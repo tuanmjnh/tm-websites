@@ -1,0 +1,40 @@
+{
+  "name": "@tm/flow-utils",
+  "version": "0.2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./constants": "./src/constants.ts",
+    "./format": "./src/format.ts",
+    "./slug": "./src/slug.ts",
+    "./locale": "./src/locale.ts",
+    "./svg": "./src/svg.ts",
+    "./image": "./src/image.ts",
+    "./url": "./src/url.ts",
+    "./media": "./src/media.ts",
+    "./code": "./src/code.ts",
+    "./browser": "./src/browser.ts",
+    "./price": "./src/price.ts",
+    "./collection": "./src/collection.ts",
+    "./sync": "./src/sync.ts",
+    "./base64": "./src/base64.ts",
+    "./hub": "./src/hub.ts",
+    "./html": "./src/html.ts",
+    "./markdown": "./src/markdown.ts",
+    "./seo": "./src/seo.ts",
+    "./types": "./src/types.ts",
+    "./ua": "./src/ua.ts",
+    "./excel": "./src/excel.ts"
+  },
+  "dependencies": {
+    "ua-parser-js": "^2.0.9"
+  },
+  "peerDependencies": {
+    "exceljs": "^4.4.0"
+  },
+  "peerDependenciesMeta": {
+    "exceljs": {
+      "optional": true
+    }
+  }
+}

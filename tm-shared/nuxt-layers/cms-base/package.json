@@ -1,0 +1,14 @@
+{
+  "name": "@tm/nuxt-layer-cms-base",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./nuxt.config.ts",
+  "dependencies": {
+    "@tm/flow-contracts": "workspace:*",
+    "@tm/flow-utils": "workspace:*",
+    "@tm/nuxt-layer-core": "workspace:*",
+    "@tm/nuxt-layer-api-base": "workspace:*",
+    "@tm/nuxt-layer-config-base": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}

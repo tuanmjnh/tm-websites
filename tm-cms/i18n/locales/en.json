@@ -1,0 +1,493 @@
+{
+  "common": {
+    "dashboard": "Dashboard",
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "refresh": "Refresh",
+    "create": "Create New",
+    "search": "Search...",
+    "loading": "Loading data...",
+    "noData": "No data available",
+    "success": "Operation successful",
+    "error": "An error occurred",
+    "more": "More",
+    "records": "records",
+    "loading_text": "Loading...",
+    "no_more_data": "No more data",
+    "actions": "Actions"
+  },
+  "auth": {
+    "loginDescription": "Sign in with the account provisioned by TM Hub to access the admin suite.",
+    "email": "Email",
+    "emailPlaceholder": "admin{'@'}example.com",
+    "emailRequired": "Enter your email",
+    "emailInvalid": "Enter a valid email",
+    "password": "Password",
+    "passwordPlaceholder": "At least 6 characters",
+    "passwordMin": "Password must be at least 6 characters",
+    "submit": "Sign in",
+    "submitting": "Signing in...",
+    "loginFailed": "Sign-in failed. Please try again.",
+    "logout": "Sign out",
+    "securedBy": "Sessions are secured by TM Hub",
+    "totp": {
+      "description": "Enter the 6-digit code from your authenticator app to continue.",
+      "code": "Authentication code",
+      "codePlaceholder": "123456",
+      "recoveryHint": "No authenticator? Enter one of your recovery codes instead.",
+      "submit": "Verify and sign in",
+      "submitting": "Verifying...",
+      "back": "Back to sign in",
+      "codeRequired": "Enter your authentication code",
+      "codeInvalid": "Enter a valid 6-digit code or recovery code"
+    },
+    "errors": {
+      "INVALID_CREDENTIALS": "Incorrect email or password.",
+      "INVALID_APP": "This CMS app is not registered or is disabled in TM Hub.",
+      "NO_APP_ACCESS": "This account does not have access to this application.",
+      "RATE_LIMITED": "Too many sign-in attempts. Please try again later.",
+      "TOTP_REQUIRED": "This account requires two-factor authentication (TOTP).",
+      "TOTP_CODE_REQUIRED": "Enter your authentication code.",
+      "TOTP_INVALID_CODE": "The authentication code is incorrect or has expired.",
+      "TOTP_CHALLENGE_EXPIRED": "The two-factor challenge has expired. Please sign in again.",
+      "TOTP_FAILED": "Two-factor verification failed. Please try again.",
+      "HUB_UNAVAILABLE": "Cannot reach TM Hub. Check TM_HUB_URL and your network connection.",
+      "HUB_ERROR": "TM Hub returned an unexpected error.",
+      "LOGIN_FAILED": "Sign-in failed. Please try again."
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "catalog": "Catalog & Products",
+    "orders": "Orders & Sales",
+    "inventory": "Inventory & Stock",
+    "finance": "Finance & Accounting",
+    "reports": "Reports & Analytics",
+    "media": "Media Library",
+    "content": "Content",
+    "aiWorkspace": "AI Workspace",
+    "users": "Users & Access",
+    "roles": "Roles & Permissions",
+    "configs": "App Configuration",
+    "audit": "Audit Log",
+    "notifications": "Notifications",
+    "mail": "Email Center",
+    "routes": "App Routes",
+    "connections": "Integrations",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Control Center",
+    "description": "Operations overview for {company}",
+    "active": "Active",
+    "inactive": "Inactive",
+    "suspended": "Suspended",
+    "restricted": "Restricted",
+    "restrictedHint": "Your account does not have permission to view this section.",
+    "viewAll": "View all",
+    "stats": {
+      "installation": "Installation",
+      "members": "Members",
+      "roles": "Roles",
+      "modules": "Licensed modules"
+    },
+    "members": {
+      "title": "Application members",
+      "description": "People with a role in this CMS installation"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "description": "Latest changes recorded by TM Hub",
+      "empty": "No activity has been recorded yet",
+      "systemActor": "System"
+    },
+    "installation": {
+      "title": "Installation profile",
+      "description": "Identifiers and entitlements used by this CMS",
+      "appId": "Application ID",
+      "tenant": "Tenant ID",
+      "configs": "Config keys",
+      "capabilities": "Capabilities",
+      "fullAccess": "Full access",
+      "noModules": "No licensed modules"
+    }
+  },
+  "admin": {
+    "errors": {
+      "unauthorized": "Your session has expired. Sign in again.",
+      "forbidden": "Your account does not have permission for this data in TM Hub.",
+      "notFound": "This resource was not found in TM Hub.",
+      "network": "Cannot reach TM Hub. Check the connection and try again.",
+      "generic": "TM Hub returned an unexpected error."
+    },
+    "users": {
+      "title": "Users & Access",
+      "description": "Accounts assigned to this CMS application in TM Hub",
+      "search": "Search by name, email or username...",
+      "listTitle": "Application members",
+      "listDescription": "Users with an active role in this CMS installation",
+      "noResults": "No users match the current search",
+      "active": "Active",
+      "inactive": "Inactive",
+      "permissionDenied": "Your account cannot read users in TM Hub (users.read).",
+      "stats": {
+        "total": "Total users",
+        "active": "Active",
+        "roles": "Distinct roles"
+      }
+    },
+    "roles": {
+      "title": "Roles & Permissions",
+      "description": "Role definitions scoped to this CMS application in TM Hub",
+      "listTitle": "Application roles",
+      "listDescription": "Permissions granted by each role",
+      "fullAccess": "Full access",
+      "system": "System",
+      "custom": "Custom",
+      "allRoutes": "All routes",
+      "noPermissions": "No permissions configured",
+      "permissionDenied": "Your account cannot read roles in TM Hub (roles.read).",
+      "stats": {
+        "total": "Total roles",
+        "system": "System roles",
+        "modules": "Permission modules"
+      }
+    },
+    "configs": {
+      "title": "App Configuration",
+      "description": "Configuration keys stored for this CMS application in TM Hub",
+      "search": "Search by key, category or description...",
+      "listTitle": "Configuration entries",
+      "listDescription": "Values are loaded through the CMS BFF; secrets stay masked",
+      "noEntries": "No configuration keys have been stored for this application",
+      "noResults": "No configuration keys match the current search",
+      "public": "Public",
+      "secret": "Secret",
+      "permissionDenied": "Your account cannot read configuration keys in TM Hub (configs.read).",
+      "stats": {
+        "total": "Total keys",
+        "public": "Public keys",
+        "secret": "Secret keys",
+        "categories": "Categories"
+      }
+    },
+    "audit": {
+      "title": "Audit Log",
+      "description": "Write activity recorded for this CMS application in TM Hub",
+      "listTitle": "Recent activity",
+      "listDescription": "Changes recorded by TM Hub audit logging",
+      "noEntries": "No audit entries have been recorded yet",
+      "unknownAction": "change",
+      "unknownModel": "record",
+      "systemActor": "System",
+      "permissionDenied": "Your account cannot read audit logs in TM Hub (apps.logs.read).",
+      "stats": {
+        "total": "Entries",
+        "actors": "Actors",
+        "models": "Records",
+        "latest": "Latest activity"
+      }
+    },
+    "content": {
+      "title": "Content",
+      "description": "Website content records stored for this CMS application in TM Hub",
+      "search": "Search by key, title or category...",
+      "listTitle": "Content entries",
+      "listDescription": "Select a record to inspect its published payload",
+      "noEntries": "No content records match the current filters",
+      "copied": "Content copied to clipboard",
+      "copy": "Copy",
+      "detailKey": "Content key",
+      "detailUpdated": "Last updated",
+      "detailData": "Payload data",
+      "detailMetadata": "Metadata",
+      "status": {
+        "all": "All statuses",
+        "published": "Published",
+        "hidden": "Hidden",
+        "deleted": "Deleted"
+      },
+      "stats": {
+        "total": "Records",
+        "published": "Published",
+        "hidden": "Hidden",
+        "categories": "Categories",
+        "deleted": "Deleted"
+      },
+      "create": "Create content",
+      "editAction": "Edit",
+      "formCreateTitle": "Create content record",
+      "formEditTitle": "Edit content record",
+      "formDescription": "Published content is served on the public website.",
+      "keyImmutable": "The key cannot change after creation; create a new record for a different key.",
+      "close": "Close",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "restore": "Restore",
+      "created": "Content record created",
+      "updated": "Content record updated",
+      "published": "Content published",
+      "unpublished": "Content unpublished",
+      "deleted": "Content record soft-deleted",
+      "restored": "Content record restored",
+      "deleteConfirmTitle": "Delete content record?",
+      "deleteConfirmText": "The record \"{title}\" will be soft-deleted and can be restored later.",
+      "softDeleteNote": "This is a soft delete: the record stays in Hub and can be restored.",
+      "permissionDenied": "Your account lacks content.read, so content cannot be listed.",
+      "fields": {
+        "key": "Content key",
+        "keyPlaceholder": "e.g. pages/about",
+        "title": "Title",
+        "titlePlaceholder": "Title shown on the website",
+        "description": "Description",
+        "descriptionPlaceholder": "Short description for SEO and listings",
+        "category": "Category",
+        "categoryPlaceholder": "e.g. page, post, docs",
+        "contentType": "Data format",
+        "isPublished": "Published",
+        "isPublishedHint": "Enable so the public website can read this record",
+        "dataJson": "JSON data",
+        "dataText": "Text content",
+        "dataJsonPlaceholder": "{'{'}\n  \"title\": \"...\"\n{'}'}",
+        "dataTextPlaceholder": "Enter Markdown, HTML or plain text..."
+      },
+      "contentTypes": {
+        "json": "JSON",
+        "markdown": "Markdown",
+        "html": "HTML",
+        "text": "Text"
+      },
+      "validation": {
+        "key": "Key must start with a letter or digit and contain only letters, digits, dots, underscores, hyphens or slashes.",
+        "title": "Title is required and must be at most 300 characters.",
+        "description": "Description must be at most 2000 characters.",
+        "category": "Category must be at most 100 characters.",
+        "data": "Invalid data: JSON must be well-formed and cannot be empty."
+      }
+    },
+    "media": {
+      "title": "Media Library",
+      "description": "Images, video and digital assets served through the TM Hub media gateway",
+      "disabled": "The Media module is not enabled in this customer's subscription",
+      "root": "Root",
+      "upload": "Upload file",
+      "foldersTitle": "Folders",
+      "foldersDescription": "Select a folder to browse its contents",
+      "resourcesTitle": "Assets in view",
+      "resourcesDescription": "Records returned by the TM Hub media gateway",
+      "noResources": "No assets in this folder",
+      "stats": {
+        "resources": "Assets in view",
+        "folders": "Folders",
+        "images": "Images",
+        "storage": "Storage in view"
+      },
+      "cloudinary": {
+        "title": "Media gateway not configured",
+        "description": "TM Hub could not reach Cloudinary for this application",
+        "hint": "Add the Cloudinary credentials to this app configuration in TM Hub to enable the media library."
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "In-app notifications delivered to this account by TM Hub",
+      "listTitle": "Inbox",
+      "listDescription": "Newest messages first; open one to mark it as read",
+      "noItems": "No notifications in this view",
+      "unread": "Unread",
+      "open": "Open",
+      "markRead": "Mark read",
+      "markAll": "Mark all read",
+      "markedAll": "All notifications marked as read",
+      "permissionDenied": "You do not have permission to view notifications for this application",
+      "compose": "Send notification",
+      "composeDescription": "Deliver an in-app notification (and web push when subscribed) to an account in this application",
+      "form": {
+        "title": "Title",
+        "titleRequired": "Title is required",
+        "titleMax": "Title must be at most 255 characters",
+        "titlePlaceholder": "A short headline",
+        "body": "Message",
+        "bodyRequired": "Message is required",
+        "bodyPlaceholder": "What do you want the recipient to know?",
+        "url": "Link (optional)",
+        "urlInvalid": "Link must be a valid URL",
+        "urlPlaceholder": "https://...",
+        "submit": "Send",
+        "sent": "Notification sent"
+      },
+      "filter": {
+        "all": "All notifications",
+        "unread": "Unread only"
+      },
+      "stats": {
+        "total": "Loaded",
+        "unread": "Unread",
+        "read": "Read"
+      }
+    },
+    "mail": {
+      "title": "Email Center",
+      "description": "Transactional templates, delivery analytics and send queue served through the TM Hub mail gateway",
+      "permissionDenied": "You do not have permission to view mail for this application",
+      "permissionDeniedTemplates": "Template management requires the mail.manage capability",
+      "permissionDeniedAnalytics": "Delivery analytics require the mail.analytics.read capability",
+      "permissionDeniedQueue": "Queue status requires the mail.send capability",
+      "filter": {
+        "all": "All templates"
+      },
+      "status": {
+        "draft": "Draft",
+        "published": "Published",
+        "archived": "Archived"
+      },
+      "stats": {
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "opened": "Opened",
+        "clicked": "Clicked"
+      },
+      "rates": {
+        "title": "Delivery performance",
+        "description": "Rates over the last 30 days for this application",
+        "delivery": "Delivery",
+        "open": "Open",
+        "click": "Click",
+        "bounce": "Bounce"
+      },
+      "queue": {
+        "title": "Send queue",
+        "description": "Runtime state of the transactional mail queue",
+        "enabled": "Queue online",
+        "disabled": "Queue offline",
+        "jobs": "{n} jobs in view"
+      },
+      "templatesTitle": "Templates",
+      "templatesDescription": "{n} templates registered for this application",
+      "noTemplates": "No templates match this filter"
+    },
+    "routes": {
+      "title": "App Routes",
+      "description": "Navigation routes registered for this application in TM Hub",
+      "permissionDenied": "You do not have permission to view routes for this application",
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "filter": {
+        "all": "All routes",
+        "visible": "Visible only",
+        "hidden": "Hidden only",
+        "gated": "Permission gated"
+      },
+      "stats": {
+        "total": "Routes",
+        "visible": "Visible",
+        "gated": "Gated",
+        "groups": "Groups"
+      },
+      "listTitle": "Route definitions",
+      "listDescription": "Ordered by sort index; grouped entries are indented",
+      "noEntries": "No routes match this filter"
+    },
+    "connections": {
+      "title": "Integrations",
+      "description": "Provider credentials and connection status for this application",
+      "permissionDenied": "You do not have permission to view integrations for this application",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "disabled": "Disabled",
+      "error": "Error",
+      "lastChecked": "Last checked",
+      "stats": {
+        "providers": "Providers",
+        "connected": "Connected",
+        "enabled": "Enabled",
+        "pending": "Pending"
+      },
+      "listTitle": "Providers",
+      "listDescription": "Code-registry integrations that back media, storage and OAuth",
+      "noEntries": "No provider definitions available"
+    }
+  },
+  "modules": {
+    "status": {
+      "entitlement": "Subscription",
+      "entitled": "Enabled",
+      "notEntitled": "Not enabled",
+      "dataSource": "Data source",
+      "connected": "Connected",
+      "pending": "Not connected",
+      "disabledText": "The {module} module is not included in this customer's subscription.",
+      "pendingText": "The {module} module is waiting for a data connection.",
+      "disabledHint": "Ask a TM Hub administrator to add this module to the subscription.",
+      "readyHint": "The module is connected to its data source. Business data will render here."
+    },
+    "catalog": {
+      "description": "Manage categories, attributes and pricing for the entire product catalog",
+      "pendingHint": "Connect the tenant database for products, categories and variants before any data can be shown."
+    },
+    "orders": {
+      "description": "Track the full order lifecycle from creation to successful delivery",
+      "pendingHint": "Connect the tenant order and payment APIs before any data can be shown."
+    },
+    "inventory": {
+      "description": "Track stock levels, minimum thresholds and low-stock alerts",
+      "pendingHint": "Connect the tenant warehouse and inventory APIs before any data can be shown."
+    },
+    "finance": {
+      "description": "Track cash flow, receivables and profitability by period",
+      "pendingHint": "Connect the tenant ledger, receivables and accounting APIs before any data can be shown."
+    },
+    "reports": {
+      "description": "Aggregate operations, sales and finance reports by period",
+      "pendingHint": "Connect the reporting data store and export service before any data can be shown."
+    },
+    "media": {
+      "description": "Images, video and digital assets served through the TM Hub media gateway",
+      "pendingHint": "Configure Cloudinary in TM Hub before the media library can list assets."
+    },
+    "aiWorkspace": {
+      "description": "AI task workspace for content editing and operations",
+      "pendingHint": "Configure a model provider and AI task queue before any data can be shown."
+    }
+  },
+  "settings": {
+    "title": "System settings",
+    "description": "Tenant, installation and session information",
+    "business": {
+      "title": "Business information",
+      "customerId": "Customer ID",
+      "companyName": "Company name",
+      "cmsAppId": "CMS app ID",
+      "webAppId": "Website app ID"
+    },
+    "session": {
+      "title": "Sign-in session",
+      "user": "User",
+      "email": "Email",
+      "tenantId": "Tenant ID",
+      "roles": "Roles",
+      "capabilities": "Effective capabilities",
+      "capabilitiesDescription": "Capabilities granted by TM Hub roles for this application"
+    },
+    "hub": {
+      "title": "TM Hub installation",
+      "description": "Live application record loaded through the CMS BFF",
+      "name": "Application name",
+      "appId": "Application ID",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Suspended",
+      "origins": "Allowed origins",
+      "configs": "Configuration keys",
+      "updated": "Last updated",
+      "unavailable": "Could not load live installation data from TM Hub.",
+      "permissionDenied": "Your account cannot read application details in TM Hub (apps.read).",
+      "none": "None"
+    },
+    "entitlements": {
+      "title": "Licensed modules",
+      "description": "Modules available under the current subscription"
+    }
+  }
+}

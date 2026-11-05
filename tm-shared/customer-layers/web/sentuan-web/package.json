@@ -1,0 +1,7 @@
+{
+  "name": "@tm/customer-layer-sentuan-web",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./nuxt.config.ts"
+}
+

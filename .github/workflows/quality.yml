@@ -1,0 +1,61 @@
+name: Quality Gates
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Static gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate customer registry
+        run: pnpm validate:registry
+
+      - name: Verify scaffold integrity
+        run: pnpm verify:scaffold
+
+      - name: Test layer precedence
+        run: pnpm test:layers
+
+      - name: Test Hub contracts
+        run: pnpm test:hub
+
+      - name: Test public content contracts
+        run: pnpm test:web-content
+
+      - name: Typecheck shared packages
+        run: pnpm --dir tm-shared run typecheck
+
+      - name: Typecheck apps
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint

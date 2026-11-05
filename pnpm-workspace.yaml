@@ -1,0 +1,23 @@
+packages:
+  - 'tm-cms'
+  - 'tm-web'
+  - 'tm-shared/packages/*'
+  - 'tm-shared/nuxt-layers/*'
+  - 'tm-shared/customer-layers/cms/*'
+  - 'tm-shared/customer-layers/web/*'
+
+# pnpm 12 blocks lifecycle scripts by default. These four must run:
+# esbuild ships a native binary fetcher, vue-demi patches Vue 3 shims.
+allowBuilds:
+  esbuild: true
+  vue-demi: true
+
+minimumReleaseAgeExclude:
+  - '@nuxt/kit@4.6.4'
+  - '@nuxt/nitro-server@4.6.4'
+  - '@nuxt/schema@4.6.4'
+  - '@nuxt/vite-builder@4.6.4'
+  - '@nuxt/vite-server@4.6.4'
+  - nitropack@2.13.6
+  - nuxt@4.6.4
+  - unrouting@0.3.2

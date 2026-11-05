@@ -1,0 +1,55 @@
+/* Bento Grid UI Utility Classes */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .bento-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.bento-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--ui-radius, 6px);
+  border: 1px solid var(--ui-border);
+  background: color-mix(in oklab, var(--ui-bg-elevated) 82%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 1.25rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bento-card:hover {
+  border-color: color-mix(in oklab, var(--ui-primary) 35%, var(--ui-border));
+}
+
+.bento-col-span-2 {
+  grid-column: span 1 / span 1;
+}
+
+@media (min-width: 768px) {
+  .bento-col-span-2 {
+    grid-column: span 2 / span 2;
+  }
+}
+
+.bento-col-span-3 {
+  grid-column: span 1 / span 1;
+}
+
+@media (min-width: 1024px) {
+  .bento-col-span-3 {
+    grid-column: span 3 / span 3;
+  }
+}
+

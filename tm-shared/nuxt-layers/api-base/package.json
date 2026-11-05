@@ -1,0 +1,11 @@
+{
+  "name": "@tm/nuxt-layer-api-base",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./nuxt.config.ts",
+  "dependencies": {
+    "@tm/flow-contracts": "workspace:*",
+    "@tm/flow-utils": "workspace:*",
+    "h3": "^1.15.11"
+  }
+}

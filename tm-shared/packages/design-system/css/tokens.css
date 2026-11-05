@@ -1,0 +1,21 @@
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Micro border radius scale: 2px - 10px */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+}
+
+:root {
+  --ui-radius: 6px;
+  --udmt-ambient: 14%;
+}
+
+.dark {
+  --udmt-ambient: 26%;
+}
+

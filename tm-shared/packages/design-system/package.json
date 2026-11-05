@@ -1,0 +1,10 @@
+{
+  "name": "@tm/design-system",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./css": "./css/index.css",
+    "./css/*": "./css/*"
+  }
+}
+

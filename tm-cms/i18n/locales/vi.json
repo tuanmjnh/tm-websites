@@ -1,0 +1,493 @@
+{
+  "common": {
+    "dashboard": "Bảng điều khiển",
+    "save": "Lưu thay đổi",
+    "cancel": "Hủy bỏ",
+    "delete": "Xóa",
+    "refresh": "Làm mới",
+    "create": "Tạo mới",
+    "search": "Tìm kiếm...",
+    "loading": "Đang tải dữ liệu...",
+    "noData": "Không có dữ liệu",
+    "success": "Thao tác thành công",
+    "error": "Đã xảy ra lỗi",
+    "more": "Xem thêm",
+    "records": "bản ghi",
+    "loading_text": "Đang tải...",
+    "no_more_data": "Đã tải hết dữ liệu",
+    "actions": "Thao tác"
+  },
+  "auth": {
+    "loginDescription": "Dùng tài khoản được cấp bởi TM Hub để truy cập bảng quản trị.",
+    "email": "Email",
+    "emailPlaceholder": "admin{'@'}example.com",
+    "emailRequired": "Vui lòng nhập email",
+    "emailInvalid": "Email không hợp lệ",
+    "password": "Mật khẩu",
+    "passwordPlaceholder": "Tối thiểu 6 ký tự",
+    "passwordMin": "Mật khẩu phải có ít nhất 6 ký tự",
+    "submit": "Đăng nhập",
+    "submitting": "Đang đăng nhập...",
+    "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
+    "logout": "Đăng xuất",
+    "securedBy": "Phiên đăng nhập được bảo vệ bởi TM Hub",
+    "totp": {
+      "description": "Nhập mã 6 chữ số từ ứng dụng xác thực để tiếp tục.",
+      "code": "Mã xác thực",
+      "codePlaceholder": "123456",
+      "recoveryHint": "Không có ứng dụng xác thực? Nhập một trong các mã khôi phục của bạn.",
+      "submit": "Xác thực và đăng nhập",
+      "submitting": "Đang xác thực...",
+      "back": "Quay lại đăng nhập",
+      "codeRequired": "Vui lòng nhập mã xác thực",
+      "codeInvalid": "Nhập mã 6 chữ số hoặc mã khôi phục hợp lệ"
+    },
+    "errors": {
+      "INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng.",
+      "INVALID_APP": "Ứng dụng CMS chưa được đăng ký hoặc đang bị khóa trong TM Hub.",
+      "NO_APP_ACCESS": "Tài khoản không có quyền truy cập ứng dụng này.",
+      "RATE_LIMITED": "Quá nhiều lần đăng nhập. Vui lòng thử lại sau ít phút.",
+      "TOTP_REQUIRED": "Tài khoản đã bật xác thực 2 lớp (TOTP).",
+      "TOTP_CODE_REQUIRED": "Vui lòng nhập mã xác thực.",
+      "TOTP_INVALID_CODE": "Mã xác thực không đúng hoặc đã hết hiệu lực.",
+      "TOTP_CHALLENGE_EXPIRED": "Phiên xác thực 2 lớp đã hết hạn. Vui lòng đăng nhập lại.",
+      "TOTP_FAILED": "Xác thực 2 lớp thất bại. Vui lòng thử lại.",
+      "HUB_UNAVAILABLE": "Không thể kết nối TM Hub. Kiểm tra TM_HUB_URL và kết nối mạng.",
+      "HUB_ERROR": "TM Hub trả về lỗi không mong đợi.",
+      "LOGIN_FAILED": "Đăng nhập thất bại. Vui lòng thử lại."
+    }
+  },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "catalog": "Sản phẩm & Danh mục",
+    "orders": "Đơn hàng & Bán hàng",
+    "inventory": "Kho & Tồn kho",
+    "finance": "Tài chính & Thu chi",
+    "reports": "Báo cáo & Phân tích",
+    "media": "Thư viện Media",
+    "content": "Nội dung",
+    "aiWorkspace": "AI Workspace",
+    "users": "Người dùng & Truy cập",
+    "roles": "Vai trò & Phân quyền",
+    "configs": "Cấu hình ứng dụng",
+    "audit": "Nhật ký thao tác",
+    "notifications": "Thông báo",
+    "mail": "Trung tâm Email",
+    "routes": "Tuyến đường ứng dụng",
+    "connections": "Tích hợp",
+    "settings": "Cấu hình hệ thống"
+  },
+  "dashboard": {
+    "title": "Trung tâm điều khiển",
+    "description": "Tổng quan vận hành dành cho {company}",
+    "active": "Đang hoạt động",
+    "inactive": "Đã khóa",
+    "suspended": "Tạm khóa",
+    "restricted": "Bị hạn chế",
+    "restrictedHint": "Tài khoản không có quyền xem phần này.",
+    "viewAll": "Xem tất cả",
+    "stats": {
+      "installation": "Bản cài đặt",
+      "members": "Thành viên",
+      "roles": "Vai trò",
+      "modules": "Phân hệ được cấp"
+    },
+    "members": {
+      "title": "Thành viên ứng dụng",
+      "description": "Người dùng có vai trò trong bản cài đặt CMS này"
+    },
+    "activity": {
+      "title": "Hoạt động gần đây",
+      "description": "Thay đổi mới nhất được TM Hub ghi nhận",
+      "empty": "Chưa có hoạt động nào được ghi nhận",
+      "systemActor": "Hệ thống"
+    },
+    "installation": {
+      "title": "Hồ sơ bản cài đặt",
+      "description": "Định danh và quyền mà CMS này đang sử dụng",
+      "appId": "Application ID",
+      "tenant": "Tenant ID",
+      "configs": "Khóa cấu hình",
+      "capabilities": "Quyền hiệu lực",
+      "fullAccess": "Toàn quyền",
+      "noModules": "Chưa có phân hệ được cấp"
+    }
+  },
+  "admin": {
+    "errors": {
+      "unauthorized": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+      "forbidden": "Tài khoản không có quyền xem dữ liệu này trong TM Hub.",
+      "notFound": "Không tìm thấy tài nguyên trong TM Hub.",
+      "network": "Không thể kết nối TM Hub. Kiểm tra kết nối và thử lại.",
+      "generic": "TM Hub trả về lỗi không mong đợi."
+    },
+    "users": {
+      "title": "Người dùng & Truy cập",
+      "description": "Các tài khoản được gán vào ứng dụng CMS này trong TM Hub",
+      "search": "Tìm theo tên, email hoặc username...",
+      "listTitle": "Thành viên ứng dụng",
+      "listDescription": "Người dùng có vai trò đang hoạt động trong CMS này",
+      "noResults": "Không có người dùng khớp với tìm kiếm",
+      "active": "Hoạt động",
+      "inactive": "Đã khóa",
+      "permissionDenied": "Tài khoản không có quyền đọc người dùng trong TM Hub (users.read).",
+      "stats": {
+        "total": "Tổng người dùng",
+        "active": "Đang hoạt động",
+        "roles": "Số vai trò khác nhau"
+      }
+    },
+    "roles": {
+      "title": "Vai trò & Phân quyền",
+      "description": "Định nghĩa vai trò theo phạm vi ứng dụng CMS trong TM Hub",
+      "listTitle": "Vai trò ứng dụng",
+      "listDescription": "Quyền được cấp cho từng vai trò",
+      "fullAccess": "Toàn quyền",
+      "system": "Hệ thống",
+      "custom": "Tùy chỉnh",
+      "allRoutes": "Tất cả tuyến đường",
+      "noPermissions": "Chưa cấu hình quyền",
+      "permissionDenied": "Tài khoản không có quyền đọc vai trò trong TM Hub (roles.read).",
+      "stats": {
+        "total": "Tổng vai trò",
+        "system": "Vai trò hệ thống",
+        "modules": "Nhóm quyền"
+      }
+    },
+    "configs": {
+      "title": "Cấu hình ứng dụng",
+      "description": "Các khóa cấu hình được lưu cho ứng dụng CMS này trong TM Hub",
+      "search": "Tìm theo khóa, nhóm hoặc mô tả...",
+      "listTitle": "Danh sách cấu hình",
+      "listDescription": "Giá trị tải qua CMS BFF; khóa bí mật luôn được che",
+      "noEntries": "Ứng dụng chưa có khóa cấu hình nào",
+      "noResults": "Không có khóa cấu hình khớp với tìm kiếm",
+      "public": "Công khai",
+      "secret": "Bí mật",
+      "permissionDenied": "Tài khoản không có quyền đọc cấu hình trong TM Hub (configs.read).",
+      "stats": {
+        "total": "Tổng số khóa",
+        "public": "Khóa công khai",
+        "secret": "Khóa bí mật",
+        "categories": "Nhóm cấu hình"
+      }
+    },
+    "audit": {
+      "title": "Nhật ký thao tác",
+      "description": "Hoạt động ghi dữ liệu của ứng dụng CMS này trong TM Hub",
+      "listTitle": "Hoạt động gần đây",
+      "listDescription": "Thay đổi được TM Hub ghi nhận qua audit log",
+      "noEntries": "Chưa có bản ghi nhật ký nào",
+      "unknownAction": "thay đổi",
+      "unknownModel": "bản ghi",
+      "systemActor": "Hệ thống",
+      "permissionDenied": "Tài khoản không có quyền đọc nhật ký trong TM Hub (apps.logs.read).",
+      "stats": {
+        "total": "Số bản ghi",
+        "actors": "Người thao tác",
+        "models": "Đối tượng",
+        "latest": "Hoạt động mới nhất"
+      }
+    },
+    "content": {
+      "title": "Nội dung",
+      "description": "Bản ghi nội dung website được lưu cho ứng dụng CMS này trong TM Hub",
+      "search": "Tìm theo khóa, tiêu đề hoặc nhóm...",
+      "listTitle": "Danh sách nội dung",
+      "listDescription": "Chọn một bản ghi để xem dữ liệu đã xuất bản",
+      "noEntries": "Không có bản ghi nội dung khớp bộ lọc hiện tại",
+      "copied": "Đã sao chép nội dung",
+      "copy": "Sao chép",
+      "detailKey": "Khóa nội dung",
+      "detailUpdated": "Cập nhật gần nhất",
+      "detailData": "Dữ liệu nội dung",
+      "detailMetadata": "Metadata",
+      "status": {
+        "all": "Tất cả trạng thái",
+        "published": "Đã xuất bản",
+        "hidden": "Đang ẩn",
+        "deleted": "Đã xóa"
+      },
+      "stats": {
+        "total": "Số bản ghi",
+        "published": "Đã xuất bản",
+        "hidden": "Đang ẩn",
+        "categories": "Nhóm nội dung",
+        "deleted": "Đã xóa"
+      },
+      "create": "Tạo nội dung",
+      "editAction": "Sửa",
+      "formCreateTitle": "Tạo bản ghi nội dung",
+      "formEditTitle": "Sửa bản ghi nội dung",
+      "formDescription": "Nội dung đã xuất bản sẽ hiển thị trên website công khai.",
+      "keyImmutable": "Khóa không thể đổi sau khi tạo; hãy tạo bản ghi mới nếu cần khóa khác.",
+      "close": "Đóng",
+      "publish": "Xuất bản",
+      "unpublish": "Ẩn bản ghi",
+      "restore": "Khôi phục",
+      "created": "Đã tạo bản ghi nội dung",
+      "updated": "Đã cập nhật bản ghi nội dung",
+      "published": "Đã xuất bản nội dung",
+      "unpublished": "Đã ẩn nội dung",
+      "deleted": "Đã xóa mềm bản ghi nội dung",
+      "restored": "Đã khôi phục bản ghi nội dung",
+      "deleteConfirmTitle": "Xóa bản ghi nội dung?",
+      "deleteConfirmText": "Bản ghi “{title}” sẽ bị xóa mềm và có thể khôi phục sau.",
+      "softDeleteNote": "Đây là xóa mềm: bản ghi vẫn còn trong Hub và có thể khôi phục.",
+      "permissionDenied": "Tài khoản của bạn không có quyền content.read để xem nội dung.",
+      "fields": {
+        "key": "Khóa nội dung",
+        "keyPlaceholder": "ví dụ: pages/gioi-thieu",
+        "title": "Tiêu đề",
+        "titlePlaceholder": "Tiêu đề hiển thị trên website",
+        "description": "Mô tả",
+        "descriptionPlaceholder": "Mô tả ngắn dùng cho SEO và danh sách",
+        "category": "Nhóm nội dung",
+        "categoryPlaceholder": "ví dụ: page, post, docs",
+        "contentType": "Định dạng dữ liệu",
+        "isPublished": "Xuất bản",
+        "isPublishedHint": "Bật để website công khai đọc được bản ghi này",
+        "dataJson": "Dữ liệu JSON",
+        "dataText": "Nội dung văn bản",
+        "dataJsonPlaceholder": "{'{'}\n  \"title\": \"...\"\n{'}'}",
+        "dataTextPlaceholder": "Nhập Markdown, HTML hoặc văn bản thuần..."
+      },
+      "contentTypes": {
+        "json": "JSON",
+        "markdown": "Markdown",
+        "html": "HTML",
+        "text": "Văn bản"
+      },
+      "validation": {
+        "key": "Khóa phải bắt đầu bằng chữ hoặc số và chỉ gồm chữ, số, dấu chấm, gạch dưới, gạch ngang hoặc dấu /.",
+        "title": "Tiêu đề là bắt buộc và tối đa 300 ký tự.",
+        "description": "Mô tả tối đa 2000 ký tự.",
+        "category": "Nhóm nội dung tối đa 100 ký tự.",
+        "data": "Dữ liệu không hợp lệ: JSON phải đúng định dạng và không được để trống."
+      }
+    },
+    "media": {
+      "title": "Thư viện Media",
+      "description": "Hình ảnh, video và tài nguyên số phân phối qua cổng media của TM Hub",
+      "disabled": "Phân hệ Media chưa được kích hoạt trong gói đăng ký của khách hàng này",
+      "root": "Gốc",
+      "upload": "Tải tệp lên",
+      "foldersTitle": "Thư mục",
+      "foldersDescription": "Chọn một thư mục để xem nội dung bên trong",
+      "resourcesTitle": "Tài nguyên đang xem",
+      "resourcesDescription": "Bản ghi do cổng media của TM Hub trả về",
+      "noResources": "Không có tài nguyên trong thư mục này",
+      "stats": {
+        "resources": "Tài nguyên đang xem",
+        "folders": "Thư mục",
+        "images": "Hình ảnh",
+        "storage": "Dung lượng đang xem"
+      },
+      "cloudinary": {
+        "title": "Cổng media chưa được cấu hình",
+        "description": "TM Hub chưa thể kết nối Cloudinary cho ứng dụng này",
+        "hint": "Thêm thông tin Cloudinary vào cấu hình ứng dụng này trong TM Hub để bật thư viện media."
+      }
+    },
+    "notifications": {
+      "title": "Thông báo",
+      "description": "Thông báo trong ứng dụng do TM Hub gửi tới tài khoản này",
+      "listTitle": "Hộp thư",
+      "listDescription": "Mới nhất ở trên; mở một thông báo để đánh dấu đã đọc",
+      "noItems": "Không có thông báo trong mục này",
+      "unread": "Chưa đọc",
+      "open": "Mở",
+      "markRead": "Đánh dấu đã đọc",
+      "markAll": "Đọc tất cả",
+      "markedAll": "Đã đánh dấu tất cả thông báo là đã đọc",
+      "permissionDenied": "Bạn không có quyền xem thông báo của ứng dụng này",
+      "compose": "Gửi thông báo",
+      "composeDescription": "Gửi thông báo trong ứng dụng (và web push nếu đã đăng ký) tới một tài khoản thuộc ứng dụng này",
+      "form": {
+        "title": "Tiêu đề",
+        "titleRequired": "Tiêu đề là bắt buộc",
+        "titleMax": "Tiêu đề tối đa 255 ký tự",
+        "titlePlaceholder": "Dòng tiêu đề ngắn gọn",
+        "body": "Nội dung",
+        "bodyRequired": "Nội dung là bắt buộc",
+        "bodyPlaceholder": "Bạn muốn người nhận biết điều gì?",
+        "url": "Liên kết (không bắt buộc)",
+        "urlInvalid": "Liên kết phải là URL hợp lệ",
+        "urlPlaceholder": "https://...",
+        "submit": "Gửi",
+        "sent": "Đã gửi thông báo"
+      },
+      "filter": {
+        "all": "Tất cả thông báo",
+        "unread": "Chỉ chưa đọc"
+      },
+      "stats": {
+        "total": "Đã tải",
+        "unread": "Chưa đọc",
+        "read": "Đã đọc"
+      }
+    },
+    "mail": {
+      "title": "Trung tâm Email",
+      "description": "Mẫu email giao dịch, phân tích gửi và hàng đợi qua cổng mail của TM Hub",
+      "permissionDenied": "Bạn không có quyền xem email của ứng dụng này",
+      "permissionDeniedTemplates": "Quản lý mẫu yêu cầu quyền mail.manage",
+      "permissionDeniedAnalytics": "Phân tích gửi yêu cầu quyền mail.analytics.read",
+      "permissionDeniedQueue": "Trạng thái hàng đợi yêu cầu quyền mail.send",
+      "filter": {
+        "all": "Tất cả mẫu"
+      },
+      "status": {
+        "draft": "Bản nháp",
+        "published": "Đã phát hành",
+        "archived": "Đã lưu trữ"
+      },
+      "stats": {
+        "sent": "Đã gửi",
+        "delivered": "Đã nhận",
+        "opened": "Đã mở",
+        "clicked": "Đã nhấp"
+      },
+      "rates": {
+        "title": "Hiệu suất gửi",
+        "description": "Tỷ lệ trong 30 ngày gần nhất cho ứng dụng này",
+        "delivery": "Tỷ lệ nhận",
+        "open": "Tỷ lệ mở",
+        "click": "Tỷ lệ nhấp",
+        "bounce": "Tỷ lệ trả về"
+      },
+      "queue": {
+        "title": "Hàng đợi gửi",
+        "description": "Trạng thái vận hành của hàng đợi email giao dịch",
+        "enabled": "Hàng đợi hoạt động",
+        "disabled": "Hàng đợi tắt",
+        "jobs": "{n} tác vụ đang xem"
+      },
+      "templatesTitle": "Mẫu email",
+      "templatesDescription": "{n} mẫu đã đăng ký cho ứng dụng này",
+      "noTemplates": "Không có mẫu nào khớp bộ lọc này"
+    },
+    "routes": {
+      "title": "Tuyến đường ứng dụng",
+      "description": "Các tuyến điều hướng đã đăng ký cho ứng dụng này trong TM Hub",
+      "permissionDenied": "Bạn không có quyền xem tuyến đường của ứng dụng này",
+      "visible": "Hiển thị",
+      "hidden": "Ẩn",
+      "filter": {
+        "all": "Tất cả tuyến",
+        "visible": "Chỉ hiển thị",
+        "hidden": "Chỉ ẩn",
+        "gated": "Yêu cầu quyền"
+      },
+      "stats": {
+        "total": "Tuyến",
+        "visible": "Hiển thị",
+        "gated": "Yêu cầu quyền",
+        "groups": "Nhóm"
+      },
+      "listTitle": "Định nghĩa tuyến",
+      "listDescription": "Sắp xếp theo chỉ số thứ tự; mục con được thụt lề",
+      "noEntries": "Không có tuyến nào khớp bộ lọc này"
+    },
+    "connections": {
+      "title": "Tích hợp",
+      "description": "Thông tin xác thực nhà cung cấp và trạng thái kết nối cho ứng dụng này",
+      "permissionDenied": "Bạn không có quyền xem tích hợp của ứng dụng này",
+      "connected": "Đã kết nối",
+      "notConnected": "Chưa kết nối",
+      "disabled": "Đã tắt",
+      "error": "Lỗi",
+      "lastChecked": "Kiểm tra lần cuối",
+      "stats": {
+        "providers": "Nhà cung cấp",
+        "connected": "Đã kết nối",
+        "enabled": "Đang bật",
+        "pending": "Chờ cấu hình"
+      },
+      "listTitle": "Nhà cung cấp",
+      "listDescription": "Các tích hợp từ registry hỗ trợ media, lưu trữ và OAuth",
+      "noEntries": "Không có định nghĩa nhà cung cấp nào"
+    }
+  },
+  "modules": {
+    "status": {
+      "entitlement": "Gói đăng ký",
+      "entitled": "Đã kích hoạt",
+      "notEntitled": "Chưa kích hoạt",
+      "dataSource": "Nguồn dữ liệu",
+      "connected": "Đã kết nối",
+      "pending": "Chưa kết nối",
+      "disabledText": "Phân hệ {module} chưa nằm trong gói đăng ký của khách hàng này.",
+      "pendingText": "Phân hệ {module} đang chờ kết nối dữ liệu.",
+      "disabledHint": "Liên hệ quản trị viên TM Hub để bổ sung phân hệ này vào gói đăng ký.",
+      "readyHint": "Phân hệ đã kết nối nguồn dữ liệu. Giao diện nghiệp vụ sẽ hiển thị số liệu thật."
+    },
+    "catalog": {
+      "description": "Quản lý danh mục, thuộc tính và giá bán của toàn bộ sản phẩm",
+      "pendingHint": "Cần kết nối cơ sở dữ liệu tenant cho sản phẩm, danh mục và biến thể trước khi hiển thị dữ liệu."
+    },
+    "orders": {
+      "description": "Theo dõi toàn bộ vòng đời đơn hàng từ tạo mới đến khi giao thành công",
+      "pendingHint": "Cần kết nối API đơn hàng và thanh toán của tenant trước khi hiển thị dữ liệu."
+    },
+    "inventory": {
+      "description": "Theo dõi số lượng tồn, định mức tối thiểu và cảnh báo hết hàng",
+      "pendingHint": "Cần kết nối kho và API tồn kho của tenant trước khi hiển thị dữ liệu."
+    },
+    "finance": {
+      "description": "Theo dõi dòng tiền, công nợ và hiệu quả lợi nhuận theo kỳ",
+      "pendingHint": "Cần kết nối sổ quỹ, công nợ và API kế toán của tenant trước khi hiển thị dữ liệu."
+    },
+    "reports": {
+      "description": "Tổng hợp báo cáo vận hành, bán hàng và tài chính theo kỳ",
+      "pendingHint": "Cần kết nối kho dữ liệu báo cáo và dịch vụ xuất tệp trước khi hiển thị dữ liệu."
+    },
+    "media": {
+      "description": "Hình ảnh, video và tài nguyên số phân phối qua cổng media của TM Hub",
+      "pendingHint": "Cần cấu hình Cloudinary trong TM Hub trước khi thư viện media có thể hiển thị tài nguyên."
+    },
+    "aiWorkspace": {
+      "description": "Không gian tác vụ AI hỗ trợ biên tập nội dung và vận hành",
+      "pendingHint": "Cần cấu hình nhà cung cấp mô hình và hàng đợi tác vụ AI trước khi hiển thị dữ liệu."
+    }
+  },
+  "settings": {
+    "title": "Cấu hình hệ thống",
+    "description": "Thông tin tenant, bản cài đặt và phiên đăng nhập",
+    "business": {
+      "title": "Thông tin doanh nghiệp",
+      "customerId": "Mã khách hàng",
+      "companyName": "Tên doanh nghiệp",
+      "cmsAppId": "App ID (CMS)",
+      "webAppId": "App ID (Web)"
+    },
+    "session": {
+      "title": "Phiên đăng nhập",
+      "user": "Người dùng",
+      "email": "Email",
+      "tenantId": "Tenant ID",
+      "roles": "Vai trò",
+      "capabilities": "Quyền hiệu lực",
+      "capabilitiesDescription": "Các quyền được TM Hub cấp cho ứng dụng này"
+    },
+    "hub": {
+      "title": "Bản cài đặt TM Hub",
+      "description": "Bản ghi ứng dụng trực tiếp tải qua CMS BFF",
+      "name": "Tên ứng dụng",
+      "appId": "Application ID",
+      "status": "Trạng thái",
+      "active": "Đang hoạt động",
+      "inactive": "Tạm khóa",
+      "origins": "Origin được phép",
+      "configs": "Khóa cấu hình",
+      "updated": "Cập nhật gần nhất",
+      "unavailable": "Không tải được dữ liệu bản cài đặt từ TM Hub.",
+      "permissionDenied": "Tài khoản không có quyền đọc chi tiết ứng dụng trong TM Hub (apps.read).",
+      "none": "Không có"
+    },
+    "entitlements": {
+      "title": "Phân hệ được cấp quyền",
+      "description": "Các module khả dụng theo gói đăng ký hiện tại"
+    }
+  }
+}

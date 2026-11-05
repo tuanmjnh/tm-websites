@@ -1,0 +1,36 @@
+{
+  "name": "tm-platform",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": "^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "dev:cms": "pnpm --dir tm-cms run dev",
+    "dev:web": "pnpm --dir tm-web run dev",
+    "build:cms": "pnpm --dir tm-cms run build:vercel",
+    "build:web": "pnpm --dir tm-web run build:vercel",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "pnpm -r --if-present run lint",
+    "validate:registry": "tsx scripts/build/validate-registry.ts",
+    "validate:build:cms": "tsx scripts/build/validate-build.ts cms",
+    "validate:build:web": "tsx scripts/build/validate-build.ts web",
+    "verify:scaffold": "tsx scripts/verify-scaffold.ts",
+    "test:layers": "tsx scripts/build/test-layer-priority.ts",
+    "test:hub": "tsx scripts/build/test-hub-contracts.ts",
+    "test:web-content": "tsx scripts/build/test-web-content.ts",
+    "hub:check": "tsx scripts/build/check-hub.ts",
+    "cache:clear": "rimraf tm-cms/.nuxt tm-web/.nuxt tm-cms/.output tm-web/.output node_modules/.cache node_modules/.vite"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.17.0",
+    "@types/node": "^24.19.2",
+    "cross-env": "^10.1.0",
+    "eslint": "^10.14.0",
+    "rimraf": "^6.1.3",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3"
+  }
+}

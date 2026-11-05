@@ -1,0 +1,114 @@
+{
+  "common": {
+    "home": "Home",
+    "products": "Products",
+    "collections": "Collections",
+    "about": "About Us",
+    "contact": "Contact",
+    "buyNow": "Buy Now",
+    "addToCart": "Add to Cart",
+    "viewDetails": "View Details",
+    "more": "More",
+    "records": "records",
+    "loading_text": "Loading...",
+    "no_more_data": "No more data",
+    "actions": "Actions"
+  },
+  "nav": {
+    "home": "Home",
+    "products": "Products",
+    "categories": "Categories",
+    "about": "About",
+    "contact": "Contact",
+    "switchLanguage": "Switch language"
+  },
+  "home": {
+    "seo": {
+      "description": "{company} — product catalog and services served live from the management system."
+    },
+    "hero": {
+      "badge": "New collection 2026",
+      "title": "Welcome to",
+      "subtitle": "Explore a curated catalog rendered straight from the store's own data.",
+      "cta": "Browse products",
+      "secondary": "View categories"
+    },
+    "featured": {
+      "title": "Latest products",
+      "subtitle": "Pulled from the store's published catalog",
+      "viewAll": "View all"
+    },
+    "categories": {
+      "title": "Product categories",
+      "subtitle": "Browse products by group",
+      "viewAll": "View all categories"
+    }
+  },
+  "catalog": {
+    "title": "Products",
+    "subtitle": "The store's published product catalog.",
+    "searchPlaceholder": "Search by product name or code",
+    "searchCategory": "Search categories",
+    "allCategories": "All categories",
+    "sortLabel": "Sort",
+    "sort": {
+      "newest": "Newest",
+      "price-asc": "Price: low to high",
+      "price-desc": "Price: high to low",
+      "name-asc": "Name A-Z",
+      "popular": "Best selling"
+    },
+    "clearFilters": "Clear filters",
+    "results": "{n} products",
+    "empty": {
+      "title": "No products found",
+      "description": "No product matches the current filters."
+    },
+    "state": {
+      "disconnected": {
+        "title": "Catalog not connected",
+        "description": "This website is not configured with the customer product database yet."
+      },
+      "unavailable": {
+        "title": "Catalog temporarily unavailable",
+        "description": "Product data could not be read right now. Please try again shortly."
+      }
+    },
+    "inStock": "In stock",
+    "outOfStock": "Out of stock",
+    "sku": "Product code",
+    "uom": "Unit",
+    "attributes": "Attributes",
+    "variants": "Variants",
+    "variantName": "Variant",
+    "variantSku": "Code",
+    "variantPrice": "Price",
+    "variantStock": "Availability",
+    "description": "Product description",
+    "backToList": "Back to list",
+    "viewCategory": "View category"
+  },
+  "category": {
+    "indexTitle": "Categories",
+    "indexSubtitle": "Browse products by category group.",
+    "emptyTitle": "No categories yet",
+    "emptyDescription": "No category has been published for this store yet.",
+    "viewAllProducts": "View all products"
+  },
+  "site": {
+    "tagline": "Hand-picked products and services with a commitment to quality and attentive support.",
+    "explore": "Explore",
+    "support": "Support",
+    "rights": "All rights reserved by TM Ecosystem."
+  },
+  "content": {
+    "updatedAt": "Updated"
+  },
+  "error": {
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The page you are looking for does not exist, was removed, or is not published yet.",
+    "serverTitle": "Unable to load this page",
+    "serverDescription": "Something went wrong while loading the content. Please try again shortly.",
+    "backHome": "Back to home"
+  }
+}

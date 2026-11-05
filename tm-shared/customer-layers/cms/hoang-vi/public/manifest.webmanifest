@@ -1,0 +1,24 @@
+{
+  "name": "Hoàng Vi CMS",
+  "short_name": "HoàngVi",
+  "description": "Quản trị Hoàng Vi Beauty & Cosmetics",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#f43f5e",
+  "icons": [
+    {
+      "src": "/branding/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/branding/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

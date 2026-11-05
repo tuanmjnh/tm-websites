@@ -1,0 +1,38 @@
+/* Ambient Aurora Mesh Backdrop (adopted from TM Data Manager) */
+.udmt-backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(60rem 40rem at 12% -10%, color-mix(in oklab, var(--ui-primary) var(--udmt-ambient), transparent), transparent 70%),
+    radial-gradient(50rem 30rem at 90% 0%, color-mix(in oklab, var(--ui-secondary) var(--udmt-ambient), transparent), transparent 70%);
+}
+
+/* Linear Flat Glassmorphism Panel */
+.panel {
+  background: color-mix(in oklab, var(--ui-bg-elevated) 82%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius, 6px);
+}
+
+.panel-subtle {
+  background: color-mix(in oklab, var(--ui-bg) 70%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklab, var(--ui-border) 60%, transparent);
+  border-radius: var(--ui-radius, 6px);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-border-accented) transparent;
+}
+

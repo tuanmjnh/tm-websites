@@ -1,0 +1,9 @@
+{
+  "name": "@tm/nuxt-layer-config-base",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./nuxt.config.ts",
+  "dependencies": {
+    "@tm/flow-config": "workspace:*"
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "common": {
+    "home": "Trang chủ",
+    "products": "Sản phẩm",
+    "collections": "Bộ sưu tập",
+    "about": "Về chúng tôi",
+    "contact": "Liên hệ",
+    "buyNow": "Mua ngay",
+    "addToCart": "Thêm vào giỏ",
+    "viewDetails": "Xem chi tiết",
+    "more": "Xem thêm",
+    "records": "bản ghi",
+    "loading_text": "Đang tải...",
+    "no_more_data": "Đã tải hết dữ liệu",
+    "actions": "Thao tác"
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "products": "Sản phẩm",
+    "categories": "Danh mục",
+    "about": "Giới thiệu",
+    "contact": "Liên hệ",
+    "switchLanguage": "Đổi ngôn ngữ"
+  },
+  "home": {
+    "seo": {
+      "description": "{company} — danh mục sản phẩm và dịch vụ được cập nhật trực tiếp từ hệ thống quản trị."
+    },
+    "hero": {
+      "badge": "Bộ sưu tập mới 2026",
+      "title": "Chào mừng đến với",
+      "subtitle": "Khám phá danh mục sản phẩm được tuyển chọn, hiển thị trực tiếp từ dữ liệu của cửa hàng.",
+      "cta": "Khám phá sản phẩm",
+      "secondary": "Xem danh mục"
+    },
+    "featured": {
+      "title": "Sản phẩm mới nhất",
+      "subtitle": "Cập nhật từ danh mục đang bán của cửa hàng",
+      "viewAll": "Xem tất cả"
+    },
+    "categories": {
+      "title": "Danh mục sản phẩm",
+      "subtitle": "Duyệt theo nhóm sản phẩm",
+      "viewAll": "Xem tất cả danh mục"
+    }
+  },
+  "catalog": {
+    "title": "Sản phẩm",
+    "subtitle": "Danh mục sản phẩm đang bán của cửa hàng.",
+    "searchPlaceholder": "Tìm theo tên hoặc mã sản phẩm",
+    "searchCategory": "Tìm danh mục",
+    "allCategories": "Tất cả danh mục",
+    "sortLabel": "Sắp xếp",
+    "sort": {
+      "newest": "Mới nhất",
+      "price-asc": "Giá tăng dần",
+      "price-desc": "Giá giảm dần",
+      "name-asc": "Tên A-Z",
+      "popular": "Bán chạy"
+    },
+    "clearFilters": "Xoá bộ lọc",
+    "results": "{n} sản phẩm",
+    "empty": {
+      "title": "Không tìm thấy sản phẩm",
+      "description": "Chưa có sản phẩm nào khớp với bộ lọc hiện tại."
+    },
+    "state": {
+      "disconnected": {
+        "title": "Danh mục chưa được kết nối",
+        "description": "Website này chưa được cấu hình kết nối tới cơ sở dữ liệu sản phẩm của khách hàng."
+      },
+      "unavailable": {
+        "title": "Tạm thời không tải được danh mục",
+        "description": "Không thể đọc dữ liệu sản phẩm lúc này. Vui lòng thử lại sau ít phút."
+      }
+    },
+    "inStock": "Còn hàng",
+    "outOfStock": "Hết hàng",
+    "sku": "Mã sản phẩm",
+    "uom": "Đơn vị tính",
+    "attributes": "Thuộc tính",
+    "variants": "Phân loại",
+    "variantName": "Phân loại",
+    "variantSku": "Mã",
+    "variantPrice": "Giá",
+    "variantStock": "Tình trạng",
+    "description": "Mô tả sản phẩm",
+    "backToList": "Về danh sách",
+    "viewCategory": "Xem danh mục"
+  },
+  "category": {
+    "indexTitle": "Danh mục",
+    "indexSubtitle": "Duyệt sản phẩm theo nhóm danh mục.",
+    "emptyTitle": "Chưa có danh mục",
+    "emptyDescription": "Chưa có danh mục nào được xuất bản cho cửa hàng này.",
+    "viewAllProducts": "Xem tất cả sản phẩm"
+  },
+  "site": {
+    "tagline": "Sản phẩm và dịch vụ được tuyển chọn, cam kết chất lượng và dịch vụ tận tâm.",
+    "explore": "Khám phá",
+    "support": "Hỗ trợ",
+    "rights": "Bản quyền thuộc về TM Ecosystem."
+  },
+  "content": {
+    "updatedAt": "Cập nhật"
+  },
+  "error": {
+    "notFoundTitle": "Không tìm thấy trang",
+    "notFoundDescription": "Trang bạn tìm không tồn tại, đã được gỡ hoặc chưa được xuất bản.",
+    "serverTitle": "Không thể tải trang",
+    "serverDescription": "Đã xảy ra lỗi khi tải nội dung. Vui lòng thử lại sau ít phút.",
+    "backHome": "Về trang chủ"
+  }
+}
