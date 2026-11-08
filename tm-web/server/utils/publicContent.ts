@@ -1,28 +1,40 @@
 import type { H3Event } from 'h3'
-import { HubPublicContentListSchema, type HubPublicContent } from '@tm/flow-contracts'
-import { getErrorStatus, resolveHubUrl } from '@tm/flow-utils/hub'
+import {
+  DEFAULT_PUBLIC_CONTENT_LOCALE,
+  normalizePublicLocale,
+  type PublicContent,
+  type PublicContentEntry,
+  type PublicContentListItem,
+} from '@tm/flow-contracts/content-public'
 import { normalizeSiteBaseUrl } from '@tm/flow-utils/seo'
+import {
+  PUBLIC_CONTENT_LIST_PROJECTION,
+  PUBLIC_CONTENT_PROJECTION,
+  PUBLIC_CONTENT_SITEMAP_FIELDS,
+  PublicContentModel,
+  buildPublishedContentFilter,
+  buildPublishedListFilter,
+  toPublicContent,
+  toPublicContentEntry,
+  toPublicContentListItem,
+  type PublicContentDoc,
+} from '#server/models/contentPublic'
+import { withSiteDb } from './mongo'
 
-const CONTENT_PATH = '/api/v1/content/public'
-const HUB_TIMEOUT_MS = 8000
-const MAX_PAGES = 25
+/**
+ * Public content read path for the storefront.
+ *
+ * The CMS writes content into the customer database; the storefront reads it
+ * directly with its own public policy (published + inside the schedule window +
+ * requested locale + allowlisted fields). There is no call to Hub and no call to
+ * the CMS admin API, so a visitor never needs a session and an unpublished
+ * record is never reachable.
+ */
 
-interface PublicContentSettings {
-  baseUrl: string
-  appId: string
-}
-
-interface PublicContentPage {
-  items: HubPublicContent[]
-  nextCursor?: string
-}
-
-export function getPublicContentSettings(event: H3Event): PublicContentSettings {
-  const config = useRuntimeConfig(event)
-  return {
-    baseUrl: String(config.public.hubUrl || ''),
-    appId: String(config.public.hubAppId || config.public.appId || ''),
-  }
+export function getContentLocale(event: H3Event): string {
+  const requested = getQuery(event).locale
+  return normalizePublicLocale(Array.isArray(requested) ? requested[0] : requested)
+    ?? DEFAULT_PUBLIC_CONTENT_LOCALE
 }
 
 /**
@@ -42,99 +54,133 @@ export function getSiteBaseUrl(event: H3Event): string {
   return `${proto}://${host}`
 }
 
-async function requestPublicContent(
-  event: H3Event,
-  query: Record<string, string | number | undefined>,
-): Promise<PublicContentPage> {
-  const { baseUrl, appId } = getPublicContentSettings(event)
-
-  if (!baseUrl || !appId) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'error.contentUnavailable',
-      data: { code: 'CONTENT_NOT_CONFIGURED' },
-    })
-  }
-
-  const headers = new Headers()
-  headers.set('Accept', 'application/json')
-  headers.set('X-App-Id', appId)
-
-  let payload: unknown
-  try {
-    payload = await $fetch(resolveHubUrl(baseUrl, CONTENT_PATH), {
-      query,
-      headers,
-      timeout: HUB_TIMEOUT_MS,
-    })
-  } catch (error) {
-    if (getErrorStatus(error) === 404) {
-      throw createError({ statusCode: 404, statusMessage: 'error.contentNotFound' })
-    }
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'error.contentUnavailable',
-      data: { code: 'CONTENT_UPSTREAM_UNAVAILABLE' },
-    })
-  }
-
-  const parsed = HubPublicContentListSchema.safeParse(payload)
-  if (!parsed.success) {
-    throw createError({
-      statusCode: 502,
-      statusMessage: 'error.contentInvalid',
-      data: { code: 'CONTENT_INVALID_RESPONSE' },
-    })
-  }
-
-  return {
-    items: parsed.data.data,
-    nextCursor: parsed.data.nextCursor ?? undefined,
-  }
+/**
+ * Requested locale first, then the storefront default. A record that was only
+ * written in Vietnamese still renders for an English visitor instead of 404ing;
+ * untranslated copy is a content gap, not a missing page.
+ */
+export function contentLocaleCandidates(locale?: string): string[] {
+  const requested = normalizePublicLocale(locale) ?? DEFAULT_PUBLIC_CONTENT_LOCALE
+  return requested === DEFAULT_PUBLIC_CONTENT_LOCALE
+    ? [DEFAULT_PUBLIC_CONTENT_LOCALE]
+    : [requested, DEFAULT_PUBLIC_CONTENT_LOCALE]
 }
 
-export async function fetchPublicContentPage(
+/** Resolves one public record by content key or by the locale's slug. */
+export async function fetchPublicContent(
   event: H3Event,
-  options: {
-    key?: string
-    category?: string
-    cursor?: string
-    limit?: number
-  } = {},
-): Promise<PublicContentPage> {
-  return requestPublicContent(event, {
-    key: options.key,
-    category: options.category,
-    cursor: options.cursor,
-    limit: options.limit,
+  options: { path: string; locale?: string },
+): Promise<PublicContent | null> {
+  const path = options.path.trim()
+  if (!path) return null
+
+  return withSiteDb(event, async () => {
+    for (const locale of contentLocaleCandidates(options.locale)) {
+      const doc = await PublicContentModel.findOne(
+        buildPublishedContentFilter({ locale, keyOrSlug: path }),
+        PUBLIC_CONTENT_PROJECTION,
+      )
+        .sort({ updatedAt: -1, _id: -1 })
+        .lean()
+
+      if (!doc) continue
+      const content = toPublicContent(doc as unknown as PublicContentDoc, locale)
+      if (content) return content
+    }
+    return null
   })
 }
 
-export async function fetchPublicContentByKey(
-  event: H3Event,
-  key: string,
-): Promise<HubPublicContent | null> {
-  const page = await fetchPublicContentPage(event, { key, limit: 1 })
-  return page.items.find(item => item.key === key) ?? null
+export interface PublicContentListOptions {
+  locale?: string
+  type?: string
+  tag?: string
+  category?: string
+  /** Bounded literal search, validated by the route before it reaches here. */
+  q?: string
+  cursor?: string
+  sort?: 'newest' | 'oldest'
+  limit?: number
+}
+
+export interface PublicContentListResult {
+  data: PublicContentListItem[]
+  meta: { nextCursor: string | null, hasMore: boolean, limit: number }
 }
 
 /**
- * Lists every published record for the configured app.
- * The public Hub API only returns published, non-deleted, exact-app content.
+ * Public listing over the same policy as one record: published, inside its
+ * window, an allowlisted projection without the body. The requested locale and
+ * its fallback are resolved in one query, so an English visitor still sees
+ * Vietnamese-only posts instead of an empty page.
  */
-export async function fetchAllPublishedContent(event: H3Event): Promise<HubPublicContent[]> {
-  const items: HubPublicContent[] = []
-  const seenCursors = new Set<string>()
-  let cursor: string | undefined
+export async function fetchPublicContentList(
+  event: H3Event,
+  options: PublicContentListOptions = {},
+): Promise<PublicContentListResult> {
+  const limit = Math.min(Math.max(Math.trunc(options.limit ?? 12), 1), 50)
+  const candidates = [...new Set(contentLocaleCandidates(options.locale))]
+  const sortDirection = options.sort === 'oldest' ? 1 : -1
 
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const result = await fetchPublicContentPage(event, { cursor, limit: 100 })
-    items.push(...result.items)
+  return withSiteDb(event, async () => {
+    const docs = await PublicContentModel.find(
+      buildPublishedListFilter({
+        type: options.type,
+        tag: options.tag,
+        category: options.category,
+        q: options.q,
+        cursor: options.cursor,
+        sort: options.sort,
+        localeIn: candidates,
+      }),
+      PUBLIC_CONTENT_LIST_PROJECTION,
+    )
+      .sort({ _id: sortDirection })
+      .limit(limit + 1)
+      .lean()
 
-    if (!result.nextCursor || seenCursors.has(result.nextCursor)) break
-    seenCursors.add(result.nextCursor)
-    cursor = result.nextCursor
-  }
+    const hasMore = docs.length > limit
+    const page = (hasMore ? docs.slice(0, limit) : docs) as unknown as PublicContentDoc[]
 
-  return items
+    const data: PublicContentListItem[] = []
+    for (const doc of page) {
+      for (const locale of candidates) {
+        const item = toPublicContentListItem(doc, locale)
+        if (item) {
+          data.push(item)
+          break
+        }
+      }
+    }
+
+    const last = page[page.length - 1]
+    const lastId = last && last._id ? String(last._id) : null
+
+    return {
+      data,
+      meta: { nextCursor: hasMore ? lastId : null, hasMore, limit },
+    }
+  })
+}
+
+/**
+ * Every published record once, for the sitemap. Storefront URLs are
+ * locale-free, so the locale is not a filter here.
+ */
+export async function fetchAllPublishedContent(event: H3Event): Promise<PublicContentEntry[]> {
+  return withSiteDb(event, async () => {
+    const docs = await PublicContentModel.find(
+      buildPublishedContentFilter({}),
+      PUBLIC_CONTENT_SITEMAP_FIELDS,
+    )
+      .sort({ updatedAt: -1, _id: -1 })
+      .lean()
+
+    const entries: PublicContentEntry[] = []
+    for (const doc of docs as unknown as PublicContentDoc[]) {
+      const entry = toPublicContentEntry(doc)
+      if (entry) entries.push(entry)
+    }
+    return entries
+  })
 }

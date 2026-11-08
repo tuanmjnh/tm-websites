@@ -9,6 +9,7 @@ const navLinks = computed(() => [
   { label: t('nav.categories'), to: '/categories' },
   { label: t('nav.about'), to: '/about' },
   { label: t('nav.contact'), to: '/contact' },
+  { label: t('nav.search'), to: '/tim-kiem' },
 ])
 
 const isActive = (to: string) => to === '/' ? route.path === '/' : route.path.startsWith(to)

@@ -29,9 +29,42 @@ export default defineNuxtConfig({
     '@nuxtjs/i18n',
     '@pinia/nuxt',
     '@vueuse/nuxt',
+    '@vite-pwa/nuxt',
     // Must stay last: generates .nuxt/eslint.config.mjs consumed by eslint.config.mjs
     '@nuxt/eslint',
   ],
+
+  // Offline shell for the storefront. Customer identity (name, colours, icons)
+  // lives in each customer layer's public/manifest.webmanifest; this block only
+  // holds tenant-agnostic behaviour, so a build cannot emit another tenant's brand.
+  pwa: {
+    // Never served from `nuxt dev`: a localhost worker would survive redeploys
+    // and shadow the next build's assets wiped by `cache:clear`.
+    disable: Boolean(process.env.TM_PWA_DISABLED) || process.env.NODE_ENV !== 'production',
+    registerType: 'autoUpdate',
+    // Point at the customer layer's static manifest instead of generating one
+    // here, and let that layer own its icons.
+    manifest: false,
+    includeManifestIcons: false,
+    injectRegister: false,
+    // Hand-written worker: generateSW's `navigateFallback` answers every route
+    // with one precached document, which is wrong for an SSR storefront.
+    strategies: 'injectManifest',
+    srcDir: resolve(appDir, 'service-worker'),
+    filename: 'sw.ts',
+    injectManifest: {
+      // Hashed client assets plus the customer's shell files. SSR documents are
+      // never matched, so no rendered page can end up in this manifest; the
+      // offline page is cached by the worker itself to keep its `.html` URL.
+      globPatterns: ['**/*.{js,css,woff2,webmanifest,png,svg,ico}'],
+    },
+    // Serves `/sw.js` with must-revalidate, so a new deployment is picked up on
+    // the next visit instead of being pinned by an HTTP cache.
+    registerWebManifestInRouteRules: true,
+    devOptions: {
+      enabled: false,
+    },
+  },
 
   i18n: {
     // i18n v10 resolves `file` from <rootDir>/i18n/locales/ by default
@@ -84,7 +117,6 @@ export default defineNuxtConfig({
     },
     '/api/_internal/**': { cache: false },
     '/api/auth/**': { cache: false },
-
   },
 
   typescript: {

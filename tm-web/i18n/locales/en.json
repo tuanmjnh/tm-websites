@@ -20,7 +20,8 @@
     "categories": "Categories",
     "about": "About",
     "contact": "Contact",
-    "switchLanguage": "Switch language"
+    "switchLanguage": "Switch language",
+    "search": "Search"
   },
   "home": {
     "seo": {
@@ -104,11 +105,53 @@
   "content": {
     "updatedAt": "Updated"
   },
+  "post": {
+    "indexTitle": "Journal",
+    "indexSubtitle": "News, guides and stories from the store",
+    "filterTag": "Tag: {tag}",
+    "clearFilter": "Clear filter",
+    "empty": "No posts published yet",
+    "unavailable": "The post list could not be loaded. Please try again shortly.",
+    "readMore": "Read more",
+    "loadMore": "Load more posts",
+    "searchTitle": "Results for “{q}”",
+    "searchPlaceholder": "Search articles…",
+    "searchAction": "Search",
+    "searchEmpty": "No article matches “{q}”",
+    "filterQuery": "Query: {q}"
+  },
   "error": {
     "notFoundTitle": "Page not found",
     "notFoundDescription": "The page you are looking for does not exist, was removed, or is not published yet.",
     "serverTitle": "Unable to load this page",
     "serverDescription": "Something went wrong while loading the content. Please try again shortly.",
     "backHome": "Back to home"
+  },
+  "tag": {
+    "subtitle": "Articles tagged “{tag}”",
+    "empty": "No article carries the tag “{tag}” yet"
+  },
+  "categoryContent": {
+    "subtitle": "Articles and pages in the “{name}” category",
+    "empty": "The “{name}” category has no published content yet"
+  },
+  "search": {
+    "indexTitle": "Search",
+    "title": "Results for “{q}”",
+    "subtitle": "Search the store’s articles, pages and products",
+    "placeholder": "Type a keyword…",
+    "action": "Search",
+    "hint": "Type a keyword to search articles, pages and products.",
+    "empty": "No result matches “{q}”.",
+    "contentSection": "Articles & pages",
+    "productSection": "Products",
+    "viewAllContent": "View all articles",
+    "viewAllProducts": "View all products",
+    "productsUnavailable": "The catalog is not connected, so results only include articles and pages."
+  },
+  "contentType": {
+    "page": "Page",
+    "post": "Article",
+    "fragment": "Content block"
   }
 }

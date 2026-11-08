@@ -20,7 +20,8 @@
     "categories": "Danh mục",
     "about": "Giới thiệu",
     "contact": "Liên hệ",
-    "switchLanguage": "Đổi ngôn ngữ"
+    "switchLanguage": "Đổi ngôn ngữ",
+    "search": "Tìm kiếm"
   },
   "home": {
     "seo": {
@@ -104,11 +105,53 @@
   "content": {
     "updatedAt": "Cập nhật"
   },
+  "post": {
+    "indexTitle": "Bài viết",
+    "indexSubtitle": "Tin tức, hướng dẫn và câu chuyện từ cửa hàng",
+    "filterTag": "Thẻ: {tag}",
+    "clearFilter": "Bỏ lọc",
+    "empty": "Chưa có bài viết nào được đăng",
+    "unavailable": "Chưa tải được danh sách bài viết. Vui lòng thử lại sau.",
+    "readMore": "Đọc tiếp",
+    "loadMore": "Xem thêm bài viết",
+    "searchTitle": "Kết quả cho “{q}”",
+    "searchPlaceholder": "Tìm bài viết…",
+    "searchAction": "Tìm",
+    "searchEmpty": "Không có bài viết nào khớp với “{q}”",
+    "filterQuery": "Từ khoá: {q}"
+  },
   "error": {
     "notFoundTitle": "Không tìm thấy trang",
     "notFoundDescription": "Trang bạn tìm không tồn tại, đã được gỡ hoặc chưa được xuất bản.",
     "serverTitle": "Không thể tải trang",
     "serverDescription": "Đã xảy ra lỗi khi tải nội dung. Vui lòng thử lại sau ít phút.",
     "backHome": "Về trang chủ"
+  },
+  "tag": {
+    "subtitle": "Các bài viết được gắn thẻ “{tag}”",
+    "empty": "Chưa có bài viết nào mang thẻ “{tag}”"
+  },
+  "categoryContent": {
+    "subtitle": "Bài viết và trang trong danh mục “{name}”",
+    "empty": "Danh mục “{name}” chưa có nội dung nào được đăng"
+  },
+  "search": {
+    "indexTitle": "Tìm kiếm",
+    "title": "Kết quả cho “{q}”",
+    "subtitle": "Tìm trong bài viết, trang và sản phẩm của cửa hàng",
+    "placeholder": "Nhập từ khoá…",
+    "action": "Tìm",
+    "hint": "Nhập từ khoá để tìm bài viết, trang và sản phẩm.",
+    "empty": "Không tìm thấy kết quả nào cho “{q}”.",
+    "contentSection": "Bài viết & trang",
+    "productSection": "Sản phẩm",
+    "viewAllContent": "Xem tất cả bài viết",
+    "viewAllProducts": "Xem tất cả sản phẩm",
+    "productsUnavailable": "Danh mục sản phẩm chưa được kết nối nên kết quả chỉ gồm bài viết và trang."
+  },
+  "contentType": {
+    "page": "Trang",
+    "post": "Bài viết",
+    "fragment": "Khối nội dung"
   }
 }

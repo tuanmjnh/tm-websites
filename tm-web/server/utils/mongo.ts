@@ -82,9 +82,16 @@ export async function connectMongo(target: MongoTarget): Promise<typeof mongoose
   return mongoose
 }
 
-/** Requires the catalog binding and runs `handler` against a live connection. */
-export async function withCatalogDb<T>(event: H3Event, handler: () => Promise<T>): Promise<T> {
+/**
+ * Requires the site binding and runs `handler` against a live connection.
+ * Catalog and content live in the same customer database, so the storefront
+ * features share one pooled connection instead of opening a second one.
+ */
+export async function withSiteDb<T>(event: H3Event, handler: () => Promise<T>): Promise<T> {
   const target = requireMongoTarget(event)
   await connectMongo(target)
   return handler()
 }
+
+/** Catalog-facing alias kept for the existing catalog service imports. */
+export const withCatalogDb = withSiteDb

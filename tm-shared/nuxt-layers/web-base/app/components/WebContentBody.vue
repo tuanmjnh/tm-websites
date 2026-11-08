@@ -1,41 +1,33 @@
 <script setup lang="ts">
-import { toPublicContentView, type HubPublicContent } from '@tm/flow-contracts'
+import type { PublicContent } from '@tm/flow-contracts/content-public'
 import { sanitizePublicHtml } from '@tm/flow-utils/html'
 import { renderSafeMarkdown } from '@tm/flow-utils/markdown'
 
+/**
+ * Renders the body according to the format the editor chose. Both HTML and
+ * Markdown pass through their sanitizing renderer (HTML is allowlisted, Markdown
+ * escapes raw HTML and rejects unsafe links), and plain text is never parsed.
+ */
 const props = defineProps<{
-  content: HubPublicContent
+  content: PublicContent
 }>()
 
-const view = computed(() => toPublicContentView(props.content))
-
-const html = computed(() => (view.value.kind === 'html' ? sanitizePublicHtml(view.value.html) : ''))
-const markdown = computed(() => (view.value.kind === 'markdown' ? renderSafeMarkdown(view.value.markdown) : ''))
-const text = computed(() => (view.value.kind === 'text' ? view.value.text : ''))
-const sections = computed(() => (view.value.kind === 'sections' ? view.value.sections : []))
-const json = computed(() => (view.value.kind === 'json' ? view.value.json : ''))
+const html = computed(() => {
+  const body = props.content.body || ''
+  if (!body.trim()) return ''
+  if (props.content.format === 'html') return sanitizePublicHtml(body)
+  if (props.content.format === 'text') return ''
+  return renderSafeMarkdown(body)
+})
 </script>
 
 <template>
   <div class="web-content text-sm leading-7 text-default sm:text-base">
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <div v-if="view.kind === 'html'" class="web-content-html" v-html="html" />
-
-    <!-- eslint-disable-next-line vue/no-v-html -->
-    <div v-else-if="view.kind === 'markdown'" class="web-content-html" v-html="markdown" />
-
-    <p v-else-if="view.kind === 'text'" class="whitespace-pre-line">{{ text }}</p>
-
-    <div v-else-if="view.kind === 'sections'" class="space-y-6">
-      <section v-for="(section, index) in sections" :key="index">
-        <h2 v-if="section.heading" class="text-lg font-semibold text-highlighted">
-          {{ section.heading }}
-        </h2>
-        <p class="mt-2 whitespace-pre-line text-default">{{ section.body }}</p>
-      </section>
-    </div>
-
-    <pre v-else class="overflow-x-auto rounded-[6px] border border-default/60 bg-elevated/40 p-4 text-xs text-default"><code>{{ json }}</code></pre>
+    <div v-if="content.format !== 'text' && html" class="web-content-html" v-html="html" />
+    <p v-else-if="content.format === 'text' && content.body" class="whitespace-pre-line">
+      {{ content.body }}
+    </p>
   </div>
 </template>
 

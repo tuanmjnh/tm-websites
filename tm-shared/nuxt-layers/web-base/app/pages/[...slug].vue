@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { contentKeyFromPath, type HubPublicContent } from '@tm/flow-contracts'
+import { contentKeyFromPath } from '@tm/flow-contracts'
+import type { PublicContent } from '@tm/flow-contracts/content-public'
 import { buildCanonicalUrl, resolveSiteUrl } from '@tm/flow-utils/seo'
 
 const route = useRoute()
@@ -20,12 +21,14 @@ const contentEndpoint = computed(() => {
 })
 
 const { data, error } = await useAsyncData(
-  () => `public-content:${contentKey.value ?? 'invalid'}`,
+  () => `public-content:${contentKey.value ?? 'invalid'}:${locale.value}`,
   async () => {
-    const response = await $fetch<{ success: boolean, data: HubPublicContent }>(contentEndpoint.value)
+    const response = await $fetch<{ success: boolean, data: PublicContent }>(contentEndpoint.value, {
+      query: { locale: locale.value },
+    })
     return response.data
   },
-  { watch: [() => route.fullPath] },
+  { watch: [() => route.fullPath, locale] },
 )
 
 if (error.value) {
@@ -54,15 +57,14 @@ watch(error, (value) => {
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
 const canonical = computed(() => buildCanonicalUrl(baseUrl, route.path))
 
-const metadataImage = computed(() => {
-  const image = content.value?.metadata?.image
-  return typeof image === 'string' ? image : ''
-})
+const seoTitle = computed(() => content.value?.seo.title || content.value?.title || '')
+const seoDescription = computed(() => content.value?.seo.description || content.value?.excerpt || '')
+const categoryLabel = computed(() => content.value?.categories[0] || '')
 
-const ogImage = computed(() => resolveSiteUrl(baseUrl, metadataImage.value || '/branding/og-cover.png'))
+const ogImage = computed(() => resolveSiteUrl(baseUrl, content.value?.seo.image || '/branding/og-cover.png'))
 
 const formattedDate = computed(() => {
-  const value = content.value?.updatedAt
+  const value = content.value?.publishedAt || content.value?.updatedAt
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -70,13 +72,15 @@ const formattedDate = computed(() => {
 })
 
 useSeoMeta({
-  title: () => content.value?.title || '',
-  description: () => content.value?.description || '',
-  ogTitle: () => content.value?.title || '',
-  ogDescription: () => content.value?.description || '',
+  title: () => seoTitle.value,
+  description: () => seoDescription.value,
+  ogTitle: () => seoTitle.value,
+  ogDescription: () => seoDescription.value,
   ogType: 'article',
   ogUrl: () => canonical.value,
   ogImage: () => ogImage.value,
+  articlePublishedTime: () => content.value?.publishedAt || undefined,
+  articleModifiedTime: () => content.value?.updatedAt || undefined,
   twitterCard: 'summary_large_image',
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
@@ -93,12 +97,14 @@ useHead(() => {
 
   const structuredData = {
     '@context': 'https://schema.org',
-    '@type': 'WebPage',
+    '@type': current.type === 'post' ? 'Article' : 'WebPage',
     name: current.title,
-    description: current.description || undefined,
+    headline: current.type === 'post' ? current.title : undefined,
+    description: seoDescription.value || undefined,
     url: canonical.value,
+    datePublished: current.publishedAt || undefined,
     dateModified: current.updatedAt || undefined,
-    inLanguage: locale.value,
+    inLanguage: current.locale,
     isPartOf: {
       '@type': 'WebSite',
       name: customer.value?.companyName || '',
@@ -129,18 +135,18 @@ useHead(() => {
 
     <header class="mb-8 border-b border-default/50 pb-6">
       <div
-        v-if="content.category"
+        v-if="categoryLabel"
         class="mb-3 inline-flex items-center rounded-[4px] border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary"
       >
-        {{ content.category }}
+        {{ categoryLabel }}
       </div>
 
       <h1 class="text-3xl font-extrabold tracking-tight text-highlighted sm:text-4xl">
         {{ content.title }}
       </h1>
 
-      <p v-if="content.description" class="mt-3 text-sm text-muted sm:text-base">
-        {{ content.description }}
+      <p v-if="content.excerpt" class="mt-3 text-sm text-muted sm:text-base">
+        {{ content.excerpt }}
       </p>
 
       <p v-if="formattedDate" class="mt-3 text-xs text-muted">
@@ -149,5 +155,16 @@ useHead(() => {
     </header>
 
     <WebContentBody :content="content" />
+
+    <footer v-if="content.tags.length" class="mt-10 flex flex-wrap gap-2 border-t border-default/50 pt-6">
+      <NuxtLink
+        v-for="tag in content.tags"
+        :key="tag"
+        :to="`/tag/${encodeURIComponent(tag)}`"
+        class="inline-flex items-center rounded-[4px] border border-default/60 bg-elevated/40 px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-primary/50 hover:text-primary"
+      >
+        {{ tag }}
+      </NuxtLink>
+    </footer>
   </article>
 </template>

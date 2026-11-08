@@ -4,10 +4,10 @@
   "type": "module",
   "main": "./nuxt.config.ts",
   "dependencies": {
-    "@tm/nuxt-layer-core": "workspace:*",
+    "@tm/flow-contracts": "workspace:*",
+    "@tm/flow-utils": "workspace:*",
     "@tm/nuxt-layer-api-base": "workspace:*",
     "@tm/nuxt-layer-config-base": "workspace:*",
-    "@tm/flow-contracts": "workspace:*",
-    "@tm/flow-utils": "workspace:*"
+    "@tm/nuxt-layer-core": "workspace:*"
   }
 }
