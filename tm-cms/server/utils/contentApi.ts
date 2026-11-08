@@ -6,6 +6,7 @@ import type { AuditEntryDocument } from '#server/models/audit'
 import type { ContentRevisionDocument } from '#server/models/revision'
 import { CategoryServiceError } from '#server/services/categoryService'
 import { MediaServiceError } from '#server/services/mediaService'
+import { MenuServiceError } from '#server/services/menuService'
 import { ContentServiceError } from '#server/services/contentService'
 import { MediaStorageError } from './mediaStorage'
 import { IdempotencyError, normalizeIdempotencyKey } from './idempotency'
@@ -39,6 +40,13 @@ export const MediaListQuerySchema = z.object({
 })
 
 export const MediaUpdateBodySchema = z.record(z.string(), z.unknown())
+
+/** Menu writes are validated in the service, where the invariant codes live. */
+export const MenuBodySchema = z.record(z.string(), z.unknown())
+
+export const MenuDeleteQuerySchema = z.object({
+  revision: z.coerce.number().int().min(1),
+})
 
 export const MediaDeleteQuerySchema = z.object({
   revision: z.coerce.number().int().min(1),
@@ -79,6 +87,9 @@ export function translateContentError(error: unknown): never {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof CategoryServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof MenuServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof MediaServiceError) {

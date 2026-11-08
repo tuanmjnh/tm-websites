@@ -7,6 +7,7 @@ import { syncCategoryIndexes } from './category'
 import { syncContentRevisionIndexes } from './revision'
 import { syncMediaIndexes } from './media'
 import { syncSettingsIndexes } from './settings'
+import { syncMenuIndexes } from './menu'
 
 /**
  * Migration-version records. Every schema change that ships must carry a stable
@@ -208,6 +209,17 @@ export const MIGRATIONS: readonly Migration[] = [
     checksum: 'settings-indexes@1',
     apply: async (connection) => {
       await syncSettingsIndexes(connection)
+    },
+  },
+  {
+    // P2.d: site menus in their own collection. The unique (site, key) index is
+    // what makes a duplicate `main` menu a conflict, and `menus` is left to the
+    // legacy documents until the import slice.
+    id: 'menu-indexes',
+    version: 7,
+    checksum: 'menu-indexes@2',
+    apply: async (connection) => {
+      await syncMenuIndexes(connection)
     },
   },
 ]

@@ -316,12 +316,23 @@ Still open in P2.c: audit covers content only, the retention periods are placeho
 
 Verified over HTTP on `:4005` (defaults, first save, idempotent replay, `409`, `422` cases, audit rows) and in the browser (card render, save → revision 1, unchanged message, stale-form conflict message). Probe document, audit entries and idempotency keys were removed afterwards.
 
-Open items: Hub roles need `configs.write` for a real admin to save; menus and the public projection are still missing; only `sentuan` was exercised (Q2). The logo/default SEO image are picked from the media library in a dialog (verified in the browser with a probe upload, since removed).
+Open items: Hub roles need `configs.write` for a real admin to save; the public projection is still missing; only `sentuan` was exercised (Q2). The logo/default SEO image are picked from the media library in a dialog (verified in the browser with a probe upload, since removed).
+
+### P2.d (rest) — site menus (landed 2026-11-08)
+
+| Slice | Evidence |
+| --- | --- |
+| Site-scoped menus in their own `site_menus` collection (immutable slug key, ordered items <=30, per-locale label, `content`/`category`/`url` link), unique `(siteId, key)`, migration `menu-indexes` v7 | `tm-cms/server/models/menu.ts`, `flow-contracts/src/menu-admin.ts` |
+| `GET`/`POST /api/v1/admin/menus`, `GET`/`PATCH`/`DELETE /:id` with `configs.read`/`configs.write`, revision lock, idempotency and one `audit_logs` entry (`resourceType: menu`) per mutation | `tm-cms/server/services/menuService.ts`, `tm-cms/server/api/v1/admin/menus/*` |
+| `/menus` editor: menu list, name, ordered items with up/down/edit/remove, item dialog with per-type target hints, unsaved marker, delete confirmation; nav entry and audit filter option | `cms-base/app/pages/menus.vue`, `.../composables/useMenuAdmin.ts`, `tm-cms/i18n/locales/{vi,en}.json` |
+| Suites: `pnpm test:menus` 12 live checks | `scripts/build/test-menu-service.ts` |
+
+The collection is `site_menus` because every migrated database already contains the legacy shop `menus` documents (9 in `sen-tuan`, none with a `siteId`); they all collided on the new unique index, so they stay untouched until the import slice. Verified over HTTP (`201`/`409`/`422`/`403`/`401`, idempotent replay) and in the browser (add item, reorder, save -> `Revision 3`/`4`, create and delete through the dialogs); probe menus, audit rows and keys were removed afterwards. Still open: no public projection or storefront navigation yet, items cannot nest, there is no drag-and-drop ordering, no bulk actions, and links are not validated against existing content/category records (a typo saves and simply 404s later).
 
 ## Next slices
 
 1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub. The settings document already holds the contact address a form would notify.
-2. **P2.d — settings leftovers**: the site settings document (company, SEO defaults, locales, modules) now sits on the same model + audit + idempotency pattern; what remains is menus, a media picker for the logo/default image, the public projection and enabling `default`/`thanhtung`/`hoangvi` once Q2 names their databases.
+2. **SYS-02 public projection**: menus and the settings document now exist (`site_menus`, `settings`); what remains is the read-side projection the storefront would consume (site name, SEO defaults, logo, header/footer navigation) and enabling `default`/`thanhtung`/`hoangvi` once Q2 names their databases.
 3. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
 4. **P2.c (rest) — retention scheduling**: `pnpm prune:retention` exists but needs Q16's periods and a scheduler (Q12) before a site can rely on it; category/media still lack a per-record history endpoint.
 

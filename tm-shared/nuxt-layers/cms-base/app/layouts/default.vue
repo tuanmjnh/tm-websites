@@ -25,6 +25,7 @@ const navItems = computed(() => [
   ...gatedModuleItems('aiWorkspace'),
   ...(hasCapability('users.read') ? [{ label: t('nav.users'), icon: 'i-lucide-users', to: '/users' }] : []),
   ...(hasCapability('roles.read') ? [{ label: t('nav.roles'), icon: 'i-lucide-shield-check', to: '/roles' }] : []),
+  ...(hasCapability('configs.read') ? [{ label: t('nav.menus'), icon: 'i-lucide-list-tree', to: '/menus' }] : []),
   ...(hasCapability('configs.read') ? [{ label: t('nav.configs'), icon: 'i-lucide-key-round', to: '/configs' }] : []),
   ...(hasCapability('routes.read') ? [{ label: t('nav.routes'), icon: 'i-lucide-route', to: '/routes' }] : []),
   ...(hasCapability('connections.read') ? [{ label: t('nav.connections'), icon: 'i-lucide-cable', to: '/connections' }] : []),

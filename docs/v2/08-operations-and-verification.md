@@ -287,6 +287,18 @@ TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=sen-tuan \
 
 Defaults are conservative placeholders (50 snapshots per record, 365 days of audit) and stay dry-run unless `--apply` is passed. The real periods are still an owner decision (Q16). Coverage: `pnpm test:retention` (5 checks, disposable database).
 
+### Site menus smoke (P2.d)
+
+| Step | Expected |
+| --- | --- |
+| Open `/menus` as a session with `configs.read` | The menu list (key + item count) or the empty state; *New menu* only appears with `configs.write` |
+| Create a menu with key `Menu chinh` | The key is stored as `menu-chinh`; the new menu opens with 0 items and `Revision 1`; a second menu with the same key -> `409` shown in the dialog |
+| Add an item with a vi/en label, pick a link type, type a target | The item appears in the list with its type badge; a URL target without a leading `/` is refused with the reason, and the dialog stays open |
+| Reorder with the arrows and press *Save Changes* | `Revision` increments on the page and in `GET /api/v1/admin/menus/:id`; the stored order matches the list; reloading shows no unsaved marker |
+| Save from a form another admin already changed | The conflict message is shown and the page reloads the current revision |
+| *Delete menu*, confirm | The menu disappears from the list; the audit page shows the `delete` row with the session actor; linked pages are untouched |
+| Database check | Menus live in `site_menus`; a migrated database's legacy `menus` documents are **not** touched or indexed |
+
 ### Site settings smoke (P2.d)
 
 | Check | Expected |

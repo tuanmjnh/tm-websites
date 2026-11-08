@@ -77,7 +77,8 @@
     "routes": "Tuyến đường ứng dụng",
     "connections": "Tích hợp",
     "settings": "Cấu hình hệ thống",
-    "categories": "Danh mục"
+    "categories": "Danh mục",
+    "menus": "Menu điều hướng"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -303,6 +304,65 @@
         "notFound": "Không tìm thấy danh mục",
         "keyRequired": "Cần nhập khóa danh mục",
         "nameRequired": "Cần nhập tên cho ít nhất một ngôn ngữ"
+      }
+    },
+    "menus": {
+      "title": "Menu điều hướng",
+      "description": "Menu đầu trang và chân trang của site",
+      "empty": "Chưa có menu nào",
+      "permissionDenied": "Bạn không có quyền xem menu",
+      "create": "Tạo menu",
+      "createTitle": "Tạo menu mới",
+      "created": "Đã tạo menu",
+      "saved": "Đã lưu menu",
+      "deleted": "Đã xoá menu",
+      "selectHint": "Chọn một menu để sửa",
+      "itemCount": "{count} mục",
+      "revision": "Phiên bản",
+      "itemsHint": "Các mục hiển thị theo đúng thứ tự trong danh sách",
+      "addItem": "Thêm mục",
+      "noItems": "Menu này chưa có mục nào",
+      "applyItem": "Áp dụng",
+      "moveUp": "Lên",
+      "moveDown": "Xuống",
+      "remove": "Bỏ mục",
+      "deleteMenu": "Xoá menu",
+      "deleteTitle": "Xoá menu",
+      "deleteHint": "Xoá menu “{name}”? Các trang được liên kết không bị ảnh hưởng.",
+      "unsaved": "Có thay đổi chưa lưu",
+      "itemCreateTitle": "Thêm mục menu",
+      "itemEditTitle": "Sửa mục menu",
+      "keyHint": "Khoá cố định, không đổi được sau khi tạo (main, footer...)",
+      "fields": {
+        "key": "Khoá",
+        "name": "Tên",
+        "type": "Loại liên kết",
+        "target": "Đích"
+      },
+      "types": {
+        "content": "Nội dung",
+        "category": "Danh mục",
+        "url": "Đường dẫn"
+      },
+      "targetHints": {
+        "content": "Key của nội dung, ví dụ gioi-thieu",
+        "category": "Key của danh mục, ví dụ trang-suc",
+        "url": "Đường dẫn bắt đầu bằng / hoặc URL đầy đủ"
+      },
+      "errors": {
+        "keyExists": "Khoá này đã được dùng cho menu khác",
+        "keyInvalid": "Khoá menu không hợp lệ",
+        "nameRequired": "Cần nhập tên menu",
+        "revisionConflict": "Menu đã được người khác sửa, hãy tải lại",
+        "unchanged": "Không có thay đổi nào để lưu",
+        "keyImmutable": "Không thể đổi khoá sau khi tạo",
+        "itemsLimit": "Mỗi menu tối đa 30 mục",
+        "labelRequired": "Cần ít nhất một nhãn cho mục này",
+        "labelInvalid": "Nhãn quá dài",
+        "targetInvalid": "Đích không hợp lệ với loại liên kết",
+        "targetRequired": "Cần nhập đích liên kết",
+        "payloadInvalid": "Dữ liệu menu không hợp lệ",
+        "notFound": "Không tìm thấy menu"
       }
     },
     "content": {

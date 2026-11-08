@@ -77,7 +77,8 @@
     "routes": "App Routes",
     "connections": "Integrations",
     "settings": "Settings",
-    "categories": "Categories"
+    "categories": "Categories",
+    "menus": "Menus"
   },
   "dashboard": {
     "title": "Control Center",
@@ -303,6 +304,65 @@
         "notFound": "Category not found",
         "keyRequired": "Enter a category key",
         "nameRequired": "Enter a name for at least one locale"
+      }
+    },
+    "menus": {
+      "title": "Navigation menus",
+      "description": "The site's header and footer navigation",
+      "empty": "No menus yet",
+      "permissionDenied": "You do not have permission to view menus",
+      "create": "New menu",
+      "createTitle": "Create a menu",
+      "created": "Menu created",
+      "saved": "Menu saved",
+      "deleted": "Menu deleted",
+      "selectHint": "Select a menu to edit",
+      "itemCount": "{count} items",
+      "revision": "Revision",
+      "itemsHint": "Items render in the order listed here",
+      "addItem": "Add item",
+      "noItems": "This menu has no items yet",
+      "applyItem": "Apply",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove",
+      "deleteMenu": "Delete menu",
+      "deleteTitle": "Delete menu",
+      "deleteHint": "Delete the menu “{name}”? Pages it links to are not affected.",
+      "unsaved": "Unsaved changes",
+      "itemCreateTitle": "Add a menu item",
+      "itemEditTitle": "Edit menu item",
+      "keyHint": "Fixed after creation (main, footer...)",
+      "fields": {
+        "key": "Key",
+        "name": "Name",
+        "type": "Link type",
+        "target": "Target"
+      },
+      "types": {
+        "content": "Content",
+        "category": "Category",
+        "url": "URL"
+      },
+      "targetHints": {
+        "content": "The content key, e.g. gioi-thieu",
+        "category": "The category key, e.g. trang-suc",
+        "url": "A path starting with / or a full URL"
+      },
+      "errors": {
+        "keyExists": "Another menu already uses this key",
+        "keyInvalid": "The menu key is not valid",
+        "nameRequired": "A menu name is required",
+        "revisionConflict": "The menu was changed by someone else; reload before saving",
+        "unchanged": "There is nothing to save",
+        "keyImmutable": "The key cannot change after creation",
+        "itemsLimit": "A menu holds at most 30 items",
+        "labelRequired": "At least one label is required",
+        "labelInvalid": "The label is too long",
+        "targetInvalid": "The target does not match the link type",
+        "targetRequired": "A link target is required",
+        "payloadInvalid": "The menu payload is not valid",
+        "notFound": "Menu not found"
       }
     },
     "content": {

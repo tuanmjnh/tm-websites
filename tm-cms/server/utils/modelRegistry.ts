@@ -6,6 +6,7 @@ import type { IdempotencyRecordDocument } from '../models/idempotency'
 import type { CategoryDocument } from '../models/category'
 import type { MediaDocument } from '../models/media'
 import type { SiteSettingsDocument } from '../models/settings'
+import type { MenuDocument } from '../models/menu'
 import type { ContentRevisionDocument } from '../models/revision'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -13,6 +14,7 @@ import { idempotencyModel, syncIdempotencyIndexes } from '../models/idempotency'
 import { categoryModel, syncCategoryIndexes } from '../models/category'
 import { mediaModel, syncMediaIndexes } from '../models/media'
 import { siteSettingsModel, syncSettingsIndexes } from '../models/settings'
+import { menuModel, syncMenuIndexes } from '../models/menu'
 import { contentRevisionModel, syncContentRevisionIndexes } from '../models/revision'
 import { MIGRATIONS, applyMigrations } from '../models/migrations'
 import { withCustomerDb } from './database'
@@ -31,6 +33,7 @@ export interface PreparedModels {
   Category: Model<CategoryDocument>
   Media: Model<MediaDocument>
   Settings: Model<SiteSettingsDocument>
+  Menu: Model<MenuDocument>
 }
 
 const preparation = new WeakMap<Connection, Promise<PreparedModels>>()
@@ -46,6 +49,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncCategoryIndexes(connection)
   await syncMediaIndexes(connection)
   await syncSettingsIndexes(connection)
+  await syncMenuIndexes(connection)
 
   if (migrations.applied.length > 0) {
     console.info(`[tm-db] applied migrations: ${migrations.applied.join(', ')}`)
@@ -59,6 +63,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     Category: categoryModel(connection),
     Media: mediaModel(connection),
     Settings: siteSettingsModel(connection),
+    Menu: menuModel(connection),
   }
 }
 
