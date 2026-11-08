@@ -47,6 +47,13 @@ export default defineNuxtConfig({
   runtimeConfig: {
     hubSecret: process.env.TM_HUB_SECRET || '',
     authMode: process.env.TM_AUTH_MODE || 'hub',
+    // Server-only customer database binding. The registry owns the database
+    // name; TM_MONGO_DB may only repeat it, never point at another customer.
+    mongoUri: process.env.TM_MONGO_URI || '',
+    mongoDbName: selected.mongoDbName || '',
+    mongoDbOverride: process.env.TM_MONGO_DB || '',
+    // Site that content records belong to; deployment-scoped, never request input.
+    siteId: process.env.TM_SITE_ID || selected.customerId || '',
     public: {
       hubUrl: process.env.TM_HUB_URL || 'http://localhost:4000',
       hubAppId: process.env.TM_CMS_APP_ID || selected.appId,

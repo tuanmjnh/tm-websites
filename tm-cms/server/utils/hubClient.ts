@@ -1,7 +1,9 @@
 import type { H3Event } from 'h3'
 import type { LoginRequest, UserSession } from '@tm/flow-contracts'
+import type { HubResponse } from 'tm-hub-client'
 import { UserSessionSchema } from '@tm/flow-contracts'
-import { getErrorStatus, resolveHubUrl } from '@tm/flow-utils/hub'
+import { getErrorStatus, getHubErrorCode } from '@tm/flow-utils/hub'
+import { HubClient } from 'tm-hub-client'
 
 export interface HubTokens {
   accessToken: string
@@ -11,7 +13,7 @@ export interface HubTokens {
 interface HubUserPayload {
   id?: string
   userId?: string
-  email: string
+  email?: string
   name?: string | null
   username?: string | null
   appId?: string
@@ -21,7 +23,7 @@ interface HubUserPayload {
   totpEnabled?: boolean
 }
 
-interface HubLoginData {
+interface HubAuthPayload {
   accessToken?: string
   refreshToken?: string
   expiresIn?: number
@@ -30,9 +32,14 @@ interface HubLoginData {
   pendingTotpToken?: string
 }
 
-interface HubResponse<T> {
-  success?: boolean
-  data?: T
+export interface HubAuthTransport {
+  auth: {
+    login: (credentials: { email: string, password: string, platform?: string }) => Promise<HubResponse<unknown>>
+    verifyTotp: (pendingTotpToken: string, code: string) => Promise<HubResponse<unknown>>
+    me: () => Promise<HubResponse<unknown>>
+    refresh: (refreshToken: string) => Promise<HubResponse<unknown>>
+    logout: (refreshToken?: string) => Promise<HubResponse<unknown>>
+  }
 }
 
 export class HubRequestError extends Error {
@@ -49,7 +56,15 @@ export class HubRequestError extends Error {
   }
 }
 
-export function getHubSettings(event: H3Event) {
+export interface HubSettings {
+  baseUrl: string
+  appId: string
+  tenantId: string
+  secret: string
+  authMode: string
+}
+
+export function getHubSettings(event: H3Event): HubSettings {
   const config = useRuntimeConfig(event)
   return {
     baseUrl: String(config.public.hubUrl || ''),
@@ -60,7 +75,29 @@ export function getHubSettings(event: H3Event) {
   }
 }
 
-function toHubRequestError(error: unknown) {
+export interface HubTransportConfig {
+  baseUrl: string
+  appId: string
+  accessToken?: string
+  fetch?: typeof globalThis.fetch
+}
+
+/**
+ * A transport is built per request and never shared: the SDK caches refresh
+ * state and permissions per instance, so a process-global client would leak one
+ * user's token into another request.
+ */
+export function createHubTransport(config: HubTransportConfig): HubClient {
+  const accessToken = config.accessToken
+  return new HubClient({
+    baseUrl: config.baseUrl,
+    appId: config.appId,
+    ...(accessToken ? { getAccessToken: () => accessToken } : {}),
+    ...(config.fetch ? { fetch: config.fetch } : {}),
+  })
+}
+
+export function toHubRequestError(error: unknown): HubRequestError {
   if (error instanceof HubRequestError) {
     return error
   }
@@ -73,50 +110,39 @@ function toHubRequestError(error: unknown) {
     return new HubRequestError(503, 'HUB_UNAVAILABLE', message)
   }
 
-  return new HubRequestError(statusCode, 'HUB_REQUEST_FAILED', message, body)
+  return new HubRequestError(statusCode, getHubErrorCode(error) || 'HUB_REQUEST_FAILED', message, body)
 }
 
-async function hubRequest<T>(
-  event: H3Event,
-  path: string,
-  options: {
-    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-    body?: unknown
-    headers?: HeadersInit
-    accessToken?: string
-  } = {},
-): Promise<T> {
-  const { baseUrl, appId, secret } = getHubSettings(event)
-
-  if (!baseUrl) {
-    throw new HubRequestError(503, 'HUB_NOT_CONFIGURED', 'TM_HUB_URL is not configured')
-  }
-
-  const headers = new Headers(options.headers)
-  headers.set('Accept', 'application/json')
-  if (appId) headers.set('X-App-Id', appId)
-  if (secret) headers.set('X-Api-Key', secret)
-  if (options.accessToken) headers.set('Authorization', `Bearer ${options.accessToken}`)
-
+async function runHubCall<T>(call: () => Promise<T>): Promise<T> {
   try {
-    return await $fetch(resolveHubUrl(baseUrl, path), {
-      method: options.method ?? 'GET',
-      body: options.body as Record<string, unknown> | undefined,
-      headers,
-    }) as T
+    return await call()
   } catch (error) {
     throw toHubRequestError(error)
   }
 }
 
-function mapHubUser(user: HubUserPayload, context: { appId: string, tenantId: string }): UserSession {
+export function mapHubUser(user: HubUserPayload, context: { appId: string, tenantId: string }): UserSession {
+  const claimedAppId = user.appId
+  if (claimedAppId && claimedAppId !== context.appId) {
+    throw new HubRequestError(403, 'APP_MISMATCH', 'TM Hub session belongs to a different application')
+  }
+
+  const id = user.id || user.userId
+  if (!id || !user.email) {
+    throw new HubRequestError(502, 'HUB_INVALID_RESPONSE', 'TM Hub did not return a complete user payload')
+  }
+
+  if (!context.tenantId) {
+    throw new HubRequestError(503, 'HUB_TENANT_UNCONFIGURED', 'TM_TENANT_ID is not configured for this deployment')
+  }
+
   return UserSessionSchema.parse({
-    id: user.id || user.userId,
+    id,
     email: user.email,
     name: user.name || user.email,
     username: user.username ?? undefined,
     tenantId: context.tenantId,
-    appId: user.appId || context.appId,
+    appId: context.appId,
     roles: user.roles ?? [],
     permissions: user.permissions ?? [],
     allowedRoutes: user.allowedRoutes ?? [],
@@ -128,24 +154,18 @@ export type HubLoginResult =
   | { totpRequired: true, pendingTotpToken: string }
   | { totpRequired: false, user: UserSession, tokens: HubTokens }
 
-export async function hubLogin(event: H3Event, credentials: LoginRequest): Promise<HubLoginResult> {
-  const { appId, tenantId } = getHubSettings(event)
+export async function loginViaHub(
+  transport: HubAuthTransport,
+  credentials: LoginRequest,
+  context: { appId: string, tenantId: string },
+): Promise<HubLoginResult> {
+  const payload = await runHubCall(() => transport.auth.login({
+    email: credentials.email,
+    password: credentials.password,
+    platform: 'web',
+  }))
 
-  if (!appId) {
-    throw new HubRequestError(503, 'HUB_APP_ID_MISSING', 'CMS app id is not configured')
-  }
-
-  const payload = await hubRequest<HubResponse<HubLoginData>>(event, '/api/v1/auth/login', {
-    method: 'POST',
-    body: {
-      appId,
-      email: credentials.email,
-      password: credentials.password,
-      platform: 'web',
-    },
-  })
-
-  const data = payload?.data
+  const data = payload?.data as HubAuthPayload | undefined
   if (!data) {
     throw new HubRequestError(502, 'HUB_INVALID_RESPONSE', 'TM Hub returned an empty login payload')
   }
@@ -164,68 +184,53 @@ export async function hubLogin(event: H3Event, credentials: LoginRequest): Promi
 
   return {
     totpRequired: false,
-    user: mapHubUser(data.user, { appId, tenantId }),
+    user: mapHubUser(data.user, context),
     tokens: {
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
-    } satisfies HubTokens,
+    },
   }
 }
 
-export async function hubTotpLogin(
-  event: H3Event,
+export async function totpLoginViaHub(
+  transport: HubAuthTransport,
   params: { pendingTotpToken: string, code: string },
+  context: { appId: string, tenantId: string },
 ): Promise<{ user: UserSession, tokens: HubTokens }> {
-  const { appId, tenantId } = getHubSettings(event)
+  const payload = await runHubCall(() => transport.auth.verifyTotp(params.pendingTotpToken, params.code))
+  const data = payload?.data as HubAuthPayload | undefined
 
-  const payload = await hubRequest<HubResponse<HubLoginData>>(event, '/api/v1/auth/totp/login', {
-    method: 'POST',
-    body: {
-      pendingTotpToken: params.pendingTotpToken,
-      code: params.code,
-    },
-  })
-
-  const data = payload?.data
   if (!data?.accessToken || !data.user) {
     throw new HubRequestError(502, 'HUB_INVALID_RESPONSE', 'TM Hub did not return a complete login payload')
   }
 
   return {
-    user: mapHubUser(data.user, { appId, tenantId }),
+    user: mapHubUser(data.user, context),
     tokens: {
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
-    } satisfies HubTokens,
+    },
   }
 }
 
-export async function hubFetchMe(event: H3Event, accessToken: string): Promise<UserSession> {
-  const { appId, tenantId } = getHubSettings(event)
-  const payload = await hubRequest<HubResponse<HubUserPayload>>(event, '/api/v1/auth/me', {
-    accessToken,
-  })
+export async function fetchMeViaHub(
+  transport: HubAuthTransport,
+  context: { appId: string, tenantId: string },
+): Promise<UserSession> {
+  const payload = await runHubCall(() => transport.auth.me())
+  const data = payload?.data as HubUserPayload | undefined
 
-  if (!payload?.data) {
+  if (!data) {
     throw new HubRequestError(401, 'UNAUTHENTICATED', 'TM Hub did not return a session')
   }
 
-  return mapHubUser(payload.data, { appId, tenantId })
+  return mapHubUser(data, context)
 }
 
-export async function hubRefresh(event: H3Event, refreshToken: string): Promise<HubTokens> {
-  const { appId } = getHubSettings(event)
+export async function refreshViaHub(transport: HubAuthTransport, refreshToken: string): Promise<HubTokens> {
+  const payload = await runHubCall(() => transport.auth.refresh(refreshToken))
+  const data = payload?.data as { accessToken?: string, refreshToken?: string } | undefined
 
-  const payload = await hubRequest<HubResponse<{ accessToken?: string, refreshToken?: string }>>(
-    event,
-    '/api/v1/auth/refresh',
-    {
-      method: 'POST',
-      body: { refreshToken, appId },
-    },
-  )
-
-  const data = payload?.data
   if (!data?.accessToken) {
     throw new HubRequestError(401, 'REFRESH_FAILED', 'Refresh token is invalid or expired')
   }
@@ -236,13 +241,57 @@ export async function hubRefresh(event: H3Event, refreshToken: string): Promise<
   }
 }
 
+async function transportForEvent(
+  event: H3Event,
+  options: { accessToken?: string } = {},
+): Promise<{ transport: HubClient, context: { appId: string, tenantId: string } }> {
+  const settings = getHubSettings(event)
+
+  if (!settings.baseUrl) {
+    throw new HubRequestError(503, 'HUB_NOT_CONFIGURED', 'TM_HUB_URL is not configured')
+  }
+
+  if (!settings.appId) {
+    throw new HubRequestError(503, 'HUB_APP_ID_MISSING', 'CMS app id is not configured')
+  }
+
+  return {
+    transport: createHubTransport({
+      baseUrl: settings.baseUrl,
+      appId: settings.appId,
+      accessToken: options.accessToken,
+    }),
+    context: { appId: settings.appId, tenantId: settings.tenantId },
+  }
+}
+
+export async function hubLogin(event: H3Event, credentials: LoginRequest): Promise<HubLoginResult> {
+  const { transport, context } = await transportForEvent(event)
+  return loginViaHub(transport, credentials, context)
+}
+
+export async function hubTotpLogin(
+  event: H3Event,
+  params: { pendingTotpToken: string, code: string },
+): Promise<{ user: UserSession, tokens: HubTokens }> {
+  const { transport, context } = await transportForEvent(event)
+  return totpLoginViaHub(transport, params, context)
+}
+
+export async function hubFetchMe(event: H3Event, accessToken: string): Promise<UserSession> {
+  const { transport, context } = await transportForEvent(event, { accessToken })
+  return fetchMeViaHub(transport, context)
+}
+
+export async function hubRefresh(event: H3Event, refreshToken: string): Promise<HubTokens> {
+  const { transport } = await transportForEvent(event)
+  return refreshViaHub(transport, refreshToken)
+}
+
 export async function hubLogout(event: H3Event, refreshToken: string) {
-  const { appId } = getHubSettings(event)
   try {
-    await hubRequest(event, '/api/v1/auth/logout', {
-      method: 'POST',
-      body: { refreshToken, appId },
-    })
+    const { transport } = await transportForEvent(event)
+    await transport.auth.logout(refreshToken)
   } catch {
     // Session cookies are cleared locally even when Hub revocation fails.
   }
@@ -255,6 +304,10 @@ export function translateHubAuthError(error: unknown): never {
 
   if (error.code === 'TOTP_REQUIRED') {
     return errorResponse(409, 'TOTP_REQUIRED', 'Tài khoản yêu cầu xác thực 2 lớp (TOTP)')
+  }
+
+  if (error.code === 'APP_MISMATCH') {
+    return errorResponse(403, 'APP_MISMATCH', 'Phiên đăng nhập không thuộc ứng dụng này')
   }
 
   if (error.statusCode === 400) {
@@ -283,6 +336,10 @@ export function translateHubAuthError(error: unknown): never {
 export function translateHubTotpError(error: unknown): never {
   if (!(error instanceof HubRequestError)) {
     throw error
+  }
+
+  if (error.code === 'APP_MISMATCH') {
+    return errorResponse(403, 'APP_MISMATCH', 'Phiên đăng nhập không thuộc ứng dụng này')
   }
 
   if (error.statusCode === 400) {

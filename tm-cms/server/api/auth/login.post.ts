@@ -1,6 +1,8 @@
 import { LoginRequestSchema } from '@tm/flow-contracts'
 
 export default defineEventHandler(async (event) => {
+  assertSameOriginMutation(event)
+
   const body = await readBody(event)
   const validation = LoginRequestSchema.safeParse(body)
 

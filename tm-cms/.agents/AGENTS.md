@@ -1,7 +1,5 @@
-# AGENTS.md — pointer
+# Agent guidance pointer
 
-The canonical guidance for AI coding agents in this repository is the root [`AGENTS.md`](../AGENTS.md).
+Read the [monorepo AGENTS.md](../../AGENTS.md) and [CMS-specific guidance](../AGENTS.md). The [canonical documentation index](../../docs/v2/README.md) defines the architecture and implementation roadmap.
 
-Read and follow it. Do not duplicate its content here — edit the root `AGENTS.md` directly so all agents stay in sync.
-
-Project-scoped skills for agents live in [`skills/`](./skills/).
+Project skills remain in [skills](skills/). Skill examples must not override the actual monorepo paths, ownership boundary or installed framework version.

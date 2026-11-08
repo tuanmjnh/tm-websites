@@ -15,7 +15,8 @@
     "records": "records",
     "loading_text": "Loading...",
     "no_more_data": "No more data",
-    "actions": "Actions"
+    "actions": "Actions",
+    "edit": "Edit"
   },
   "auth": {
     "loginDescription": "Sign in with the account provisioned by TM Hub to access the admin suite.",
@@ -75,7 +76,8 @@
     "mail": "Email Center",
     "routes": "App Routes",
     "connections": "Integrations",
-    "settings": "Settings"
+    "settings": "Settings",
+    "categories": "Categories"
   },
   "dashboard": {
     "title": "Control Center",
@@ -189,12 +191,54 @@
         "latest": "Latest activity"
       }
     },
+    "categories": {
+      "title": "Content categories",
+      "description": "One category tree shared by pages, posts and the storefront filters",
+      "create": "Create category",
+      "createTitle": "Create content category",
+      "editTitle": "Edit content category",
+      "created": "Category created",
+      "updated": "Category updated",
+      "deleted": "Category deleted",
+      "order": "Order",
+      "revision": "Revision",
+      "addChild": "Add child category",
+      "keyImmutable": "A category key cannot change after creation",
+      "empty": "No categories yet",
+      "permissionDenied": "This account cannot read content",
+      "root": "Top level",
+      "deleteTitle": "Delete category",
+      "deleteHint": "Delete the category “{name}”?",
+      "deleteGuard": "Only a category without children and without content using it can be deleted.",
+      "fields": {
+        "key": "Category key",
+        "parent": "Parent category",
+        "order": "Display order",
+        "name": "Display name",
+        "slug": "Slug"
+      },
+      "errors": {
+        "keyExists": "This category key is already used",
+        "slugExists": "This slug is already used for the same locale",
+        "parentNotFound": "The parent category does not exist",
+        "cycle": "A category cannot sit under itself or one of its descendants",
+        "depthExceeded": "The category tree exceeds the allowed depth",
+        "revisionConflict": "Someone else changed this category. The list was reloaded, please try again.",
+        "hasChildren": "This category still has children; move or delete them first",
+        "inUse": "Content still uses this category",
+        "keyImmutable": "The category key cannot change",
+        "payloadInvalid": "The category payload is invalid",
+        "notFound": "Category not found",
+        "keyRequired": "Enter a category key",
+        "nameRequired": "Enter a name for at least one locale"
+      }
+    },
     "content": {
       "title": "Content",
-      "description": "Website content records stored for this CMS application in TM Hub",
-      "search": "Search by key, title or category...",
+      "description": "Website content stored in the customer MongoDB, shared by the CMS and the public website",
+      "search": "Search by key, title or slug...",
       "listTitle": "Content entries",
-      "listDescription": "Select a record to inspect its published payload",
+      "listDescription": "Select a record to inspect, publish, schedule or archive it",
       "noEntries": "No content records match the current filters",
       "copied": "Content copied to clipboard",
       "copy": "Copy",
@@ -206,14 +250,20 @@
         "all": "All statuses",
         "published": "Published",
         "hidden": "Hidden",
-        "deleted": "Deleted"
+        "deleted": "Deleted",
+        "draft": "Draft",
+        "scheduled": "Scheduled",
+        "archived": "Archived"
       },
       "stats": {
         "total": "Records",
         "published": "Published",
         "hidden": "Hidden",
         "categories": "Categories",
-        "deleted": "Deleted"
+        "deleted": "Deleted",
+        "draft": "Drafts",
+        "scheduled": "Scheduled",
+        "archived": "Archived"
       },
       "create": "Create content",
       "editAction": "Edit",
@@ -233,7 +283,24 @@
       "restored": "Content record restored",
       "deleteConfirmTitle": "Delete content record?",
       "deleteConfirmText": "The record \"{title}\" will be soft-deleted and can be restored later.",
-      "softDeleteNote": "This is a soft delete: the record stays in Hub and can be restored.",
+      "softDeleteNote": "This is a soft delete: the record stays in the customer MongoDB and can be restored.",
+      "bulk": {
+        "selectAll": "Select every record",
+        "selected": "{count} selected",
+        "publish": "Publish",
+        "archive": "Archive",
+        "delete": "Delete",
+        "confirmTitle": "Bulk action: {count} records",
+        "confirm": {
+          "publish": "The selected records are published immediately and appear on the public site.",
+          "archive": "The selected records are archived and leave the public site.",
+          "delete": "The selected records are soft-deleted and can be restored later."
+        },
+        "run": "Confirm",
+        "close": "Close",
+        "done": "Processed {ok}/{total} records",
+        "duplicate": "This record is listed twice in the request"
+      },
       "permissionDenied": "Your account lacks content.read, so content cannot be listed.",
       "fields": {
         "key": "Content key",
@@ -250,7 +317,30 @@
         "dataJson": "JSON data",
         "dataText": "Text content",
         "dataJsonPlaceholder": "{'{'}\n  \"title\": \"...\"\n{'}'}",
-        "dataTextPlaceholder": "Enter Markdown, HTML or plain text..."
+        "dataTextPlaceholder": "Enter Markdown, HTML or plain text...",
+        "type": "Content type",
+        "slug": "URL slug",
+        "slugPlaceholder": "about-us",
+        "excerpt": "Excerpt",
+        "excerptPlaceholder": "Short summary shown in lists and SEO",
+        "body": "Body",
+        "format": "Body format",
+        "bodyPlaceholder": {
+          "markdown": "Write Markdown: # heading, **bold**, - list...",
+          "html": "Paste sanitized HTML (p, h2, ul, a tags...), no script or style tags...",
+          "text": "Plain text; line breaks are preserved..."
+        },
+        "seoTitle": "SEO title",
+        "seoDescription": "SEO description",
+        "tags": "Tags (comma separated)",
+        "tagsPlaceholder": "silver, gemstone",
+        "categories": "Categories",
+        "categoriesPlaceholder": "Pick categories",
+        "publishAt": "Start publishing",
+        "unpublishAt": "Stop publishing",
+        "media": "Attachments",
+        "mediaPlaceholder": "Pick files from the library",
+        "mediaEmpty": "No files in the library yet"
       },
       "contentTypes": {
         "json": "JSON",
@@ -264,29 +354,135 @@
         "description": "Description must be at most 2000 characters.",
         "category": "Category must be at most 100 characters.",
         "data": "Invalid data: JSON must be well-formed and cannot be empty."
+      },
+      "loadMore": "Load more",
+      "type": {
+        "all": "All types",
+        "page": "Page",
+        "post": "Post",
+        "fragment": "Fragment"
+      },
+      "locales": {
+        "vi": "Vietnamese",
+        "en": "English"
+      },
+      "scheduled": "Content scheduled",
+      "archived": "Content archived",
+      "scheduleTitle": "Schedule publication",
+      "scheduleHint": "Pick when the public website may serve this record. Until then it stays scheduled.",
+      "actions": {
+        "view": "View",
+        "edit": "Edit",
+        "publish": "Publish",
+        "unpublish": "Unpublish",
+        "schedule": "Schedule",
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete"
+      },
+      "audit": {
+        "create": "Created",
+        "update": "Edited",
+        "publish": "Published",
+        "schedule": "Scheduled",
+        "unpublish": "Unpublished",
+        "archive": "Archived",
+        "restore": "Restored",
+        "delete": "Deleted",
+        "revert": "Reverted to version"
+      },
+      "versions": {
+        "title": "Content versions",
+        "empty": "No versions stored yet",
+        "reload": "Reload",
+        "preview": "View",
+        "restore": "Restore",
+        "restored": "Restored the earlier version",
+        "changed": "Changed against the current version",
+        "noChanges": "No differences",
+        "previewTitle": "Version {revision}",
+        "diffBefore": "Before",
+        "diffAfter": "Current"
+      },
+      "detail": {
+        "key": "Content key",
+        "updated": "Last updated",
+        "publishedAt": "Published at",
+        "window": "Publishing window",
+        "revision": "Revision",
+        "history": "Activity",
+        "historyEmpty": "No changes recorded yet",
+        "historyReload": "Reload"
+      },
+      "errors": {
+        "keyExists": "Another record already uses this key",
+        "slugExists": "This slug is already used for the same locale",
+        "revisionConflict": "Someone else changed this record. The list was reloaded, please try again.",
+        "payloadInvalid": "The content payload is invalid",
+        "publishAtPast": "The scheduled time must be in the future",
+        "publishAtFuture": "This record is scheduled for the future and cannot be published now",
+        "publishAtRequired": "Pick a publication time",
+        "transitionInvalid": "That action is not allowed in the current status",
+        "notFound": "Content record not found",
+        "revisionNotFound": "Content version not found",
+        "revisionCurrent": "This is already the current version",
+        "revisionUnchanged": "This version matches the current content",
+        "localeRequired": "At least one locale needs a title or slug"
+      },
+      "format": {
+        "markdown": "Markdown",
+        "html": "HTML",
+        "text": "Plain text"
       }
     },
     "media": {
-      "title": "Media Library",
-      "description": "Images, video and digital assets served through the TM Hub media gateway",
-      "disabled": "The Media module is not enabled in this customer's subscription",
+      "title": "Media library",
+      "description": "Files are stored outside MongoDB and only allowlisted formats are served publicly",
+      "permissionDenied": "You do not have permission to view the media library",
+      "upload": "Upload files",
+      "uploading": "Uploading",
+      "uploadHint": "PNG, JPEG, WebP, AVIF, GIF or PDF · up to {size} MB per file",
+      "empty": "No files in the library yet",
+      "search": "Search by file name",
+      "allKinds": "All types",
+      "allFolders": "All folders",
       "root": "Root",
-      "upload": "Upload file",
-      "foldersTitle": "Folders",
-      "foldersDescription": "Select a folder to browse its contents",
-      "resourcesTitle": "Assets in view",
-      "resourcesDescription": "Records returned by the TM Hub media gateway",
-      "noResources": "No assets in this folder",
-      "stats": {
-        "resources": "Assets in view",
-        "folders": "Folders",
-        "images": "Images",
-        "storage": "Storage in view"
+      "loadMore": "Load more",
+      "kinds": {
+        "image": "Images",
+        "document": "Documents"
       },
-      "cloudinary": {
-        "title": "Media gateway not configured",
-        "description": "TM Hub could not reach Cloudinary for this application",
-        "hint": "Add the Cloudinary credentials to this app configuration in TM Hub to enable the media library."
+      "fields": {
+        "title": "Display name",
+        "alt": "Alternative text (alt)",
+        "folder": "Folder"
+      },
+      "editTitle": "Edit file details",
+      "deleteTitle": "Delete this file?",
+      "deleteDescription": "The file is removed from the library and from disk. This cannot be undone.",
+      "copyUrl": "Copy URL",
+      "urlCopied": "URL copied",
+      "uploaded": "Files uploaded",
+      "updated": "File details updated",
+      "deleted": "File deleted",
+      "stats": {
+        "resources": "Files",
+        "images": "Images",
+        "documents": "Documents",
+        "storage": "Size"
+      },
+      "errors": {
+        "typeNotAllowed": "This file type is not allowed (PNG, JPEG, WebP, AVIF, GIF, PDF)",
+        "sizeExceeded": "The file is larger than 5 MB",
+        "empty": "The file is empty",
+        "inUse": "This file is used by content; detach it from that content first",
+        "revisionConflict": "This file changed in another session; reload the library",
+        "updateUnchanged": "Nothing to save",
+        "notFound": "File not found",
+        "folderInvalid": "Folder name is not valid",
+        "titleInvalid": "Display name is too long",
+        "fileRequired": "Choose a file to upload",
+        "queryInvalid": "Library filter is not valid"
       }
     },
     "notifications": {

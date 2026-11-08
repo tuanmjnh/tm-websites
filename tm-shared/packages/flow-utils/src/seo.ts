@@ -58,6 +58,25 @@ export function buildSitemapEntries(baseUrl: string, pages: SitemapPage[]): Site
   return entries
 }
 
+/**
+ * robots.txt body for a deployment. A non-indexable deployment (preview) blocks
+ * every crawler; otherwise only the API and the query-dependent search page are
+ * excluded, and the sitemap is advertised on the canonical origin.
+ */
+export function buildRobotsTxt(baseUrl: string, indexable: boolean): string {
+  if (!indexable) return 'User-agent: *\nDisallow: /\n'
+
+  return [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /api/',
+    'Disallow: /tim-kiem',
+    '',
+    `Sitemap: ${normalizeSiteBaseUrl(baseUrl)}/sitemap.xml`,
+    '',
+  ].join('\n')
+}
+
 export function buildSitemapXml(entries: SitemapEntry[]): string {
   const urls = entries
     .map((entry) => {

@@ -1,260 +1,433 @@
 <script setup lang="ts">
-import type { HubMediaFolder, HubMediaResource } from '@tm/flow-contracts'
+import type { AdminMedia } from '@tm/flow-contracts/media-admin'
+import { MEDIA_MAX_BYTES, MEDIA_MIME_TYPES } from '@tm/flow-contracts/media-admin'
 
 const { t, locale } = useI18n()
-const { isModuleEnabled } = useCustomerConfig()
-const { fetchMediaFolders, fetchMediaResources, describeError, getHubErrorCode } = useHubAdmin()
+const toast = useToast()
+const { hasCapability } = useHub()
+const { list, upload, update, remove, errorCode } = useMediaAdmin()
 
-const enabled = computed(() => isModuleEnabled('media'))
+const canRead = computed(() => hasCapability('media.read'))
+const canUpload = computed(() => hasCapability('media.upload'))
+const canDelete = computed(() => hasCapability('media.delete'))
+
+const accept = MEDIA_MIME_TYPES.join(',')
+const maxMegabytes = Math.round(MEDIA_MAX_BYTES / (1024 * 1024))
 
 const loading = ref(false)
 const loadingMore = ref(false)
 const error = ref<string | null>(null)
-const cloudinaryMissing = ref(false)
+const items = ref<AdminMedia[]>([])
+const counts = ref<Record<string, number>>({})
+const folders = ref<string[]>([])
+const nextCursor = ref<string | null>(null)
+const hasMore = ref(false)
 
-const folders = ref<HubMediaFolder[]>([])
-const resources = ref<HubMediaResource[]>([])
-const currentFolder = ref<string | null>(null)
-const cursor = ref<string | null>(null)
-const canLoadMore = ref(false)
+const filters = reactive({
+  kind: 'all' as 'all' | 'image' | 'document',
+  folder: 'all',
+  q: '',
+})
 
-const formatBytes = (bytes: number) => {
+const fileInput = ref<HTMLInputElement | null>(null)
+const uploading = ref(false)
+const uploadError = ref<string | null>(null)
+const uploadProgress = ref('')
+
+const editOpen = ref(false)
+const editing = ref<AdminMedia | null>(null)
+const saving = ref(false)
+const editError = ref<string | null>(null)
+const editForm = reactive({ title: '', alt: '', folder: '' })
+
+const deleteOpen = ref(false)
+const deleting = ref<AdminMedia | null>(null)
+const deleteBusy = ref(false)
+const deleteError = ref<string | null>(null)
+
+const kindItems = computed(() => [
+  { label: t('admin.media.allKinds'), value: 'all' },
+  { label: t('admin.media.kinds.image'), value: 'image' },
+  { label: t('admin.media.kinds.document'), value: 'document' },
+])
+
+const folderItems = computed(() => [
+  { label: t('admin.media.allFolders'), value: 'all' },
+  { label: t('admin.media.root'), value: 'root' },
+  ...folders.value.map(folder => ({ label: folder, value: folder })),
+])
+
+const stats = computed(() => [
+  { label: t('admin.media.stats.resources'), value: String(counts.value.all ?? 0), icon: 'i-lucide-files' },
+  { label: t('admin.media.stats.images'), value: String(counts.value.image ?? 0), icon: 'i-lucide-image' },
+  { label: t('admin.media.stats.documents'), value: String(counts.value.document ?? 0), icon: 'i-lucide-file-text' },
+  { label: t('admin.media.stats.storage'), value: formatBytes(totalBytes.value), icon: 'i-lucide-hard-drive' },
+])
+
+const totalBytes = computed(() => items.value.reduce((sum, entry) => sum + entry.size, 0))
+
+const errorMessages: Record<string, string> = {
+  MEDIA_TYPE_NOT_ALLOWED: 'admin.media.errors.typeNotAllowed',
+  MEDIA_SIZE_EXCEEDED: 'admin.media.errors.sizeExceeded',
+  MEDIA_EMPTY: 'admin.media.errors.empty',
+  MEDIA_IN_USE: 'admin.media.errors.inUse',
+  MEDIA_REVISION_CONFLICT: 'admin.media.errors.revisionConflict',
+  MEDIA_UPDATE_UNCHANGED: 'admin.media.errors.updateUnchanged',
+  MEDIA_NOT_FOUND: 'admin.media.errors.notFound',
+  MEDIA_FOLDER_INVALID: 'admin.media.errors.folderInvalid',
+  MEDIA_TITLE_INVALID: 'admin.media.errors.titleInvalid',
+  MEDIA_FILE_REQUIRED: 'admin.media.errors.fileRequired',
+  MEDIA_QUERY_INVALID: 'admin.media.errors.queryInvalid',
+}
+
+const describeError = (cause: unknown) => {
+  const code = errorCode(cause)
+  if (code && errorMessages[code]) return t(errorMessages[code]!)
+  const status = (cause as { statusCode?: number, status?: number })?.statusCode
+    ?? (cause as { status?: number })?.status
+  if (status === 401) return t('admin.errors.unauthorized')
+  if (status === 403) return t('admin.errors.forbidden')
+  if (status === 404) return t('admin.errors.notFound')
+  if (!status) return t('admin.errors.network')
+  return t('admin.errors.generic')
+}
+
+function formatBytes(bytes: number) {
   if (!bytes) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const units = ['B', 'KB', 'MB', 'GB']
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
   return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`
 }
 
-const storageBytes = computed(() => resources.value.reduce((sum, item) => sum + (item.bytes || 0), 0))
+const displayName = (entry: AdminMedia) => entry.title || entry.originalName
 
-const stats = computed(() => [
-  { title: t('admin.media.stats.resources'), value: String(resources.value.length), icon: 'i-lucide-file-image' },
-  { title: t('admin.media.stats.folders'), value: String(folders.value.length), icon: 'i-lucide-folder' },
-  { title: t('admin.media.stats.images'), value: String(resources.value.filter(item => item.resource_type === 'image').length), icon: 'i-lucide-image' },
-  { title: t('admin.media.stats.storage'), value: formatBytes(storageBytes.value), icon: 'i-lucide-hard-drive' },
-])
+const folderLabel = (entry: AdminMedia) => entry.folder || t('admin.media.root')
 
-const formatTime = (value: string | null | undefined) => (value ? new Date(value).toLocaleString(locale.value) : '—')
-
-const displayName = (resource: HubMediaResource) =>
-  resource.filename || resource.public_id.split('/').pop() || resource.public_id
-
-const dimensions = (resource: HubMediaResource) =>
-  resource.width && resource.height ? `${resource.width}×${resource.height}` : resource.resource_type
-
-const isImage = (resource: HubMediaResource) => resource.resource_type === 'image' && Boolean(resource.secure_url)
-
-function handleError(cause: unknown) {
-  if (getHubErrorCode(cause) === 'error.cloudinaryNotConfigured') {
-    cloudinaryMissing.value = true
-    error.value = null
-    return
+function query(reset: boolean) {
+  return {
+    kind: filters.kind === 'all' ? undefined : filters.kind,
+    folder: filters.folder === 'all' ? undefined : filters.folder,
+    q: filters.q.trim() || undefined,
+    cursor: reset ? undefined : nextCursor.value ?? undefined,
+    limit: 24,
   }
-  cloudinaryMissing.value = false
-  error.value = describeError(cause)
 }
 
 async function load(reset = true) {
-  if (enabled.value === false) return
-  if (reset) {
-    loading.value = true
-    cursor.value = null
-    resources.value = []
-  } else {
-    loadingMore.value = true
-  }
+  if (!canRead.value) return
+  if (reset) loading.value = true
+  else loadingMore.value = true
   error.value = null
   try {
-    if (reset) {
-      const folderPayload = await fetchMediaFolders(currentFolder.value || undefined)
-      folders.value = folderPayload.folders.length ? folderPayload.folders : (folderPayload.data?.folders ?? [])
-    }
-    const payload = await fetchMediaResources({
-      folder: currentFolder.value || undefined,
-      limit: 24,
-      cursor: reset ? undefined : (cursor.value || undefined),
-    })
-    const items = payload.resources ?? []
-    if (reset) {
-      resources.value = items
-    } else {
-      const known = new Set(resources.value.map(item => item.public_id))
-      resources.value = [...resources.value, ...items.filter(item => !known.has(item.public_id))]
-    }
-    cursor.value = payload.nextCursor ?? null
-    canLoadMore.value = Boolean(payload.nextCursor)
-    cloudinaryMissing.value = false
+    const payload = await list(query(reset))
+    items.value = reset ? payload.data : [...items.value, ...payload.data]
+    counts.value = payload.meta?.counts ?? {}
+    folders.value = payload.meta?.folders ?? []
+    nextCursor.value = payload.meta?.nextCursor ?? null
+    hasMore.value = Boolean(payload.meta?.hasMore)
   } catch (cause) {
-    handleError(cause)
+    error.value = describeError(cause)
   } finally {
     loading.value = false
     loadingMore.value = false
   }
 }
 
-function openFolder(folder: HubMediaFolder) {
-  currentFolder.value = folder.path || folder.name
-  load(true)
+async function onFiles(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  if (!files.length || !canUpload.value) return
+
+  uploading.value = true
+  uploadError.value = null
+  try {
+    for (const [index, file] of files.entries()) {
+      uploadProgress.value = `${index + 1}/${files.length}`
+      await upload({
+        file,
+        folder: filters.folder === 'all' || filters.folder === 'root' ? undefined : filters.folder,
+      })
+    }
+    toast.add({ title: t('admin.media.uploaded'), color: 'success' })
+    await load()
+  } catch (cause) {
+    // File-level failures are shown next to the control: the picker is closed by
+    // then, so a toast alone would leave no trace of the rejected file.
+    uploadError.value = describeError(cause)
+  } finally {
+    uploading.value = false
+    uploadProgress.value = ''
+  }
 }
 
-function goToRoot() {
-  currentFolder.value = null
-  load(true)
+function openEdit(entry: AdminMedia) {
+  editing.value = entry
+  editError.value = null
+  editForm.title = entry.title
+  editForm.alt = entry.alt
+  editForm.folder = entry.folder
+  editOpen.value = true
 }
 
-onMounted(() => load(true))
+async function submitEdit() {
+  if (!editing.value || saving.value) return
+  editError.value = null
+  saving.value = true
+  try {
+    await update(editing.value.id, {
+      title: editForm.title,
+      alt: editForm.alt,
+      folder: editForm.folder,
+      revision: editing.value.revision,
+    })
+    toast.add({ title: t('admin.media.updated'), color: 'success' })
+    editOpen.value = false
+    await load()
+  } catch (cause) {
+    editError.value = describeError(cause)
+    if (errorCode(cause) === 'MEDIA_REVISION_CONFLICT') await load()
+  } finally {
+    saving.value = false
+  }
+}
+
+function askDelete(entry: AdminMedia) {
+  deleting.value = entry
+  deleteError.value = null
+  deleteOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!deleting.value || deleteBusy.value) return
+  deleteBusy.value = true
+  deleteError.value = null
+  try {
+    await remove(deleting.value.id, deleting.value.revision)
+    toast.add({ title: t('admin.media.deleted'), color: 'success' })
+    deleteOpen.value = false
+    await load()
+  } catch (cause) {
+    deleteError.value = describeError(cause)
+  } finally {
+    deleteBusy.value = false
+  }
+}
+
+async function copyUrl(entry: AdminMedia) {
+  try {
+    await navigator.clipboard.writeText(entry.url)
+    toast.add({ title: t('admin.media.urlCopied'), color: 'success' })
+  } catch {
+    toast.add({ title: entry.url, color: 'neutral' })
+  }
+}
+
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+watch(() => filters.q, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => void load(), 300)
+})
+watch([() => filters.kind, () => filters.folder], () => void load())
+
+if (canRead.value) await load()
 </script>
 
 <template>
-  <CmsBasePage
-    :title="t('admin.media.title')"
-    :description="t('admin.media.description')"
-    :loading="loading"
-    :error="error"
-    :empty="enabled === false"
-    :empty-text="t('admin.media.disabled')"
-    empty-icon="i-lucide-image-off"
-  >
-    <template #right>
-      <UButton
-        icon="i-lucide-refresh-cw"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        :label="t('common.refresh')"
-        :disabled="loading"
-        @click="load(true)"
-      />
-      <UButton
-        icon="i-lucide-upload"
-        color="primary"
-        variant="soft"
-        size="sm"
-        :label="t('admin.media.upload')"
-        :disabled="cloudinaryMissing"
-      />
-    </template>
-
-    <template #toolbar>
-      <div class="mt-2 flex items-center gap-1.5 text-xs text-muted">
-        <button
-          type="button"
-          class="inline-flex items-center gap-1 rounded-sm transition-colors hover:text-highlighted"
-          @click="goToRoot"
+  <div>
+    <CmsBasePage
+      :title="t('admin.media.title')"
+      :description="t('admin.media.description')"
+      :loading="loading"
+      :error="error"
+      :empty="canRead && !loading && !items.length"
+      :empty-text="canRead ? t('admin.media.empty') : t('admin.media.permissionDenied')"
+      empty-icon="i-lucide-images"
+    >
+      <template #right>
+        <UButton
+          v-if="canUpload"
+          icon="i-lucide-upload"
+          color="primary"
+          variant="soft"
+          size="sm"
+          :loading="uploading"
+          :label="uploading ? `${t('admin.media.uploading')} ${uploadProgress}` : t('admin.media.upload')"
+          @click="fileInput?.click()"
+        />
+        <UButton
+          icon="i-lucide-refresh-cw"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :label="t('common.refresh')"
+          :disabled="!canRead || loading"
+          @click="load()"
+        />
+        <input
+          ref="fileInput"
+          type="file"
+          :accept="accept"
+          multiple
+          class="hidden"
+          @change="onFiles"
         >
-          <UIcon name="i-lucide-house" class="size-3.5" />
-          {{ t('admin.media.root') }}
-        </button>
-        <template v-if="currentFolder">
-          <UIcon name="i-lucide-chevron-right" class="size-3.5" />
-          <span class="font-medium text-highlighted">{{ currentFolder }}</span>
-        </template>
-      </div>
-    </template>
-
-    <template #error-retry>
-      <UButton
-        icon="i-lucide-refresh-cw"
-        color="neutral"
-        variant="soft"
-        size="sm"
-        :label="t('common.refresh')"
-        class="mt-4"
-        @click="load(true)"
-      />
-    </template>
-
-    <div class="bento-grid">
-      <template v-if="cloudinaryMissing">
-        <BentoCard
-          :title="t('admin.media.cloudinary.title')"
-          :description="t('admin.media.cloudinary.description')"
-          icon="i-lucide-cloud-off"
-          :col-span="4"
-        >
-          <p class="mt-2 text-sm text-muted">{{ t('admin.media.cloudinary.hint') }}</p>
-          <div class="mt-3 flex flex-wrap gap-1.5">
-            <UBadge v-for="key in ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']" :key="key" color="neutral" variant="subtle" size="sm" class="font-mono">
-              {{ key }}
-            </UBadge>
-          </div>
-        </BentoCard>
       </template>
 
-      <template v-else>
-        <BentoCard v-for="stat in stats" :key="stat.title" :title="stat.title" :icon="stat.icon">
-          <p class="mt-2 text-2xl font-bold tracking-tight text-highlighted">{{ stat.value }}</p>
-        </BentoCard>
-
-        <BentoCard
-          v-if="folders.length"
-          :title="t('admin.media.foldersTitle')"
-          :description="t('admin.media.foldersDescription')"
-          icon="i-lucide-folder-open"
-          :col-span="4"
-        >
-          <div class="mt-3 flex flex-wrap gap-2">
-            <button
-              v-for="folder in folders"
-              :key="folder.path || folder.name"
-              type="button"
-              class="inline-flex items-center gap-2 rounded-sm border border-default/60 bg-elevated/30 px-3 py-2 text-xs font-medium text-default transition-colors hover:border-default hover:text-highlighted"
-              @click="openFolder(folder)"
+      <template #toolbar>
+        <div class="mx-auto mt-2 flex w-full max-w-7xl flex-wrap items-center gap-2">
+          <UInput
+            v-model="filters.q"
+            icon="i-lucide-search"
+            size="sm"
+            class="w-full sm:w-64"
+            :placeholder="t('admin.media.search')"
+          />
+          <USelect v-model="filters.kind" :items="kindItems" value-key="value" size="sm" class="w-36" />
+          <USelect v-model="filters.folder" :items="folderItems" value-key="value" size="sm" class="w-44" />
+          <div class="ml-auto flex flex-wrap items-center gap-2">
+            <span
+              v-for="stat in stats"
+              :key="stat.label"
+              class="flex items-center gap-1.5 rounded-sm border border-default/60 px-2 py-1 text-[11px] text-muted"
             >
-              <UIcon name="i-lucide-folder" class="size-3.5 text-primary" />
-              {{ folder.name }}
-            </button>
+              <UIcon :name="stat.icon" class="size-3.5" />
+              {{ stat.label }}: <span class="font-medium text-highlighted">{{ stat.value }}</span>
+            </span>
           </div>
-        </BentoCard>
+        </div>
+        <p v-if="uploadError" class="mx-auto mt-2 w-full max-w-7xl rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">
+          {{ uploadError }}
+        </p>
+        <p v-else-if="canUpload" class="mx-auto mt-1 w-full max-w-7xl text-[11px] text-muted">
+          {{ t('admin.media.uploadHint', { size: maxMegabytes }) }}
+        </p>
+      </template>
 
-        <BentoCard
-          :title="t('admin.media.resourcesTitle')"
-          :description="t('admin.media.resourcesDescription')"
-          icon="i-lucide-file-image"
-          :col-span="4"
-        >
-          <p v-if="!resources.length" class="py-8 text-center text-sm text-muted">
-            {{ t('admin.media.noResources') }}
-          </p>
-          <div v-else class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <div
-              v-for="resource in resources"
-              :key="resource.public_id"
-              class="flex items-center gap-3 rounded-sm border border-default/50 bg-elevated/20 p-2.5"
-            >
+      <template #emptyAction>
+        <UButton
+          v-if="canRead && canUpload"
+          icon="i-lucide-upload"
+          color="primary"
+          variant="soft"
+          size="sm"
+          :label="t('admin.media.upload')"
+          @click="fileInput?.click()"
+        />
+      </template>
+
+      <div v-if="canRead && items.length" class="flex flex-col gap-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div
+            v-for="entry in items"
+            :key="entry.id"
+            class="flex flex-col overflow-hidden rounded-[4px] border border-default/60"
+          >
+            <div class="flex h-32 items-center justify-center bg-elevated/40">
               <img
-                v-if="isImage(resource)"
-                :src="resource.secure_url || ''"
-                :alt="displayName(resource)"
+                v-if="entry.kind === 'image'"
+                :src="entry.url"
+                :alt="entry.alt || displayName(entry)"
+                class="h-full w-full object-cover"
                 loading="lazy"
-                class="size-11 shrink-0 rounded-sm border border-default/50 object-cover"
               >
-              <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-sm border border-default/50 bg-elevated/40 text-muted">
-                <UIcon name="i-lucide-file-image" class="size-4.5" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-xs font-medium text-highlighted">{{ displayName(resource) }}</p>
-                <p class="mt-0.5 truncate text-[11px] text-muted">
-                  {{ dimensions(resource) }} · {{ formatBytes(resource.bytes) }}
-                </p>
-                <p class="mt-0.5 truncate text-[11px] text-dimmed">{{ formatTime(resource.created_at) }}</p>
-              </div>
+              <UIcon v-else name="i-lucide-file-text" class="size-8 text-muted" />
+            </div>
+
+            <div class="flex min-w-0 flex-1 flex-col gap-1 p-3">
+              <p class="truncate text-sm font-medium text-highlighted" :title="displayName(entry)">
+                {{ displayName(entry) }}
+              </p>
+              <p class="truncate font-mono text-[11px] text-muted">{{ entry.originalName }}</p>
+              <p class="text-[11px] text-muted">
+                {{ formatBytes(entry.size) }} · {{ folderLabel(entry) }} · {{ t('admin.categories.revision') }} {{ entry.revision }}
+              </p>
+              <p class="text-[11px] text-muted">
+                {{ entry.mimeType }} · {{ entry.createdAt ? new Date(entry.createdAt).toLocaleDateString(locale) : '—' }}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-1 border-t border-default/40 px-2 py-1.5">
+              <UButton
+                icon="i-lucide-link"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                :title="t('admin.media.copyUrl')"
+                @click="copyUrl(entry)"
+              />
+              <UButton
+                v-if="canUpload"
+                icon="i-lucide-pencil"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                :title="t('common.edit')"
+                @click="openEdit(entry)"
+              />
+              <UButton
+                v-if="canDelete"
+                icon="i-lucide-trash-2"
+                color="error"
+                variant="ghost"
+                size="xs"
+                :title="t('common.delete')"
+                @click="askDelete(entry)"
+              />
             </div>
           </div>
+        </div>
 
-          <div v-if="canLoadMore" class="mt-4 flex justify-center">
-            <UButton
-              icon="i-lucide-refresh-cw"
-              color="neutral"
-              variant="soft"
-              size="sm"
-              :loading="loadingMore"
-              :label="t('common.more')"
-              @click="load(false)"
-            />
-          </div>
-        </BentoCard>
+        <div v-if="hasMore" class="flex justify-center">
+          <UButton
+            color="neutral"
+            variant="soft"
+            size="sm"
+            :loading="loadingMore"
+            :label="t('admin.media.loadMore')"
+            @click="load(false)"
+          />
+        </div>
+      </div>
+    </CmsBasePage>
+
+    <UModal v-model:open="editOpen" :title="t('admin.media.editTitle')">
+      <template #body>
+        <div class="flex flex-col gap-3">
+          <UFormField :label="t('admin.media.fields.title')">
+            <UInput v-model="editForm.title" class="w-full" :placeholder="editing?.originalName" />
+          </UFormField>
+          <UFormField :label="t('admin.media.fields.alt')">
+            <UInput v-model="editForm.alt" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('admin.media.fields.folder')">
+            <UInput v-model="editForm.folder" class="w-full font-mono" placeholder="landing/hero" />
+          </UFormField>
+          <p v-if="editError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ editError }}</p>
+        </div>
       </template>
-    </div>
-  </CmsBasePage>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="editOpen = false" />
+          <UButton color="primary" size="sm" :loading="saving" :label="t('common.save')" @click="submitEdit" />
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="deleteOpen" :title="t('admin.media.deleteTitle')">
+      <template #body>
+        <div class="flex flex-col gap-3 text-sm">
+          <p class="text-muted">{{ t('admin.media.deleteDescription') }}</p>
+          <p class="font-mono text-xs text-highlighted">{{ deleting?.originalName }}</p>
+          <p v-if="deleteError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ deleteError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="deleteOpen = false" />
+          <UButton color="error" size="sm" :loading="deleteBusy" :label="t('common.delete')" @click="confirmDelete" />
+        </div>
+      </template>
+    </UModal>
+  </div>
 </template>

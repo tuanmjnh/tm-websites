@@ -1,4 +1,6 @@
 export default defineEventHandler(async (event) => {
+  assertSameOriginMutation(event)
+
   if (isMockAuth(event)) {
     return successResponse({ event, data: null, message: 'Token refreshed' })
   }

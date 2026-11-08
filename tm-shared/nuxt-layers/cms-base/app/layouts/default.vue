@@ -21,6 +21,7 @@ const navItems = computed(() => [
   ...gatedModuleItems('reports'),
   ...gatedModuleItems('media'),
   { label: t('nav.content'), icon: 'i-lucide-file-pen', to: '/content' },
+  ...(hasCapability('content.read') ? [{ label: t('nav.categories'), icon: 'i-lucide-folder-tree', to: '/categories' }] : []),
   ...gatedModuleItems('aiWorkspace'),
   ...(hasCapability('users.read') ? [{ label: t('nav.users'), icon: 'i-lucide-users', to: '/users' }] : []),
   ...(hasCapability('roles.read') ? [{ label: t('nav.roles'), icon: 'i-lucide-shield-check', to: '/roles' }] : []),

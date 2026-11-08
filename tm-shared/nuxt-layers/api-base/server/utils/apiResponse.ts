@@ -10,6 +10,10 @@ export interface ApiResponseOptions<T> {
     limit?: number
     nextCursor?: string
     hasMore?: boolean
+    /** Status buckets for a filtered admin list. */
+    counts?: Record<string, number>
+    /** Folder names the current admin list is grouped by (media library). */
+    folders?: string[]
   }
 }
 

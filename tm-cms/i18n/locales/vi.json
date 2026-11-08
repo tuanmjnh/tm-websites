@@ -15,7 +15,8 @@
     "records": "bản ghi",
     "loading_text": "Đang tải...",
     "no_more_data": "Đã tải hết dữ liệu",
-    "actions": "Thao tác"
+    "actions": "Thao tác",
+    "edit": "Sửa"
   },
   "auth": {
     "loginDescription": "Dùng tài khoản được cấp bởi TM Hub để truy cập bảng quản trị.",
@@ -75,7 +76,8 @@
     "mail": "Trung tâm Email",
     "routes": "Tuyến đường ứng dụng",
     "connections": "Tích hợp",
-    "settings": "Cấu hình hệ thống"
+    "settings": "Cấu hình hệ thống",
+    "categories": "Danh mục"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -189,12 +191,54 @@
         "latest": "Hoạt động mới nhất"
       }
     },
+    "categories": {
+      "title": "Danh mục nội dung",
+      "description": "Cây danh mục dùng chung cho trang, bài viết và bộ lọc trên website",
+      "create": "Tạo danh mục",
+      "createTitle": "Tạo danh mục nội dung",
+      "editTitle": "Sửa danh mục nội dung",
+      "created": "Đã tạo danh mục",
+      "updated": "Đã cập nhật danh mục",
+      "deleted": "Đã xoá danh mục",
+      "order": "Thứ tự",
+      "revision": "Phiên bản",
+      "addChild": "Thêm danh mục con",
+      "keyImmutable": "Khóa danh mục không thể đổi sau khi tạo",
+      "empty": "Chưa có danh mục nào",
+      "permissionDenied": "Tài khoản không có quyền đọc nội dung",
+      "root": "Cấp gốc",
+      "deleteTitle": "Xoá danh mục",
+      "deleteHint": "Xoá danh mục “{name}”?",
+      "deleteGuard": "Chỉ xoá được danh mục không còn danh mục con và không còn nội dung nào sử dụng.",
+      "fields": {
+        "key": "Khóa danh mục",
+        "parent": "Danh mục cha",
+        "order": "Thứ tự hiển thị",
+        "name": "Tên hiển thị",
+        "slug": "Slug"
+      },
+      "errors": {
+        "keyExists": "Khóa danh mục này đã được dùng",
+        "slugExists": "Slug đã được dùng trong cùng ngôn ngữ",
+        "parentNotFound": "Danh mục cha không tồn tại",
+        "cycle": "Không thể đặt danh mục vào chính nó hoặc danh mục con của nó",
+        "depthExceeded": "Cây danh mục vượt quá số cấp cho phép",
+        "revisionConflict": "Danh mục vừa được người khác sửa. Danh sách đã tải lại, vui lòng thử lại.",
+        "hasChildren": "Danh mục còn danh mục con, hãy chuyển hoặc xoá chúng trước",
+        "inUse": "Vẫn còn nội dung dùng danh mục này",
+        "keyImmutable": "Không thể đổi khóa danh mục",
+        "payloadInvalid": "Dữ liệu danh mục không hợp lệ",
+        "notFound": "Không tìm thấy danh mục",
+        "keyRequired": "Cần nhập khóa danh mục",
+        "nameRequired": "Cần nhập tên cho ít nhất một ngôn ngữ"
+      }
+    },
     "content": {
       "title": "Nội dung",
-      "description": "Bản ghi nội dung website được lưu cho ứng dụng CMS này trong TM Hub",
-      "search": "Tìm theo khóa, tiêu đề hoặc nhóm...",
+      "description": "Nội dung website lưu trong MongoDB của khách hàng, dùng chung cho CMS và website công khai",
+      "search": "Tìm theo khóa, tiêu đề hoặc slug...",
       "listTitle": "Danh sách nội dung",
-      "listDescription": "Chọn một bản ghi để xem dữ liệu đã xuất bản",
+      "listDescription": "Chọn một bản ghi để xem, xuất bản, hẹn giờ hoặc lưu trữ",
       "noEntries": "Không có bản ghi nội dung khớp bộ lọc hiện tại",
       "copied": "Đã sao chép nội dung",
       "copy": "Sao chép",
@@ -206,14 +250,20 @@
         "all": "Tất cả trạng thái",
         "published": "Đã xuất bản",
         "hidden": "Đang ẩn",
-        "deleted": "Đã xóa"
+        "deleted": "Đã xóa",
+        "draft": "Bản nháp",
+        "scheduled": "Hẹn giờ đăng",
+        "archived": "Lưu trữ"
       },
       "stats": {
         "total": "Số bản ghi",
         "published": "Đã xuất bản",
         "hidden": "Đang ẩn",
         "categories": "Nhóm nội dung",
-        "deleted": "Đã xóa"
+        "deleted": "Đã xóa",
+        "draft": "Bản nháp",
+        "scheduled": "Hẹn giờ",
+        "archived": "Lưu trữ"
       },
       "create": "Tạo nội dung",
       "editAction": "Sửa",
@@ -233,7 +283,24 @@
       "restored": "Đã khôi phục bản ghi nội dung",
       "deleteConfirmTitle": "Xóa bản ghi nội dung?",
       "deleteConfirmText": "Bản ghi “{title}” sẽ bị xóa mềm và có thể khôi phục sau.",
-      "softDeleteNote": "Đây là xóa mềm: bản ghi vẫn còn trong Hub và có thể khôi phục.",
+      "softDeleteNote": "Đây là xóa mềm: bản ghi vẫn nằm trong MongoDB của khách hàng và có thể khôi phục.",
+      "bulk": {
+        "selectAll": "Chọn tất cả bản ghi",
+        "selected": "Đã chọn {count} bản ghi",
+        "publish": "Xuất bản",
+        "archive": "Lưu trữ",
+        "delete": "Xoá",
+        "confirmTitle": "Thao tác hàng loạt: {count} bản ghi",
+        "confirm": {
+          "publish": "Các bản ghi đã chọn sẽ được xuất bản ngay và xuất hiện trên trang công khai.",
+          "archive": "Các bản ghi đã chọn sẽ được lưu trữ và rời khỏi trang công khai.",
+          "delete": "Các bản ghi đã chọn sẽ bị đánh dấu xoá mềm và có thể khôi phục sau."
+        },
+        "run": "Xác nhận",
+        "close": "Đóng",
+        "done": "Đã xử lý {ok}/{total} bản ghi",
+        "duplicate": "Bản ghi này bị lặp trong danh sách gửi đi"
+      },
       "permissionDenied": "Tài khoản của bạn không có quyền content.read để xem nội dung.",
       "fields": {
         "key": "Khóa nội dung",
@@ -250,7 +317,30 @@
         "dataJson": "Dữ liệu JSON",
         "dataText": "Nội dung văn bản",
         "dataJsonPlaceholder": "{'{'}\n  \"title\": \"...\"\n{'}'}",
-        "dataTextPlaceholder": "Nhập Markdown, HTML hoặc văn bản thuần..."
+        "dataTextPlaceholder": "Nhập Markdown, HTML hoặc văn bản thuần...",
+        "type": "Loại nội dung",
+        "slug": "Đường dẫn (slug)",
+        "slugPlaceholder": "gioi-thieu",
+        "excerpt": "Mô tả ngắn",
+        "excerptPlaceholder": "Tóm tắt hiển thị trong danh sách và SEO",
+        "body": "Nội dung",
+        "format": "Định dạng nội dung",
+        "bodyPlaceholder": {
+          "markdown": "Viết Markdown: # tiêu đề, **đậm**, - danh sách...",
+          "html": "Dán HTML đã làm sạch (thẻ p, h2, ul, a...), không kèm script hay style...",
+          "text": "Nhập văn bản thuần, xuống dòng sẽ được giữ nguyên..."
+        },
+        "seoTitle": "Tiêu đề SEO",
+        "seoDescription": "Mô tả SEO",
+        "tags": "Thẻ (phân cách bằng dấu phẩy)",
+        "tagsPlaceholder": "bạc, đá quý",
+        "categories": "Nhóm nội dung",
+        "categoriesPlaceholder": "Chọn danh mục",
+        "publishAt": "Bắt đầu đăng",
+        "unpublishAt": "Ngừng đăng",
+        "media": "Tệp đính kèm",
+        "mediaPlaceholder": "Chọn tệp từ thư viện",
+        "mediaEmpty": "Chưa có tệp nào trong thư viện"
       },
       "contentTypes": {
         "json": "JSON",
@@ -264,29 +354,135 @@
         "description": "Mô tả tối đa 2000 ký tự.",
         "category": "Nhóm nội dung tối đa 100 ký tự.",
         "data": "Dữ liệu không hợp lệ: JSON phải đúng định dạng và không được để trống."
+      },
+      "loadMore": "Tải thêm",
+      "type": {
+        "all": "Tất cả loại",
+        "page": "Trang",
+        "post": "Bài viết",
+        "fragment": "Khối nội dung"
+      },
+      "locales": {
+        "vi": "Tiếng Việt",
+        "en": "English"
+      },
+      "scheduled": "Đã hẹn giờ đăng nội dung",
+      "archived": "Đã lưu trữ nội dung",
+      "scheduleTitle": "Hẹn giờ đăng nội dung",
+      "scheduleHint": "Chọn thời điểm website công khai được phép đọc bản ghi này. Trước thời điểm đó bản ghi vẫn ở trạng thái hẹn giờ.",
+      "actions": {
+        "view": "Xem",
+        "edit": "Sửa",
+        "publish": "Xuất bản",
+        "unpublish": "Bỏ đăng",
+        "schedule": "Hẹn giờ đăng",
+        "archive": "Lưu trữ",
+        "restore": "Khôi phục",
+        "delete": "Xóa"
+      },
+      "audit": {
+        "create": "Tạo mới",
+        "update": "Chỉnh sửa",
+        "publish": "Đăng",
+        "schedule": "Hẹn giờ",
+        "unpublish": "Bỏ đăng",
+        "archive": "Lưu trữ",
+        "restore": "Khôi phục",
+        "delete": "Xoá",
+        "revert": "Khôi phục phiên bản"
+      },
+      "versions": {
+        "title": "Phiên bản nội dung",
+        "empty": "Chưa có phiên bản nào được lưu",
+        "reload": "Tải lại",
+        "preview": "Xem",
+        "restore": "Khôi phục",
+        "restored": "Đã khôi phục phiên bản cũ",
+        "changed": "Khác so với bản hiện tại",
+        "noChanges": "Không có khác biệt",
+        "previewTitle": "Phiên bản {revision}",
+        "diffBefore": "Bản cũ",
+        "diffAfter": "Bản hiện tại"
+      },
+      "detail": {
+        "key": "Khóa nội dung",
+        "updated": "Cập nhật gần nhất",
+        "publishedAt": "Đã đăng lúc",
+        "window": "Lịch đăng",
+        "revision": "Phiên bản",
+        "history": "Lịch sử thay đổi",
+        "historyEmpty": "Chưa có thay đổi nào được ghi lại",
+        "historyReload": "Tải lại"
+      },
+      "errors": {
+        "keyExists": "Khóa này đã được dùng cho một bản ghi khác",
+        "slugExists": "Slug đã được dùng trong cùng ngôn ngữ",
+        "revisionConflict": "Bản ghi vừa được người khác sửa. Danh sách đã tải lại, vui lòng thử lại.",
+        "payloadInvalid": "Dữ liệu nội dung không hợp lệ",
+        "publishAtPast": "Thời điểm hẹn giờ phải ở tương lai",
+        "publishAtFuture": "Bản ghi đang hẹn giờ trong tương lai nên chưa thể xuất bản ngay",
+        "publishAtRequired": "Cần chọn thời điểm đăng",
+        "transitionInvalid": "Không thể thực hiện hành động này ở trạng thái hiện tại",
+        "notFound": "Không tìm thấy bản ghi nội dung",
+        "revisionNotFound": "Không tìm thấy phiên bản nội dung này",
+        "revisionCurrent": "Đây đã là phiên bản hiện tại",
+        "revisionUnchanged": "Bản này giống hệt nội dung hiện tại",
+        "localeRequired": "Cần ít nhất một ngôn ngữ có tiêu đề hoặc slug"
+      },
+      "format": {
+        "markdown": "Markdown",
+        "html": "HTML",
+        "text": "Văn bản thuần"
       }
     },
     "media": {
       "title": "Thư viện Media",
-      "description": "Hình ảnh, video và tài nguyên số phân phối qua cổng media của TM Hub",
-      "disabled": "Phân hệ Media chưa được kích hoạt trong gói đăng ký của khách hàng này",
-      "root": "Gốc",
+      "description": "Tệp được lưu ngoài MongoDB và chỉ phục vụ công khai những định dạng nằm trong danh sách cho phép",
+      "permissionDenied": "Bạn không có quyền xem thư viện media",
       "upload": "Tải tệp lên",
-      "foldersTitle": "Thư mục",
-      "foldersDescription": "Chọn một thư mục để xem nội dung bên trong",
-      "resourcesTitle": "Tài nguyên đang xem",
-      "resourcesDescription": "Bản ghi do cổng media của TM Hub trả về",
-      "noResources": "Không có tài nguyên trong thư mục này",
-      "stats": {
-        "resources": "Tài nguyên đang xem",
-        "folders": "Thư mục",
-        "images": "Hình ảnh",
-        "storage": "Dung lượng đang xem"
+      "uploading": "Đang tải",
+      "uploadHint": "PNG, JPEG, WebP, AVIF, GIF hoặc PDF · tối đa {size} MB mỗi tệp",
+      "empty": "Chưa có tệp nào trong thư viện",
+      "search": "Tìm theo tên tệp",
+      "allKinds": "Tất cả loại",
+      "allFolders": "Tất cả thư mục",
+      "root": "Gốc",
+      "loadMore": "Tải thêm",
+      "kinds": {
+        "image": "Hình ảnh",
+        "document": "Tài liệu"
       },
-      "cloudinary": {
-        "title": "Cổng media chưa được cấu hình",
-        "description": "TM Hub chưa thể kết nối Cloudinary cho ứng dụng này",
-        "hint": "Thêm thông tin Cloudinary vào cấu hình ứng dụng này trong TM Hub để bật thư viện media."
+      "fields": {
+        "title": "Tên hiển thị",
+        "alt": "Mô tả thay thế (alt)",
+        "folder": "Thư mục"
+      },
+      "editTitle": "Sửa thông tin tệp",
+      "deleteTitle": "Xoá tệp này?",
+      "deleteDescription": "Tệp sẽ bị xoá khỏi thư viện và khỏi ổ lưu trữ. Không thể hoàn tác.",
+      "copyUrl": "Sao chép URL",
+      "urlCopied": "Đã sao chép URL",
+      "uploaded": "Đã tải tệp lên thư viện",
+      "updated": "Đã cập nhật thông tin tệp",
+      "deleted": "Đã xoá tệp",
+      "stats": {
+        "resources": "Tệp",
+        "images": "Hình ảnh",
+        "documents": "Tài liệu",
+        "storage": "Dung lượng"
+      },
+      "errors": {
+        "typeNotAllowed": "Định dạng tệp không được phép (PNG, JPEG, WebP, AVIF, GIF, PDF)",
+        "sizeExceeded": "Tệp vượt quá 5 MB",
+        "empty": "Tệp rỗng",
+        "inUse": "Tệp đang được dùng trong nội dung, hãy gỡ khỏi nội dung trước",
+        "revisionConflict": "Tệp đã bị thay đổi ở phiên khác, hãy tải lại",
+        "updateUnchanged": "Không có thay đổi để lưu",
+        "notFound": "Không tìm thấy tệp",
+        "folderInvalid": "Tên thư mục không hợp lệ",
+        "titleInvalid": "Tên hiển thị quá dài",
+        "fileRequired": "Chưa chọn tệp để tải lên",
+        "queryInvalid": "Bộ lọc thư viện không hợp lệ"
       }
     },
     "notifications": {

@@ -1,4 +1,6 @@
 export default defineEventHandler(async (event) => {
+  assertSameOriginMutation(event)
+
   if (!isMockAuth(event)) {
     const refreshToken = getRefreshToken(event)
     if (refreshToken) {

@@ -1,4 +1,6 @@
 export default defineEventHandler(async (event) => {
+  assertSameOriginMutation(event)
+
   const body = await readBody(event)
   const code = String(body?.code || '').trim()
 

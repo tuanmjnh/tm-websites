@@ -92,6 +92,17 @@ export function getHubErrorCode(error: unknown): string | undefined {
     ?? candidate?.statusMessage
 }
 
+const PROXY_DENIED_PREFIXES = ['/api/v1/auth']
+
+/**
+ * Token-issuing and session-management endpoints are BFF-only. Forwarding them
+ * through the generic proxy would hand raw Hub tokens to the browser.
+ */
+export function isHubProxyPathDenied(path: string): boolean {
+  const normalized = (path.split('?')[0] ?? path).replace(/\/+$/, '')
+  return PROXY_DENIED_PREFIXES.some(prefix => normalized === prefix || normalized.startsWith(`${prefix}/`))
+}
+
 export function sanitizeHubProxyPath(raw: string | undefined): string | null {
   if (!raw) {
     return null
@@ -118,3 +129,4 @@ export function sanitizeHubProxyPath(raw: string | undefined): string | null {
 
   return `/${path}`
 }
+

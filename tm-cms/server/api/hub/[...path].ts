@@ -1,4 +1,4 @@
-import { resolveHubUrl, sanitizeHubProxyPath } from '@tm/flow-utils/hub'
+import { isHubProxyPathDenied, resolveHubUrl, sanitizeHubProxyPath } from '@tm/flow-utils/hub'
 
 const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -6,6 +6,14 @@ export default defineEventHandler(async (event) => {
   const path = sanitizeHubProxyPath(getRouterParam(event, 'path'))
   if (!path) {
     return errorResponse(400, 'INVALID_PROXY_PATH', 'Chỉ cho phép gọi các endpoint /api/v1 của TM Hub')
+  }
+
+  if (isHubProxyPathDenied(path)) {
+    return errorResponse(403, 'PROXY_PATH_FORBIDDEN', 'Endpoint xác thực phải đi qua BFF chuyên dụng, không qua proxy')
+  }
+
+  if (BODY_METHODS.has(getMethod(event).toUpperCase())) {
+    assertSameOriginMutation(event)
   }
 
   let accessToken = getAccessToken(event)

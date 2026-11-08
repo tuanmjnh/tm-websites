@@ -8,6 +8,10 @@
     "./auth": "./src/auth.ts",
     "./catalog": "./src/catalog.ts",
     "./hub-admin": "./src/hub-admin.ts",
+    "./category-admin": "./src/category-admin.ts",
+    "./content-admin": "./src/content-admin.ts",
+    "./content-public": "./src/content-public.ts",
+    "./media-admin": "./src/media-admin.ts",
     "./public-content": "./src/public-content.ts"
   },
   "dependencies": {
