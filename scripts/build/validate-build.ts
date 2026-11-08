@@ -110,34 +110,41 @@ if (!appConfig) {
   }
 }
 
-if (appKind === 'cms') {
+// Both app kinds ship a customer-owned web app manifest; the service worker and
+// installability rules are the same, only the branding differs per layer.
+function validateManifest() {
   const manifestPath = path.join(selected.customerLayer, 'public/manifest.webmanifest')
   if (!fs.existsSync(manifestPath)) {
     fail('[PWA] Missing public/manifest.webmanifest')
-  } else {
-    try {
-      const manifest = JSON.parse(readText(manifestPath))
-      if (!manifest.name || !manifest.start_url) fail('[PWA] Manifest requires name and start_url')
-      if (manifest.display !== 'standalone') fail('[PWA] Manifest display must be "standalone"')
-      const icons = Array.isArray(manifest.icons) ? manifest.icons : []
-      const sizes = new Set(icons.map((icon: { sizes?: string }) => icon?.sizes))
-      if (!sizes.has('192x192') || !sizes.has('512x512')) {
-        fail('[PWA] Manifest must declare 192x192 and 512x512 icons')
-      }
-      for (const icon of icons) {
-        const src = typeof icon?.src === 'string' ? icon.src.replace(/^\//, '') : ''
-        if (!src || !fs.existsSync(path.join(selected.customerLayer, 'public', src))) {
-          fail(`[PWA] Manifest icon file not found: ${icon?.src ?? '(missing src)'}`)
-        }
-      }
-      if (!/^#[0-9a-f]{6}$/i.test(manifest.theme_color ?? '')) {
-        fail('[PWA] Manifest theme_color must be a 6-digit hex color')
-      }
-      if (!failures.some((item) => item.startsWith('[PWA]'))) pass('[PWA] Manifest valid with 192/512 icons')
-    } catch (error) {
-      fail(`[PWA] Manifest is not valid JSON: ${(error as Error).message}`)
-    }
+    return
   }
+  const failuresBefore = failures.length
+  try {
+    const manifest = JSON.parse(readText(manifestPath))
+    if (!manifest.name || !manifest.start_url) fail('[PWA] Manifest requires name and start_url')
+    if (manifest.display !== 'standalone') fail('[PWA] Manifest display must be "standalone"')
+    const icons = Array.isArray(manifest.icons) ? manifest.icons : []
+    const sizes = new Set(icons.map((icon: { sizes?: string }) => icon?.sizes))
+    if (!sizes.has('192x192') || !sizes.has('512x512')) {
+      fail('[PWA] Manifest must declare 192x192 and 512x512 icons')
+    }
+    for (const icon of icons) {
+      const src = typeof icon?.src === 'string' ? icon.src.replace(/^\//, '') : ''
+      if (!src || !fs.existsSync(path.join(selected.customerLayer, 'public', src))) {
+        fail(`[PWA] Manifest icon file not found: ${icon?.src ?? '(missing src)'}`)
+      }
+    }
+    if (!/^#[0-9a-f]{6}$/i.test(manifest.theme_color ?? '')) {
+      fail('[PWA] Manifest theme_color must be a 6-digit hex color')
+    }
+    if (failures.length === failuresBefore) pass('[PWA] Manifest valid with 192/512 icons')
+  } catch (error) {
+    fail(`[PWA] Manifest is not valid JSON: ${(error as Error).message}`)
+  }
+}
+
+if (appKind === 'cms') {
+  validateManifest()
 
   for (const required of ["rel: 'manifest'", "rel: 'icon'", "name: 'theme-color'"]) {
     if (!layerConfig.includes(required)) fail(`[PWA] nuxt.config.ts must define ${required}`)
@@ -145,9 +152,16 @@ if (appKind === 'cms') {
 }
 
 if (appKind === 'web') {
-  for (const required of ["name: 'description'", "property: 'og:title'", "property: 'og:image'"]) {
+  for (const required of ["name: 'description'", "property: 'og:title'", "property: 'og:image'", "rel: 'manifest'"]) {
     if (!layerConfig.includes(required)) fail(`[SEO] nuxt.config.ts must define ${required}`)
   }
+
+  validateManifest()
+
+  if (!fs.existsSync(path.join(repoRoot, 'tm-web/public/offline.html'))) {
+    fail('[PWA] Missing tm-web/public/offline.html, the offline navigation fallback')
+  }
+
   const domains = appConfig.match(/domains:\s*\[([^\]]*)\]/)?.[1]?.trim()
   if (!domains) {
     fail('[SEO] app.config.ts must declare at least one domain for the web installation')
@@ -155,20 +169,25 @@ if (appKind === 'web') {
   if (!failures.some((item) => item.startsWith('[SEO]'))) pass('[SEO] Metadata and domain binding declared')
 }
 
-// Secret leakage scan across customer layer text files and host configs
+// Secret leakage scan across customer layer text files and host configs.
+// The loopback dev default (`mongodb://127.0.0.1:<port>`) carries no secret and
+// is the documented local fallback; everything else in a connection string is
+// treated as a leak, including a cluster host with blank credentials.
+const LOCAL_MONGO = /^mongodb(\+srv)?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/i
 const forbiddenPatterns = [
-  /mongodb(\+srv)?:\/\/[^\s"']+/i,
-  /TM_HUB_SECRET\s*=\s*['"][^'"]+['"]/i,
-  /sk-[a-zA-Z0-9]{20,}/,
+  /mongodb(\+srv)?:\/\/[^\s"'`]+/gi,
+  /TM_HUB_SECRET\s*=\s*['"][^'"]+['"]/gi,
+  /sk-[a-zA-Z0-9]{20,}/g,
 ]
 
 function scanForSecrets(filePath: string) {
   const content = readText(filePath)
   if (!content) return
   for (const pattern of forbiddenPatterns) {
-    if (pattern.test(content)) {
-      fail(`[Security] Potential hardcoded secret in ${path.relative(repoRoot, filePath)}`)
-    }
+    const hits = []
+    for (const found of content.matchAll(pattern)) hits.push(found[0])
+    if (hits.length === 0 || hits.every(hit => LOCAL_MONGO.test(hit))) continue
+    fail(`[Security] Potential hardcoded secret in ${path.relative(repoRoot, filePath)}`)
   }
 }
 

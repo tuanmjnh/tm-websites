@@ -11,7 +11,10 @@ const CMS_ASSETS = [
 const WEB_ASSETS = [
   'public/branding/logo.svg',
   'public/branding/favicon.svg',
+  'public/branding/icon-192.png',
+  'public/branding/icon-512.png',
   'public/branding/og-cover.png',
+  'public/manifest.webmanifest',
 ]
 
 export const customers: CustomerRegistry = {

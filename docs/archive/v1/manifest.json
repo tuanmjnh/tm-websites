@@ -1,0 +1,92 @@
+{
+  "date": "2026-11-06",
+  "sourceRef": "e76865ebda0ffb344378b40b88e3bd766fd3fa6a",
+  "dirtyWorktree": true,
+  "records": [
+    {
+      "original": "docs/superpowers/plans/2026-11-02-tm-websites-scaffolding.md",
+      "archived": "docs/superpowers/plans/2026-11-02-tm-websites-scaffolding.md",
+      "sha256": "06250d417d4dd5e5afdaa0fc6046fbde9a4898d6c753d7bca9822d4acf010d7b"
+    },
+    {
+      "original": "docs/superpowers/plans/2026-11-04-next-work-plan.md",
+      "archived": "docs/superpowers/plans/2026-11-04-next-work-plan.md",
+      "sha256": "2286d2f250a144f5c986475c6ba5e558f4c6c1bc5d8af27115a7599e7304ddb3"
+    },
+    {
+      "original": "docs/superpowers/reports/2026-11-04-customer-build-verification.md",
+      "archived": "docs/superpowers/reports/2026-11-04-customer-build-verification.md",
+      "sha256": "4e9802a0eeeeba6867e1e7be712236b76841e0021eb2591fad23e198b112852d"
+    },
+    {
+      "original": "docs/superpowers/specs/2026-11-02-tm-websites-scaffolding-design.md",
+      "archived": "docs/superpowers/specs/2026-11-02-tm-websites-scaffolding-design.md",
+      "sha256": "a696e515780303772eb59fb04375130d81881712fcd93fece1c5c48a7f3c6226"
+    },
+    {
+      "original": "docs/TM-CMS-Project-Blueprint.md",
+      "archived": "docs/TM-CMS-Project-Blueprint.md",
+      "sha256": "ceccd651ca5e2f3fba2111110e41afbe3bef60554cf7407b42f926a797e917ec"
+    },
+    {
+      "original": "docs/TM-CMS-WEB-HUB-Blueprint-Index.md",
+      "archived": "docs/TM-CMS-WEB-HUB-Blueprint-Index.md",
+      "sha256": "4a8989c53451b7450b80ae1f94addc0c46d18109d4069f7e92687f2c6da78852"
+    },
+    {
+      "original": "docs/TM-Hub-Tenant-App-Installation-Upgrade.md",
+      "archived": "docs/TM-Hub-Tenant-App-Installation-Upgrade.md",
+      "sha256": "1534132f63d2a030aa48aac113a830f52cb0bad4a181223dfe2e30e5c53ce8dd"
+    },
+    {
+      "original": "docs/TM-Shared-Packages-Architecture.md",
+      "archived": "docs/TM-Shared-Packages-Architecture.md",
+      "sha256": "250200ce1f3e2a97c013ea1220401c917b7d802dbbfdd46fde996b105d084ca0"
+    },
+    {
+      "original": "docs/TM-Vercel-Multi-Customer-Layers-Build-Architecture.md",
+      "archived": "docs/TM-Vercel-Multi-Customer-Layers-Build-Architecture.md",
+      "sha256": "a18da10b1ad77ba808910c6d5640f53e36edeebe42de24ff5ea48c5c96db9967"
+    },
+    {
+      "original": "docs/TM-WEB-Project-Blueprint.md",
+      "archived": "docs/TM-WEB-Project-Blueprint.md",
+      "sha256": "110db23f3f35ceb56a1847b198108c65adb526e4975a86f7c231ad19698d4d92"
+    },
+    {
+      "original": "docs/YÊU CẦU ĐIỀU CHỈNH KIẾN TRÚC CUSTOMER LAYERS & VERCEL BUILD..md",
+      "archived": "docs/YÊU CẦU ĐIỀU CHỈNH KIẾN TRÚC CUSTOMER LAYERS & VERCEL BUILD..md",
+      "sha256": "ee6a0c606803f45304571236daa7202f476c763f3e68236e160a8750d757f81d"
+    },
+    {
+      "original": "README.md",
+      "archived": "README.md",
+      "sha256": "d5cd07eecbdb540992af719758eb59d5d5165e44e019d3c79b5e818d1546ffb2"
+    },
+    {
+      "original": "AGENTS.md",
+      "archived": "AGENTS.md",
+      "sha256": "62e7828886dda853c10c09e1e1ef865671a74b5fbad3540c8b32f9bcbb4aa3f8"
+    },
+    {
+      "original": "tasks/todo.md",
+      "archived": "tasks/todo.md",
+      "sha256": "cec3d9bac0c81e645e6fe1a5a3c7ea1f37458719dcf4ade428fe5d0d5d78ccdf"
+    },
+    {
+      "original": "tm-cms/AGENTS.md",
+      "archived": "tm-cms/AGENTS.md",
+      "sha256": "8523493855242908368a448d389f454ec858877dbdcbf518351329f99bae1284"
+    },
+    {
+      "original": "tm-web/AGENTS.md",
+      "archived": "tm-web/AGENTS.md",
+      "sha256": "77b59b67dd74d6384a721ae8af02a1d4fa76de10e70634c9a5726c2fc89b0c15"
+    },
+    {
+      "original": "tm-cms/.agents/AGENTS.md",
+      "archived": "tm-cms/.agents/AGENTS.md",
+      "sha256": "c220dfcac374620fb1d3ebc17bced5b929b57f881f25e00413505052c601cd78"
+    }
+  ]
+}

@@ -7,10 +7,18 @@ import {
   normalizeContentKey,
   toPublicContentView,
 } from '../../tm-shared/packages/flow-contracts/src/public-content.js'
+import {
+  DEFAULT_PUBLIC_CONTENT_LOCALE,
+  PUBLIC_CONTENT_SEARCH_MAX,
+  PublicContentCategorySchema,
+  PublicContentSchema,
+  normalizePublicLocale,
+} from '../../tm-shared/packages/flow-contracts/src/content-public.js'
 import { escapeHtml, sanitizePublicHtml } from '../../tm-shared/packages/flow-utils/src/html.js'
 import { renderSafeMarkdown } from '../../tm-shared/packages/flow-utils/src/markdown.js'
 import {
   buildCanonicalUrl,
+  buildRobotsTxt,
   buildSitemapEntries,
   buildSitemapXml,
   normalizeSiteBaseUrl,
@@ -64,6 +72,72 @@ check('public content list validates the paginated payload', () => {
   assert.equal(payload.data[0]?.key, 'about')
   assert.equal(payload.nextCursor, 'abc')
   assert.equal(HubPublicContentListSchema.safeParse({ success: true, data: [{ key: 'x' }] }).success, false)
+})
+
+console.log('\n1b. CMS public content contract')
+check('public CMS content parses the allowlisted record', () => {
+  const record = PublicContentSchema.parse({
+    key: 'pages/gioi-thieu',
+    type: 'page',
+    locale: 'vi',
+    slug: 'gioi-thieu',
+    title: 'Giới thiệu',
+    excerpt: 'Câu chuyện thương hiệu',
+    body: '# Giới thiệu',
+    format: 'markdown',
+    seo: { title: '', description: '', image: '' },
+    categories: ['pages'],
+    tags: ['brand'],
+    publishedAt: '2026-11-05T08:00:00.000Z',
+    updatedAt: '2026-11-05T08:00:00.000Z',
+  })
+  assert.equal(record.locale, 'vi')
+  assert.equal(record.type, 'page')
+})
+
+check('public CMS content rejects unknown types and missing fields', () => {
+  const base = {
+    key: 'pages/a',
+    type: 'page',
+    locale: 'vi',
+    slug: 'a',
+    title: 'A',
+    excerpt: '',
+    body: '',
+    format: 'markdown',
+    seo: { title: '', description: '', image: '' },
+    categories: [],
+    tags: [],
+    publishedAt: null,
+    updatedAt: null,
+  }
+  assert.equal(PublicContentSchema.safeParse({ ...base, type: 'landing' }).success, false)
+  assert.equal(PublicContentSchema.safeParse({ ...base, title: undefined }).success, false)
+  assert.equal(PublicContentSchema.safeParse({ ...base, seo: { title: '' } }).success, false)
+  assert.equal(PublicContentSchema.safeParse({ ...base, format: 'xml' }).success, false)
+})
+
+check('public category DTO keeps the key, locale slug and parent', () => {
+  const category = PublicContentCategorySchema.parse({
+    key: 'trang-suc',
+    slug: 'trang-suc',
+    name: 'Trang sức',
+    parent: null,
+    locale: 'vi',
+  })
+  assert.equal(category.key, 'trang-suc')
+  assert.equal(category.parent, null)
+  assert.equal(PublicContentCategorySchema.safeParse({ key: 'a', slug: 'a' }).success, false)
+  assert.equal(PUBLIC_CONTENT_SEARCH_MAX, 80)
+})
+
+check('locale normalization accepts regional tags and rejects unknown languages', () => {
+  assert.equal(normalizePublicLocale('vi'), 'vi')
+  assert.equal(normalizePublicLocale('vi-VN'), 'vi')
+  assert.equal(normalizePublicLocale('EN_us'), 'en')
+  assert.equal(normalizePublicLocale('fr'), null)
+  assert.equal(normalizePublicLocale(undefined), null)
+  assert.equal(DEFAULT_PUBLIC_CONTENT_LOCALE, 'vi')
 })
 
 console.log('\n2. Content key resolution')
@@ -209,6 +283,20 @@ check('buildSitemapEntries includes published pages once and keeps lastmod', () 
     'https://sentuan.vn/blog',
   ])
   assert.equal(entries[2]?.lastmod, '2026-11-04T06:23:41.000Z')
+})
+
+check('robots.txt excludes the API and search page and advertises the sitemap', () => {
+  const body = buildRobotsTxt('https://sentuan.vn/', true)
+  assert.ok(body.includes('Allow: /'))
+  assert.ok(body.includes('Disallow: /api/'))
+  assert.ok(body.includes('Disallow: /tim-kiem'))
+  assert.ok(body.includes('Sitemap: https://sentuan.vn/sitemap.xml'))
+  assert.ok(!body.includes('Disallow: /\n'))
+})
+
+check('robots.txt blocks every crawler on a non-indexable deployment', () => {
+  const body = buildRobotsTxt('https://preview.example', false)
+  assert.equal(body, 'User-agent: *\nDisallow: /\n')
 })
 
 check('buildSitemapXml produces a valid escaped urlset', () => {

@@ -53,13 +53,9 @@ function headConfig(kind: 'cms' | 'web') {
   const description = kind === 'cms' ? `Quản trị ${companyName}` : `${companyName} — cửa hàng trực tuyến`
   const links = [
     `        { rel: 'icon', type: 'image/svg+xml', href: '/branding/favicon.svg' },`,
-    kind === 'cms'
-      ? `        { rel: 'apple-touch-icon', href: '/branding/icon-192.png' },`
-      : `        { rel: 'apple-touch-icon', href: '/branding/logo.svg' },`,
+    `        { rel: 'apple-touch-icon', href: '/branding/icon-192.png' },`,
+    `        { rel: 'manifest', href: '/manifest.webmanifest' },`,
   ]
-  if (kind === 'cms') {
-    links.push(`        { rel: 'manifest', href: '/manifest.webmanifest' },`)
-  }
 
   const meta = [
     `        { name: 'description', content: '${description}' },`,
@@ -96,15 +92,19 @@ ${meta.join('\n')}
 function copyBranding(templateDir: string, layerDir: string, kind: 'cms' | 'web') {
   fs.cpSync(path.join(templateDir, 'public'), path.join(layerDir, 'public'), { recursive: true })
 
+  const manifestPath = path.join(layerDir, 'public/manifest.webmanifest')
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
   if (kind === 'cms') {
-    const manifestPath = path.join(layerDir, 'public/manifest.webmanifest')
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
     manifest.name = `${companyName} CMS`
     manifest.short_name = companyName
     manifest.description = `Quản trị ${companyName}`
-    manifest.theme_color = primaryHex
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
+  } else {
+    manifest.name = companyName
+    manifest.short_name = companyName
+    manifest.description = `${companyName} — cửa hàng trực tuyến`
   }
+  manifest.theme_color = primaryHex
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
 }
 
 ensureDir(path.join(cmsDir, 'app'))

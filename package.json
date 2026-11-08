@@ -20,9 +20,15 @@
     "verify:scaffold": "tsx scripts/verify-scaffold.ts",
     "test:layers": "tsx scripts/build/test-layer-priority.ts",
     "test:hub": "tsx scripts/build/test-hub-contracts.ts",
-    "test:web-content": "tsx scripts/build/test-web-content.ts",
+    "test:web-content": "tsx scripts/build/test-web-content.ts && tsx scripts/build/test-web-content-db.ts",
+    "test:iam": "tsx scripts/build/test-cms-iam.ts",
     "hub:check": "tsx scripts/build/check-hub.ts",
-    "cache:clear": "rimraf tm-cms/.nuxt tm-web/.nuxt tm-cms/.output tm-web/.output node_modules/.cache node_modules/.vite"
+    "cache:clear": "rimraf tm-cms/.nuxt tm-web/.nuxt tm-cms/.output tm-web/.output node_modules/.cache node_modules/.vite",
+    "test:db": "tsx scripts/build/test-database-binding.ts",
+    "test:content": "tsx scripts/build/test-content-model.ts && tsx scripts/build/test-content-service.ts",
+    "test:categories": "tsx scripts/build/test-category-service.ts",
+    "test:media": "tsx scripts/build/test-media-service.ts",
+    "test:bulk": "tsx scripts/build/test-bulk-service.ts"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",

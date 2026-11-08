@@ -430,6 +430,8 @@ Lưu ý: happy path được kiểm chứng bằng stub (Hub production chưa c�
 
 ## 8. Vấn đề chưa giải quyết / giới hạn
 
+> **Cập nhật 2026-11-06:** mục 4 và 12 đã lỗi thời — Web đã có service worker/offline shell (Task 16, đã kiểm chứng offline thật) và 6 module CMS đã bỏ dữ liệu mẫu; AI Workspace có nguồn dữ liệu trong tm-hub nhưng chưa nối UI. Trạng thái hiện tại: [`tasks/todo.md`](../../../tasks/todo.md).
+
 1. **Tài khoản seed dùng mật khẩu mặc định**: các user `<customer>-root/admin@example.com` được tạo bởi seed tm-hub và dùng chung mật khẩu mẫu; phải đổi mật khẩu (hoặc thay bằng tài khoản thật) trước khi mở cho khách hàng.
 2. **TOTP hai bước đã triển khai (Phase 16)**: login → 409 `TOTP_REQUIRED` → UI chuyển bước nhập mã → `/api/auth/totp` → Hub `/api/v1/auth/totp/login`. Challenge token nằm trong cookie HttpOnly `tm_totp_pending` (5 phút); sai mã giữ cookie để thử lại, 401/429 xóa cookie. Đã kiểm chứng end-to-end bằng Hub giả cục bộ (BFF probe + render `en`/`vi`, xem 7.10). **Chưa** kiểm chứng happy path với Hub production vì chưa có tài khoản nào bật TOTP; muốn xác nhận cần bật TOTP cho một tài khoản thật (ngoài phạm vi được cấp phép của phiên này). BFF chưa có endpoint đăng ký/khôi phục TOTP — đó là việc của Hub/tm-hub.
 3. **Hub tenant/app phases 1–8** thuộc repo TM Hub, chưa triển khai trong `tm-websites`; contracts mới chỉ là kiểu dữ liệu dùng chung.
