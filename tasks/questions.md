@@ -33,6 +33,7 @@
 | Q13 | Media đi tiếp bằng Cloudinary (Hub đang thiếu credential) hay chuyển sang R2/S3? | Giữ Cloudinary, chờ credential | MED-01 |
 | Q14 | Deploy: ai cấp Vercel token + domain cho từng customer? Có cần tôi chuẩn bị `vercel.json`/CI trước không? | Không deploy; chỉ build local | P10 |
 | Q15 | AI Workspace: bỏ hẳn khỏi scope (v2 đang coi là optional, không thay thế parity) hay vẫn làm sau P5? | Bỏ khỏi scope hiện tại | — |
+| Q16 | Retention: giữ bao nhiêu bản snapshot/nội dung và bao lâu `audit_logs`? Đã có lệnh `pnpm prune:retention` (dry-run mặc định, `--apply` mới xoá) với mặc định tạm 50 bản/nội dung và 365 ngày audit — cần con số chính thức. | Chưa chốt; mặc định tạm, không chạy tự động | P2.c |
 
 ## D. Việc tôi đã tự quyết trong lượt này (bạn chỉ cần bác nếu sai)
 

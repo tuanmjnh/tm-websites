@@ -30,6 +30,8 @@
     "test:categories": "tsx scripts/build/test-category-service.ts",
     "test:media": "tsx scripts/build/test-media-service.ts",
     "test:audit": "tsx scripts/build/test-audit-service.ts",
+    "test:retention": "tsx scripts/build/test-retention-service.ts",
+    "prune:retention": "tsx scripts/ops/prune-retention.ts",
     "test:bulk": "tsx scripts/build/test-bulk-service.ts"
   },
   "devDependencies": {

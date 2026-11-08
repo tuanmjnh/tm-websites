@@ -295,14 +295,22 @@ Verified over HTTP on `:4005`: two identical creates with one key produced one r
 
 Verified over HTTP on `:4005` (2 entries, filters, paging, `422` cases, `401` anonymous) and in the browser (rows, stats, action filter, search empty state, `200` requests). Probe record, audit entries and revisions were removed afterwards.
 
-Still open in P2.c: audit covers content only, no retention/pruning policy for `audit_logs` or `content_revisions`, no concurrent-key race test, no idempotency for public writes, no per-record history for category/media.
+### P2.c (rest) — retention command (landed 2026-11-08)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm prune:retention`: per-content snapshot cap and audit age cutoff, site-scoped, dry run unless `--apply`, idempotent re-run, invalid options refused | `tm-cms/server/services/retentionService.ts`, `scripts/ops/prune-retention.ts` |
+| Suites: `pnpm test:retention` 5 live checks (cap, cutoff, site isolation, dry run, re-run no-op, option bounds) | `scripts/build/test-retention-service.ts` |
+| Operator runbook + dry-run/apply evidence on `sen-tuan` | `docs/v2/08-operations-and-verification.md`, `docs/v2/05-feature-parity.md` |
+
+Still open in P2.c: audit covers content only, the retention periods are placeholder defaults pending Q16 and nothing schedules the command, no concurrent-key race test, no idempotency for public writes, no per-record history for category/media.
 
 ## Next slices
 
 1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub.
 2. **P2.d — other domains on the same foundation**: configs/settings move onto the same model + audit + idempotency pattern; prove a CMS-only customer (`thanhtung`, `hoangvi`) can bind a database once Q2 names them.
 3. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
-4. **P2.c (rest) — retention**: the audit page now filters by resource/action/actor and pages with a cursor; what is left is a retention policy so `audit_logs` and `content_revisions` do not grow without bound, plus per-record history for category/media.
+4. **P2.c (rest) — retention scheduling**: `pnpm prune:retention` exists but needs Q16's periods and a scheduler (Q12) before a site can rely on it; category/media still lack a per-record history endpoint.
 
 Blocked on owner decisions (see [`questions.md`](questions.md)): WEB-09 durable revalidation and media in the public projection need Q12 (cache/revalidation infrastructure) and Q13 (media provider/public origin); importing the existing catalog/content data and enabling `default`/`thanhtung`/`hoangvi` need Q2; revoke/entitlement freshness needs Q6; moving the models into a shared server package needs Q11.
 

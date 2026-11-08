@@ -267,6 +267,26 @@ Bulk runs with the local Hub on `:4000` (or `TM_AUTH_MODE=mock` for local-only U
 
 Probe content, its audit entries and revisions must be deleted afterwards; the sequence above is also covered by `pnpm test:audit` (7 checks), which needs no CMS server.
 
+### Retention: revisions and audit (P2.c)
+
+`pnpm prune:retention` trims the two collections that grow without a bound. It is an operator command, not a scheduled job, and it only touches one site's own database.
+
+```bash
+TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=sen-tuan \
+  pnpm prune:retention --site sentuan [--keep-revisions 50] [--audit-days 365] [--apply]
+```
+
+| Check | Expected |
+| --- | --- |
+| No `--apply` | Reports removable rows per collection and deletes nothing |
+| `--apply` with a content record over the cap | Only snapshots older than `max(revision) - keepRevisions` go; the newest `keepRevisions` stay |
+| `--apply` with `--audit-days` | `audit_logs` older than the cutoff go; newer entries and other sites are untouched |
+| Second run in a row | Reports `0` and deletes nothing |
+| `--keep-revisions 0`, `--audit-days 0`, non-integer values | Exit `1` with `RETENTION_OPTIONS_INVALID`; nothing is deleted |
+| Missing `TM_MONGO_DB` or `--site` | Exit `1` with a message naming the missing input |
+
+Defaults are conservative placeholders (50 snapshots per record, 365 days of audit) and stay dry-run unless `--apply` is passed. The real periods are still an owner decision (Q16). Coverage: `pnpm test:retention` (5 checks, disposable database).
+
 ## Customer build matrix
 
 Read the registry before each run. At this baseline: CMS supports default, sentuan, bagpost, thanhtung, hoangvi; Web supports default, sentuan, bagpost. Disabled app/customer combinations should fail, not silently build another customer.
