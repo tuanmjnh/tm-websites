@@ -191,7 +191,9 @@
           "defaultDescription": "Mô tả SEO mặc định",
           "defaultLocale": "Ngôn ngữ mặc định",
           "enabledLocales": "Ngôn ngữ bật",
-          "modules": "Module"
+          "modules": "Module",
+          "logo": "Logo",
+          "seoImage": "Ảnh SEO mặc định"
         },
         "modules": {
           "content": "Nội dung",
@@ -205,7 +207,13 @@
           "invalid": "Dữ liệu chưa hợp lệ: kiểm tra email, ngôn ngữ mặc định và danh sách ngôn ngữ bật.",
           "forbidden": "Tài khoản không có quyền sửa cấu hình (configs.write).",
           "unavailable": "Không lưu được cấu hình, thử lại sau."
-        }
+        },
+        "choose": "Chọn ảnh",
+        "clear": "Bỏ chọn",
+        "noMedia": "Chưa chọn ảnh",
+        "pickMedia": "Chọn ảnh từ thư viện",
+        "pickMediaSearch": "Tìm theo tên hoặc thư mục",
+        "pickMediaEmpty": "Chưa có ảnh nào trong thư viện."
       }
     },
     "audit": {

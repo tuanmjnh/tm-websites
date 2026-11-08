@@ -296,6 +296,7 @@ Defaults are conservative placeholders (50 snapshots per record, 365 days of aud
 | Save again without editing | "There is nothing to save." (`422 SETTINGS_UPDATE_UNCHANGED`) |
 | Bump the revision through the API, then save the stale form | "Someone else saved these settings…" (`409 SETTINGS_REVISION_CONFLICT`), nothing overwritten |
 | Try to uncheck the current default locale | The checkbox is disabled; changing the default in the select keeps both enabled |
+| Press *Choose image* next to Logo | A dialog lists the library's images with search; picking one fills the field and closes the dialog, then saving stores `company.logoMediaId` (the clear button empties it) |
 | A session without `configs.write` | Fields and Save are disabled, the read-only note is shown, `PATCH` → `403`; a session without `configs.read` → `403` on `GET` and the page shows the permission message |
 | Hub unreachable / Hub session rejected | The Hub card shows its own error while the settings card still loads and saves |
 

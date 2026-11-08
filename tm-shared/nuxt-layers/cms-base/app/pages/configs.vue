@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AdminSiteSettings, AdminSiteSettingsPatch } from '@tm/flow-contracts/settings-admin'
 import { SETTINGS_LOCALES, SITE_MODULES } from '@tm/flow-contracts/settings-admin'
+import type { AdminMedia } from '@tm/flow-contracts/media-admin'
 import type { HubAppConfigMeta } from '@tm/flow-contracts'
 
 const { t } = useI18n()
@@ -25,8 +26,10 @@ const form = reactive({
   email: '',
   phone: '',
   address: '',
+  logoMediaId: '',
   titleTemplate: '%s',
   defaultDescription: '',
+  defaultImageMediaId: '',
   defaultLocale: 'vi' as (typeof SETTINGS_LOCALES)[number],
   enabled: ['vi'] as Array<(typeof SETTINGS_LOCALES)[number]>,
   modules: { content: true, catalog: false, orders: false, inventory: false } as Record<string, boolean>,
@@ -45,12 +48,58 @@ function applySettings(settings: AdminSiteSettings) {
   form.email = settings.company.email
   form.phone = settings.company.phone
   form.address = settings.company.address
+  form.logoMediaId = settings.company.logoMediaId
   form.titleTemplate = settings.seo.titleTemplate
   form.defaultDescription = settings.seo.defaultDescription
+  form.defaultImageMediaId = settings.seo.defaultImageMediaId
   form.defaultLocale = settings.locales.default
   form.enabled = [...settings.locales.enabled]
   form.modules = { ...settings.modules }
   settingsLoaded.value = true
+}
+
+const { list: listMedia } = useMediaAdmin()
+const mediaCache = ref<Record<string, AdminMedia>>({})
+const picker = reactive({
+  open: false,
+  target: 'logo' as 'logo' | 'seoImage',
+  loading: false,
+  error: null as string | null,
+  search: '',
+  items: [] as AdminMedia[],
+})
+
+function mediaLabel(id: string): string {
+  if (!id) return t('admin.configs.site.noMedia')
+  const item = mediaCache.value[id]
+  return item ? (item.title || item.originalName) : id
+}
+
+async function loadPicker() {
+  picker.loading = true
+  picker.error = null
+  try {
+    const result = await listMedia({ kind: 'image', limit: 50, ...(picker.search.trim() ? { q: picker.search.trim() } : {}) })
+    picker.items = result.data
+    for (const item of result.data) mediaCache.value[item.id] = item
+  } catch (error) {
+    picker.error = describeError(error)
+  } finally {
+    picker.loading = false
+  }
+}
+
+function openPicker(target: 'logo' | 'seoImage') {
+  picker.target = target
+  picker.open = true
+  picker.items = []
+  void loadPicker()
+}
+
+function chooseMedia(item: AdminMedia) {
+  if (picker.target === 'logo') form.logoMediaId = item.id
+  else form.defaultImageMediaId = item.id
+  picker.open = false
 }
 
 function toggleLocale(locale: (typeof SETTINGS_LOCALES)[number], enabled: boolean) {
@@ -72,8 +121,13 @@ async function saveSite() {
       email: form.email,
       phone: form.phone,
       address: form.address,
+      logoMediaId: form.logoMediaId,
     },
-    seo: { titleTemplate: form.titleTemplate, defaultDescription: form.defaultDescription },
+    seo: {
+      titleTemplate: form.titleTemplate,
+      defaultDescription: form.defaultDescription,
+      defaultImageMediaId: form.defaultImageMediaId,
+    },
     locales: { default: form.defaultLocale, enabled: [...form.enabled] },
     modules: { ...form.modules },
   }
@@ -229,6 +283,20 @@ onMounted(load)
             <UFormField :label="t('admin.configs.site.fields.defaultDescription')" class="sm:col-span-2">
               <UInput v-model="form.defaultDescription" size="sm" :disabled="!canWrite" :maxlength="300" />
             </UFormField>
+            <UFormField :label="t('admin.configs.site.fields.logo')">
+              <div class="flex items-center gap-2">
+                <UInput :model-value="mediaLabel(form.logoMediaId)" readonly size="sm" class="min-w-0 flex-1" />
+                <UButton size="sm" color="neutral" variant="soft" :label="t('admin.configs.site.choose')" :disabled="!canWrite" @click="openPicker('logo')" />
+                <UButton v-if="form.logoMediaId" size="sm" color="neutral" variant="ghost" icon="i-lucide-x" :disabled="!canWrite" :aria-label="t('admin.configs.site.clear')" @click="form.logoMediaId = ''" />
+              </div>
+            </UFormField>
+            <UFormField :label="t('admin.configs.site.fields.seoImage')">
+              <div class="flex items-center gap-2">
+                <UInput :model-value="mediaLabel(form.defaultImageMediaId)" readonly size="sm" class="min-w-0 flex-1" />
+                <UButton size="sm" color="neutral" variant="soft" :label="t('admin.configs.site.choose')" :disabled="!canWrite" @click="openPicker('seoImage')" />
+                <UButton v-if="form.defaultImageMediaId" size="sm" color="neutral" variant="ghost" icon="i-lucide-x" :disabled="!canWrite" :aria-label="t('admin.configs.site.clear')" @click="form.defaultImageMediaId = ''" />
+              </div>
+            </UFormField>
           </div>
 
           <div class="flex flex-wrap items-end gap-4 border-t border-default/40 pt-3">
@@ -282,6 +350,40 @@ onMounted(load)
           <p v-if="!canWrite" class="text-xs text-muted">{{ t('admin.configs.site.readOnly') }}</p>
         </div>
       </BentoCard>
+
+      <UModal v-model:open="picker.open" :title="t('admin.configs.site.pickMedia')">
+        <template #body>
+          <div class="flex flex-col gap-3">
+            <UInput
+              v-model="picker.search"
+              icon="i-lucide-search"
+              size="sm"
+              :placeholder="t('admin.configs.site.pickMediaSearch')"
+              @keydown.enter="loadPicker"
+            />
+            <p v-if="picker.error" class="text-sm text-error">{{ picker.error }}</p>
+            <p v-else-if="!picker.loading && !picker.items.length" class="py-6 text-center text-sm text-muted">
+              {{ t('admin.configs.site.pickMediaEmpty') }}
+            </p>
+            <div v-else class="grid max-h-80 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+              <button
+                v-for="item in picker.items"
+                :key="item.id"
+                type="button"
+                class="flex flex-col gap-1 rounded-md border border-default p-2 text-left hover:border-primary/60"
+                @click="chooseMedia(item)"
+              >
+                <img v-if="item.kind === 'image'" :src="item.url" :alt="item.alt || item.title" class="h-24 w-full rounded-sm object-cover">
+                <span class="truncate text-xs font-medium text-highlighted">{{ item.title || item.originalName }}</span>
+                <span class="truncate text-[11px] text-muted">{{ item.folder || t('admin.media.root') }}</span>
+              </button>
+            </div>
+            <div class="flex justify-end">
+              <UButton color="neutral" variant="soft" size="sm" :label="t('common.cancel')" @click="picker.open = false" />
+            </div>
+          </div>
+        </template>
+      </UModal>
 
       <BentoCard
         :title="t('admin.configs.listTitle')"

@@ -316,7 +316,7 @@ Still open in P2.c: audit covers content only, the retention periods are placeho
 
 Verified over HTTP on `:4005` (defaults, first save, idempotent replay, `409`, `422` cases, audit rows) and in the browser (card render, save → revision 1, unchanged message, stale-form conflict message). Probe document, audit entries and idempotency keys were removed afterwards.
 
-Open items: Hub roles need `configs.write` for a real admin to save; menus, media picking for logo/default image and the public projection are still missing; only `sentuan` was exercised (Q2).
+Open items: Hub roles need `configs.write` for a real admin to save; menus and the public projection are still missing; only `sentuan` was exercised (Q2). The logo/default SEO image are picked from the media library in a dialog (verified in the browser with a probe upload, since removed).
 
 ## Next slices
 
