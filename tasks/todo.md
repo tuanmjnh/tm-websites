@@ -13,7 +13,7 @@
 | P0 | Documentation reset (v2 docs, ADR, archive) | Done — links verified, no application PASS implied |
 | P1 | IAM contract and BFF | **In progress** — P1.a (adapter/CSRF/proxy) and P1.b (verified-context gate) landed |
 | P2 | Business foundation (trusted DB binding, shared models, audit/idempotency) | **In progress** — tenant-bound DB binding, validated model, migrations v1–v3, content audit and idempotent retries landed |
-| P3 | Content/media/site vertical slice on MongoDB | **In progress** — CMS content module with audit, retry safety and revision diff/restore runs on MongoDB; Web reads the same collection for pages and the `/bai-viet` listing; media library with local storage, uploads and content attachments (P3.e); bulk publish/archive/delete with per-row results (P3.f); Web discovery with tag/category landing pages and bounded public search (WEB-02); unified public search page over content and products (WEB-04); crawl policy with robots.txt and a sitemap covering tag/category pages (WEB-08); client-owned cart with server-side re-quoting (WEB-05) |
+| P3 | Content/media/site vertical slice on MongoDB | **In progress** — CMS content module with audit, retry safety and revision diff/restore runs on MongoDB; Web reads the same collection for pages and the `/bai-viet` listing; media library with local storage, uploads and content attachments (P3.e); bulk publish/archive/delete with per-row results and bulk media move/delete (P3.f); Web discovery with tag/category landing pages and bounded public search (WEB-02); unified public search page over content and products (WEB-04); crawl policy with robots.txt and a sitemap covering tag/category pages (WEB-08); client-owned cart with server-side re-quoting (WEB-05) |
 | P4 | Catalog/search | Planned |
 | P5–P10 | Commerce/CRM, inventory/purchasing, finance, HR/comms, hardening, migration | Planned |
 
@@ -195,6 +195,18 @@ Verified on `:4005`: upload → `201` (`folder: landing/hero`, `key: sentuan/202
 
 Still open in the media slice: no provider adapter (local disk only), no image transforms or stored dimensions, no folder tree or move-batch, no idempotency for multipart uploads, no inline upload from the rich-text body, and the storefront projection does not expose media yet.
 
+### P3.f (rest) — bulk media operations (landed 2026-11-08)
+
+| Slice | Evidence |
+| --- | --- |
+| `POST /api/v1/admin/media/bulk` moves or deletes 1–50 files with one result row per file | `mediaService.ts` (`runBulkMediaCommand`), `media/bulk.post.ts`, `@tm/flow-contracts/media-admin` |
+| Media page: per-card selection, select-all/clear, move dialog with a shared folder, delete dialog with inline failures | `cms-base/app/pages/media.vue` |
+| Per-row rules stay in the single-file commands (revision lock, normalized folder, `MEDIA_IN_USE`, audit) | `scripts/build/test-media-service.ts` (12 checks) |
+
+Verified on CMS `:4005` with mock auth against `sen-tuan`: the service suite is green, HTTP `200`/`422` branches behave as documented in `04`, and in the browser a two-file move (`landing/banner` → `landing/featured`, revision 3) succeeded while a mixed delete kept the attached file and reported it inline. Probe files were removed (`media 0`, `content 2`, `items 241`) and the dev server stopped. Gates: `test:media`, root `typecheck`, root `lint`. Dialog dismissal could not be observed in the automated preview (exit animations do not advance there; the untouched `/categories` page behaves the same), so it remains unverified.
+
+Still open in P3.f: bulk limited to the loaded page, no undo, and no media in the public projection (Q13).
+
 ### P3.f — bulk content actions (landed 2026-11-07)
 
 | Slice | Evidence |
@@ -207,7 +219,7 @@ Still open in the media slice: no provider adapter (local disk only), no image t
 
 Verified over HTTP on `:4005`: publishing two drafts returned `200` with `succeeded: 2`; resending the same items at their old revisions returned `200` with `failed: 2` and `CONTENT_REVISION_CONFLICT` on each row; `schedule` with no items returned `422 CONTENT_BULK_INVALID`. In the browser the select-all bar enabled the actions only for a real selection, archiving two records reported `Processed 2/2 records` and cleared the selection, and a run over an already-archived record reported `Processed 0/1 records` with that row's reason. The select-all run also covered the two demo records, which were restored by hand afterwards (including the post's `publishedAt`, reset to the restore time because the soft delete had cleared it).
 
-Still open in P3.f: bulk is limited to the loaded page (no "all matching the filter"), no bulk schedule or shared-field edit, no undo, no media batch move/delete, and no import/export or background job runner.
+Still open in P3.f: bulk is limited to the loaded page (no "all matching the filter"), no bulk schedule or shared-field edit, no undo, and no import/export or background job runner. Media bulk move/delete landed separately (see the P3.f rest entry above).
 
 ### WEB-02 — discovery landing pages + public search (landed 2026-11-07)
 
@@ -279,8 +291,8 @@ Still open in P2.c: audit covers content only, no retention policy, no concurren
 
 1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub.
 2. **P2.d — other domains on the same foundation**: configs/settings move onto the same model + audit + idempotency pattern; prove a CMS-only customer (`thanhtung`, `hoangvi`) can bind a database once Q2 names them.
-3. **P3.f (rest) — media batch operations and CMS UI checks**: needs the local Hub on `:4000` so the CMS session can be exercised in the browser again.
-4. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
+3. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
+4. **P2.c (rest) — audit and retention UI**: the audit log page reads the entries the bulk commands write; the remaining work is filtering by resource/action and a retention policy for `content_revisions`.
 
 Blocked on owner decisions (see [`questions.md`](questions.md)): WEB-09 durable revalidation and media in the public projection need Q12 (cache/revalidation infrastructure) and Q13 (media provider/public origin); importing the existing catalog/content data and enabling `default`/`thanhtung`/`hoangvi` need Q2; revoke/entitlement freshness needs Q6; moving the models into a shared server package needs Q11.
 

@@ -483,6 +483,21 @@
         "titleInvalid": "Display name is too long",
         "fileRequired": "Choose a file to upload",
         "queryInvalid": "Library filter is not valid"
+      },
+      "bulk": {
+        "selected": "{count} files selected",
+        "selectAll": "Select all",
+        "clearSelection": "Clear selection",
+        "selectItem": "Select {name}",
+        "moveAction": "Move to folder",
+        "deleteAction": "Delete selected",
+        "moveTitle": "Move selected files",
+        "moveDescription": "Move {count} files into a new folder. Files already used by content move as well.",
+        "moveHint": "The folder is normalized (Landing / Hero → landing/hero). Leave it empty for the root folder.",
+        "deleteTitle": "Delete selected files",
+        "deleteDescription": "Delete {count} files from the library. Files still referenced by content are rejected and left untouched.",
+        "done": "{count} files processed",
+        "failedRows": "{count} files could not be processed"
       }
     },
     "notifications": {

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { AdminMedia } from '@tm/flow-contracts/media-admin'
+import type { AdminMedia, AdminMediaBulkRow } from '@tm/flow-contracts/media-admin'
 import { MEDIA_MAX_BYTES, MEDIA_MIME_TYPES } from '@tm/flow-contracts/media-admin'
 
 const { t, locale } = useI18n()
 const toast = useToast()
 const { hasCapability } = useHub()
-const { list, upload, update, remove, errorCode } = useMediaAdmin()
+const { list, upload, update, remove, bulk, errorCode } = useMediaAdmin()
 
 const canRead = computed(() => hasCapability('media.read'))
 const canUpload = computed(() => hasCapability('media.upload'))
@@ -44,6 +44,19 @@ const deleteOpen = ref(false)
 const deleting = ref<AdminMedia | null>(null)
 const deleteBusy = ref(false)
 const deleteError = ref<string | null>(null)
+
+// Bulk selection is kept by id so a reload can prune files that no longer
+// exist, while the rows that failed stay selected for another attempt.
+const selectedIds = ref<string[]>([])
+const selectedItems = computed(() => items.value.filter(entry => selectedIds.value.includes(entry.id)))
+const allSelected = computed(() => items.value.length > 0 && items.value.every(entry => selectedIds.value.includes(entry.id)))
+
+const bulkMoveOpen = ref(false)
+const bulkDeleteOpen = ref(false)
+const bulkFolder = ref('')
+const bulkBusy = ref(false)
+const bulkError = ref<string | null>(null)
+const bulkFailures = ref<AdminMediaBulkRow[]>([])
 
 const kindItems = computed(() => [
   { label: t('admin.media.allKinds'), value: 'all' },
@@ -214,6 +227,76 @@ async function confirmDelete() {
   }
 }
 
+const toggleSelection = (entry: AdminMedia) => {
+  selectedIds.value = selectedIds.value.includes(entry.id)
+    ? selectedIds.value.filter(id => id !== entry.id)
+    : [...selectedIds.value, entry.id]
+}
+
+const toggleAll = () => {
+  selectedIds.value = allSelected.value ? [] : items.value.map(entry => entry.id)
+}
+
+const clearSelection = () => {
+  selectedIds.value = []
+}
+
+function openBulkMove() {
+  bulkError.value = null
+  bulkFailures.value = []
+  const folders = [...new Set(selectedItems.value.map(entry => entry.folder).filter(Boolean))]
+  bulkFolder.value = folders.length === 1 ? folders[0]! : ''
+  bulkMoveOpen.value = true
+}
+
+function openBulkDelete() {
+  bulkError.value = null
+  bulkFailures.value = []
+  bulkDeleteOpen.value = true
+}
+
+const failureLabel = (row: AdminMediaBulkRow) => {
+  const entry = items.value.find(item => item.id === row.id)
+  return entry ? displayName(entry) : row.id
+}
+
+async function runBulk(action: 'move' | 'delete') {
+  if (!selectedItems.value.length || bulkBusy.value) return
+  bulkBusy.value = true
+  bulkError.value = null
+  bulkFailures.value = []
+  try {
+    const result = await bulk({
+      action,
+      ...(action === 'move' ? { folder: bulkFolder.value } : {}),
+      items: selectedItems.value.map(entry => ({ id: entry.id, revision: entry.revision })),
+    })
+
+    if (result.succeeded) {
+      toast.add({ title: t('admin.media.bulk.done', { count: result.succeeded }), color: 'success' })
+    }
+
+    bulkFailures.value = result.results.filter(row => !row.ok)
+
+    if (!result.failed) {
+      bulkMoveOpen.value = false
+      bulkDeleteOpen.value = false
+    }
+
+    await load()
+    // Keep only failures selected; the rows that changed are already handled.
+    if (result.failed) {
+      selectedIds.value = bulkFailures.value.map(row => row.id)
+    } else {
+      clearSelection()
+    }
+  } catch (cause) {
+    bulkError.value = describeError(cause)
+  } finally {
+    bulkBusy.value = false
+  }
+}
+
 async function copyUrl(entry: AdminMedia) {
   try {
     await navigator.clipboard.writeText(entry.url)
@@ -317,13 +400,69 @@ if (canRead.value) await load()
       </template>
 
       <div v-if="canRead && items.length" class="flex flex-col gap-4">
+        <div
+          v-if="selectedIds.length"
+          class="flex flex-wrap items-center gap-2 rounded-sm border border-primary/40 bg-primary/10 px-3 py-2 text-xs"
+        >
+          <span class="font-medium text-highlighted">
+            {{ t('admin.media.bulk.selected', { count: selectedIds.length }) }}
+          </span>
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :label="allSelected ? t('admin.media.bulk.clearSelection') : t('admin.media.bulk.selectAll')"
+            @click="toggleAll"
+          />
+          <div class="ml-auto flex flex-wrap items-center gap-2">
+            <UButton
+              v-if="canUpload"
+              color="primary"
+              variant="soft"
+              size="xs"
+              icon="i-lucide-folder-input"
+              :label="t('admin.media.bulk.moveAction')"
+              @click="openBulkMove"
+            />
+            <UButton
+              v-if="canDelete"
+              color="error"
+              variant="soft"
+              size="xs"
+              icon="i-lucide-trash-2"
+              :label="t('admin.media.bulk.deleteAction')"
+              @click="openBulkDelete"
+            />
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-x"
+              :aria-label="t('admin.media.bulk.clearSelection')"
+              @click="clearSelection"
+            />
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <div
             v-for="entry in items"
             :key="entry.id"
             class="flex flex-col overflow-hidden rounded-[4px] border border-default/60"
           >
-            <div class="flex h-32 items-center justify-center bg-elevated/40">
+            <div class="relative flex h-32 items-center justify-center bg-elevated/40">
+              <label
+                class="absolute left-2 top-2 z-10 inline-flex size-6 cursor-pointer items-center justify-center rounded-sm border border-default bg-default/80 backdrop-blur"
+                :title="t('admin.media.bulk.selectItem', { name: displayName(entry) })"
+              >
+                <input
+                  type="checkbox"
+                  class="size-3.5 accent-primary"
+                  :checked="selectedIds.includes(entry.id)"
+                  :aria-label="t('admin.media.bulk.selectItem', { name: displayName(entry) })"
+                  @change="toggleSelection(entry)"
+                >
+              </label>
               <img
                 v-if="entry.kind === 'image'"
                 :src="entry.url"
@@ -426,6 +565,63 @@ if (canRead.value) await load()
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="deleteOpen = false" />
           <UButton color="error" size="sm" :loading="deleteBusy" :label="t('common.delete')" @click="confirmDelete" />
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="bulkMoveOpen" :title="t('admin.media.bulk.moveTitle')">
+      <template #body>
+        <div class="flex flex-col gap-3 text-sm">
+          <p class="text-muted">{{ t('admin.media.bulk.moveDescription', { count: selectedIds.length }) }}</p>
+          <UFormField :label="t('admin.media.fields.folder')">
+            <UInput v-model="bulkFolder" class="w-full font-mono" placeholder="landing/hero" />
+          </UFormField>
+          <p class="text-[11px] text-muted">{{ t('admin.media.bulk.moveHint') }}</p>
+          <p v-if="bulkError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ bulkError }}</p>
+          <div v-if="bulkFailures.length" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs">
+            <p class="font-medium text-highlighted">{{ t('admin.media.bulk.failedRows', { count: bulkFailures.length }) }}</p>
+            <ul class="mt-1 space-y-0.5">
+              <li v-for="row in bulkFailures" :key="row.id" class="text-muted">
+                {{ failureLabel(row) }} — {{ row.error?.message }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="bulkMoveOpen = false" />
+          <UButton
+            color="primary"
+            size="sm"
+            :loading="bulkBusy"
+            :disabled="!bulkFolder.trim()"
+            :label="t('admin.media.bulk.moveAction')"
+            @click="runBulk('move')"
+          />
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="bulkDeleteOpen" :title="t('admin.media.bulk.deleteTitle')">
+      <template #body>
+        <div class="flex flex-col gap-3 text-sm">
+          <p class="text-muted">{{ t('admin.media.bulk.deleteDescription', { count: selectedIds.length }) }}</p>
+          <p v-if="bulkError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ bulkError }}</p>
+          <div v-if="bulkFailures.length" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs">
+            <p class="font-medium text-highlighted">{{ t('admin.media.bulk.failedRows', { count: bulkFailures.length }) }}</p>
+            <ul class="mt-1 space-y-0.5">
+              <li v-for="row in bulkFailures" :key="row.id" class="text-muted">
+                {{ failureLabel(row) }} — {{ row.error?.message }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="bulkDeleteOpen = false" />
+          <UButton color="error" size="sm" :loading="bulkBusy" :label="t('common.delete')" @click="runBulk('delete')" />
         </div>
       </template>
     </UModal>

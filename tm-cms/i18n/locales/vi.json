@@ -483,6 +483,21 @@
         "titleInvalid": "Tên hiển thị quá dài",
         "fileRequired": "Chưa chọn tệp để tải lên",
         "queryInvalid": "Bộ lọc thư viện không hợp lệ"
+      },
+      "bulk": {
+        "selected": "{count} tệp đã chọn",
+        "selectAll": "Chọn tất cả",
+        "clearSelection": "Bỏ chọn",
+        "selectItem": "Chọn tệp {name}",
+        "moveAction": "Chuyển thư mục",
+        "deleteAction": "Xoá đã chọn",
+        "moveTitle": "Chuyển thư mục cho tệp đã chọn",
+        "moveDescription": "Chuyển {count} tệp sang thư mục mới. Tệp đang được nội dung sử dụng vẫn chuyển được.",
+        "moveHint": "Thư mục được chuẩn hoá (Landing / Hero → landing/hero). Để trống là thư mục gốc.",
+        "deleteTitle": "Xoá tệp đã chọn",
+        "deleteDescription": "Xoá {count} tệp khỏi thư viện. Tệp còn được nội dung tham chiếu sẽ bị từ chối và giữ nguyên.",
+        "done": "Đã xử lý {count} tệp",
+        "failedRows": "{count} tệp không xử lý được"
       }
     },
     "notifications": {

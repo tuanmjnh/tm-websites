@@ -243,6 +243,18 @@ With `TM_SITE_INDEXABLE=false` the same route must answer exactly `User-agent: *
 
 Cart storage is per origin (`tm-cart:v1:<site>`), so clearing site data empties the cart. Probe records used for a manual check must be deleted afterwards.
 
+### Media bulk smoke (P3.f rest)
+
+| Check | Expected |
+| --- | --- |
+| With two uploaded files, tick both and pick *Move to folder* | `POST /api/v1/admin/media/bulk` with `action: move`, the normalized folder echoed back, both rows `ok`, list refreshed at the new folder |
+| Same dialog with one file attached to content, then *Delete selected* | `200` with `succeeded/failed`, the attached row reports `MEDIA_IN_USE`, the other file disappears from the list |
+| Repeat a row id, or send a stale `revision` | `MEDIA_BULK_DUPLICATE` / `MEDIA_REVISION_CONFLICT` on that row only |
+| `items: []`, unknown `action`, 51 items, over-long folder | `422 MEDIA_BULK_INVALID` / `422 MEDIA_FOLDER_INVALID` |
+| Capability check | A user without `media.delete` cannot delete, one without `media.upload` cannot move |
+
+Bulk runs with the local Hub on `:4000` (or `TM_AUTH_MODE=mock` for local-only UI work). Probe uploads must be deleted, and their bytes removed from the media root, after a manual check.
+
 ## Customer build matrix
 
 Read the registry before each run. At this baseline: CMS supports default, sentuan, bagpost, thanhtung, hoangvi; Web supports default, sentuan, bagpost. Disabled app/customer combinations should fail, not silently build another customer.

@@ -9,6 +9,7 @@ import {
   deleteMedia,
   findMediaByKey,
   listMedia,
+  runBulkMediaCommand,
   updateMedia,
 } from '../../tm-cms/server/services/mediaService.js'
 import {
@@ -280,6 +281,96 @@ async function integration() {
         isMediaError(422, 'MEDIA_TYPE_NOT_ALLOWED'),
       )
       assert.equal(await Media.countDocuments({ siteId: SITE }), before)
+    })
+
+    await check('bulk move normalizes the folder and bumps every row revision', async () => {
+      const first = await createMedia(Media, SITE, ORIGIN, {
+        body: PNG,
+        mimeType: 'image/png',
+        originalName: 'bulk-a.png',
+        uploader: UPLOADER,
+      }, meta)
+      const second = await createMedia(Media, SITE, ORIGIN, {
+        body: PNG,
+        mimeType: 'image/png',
+        originalName: 'bulk-b.png',
+        uploader: UPLOADER,
+      }, meta)
+
+      const result = await runBulkMediaCommand({ media: Media, content: Content }, SITE, ORIGIN, {
+        action: 'move',
+        folder: 'Landing / Banner',
+        items: [
+          { id: first.id, revision: first.revision },
+          { id: second.id, revision: second.revision },
+        ],
+      }, meta)
+
+      assert.equal(result.succeeded, 2)
+      assert.equal(result.failed, 0)
+      assert.equal(result.folder, 'landing/banner')
+
+      const rows = await Media.find({ siteId: SITE, _id: { $in: [first.id, second.id] } }).lean()
+      assert.deepEqual(rows.map(row => row.folder), ['landing/banner', 'landing/banner'])
+      assert.deepEqual(rows.map(row => row.revision), [2, 2])
+
+      const audits = await Audit.countDocuments({ siteId: SITE, resourceType: 'media', action: 'update' })
+      assert.ok(audits >= 2)
+
+      const duplicate = await runBulkMediaCommand({ media: Media, content: Content }, SITE, ORIGIN, {
+        action: 'move',
+        folder: 'landing/banner',
+        items: [
+          { id: first.id, revision: 2 },
+          { id: first.id, revision: 2 },
+        ],
+      }, meta)
+
+      assert.equal(duplicate.succeeded, 0)
+      assert.equal(duplicate.failed, 2)
+      assert.deepEqual(
+        duplicate.results.map(row => row.error?.code),
+        ['MEDIA_UPDATE_UNCHANGED', 'MEDIA_BULK_DUPLICATE'],
+      )
+
+      const stale = await runBulkMediaCommand({ media: Media, content: Content }, SITE, ORIGIN, {
+        action: 'move',
+        folder: 'landing/other',
+        items: [{ id: first.id, revision: 1 }],
+      }, meta)
+      assert.equal(stale.failed, 1)
+      assert.equal(stale.results[0]!.error?.code, 'MEDIA_REVISION_CONFLICT')
+
+      const tooLong = await runBulkMediaCommand({ media: Media, content: Content }, SITE, ORIGIN, {
+        action: 'move',
+        folder: 'x'.repeat(130),
+        items: [{ id: first.id, revision: 2 }],
+      }, meta).catch((error: unknown) => error)
+      assert.ok(isMediaError(422, 'MEDIA_FOLDER_INVALID')(tooLong))
+
+      const probe = await createContent(Content, SITE, {
+        type: 'page',
+        key: 'pages/bulk-media-probe',
+        locales: [{ locale: 'vi', slug: 'bulk-media-probe', title: 'Bulk media probe' }],
+        media: [first.id],
+      })
+      assert.equal(probe.media.length, 1)
+
+      const removed = await runBulkMediaCommand({ media: Media, content: Content }, SITE, ORIGIN, {
+        action: 'delete',
+        items: [
+          { id: first.id, revision: 2 },
+          { id: second.id, revision: 2 },
+        ],
+      }, meta)
+
+      assert.equal(removed.action, 'delete')
+      assert.equal(removed.folder, null)
+      assert.equal(removed.succeeded, 1)
+      assert.equal(removed.failed, 1)
+      assert.equal(removed.results[0]!.error?.code, 'MEDIA_IN_USE')
+      assert.ok(await Media.findOne({ siteId: SITE, _id: first.id }), 'the in-use file survives')
+      assert.equal(await Media.findById(second.id), null)
     })
 
     await Content.deleteMany({ siteId: SITE })

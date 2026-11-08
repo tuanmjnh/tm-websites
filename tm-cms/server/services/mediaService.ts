@@ -1,6 +1,14 @@
 import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
-import type { AdminMedia, AdminMediaList, MediaKind, MediaUpdate } from '@tm/flow-contracts/media-admin'
+import type {
+  AdminMedia,
+  AdminMediaBulkRequest,
+  AdminMediaBulkResult,
+  AdminMediaBulkRow,
+  AdminMediaList,
+  MediaKind,
+  MediaUpdate,
+} from '@tm/flow-contracts/media-admin'
 import {
   MEDIA_MAX_ALT_LENGTH,
   MEDIA_MAX_TITLE_LENGTH,
@@ -414,4 +422,68 @@ export async function findMediaByKey(
   key: string,
 ): Promise<MediaRecord | null> {
   return model.findOne({ siteId, 'storage.key': key }).lean<MediaRecord | null>()
+}
+
+/**
+ * Runs move/delete over a bounded batch.
+ *
+ * Each row reuses the single-file command, so the revision lock, folder
+ * normalization, in-use guard and audit entry behave exactly as they do for one
+ * file. A failed row is reported inside `results` and never rolls back or hides
+ * the rows that succeeded; duplicate ids are reported instead of being applied
+ * twice.
+ */
+export async function runBulkMediaCommand(
+  models: { media: Model<MediaDocument>, content: Model<ContentDocument> },
+  siteId: string,
+  origin: string,
+  request: AdminMediaBulkRequest,
+  meta?: ContentAuditMeta,
+): Promise<AdminMediaBulkResult> {
+  const folder = request.action === 'move'
+    ? (() => {
+        try {
+          return normalizeFolder(request.folder)
+        } catch (error) {
+          return translateInvariant(error)
+        }
+      })()
+    : null
+
+  const seen = new Set<string>()
+  const results: AdminMediaBulkRow[] = []
+
+  for (const item of request.items) {
+    if (seen.has(item.id)) {
+      results.push({
+        id: item.id,
+        ok: false,
+        revision: null,
+        error: { code: 'MEDIA_BULK_DUPLICATE', message: 'This file appears twice in the same batch' },
+      })
+      continue
+    }
+    seen.add(item.id)
+
+    try {
+      if (folder === null) {
+        await deleteMedia(models, siteId, item.id, item.revision, meta)
+        results.push({ id: item.id, ok: true, revision: null, error: null })
+      } else {
+        const updated = await updateMedia(models.media, siteId, origin, item.id, { folder, revision: item.revision }, meta)
+        results.push({ id: item.id, ok: true, revision: updated.revision, error: null })
+      }
+    } catch (error) {
+      if (!(error instanceof MediaServiceError)) throw error
+      results.push({
+        id: item.id,
+        ok: false,
+        revision: null,
+        error: { code: error.code, message: error.message },
+      })
+    }
+  }
+
+  const succeeded = results.filter(row => row.ok).length
+  return { action: request.action, folder, results, succeeded, failed: results.length - succeeded }
 }

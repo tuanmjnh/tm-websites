@@ -1,4 +1,9 @@
-import type { AdminMedia, MediaKind } from '@tm/flow-contracts/media-admin'
+import type {
+  AdminMedia,
+  AdminMediaBulkRequest,
+  AdminMediaBulkResult,
+  MediaKind,
+} from '@tm/flow-contracts/media-admin'
 
 /**
  * CMS media client for the local library. Files belong to the deployment's
@@ -82,6 +87,15 @@ export const useMediaAdmin = () => {
     return payload.data
   }
 
+  /** Move or delete a bounded batch; the response reports one row per file. */
+  const bulk = async (input: AdminMediaBulkRequest): Promise<AdminMediaBulkResult> => {
+    const payload = await plainFetch('/api/v1/admin/media/bulk', {
+      method: 'POST',
+      body: input,
+    }) as { success: boolean, data: AdminMediaBulkResult }
+    return payload.data
+  }
+
   const errorCode = (error: unknown): string | null => {
     const body = (error as ApiErrorBody)?.data
     return body?.data?.error?.code || body?.error?.code || null
@@ -93,5 +107,5 @@ export const useMediaAdmin = () => {
     return typeof status === 'number' ? status : null
   }
 
-  return { list, upload, update, remove, errorCode, errorStatus }
+  return { list, upload, update, remove, bulk, errorCode, errorStatus }
 }

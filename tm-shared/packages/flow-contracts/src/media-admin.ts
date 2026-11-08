@@ -73,3 +73,50 @@ export const MediaUpdateSchema = z.object({
 })
 
 export type MediaUpdate = z.infer<typeof MediaUpdateSchema>
+
+/**
+ * Bulk media actions. Moving changes only the folder, so the per-row rules of
+ * `updateMedia` (revision lock, normalized folder, audit entry) still apply;
+ * deleting still refuses a file a live content record references.
+ */
+export const ADMIN_MEDIA_BULK_ACTIONS = ['move', 'delete'] as const
+export type AdminMediaBulkAction = (typeof ADMIN_MEDIA_BULK_ACTIONS)[number]
+
+/** One request is capped at 50 files, matching the content bulk cap. */
+export const ADMIN_MEDIA_BULK_LIMIT = 50
+
+export const AdminMediaBulkItemSchema = z.object({
+  id: z.string().trim().min(1),
+  revision: z.number().int().min(1),
+})
+
+export type AdminMediaBulkItem = z.infer<typeof AdminMediaBulkItemSchema>
+
+export const AdminMediaBulkRequestSchema = z.object({
+  action: z.enum(ADMIN_MEDIA_BULK_ACTIONS),
+  items: z.array(AdminMediaBulkItemSchema).min(1).max(ADMIN_MEDIA_BULK_LIMIT),
+  /** Destination folder for `move`; ignored by `delete`. */
+  folder: z.string().max(MEDIA_MAX_FOLDER_LENGTH).optional(),
+})
+
+export type AdminMediaBulkRequest = z.infer<typeof AdminMediaBulkRequestSchema>
+
+export const AdminMediaBulkRowSchema = z.object({
+  id: z.string(),
+  ok: z.boolean(),
+  revision: z.number().nullable(),
+  error: z.object({ code: z.string(), message: z.string() }).nullable(),
+})
+
+export type AdminMediaBulkRow = z.infer<typeof AdminMediaBulkRowSchema>
+
+export const AdminMediaBulkResultSchema = z.object({
+  action: z.enum(ADMIN_MEDIA_BULK_ACTIONS),
+  /** Normalized destination for `move`, `null` for `delete`. */
+  folder: z.string().nullable(),
+  results: z.array(AdminMediaBulkRowSchema),
+  succeeded: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+})
+
+export type AdminMediaBulkResult = z.infer<typeof AdminMediaBulkResultSchema>
