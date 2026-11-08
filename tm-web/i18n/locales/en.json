@@ -89,6 +89,33 @@
     "backToList": "Back to list",
     "viewCategory": "View category"
   },
+  "cart": {
+    "title": "Cart",
+    "itemsCount": "{count} items in cart",
+    "empty": "Your cart is empty",
+    "emptyHint": "Add products from the catalog to see prices and availability refreshed from the store.",
+    "browse": "Browse products",
+    "product": "Product",
+    "unitPrice": "Unit price",
+    "quantity": "Quantity",
+    "lineTotal": "Line total",
+    "subtotal": "Subtotal",
+    "remove": "Remove",
+    "clear": "Clear cart",
+    "continueShopping": "Continue shopping",
+    "checkoutSoon": "The cart only quotes prices and availability. Checkout arrives in a later phase.",
+    "add": "Add to cart",
+    "added": "Added to your cart.",
+    "viewCart": "View cart",
+    "selectVariant": "Choose a variant",
+    "unavailableName": "Product no longer sold",
+    "issue": {
+      "item_unavailable": "This product is no longer in the published catalog.",
+      "variant_unavailable": "The selected variant is no longer available.",
+      "out_of_stock": "This product is out of stock.",
+      "price_changed": "The price was updated to the current store price."
+    }
+  },
   "category": {
     "indexTitle": "Categories",
     "indexSubtitle": "Browse products by category group.",

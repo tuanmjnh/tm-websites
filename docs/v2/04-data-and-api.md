@@ -124,6 +124,16 @@ Body rendering follows the locale's declared `format`: `html` is sanitized, `mar
 
 Route naming note: this slice stays on the current Web namespace (`/api/public/*`) instead of the proposed `/api/v1/public/*`, because the existing storefront routes and their tests already live there. Move it with the rest of the namespace sweep, once a slice needs the v1 prefix for a real consumer — do not publish both paths.
 
+### Implemented public cart (Web)
+
+The cart is client-owned: the browser stores only item ids, optional variant SKUs, quantities and the price the visitor was shown. Every render of `/gio-hang` re-quotes those lines, so prices, availability and totals always come from the published catalog instead of from storage a visitor can edit.
+
+| Route | Input | Success | Notes |
+| --- | --- | --- | --- |
+| `POST /api/public/cart/validate` | `{ lines: [{ itemId, variantSku?, quantity, expectedPrice? }] }`, 1–20 lines, quantity 1–99 | `{ success, data: PublicCart }` | Read-only computation over the same publish filter as the catalog: no session, no CSRF token, `Cache-Control: no-store`. Unknown, unpublished or deleted ids come back as an `item_unavailable` line with no price; a product with variants and no SKU, or an unknown SKU, is `variant_unavailable`; an out-of-stock line keeps the price but contributes `0` to `subtotal`/`itemCount`; `expectedPrice` mismatch is reported as `price_changed` while the response still quotes the current price. Malformed input, quantity above 99 or more than 20 lines → `422 CART_INVALID`. |
+
+The builder (`buildPublicCart` in `@tm/flow-contracts/public-cart`) is pure, so the tests cover every branch without a server or a database. Client state lives in `useCart` (`localStorage`, one key per site origin); it hydrates on mount, syncs each stored `expectedPrice` to the quoted one after a successful revalidation so a price notice appears once rather than on every reload, and keeps unavailable lines visible with a per-line message until the visitor removes them. `/gio-hang` is `noindex, follow`, because a cart is per visitor and has no canonical URL.
+
 ## Shared versus host-specific code
 
 Shared server package: validated schemas/model factories, command invariants, transaction boundaries, money/stock calculations and domain events. Shared app/server package: Zod DTOs, enums, safe validation and pure helpers.

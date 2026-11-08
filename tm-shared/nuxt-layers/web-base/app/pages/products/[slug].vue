@@ -33,11 +33,9 @@ const description = computed(() => {
 })
 
 const currency = computed(() => String(config.public.currency || item.value?.currency || 'VND'))
-const price = computed(() => formatCatalogPrice(item.value?.price, currency.value, locale.value))
-const compareAtPrice = computed(() => {
-  if (!item.value?.compareAtPrice || item.value.compareAtPrice <= item.value.price) return ''
-  return formatCatalogPrice(item.value.compareAtPrice, currency.value, locale.value)
-})
+const price = computed(() => formatCatalogPrice(unitPrice.value, currency.value, locale.value))
+const compareAtPrice = computed(() =>
+  unitCompareAtPrice.value ? formatCatalogPrice(unitCompareAtPrice.value, currency.value, locale.value) : '')
 
 const gallery = computed(() => {
   if (!item.value) return []
@@ -54,6 +52,45 @@ const primaryCategory = computed(() => item.value?.categories[0] ?? null)
 const attributes = computed(() => item.value?.attributes ?? [])
 const variants = computed(() => item.value?.variants ?? [])
 const updatedAt = computed(() => (item.value ? formatCatalogDate(item.value.updatedAt, locale.value) : ''))
+
+// Variant-aware purchase panel. The cart only stores the id, the SKU and the
+// quantity; the price shown here is what `POST /cart/validate` re-checks.
+const { add } = useCart()
+const selectedVariantSku = ref<string | null>(null)
+const quantity = ref(1)
+const added = ref(false)
+
+watch(item, () => {
+  quantity.value = 1
+  added.value = false
+})
+
+// The default variant is derived, not assigned from a watcher: that keeps the
+// server-rendered markup and the hydrated client in the same state, so the
+// add-to-cart button is never rendered disabled for an in-stock variant.
+const defaultVariantSku = computed(() =>
+  (variants.value.find(variant => variant.inStock && variant.sku) ?? variants.value[0])?.sku ?? null)
+const activeVariantSku = computed(() => selectedVariantSku.value ?? defaultVariantSku.value)
+const selectedVariant = computed(() => variants.value.find(variant => variant.sku === activeVariantSku.value) ?? null)
+const unitPrice = computed(() => selectedVariant.value?.price ?? item.value?.price ?? 0)
+const unitCompareAtPrice = computed(() => {
+  const compareAt = selectedVariant.value?.compareAtPrice ?? item.value?.compareAtPrice ?? 0
+  return compareAt > unitPrice.value ? compareAt : 0
+})
+const canAdd = computed(() => {
+  if (!item.value?.inStock) return false
+  if (!variants.value.length) return true
+  return Boolean(selectedVariant.value?.sku && selectedVariant.value.inStock)
+})
+
+const addToCart = () => {
+  if (!item.value || !canAdd.value) return
+  added.value = add({
+    itemId: item.value.id,
+    ...(activeVariantSku.value ? { variantSku: activeVariantSku.value } : {}),
+    expectedPrice: unitPrice.value,
+  }, Number(quantity.value) || 1)
+}
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
 const canonical = computed(() => buildCanonicalUrl(baseUrl, item.value?.path || route.path))
@@ -103,9 +140,9 @@ useHead(() => {
     offers: {
       '@type': 'Offer',
       url: canonical.value,
-      price: item.value.price,
+      price: unitPrice.value,
       priceCurrency: currency.value,
-      availability: item.value.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      availability: canAdd.value ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
     },
   }
 
@@ -194,6 +231,60 @@ useHead(() => {
             <UBadge :color="item.inStock ? 'primary' : 'neutral'" variant="subtle" size="sm" class="rounded-[4px]">
               {{ item.inStock ? t('catalog.inStock') : t('catalog.outOfStock') }}
             </UBadge>
+          </div>
+
+          <div class="mt-6 rounded-[6px] border border-default/60 bg-elevated/20 p-4">
+            <div v-if="variants.length">
+              <p class="text-xs font-medium text-muted">{{ t('cart.selectVariant') }}</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <button
+                  v-for="variant in variants"
+                  :key="variant.sku || 'base'"
+                  type="button"
+                  class="rounded-[4px] border px-2.5 py-1.5 text-xs transition-colors"
+                  :class="activeVariantSku === variant.sku ? 'border-primary bg-primary/10 text-primary' : 'border-default/60 text-default hover:border-primary/50'"
+                  :disabled="!variant.sku || !variant.inStock"
+                  :aria-pressed="activeVariantSku === variant.sku"
+                  @click="selectedVariantSku = variant.sku ?? null"
+                >
+                  {{ variant.name ? readLocalized(variant.name, locale) : variant.sku }}
+                  <span class="ml-1 text-dimmed">{{ formatCatalogPrice(variant.price, currency, locale) }}</span>
+                  <span v-if="!variant.inStock" class="ml-1 text-dimmed">({{ t('catalog.outOfStock') }})</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-end gap-2">
+              <UInput
+                v-model.number="quantity"
+                type="number"
+                min="1"
+                max="99"
+                class="w-20"
+                :aria-label="t('cart.quantity')"
+              />
+              <UButton
+                color="primary"
+                size="md"
+                icon="i-lucide-shopping-cart"
+                :label="t('cart.add')"
+                :disabled="!canAdd"
+                @click="addToCart"
+              />
+              <UButton
+                v-if="added"
+                to="/gio-hang"
+                color="neutral"
+                variant="ghost"
+                size="md"
+                icon="i-lucide-arrow-right"
+                trailing
+                :label="t('cart.viewCart')"
+              />
+            </div>
+
+            <p v-if="added" class="mt-2 text-xs text-primary">{{ t('cart.added') }}</p>
+            <p v-else-if="!item.inStock" class="mt-2 text-xs text-muted">{{ t('catalog.outOfStock') }}</p>
           </div>
 
           <dl class="mt-5 grid grid-cols-2 gap-3 text-xs">

@@ -33,7 +33,7 @@ export interface CatalogListResult {
 }
 
 // Only published, active, non-deleted records are ever readable by a visitor.
-const PUBLISHED_ITEM_FILTER = {
+export const PUBLISHED_ITEM_FILTER = {
   isDeleted: { $ne: true },
   isActive: true,
   status: 'published',

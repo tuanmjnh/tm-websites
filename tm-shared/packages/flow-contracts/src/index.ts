@@ -5,6 +5,7 @@ export * from './content-admin.js'
 // PublicContentType) would collide with the legacy Hub `public-content` contract.
 export * from './auth.js'
 export * from './catalog.js'
+export * from './public-cart.js'
 export * from './hub-admin.js'
 export * from './public-content.js'
 export * from './site.js'

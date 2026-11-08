@@ -230,6 +230,19 @@ Expected: `200` for published records (by key or slug), `404` for draft/schedule
 
 With `TM_SITE_INDEXABLE=false` the same route must answer exactly `User-agent: *\nDisallow: /\n`; restart the dev server with that env to check the preview branch, since the value is read from runtime config. `pnpm test:web-content` covers both branches without a server.
 
+### Cart smoke (WEB-05)
+
+| Check | Expected |
+| --- | --- |
+| `curl -s -X POST :4006/api/public/cart/validate -H 'content-type: application/json' -d '{"lines":[{"itemId":"<published id>","quantity":2,"expectedPrice":<shown price>}]}'` | `200` with `unitPrice`, `lineTotal`, `subtotal` and `itemCount` recomputed by the server, plus `Cache-Control: no-store` |
+| Same request with an unpublished/deleted id | `200` with an `item_unavailable` line, `unitPrice 0`, and that line excluded from `subtotal` |
+| Variant product with no `variantSku`, or an unknown SKU | `variant_unavailable`, `available: false` |
+| Quantity `100`, or 21 lines | `422 CART_INVALID` |
+| Browser: add a product, reload `/gio-hang` | Badge and rows survive the reload; totals match the catalog price |
+| Browser: change the catalog price, reload `/gio-hang` | The new price is quoted with a one-time price notice; a second reload is quiet |
+
+Cart storage is per origin (`tm-cart:v1:<site>`), so clearing site data empties the cart. Probe records used for a manual check must be deleted afterwards.
+
 ## Customer build matrix
 
 Read the registry before each run. At this baseline: CMS supports default, sentuan, bagpost, thanhtung, hoangvi; Web supports default, sentuan, bagpost. Disabled app/customer combinations should fail, not silently build another customer.

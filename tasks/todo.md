@@ -13,7 +13,7 @@
 | P0 | Documentation reset (v2 docs, ADR, archive) | Done — links verified, no application PASS implied |
 | P1 | IAM contract and BFF | **In progress** — P1.a (adapter/CSRF/proxy) and P1.b (verified-context gate) landed |
 | P2 | Business foundation (trusted DB binding, shared models, audit/idempotency) | **In progress** — tenant-bound DB binding, validated model, migrations v1–v3, content audit and idempotent retries landed |
-| P3 | Content/media/site vertical slice on MongoDB | **In progress** — CMS content module with audit, retry safety and revision diff/restore runs on MongoDB; Web reads the same collection for pages and the `/bai-viet` listing; media library with local storage, uploads and content attachments (P3.e); bulk publish/archive/delete with per-row results (P3.f); Web discovery with tag/category landing pages and bounded public search (WEB-02); unified public search page over content and products (WEB-04); crawl policy with robots.txt and a sitemap covering tag/category pages (WEB-08) |
+| P3 | Content/media/site vertical slice on MongoDB | **In progress** — CMS content module with audit, retry safety and revision diff/restore runs on MongoDB; Web reads the same collection for pages and the `/bai-viet` listing; media library with local storage, uploads and content attachments (P3.e); bulk publish/archive/delete with per-row results (P3.f); Web discovery with tag/category landing pages and bounded public search (WEB-02); unified public search page over content and products (WEB-04); crawl policy with robots.txt and a sitemap covering tag/category pages (WEB-08); client-owned cart with server-side re-quoting (WEB-05) |
 | P4 | Catalog/search | Planned |
 | P5–P10 | Commerce/CRM, inventory/purchasing, finance, HR/comms, hardening, migration | Planned |
 
@@ -238,6 +238,17 @@ Verified on `:4006`: `?q=Giới` rendered one content row with `<mark>Giới</ma
 
 Still open in WEB-04: no per-group pagination, no typo tolerance or synonyms, product names are not highlighted, category/tag discovery stays on the landing pages, no zero-result suggestions, and no search analytics.
 
+### WEB-05 — cart (landed 2026-11-08)
+
+| Slice | Evidence |
+| --- | --- |
+| Cart contract + pure builder: caps (20 lines, qty 1–99), variant resolution, `item_unavailable` / `variant_unavailable` / `out_of_stock` / `price_changed` | `@tm/flow-contracts/public-cart`, `scripts/build/test-web-cart.ts` |
+| `POST /api/public/cart/validate` re-quotes from the published catalog, `no-store`, never trusts stored prices | `tm-web/server/api/public/cart/validate.post.ts`, `tm-web/server/utils/cartService.ts` |
+| `/gio-hang`: quantity edit, remove, clear, per-line issue messages, subtotal, empty state, `noindex` | `web-base` page + `useCart` composable |
+| Product page purchase panel: variant picker (out-of-stock disabled), quantity, add-to-cart, cart badge | `web-base` product page + layout |
+
+Verified on `:4006` with temporary probe records: HTTP `200`/`422` branches as above, and in the browser add → reload (badge + totals persist), quantity change (`300,000` → `450,000`), variant add (two rows, `570,000`), price raise (one-time notice, then quiet), deleted record (`item_unavailable`, excluded from subtotal), remove and clear. Probes were deleted and the cart storage cleared; `items` is back to 241. Gates: `test:web-cart` (14), `test:web-content`, `test:content`, `test:categories`, `test:media`, `test:bulk`, `test:iam`, `test:db`, `test:layers`, root `typecheck`, root `lint`, `build:web`.
+
 ### WEB-08 — crawl policy + robots.txt (landed 2026-11-08)
 
 | Slice | Evidence |
@@ -266,10 +277,10 @@ Still open in P2.c: audit covers content only, no retention policy, no concurren
 
 ## Next slices
 
-1. **WEB-05 — cart**: client-owned cart with server-side revalidation of variant/price/availability, still without checkout.
-2. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub.
-3. **P2.d — other domains on the same foundation**: configs/settings move onto the same model + audit + idempotency pattern; prove a CMS-only customer (`thanhtung`, `hoangvi`) can bind a database once Q2 names them.
-4. **P3.f (rest) — media batch operations and CMS UI checks**: needs the local Hub on `:4000` so the CMS session can be exercised in the browser again.
+1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub.
+2. **P2.d — other domains on the same foundation**: configs/settings move onto the same model + audit + idempotency pattern; prove a CMS-only customer (`thanhtung`, `hoangvi`) can bind a database once Q2 names them.
+3. **P3.f (rest) — media batch operations and CMS UI checks**: needs the local Hub on `:4000` so the CMS session can be exercised in the browser again.
+4. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
 
 Blocked on owner decisions (see [`questions.md`](questions.md)): WEB-09 durable revalidation and media in the public projection need Q12 (cache/revalidation infrastructure) and Q13 (media provider/public origin); importing the existing catalog/content data and enabling `default`/`thanhtung`/`hoangvi` need Q2; revoke/entitlement freshness needs Q6; moving the models into a shared server package needs Q11.
 

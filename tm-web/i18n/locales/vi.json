@@ -89,6 +89,33 @@
     "backToList": "Về danh sách",
     "viewCategory": "Xem danh mục"
   },
+  "cart": {
+    "title": "Giỏ hàng",
+    "itemsCount": "{count} sản phẩm trong giỏ",
+    "empty": "Giỏ hàng đang trống",
+    "emptyHint": "Thêm sản phẩm từ danh mục để xem giá và tình trạng còn hàng được cập nhật từ cửa hàng.",
+    "browse": "Xem sản phẩm",
+    "product": "Sản phẩm",
+    "unitPrice": "Đơn giá",
+    "quantity": "Số lượng",
+    "lineTotal": "Thành tiền",
+    "subtotal": "Tạm tính",
+    "remove": "Xoá",
+    "clear": "Xoá giỏ hàng",
+    "continueShopping": "Tiếp tục mua sắm",
+    "checkoutSoon": "Giỏ hàng chỉ dùng để tham khảo giá và tình trạng hàng. Bước thanh toán sẽ được bật ở giai đoạn tiếp theo.",
+    "add": "Thêm vào giỏ",
+    "added": "Đã thêm vào giỏ hàng.",
+    "viewCart": "Xem giỏ hàng",
+    "selectVariant": "Chọn phân loại",
+    "unavailableName": "Sản phẩm không còn bán",
+    "issue": {
+      "item_unavailable": "Sản phẩm không còn trong danh mục đang bán.",
+      "variant_unavailable": "Phân loại đã chọn không còn khả dụng.",
+      "out_of_stock": "Sản phẩm đang hết hàng.",
+      "price_changed": "Giá đã được cập nhật theo giá hiện tại của cửa hàng."
+    }
+  },
   "category": {
     "indexTitle": "Danh mục",
     "indexSubtitle": "Duyệt sản phẩm theo nhóm danh mục.",

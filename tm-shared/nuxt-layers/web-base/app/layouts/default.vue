@@ -29,6 +29,10 @@ const switchLocale = async () => {
   if (next) await setLocale(next)
 }
 
+// The cart lives in localStorage, so the badge can only be filled after mount.
+const { count: cartCount, hydrate: hydrateCart } = useCart()
+onMounted(() => hydrateCart())
+
 const contactEmail = computed(() => siteConfig.value.supportEmail || '')
 const contactPhone = computed(() => siteConfig.value.supportPhone || '')
 const contactAddress = computed(() => siteConfig.value.address || '')
@@ -60,6 +64,17 @@ const contactAddress = computed(() => siteConfig.value.address || '')
         </nav>
 
         <div class="flex items-center gap-2">
+          <NuxtLink
+            to="/gio-hang"
+            class="relative inline-flex size-9 items-center justify-center rounded-[4px] text-default transition-colors hover:bg-elevated/60 hover:text-primary"
+            :aria-label="t('cart.viewCart')"
+          >
+            <UIcon name="i-lucide-shopping-cart" class="size-5" aria-hidden="true" />
+            <span
+              v-if="cartCount"
+              class="absolute -right-1 -top-1 min-w-4 rounded-full bg-primary px-1 text-center text-[10px] font-bold leading-4 text-inverted"
+            >{{ cartCount > 99 ? '99+' : cartCount }}</span>
+          </NuxtLink>
           <UButton
             color="neutral"
             variant="ghost"
