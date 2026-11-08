@@ -99,22 +99,40 @@ export async function recordContentAudit(
   })
 }
 
-/** Newest first, capped: the CMS shows activity, it does not paginate history yet. */
+/**
+ * Newest first, capped: the CMS shows activity, it does not paginate history yet.
+ *
+ * The type is part of the filter because ids come from different collections
+ * and an audit row alone does not say which record it belongs to.
+ */
+export async function listRecordAudit(
+  model: Model<AuditEntryDocument>,
+  siteId: string,
+  options: { resourceType: AuditResourceType, resourceId: string, limit?: number },
+): Promise<AdminContentAudit[]> {
+  const capped = Math.min(Math.max(Math.trunc(options.limit ?? 20), 1), 50)
+
+  const entries = await model
+    .find({ siteId, resourceType: options.resourceType, resourceId: options.resourceId })
+    .sort({ createdAt: -1, _id: -1 })
+    .limit(capped)
+    .lean<AuditEntryRecord[]>()
+
+  return entries.map(entry => toAdminAuditEntry(entry))
+}
+
+/** Content history keeps the record id and the `content` type as its defaults. */
 export async function listContentAudit(
   model: Model<AuditEntryDocument>,
   siteId: string,
   resourceId: string,
   limit = 20,
 ): Promise<AdminContentAudit[]> {
-  const capped = Math.min(Math.max(Math.trunc(limit), 1), 50)
+  return listRecordAudit(model, siteId, { resourceType: 'content', resourceId, limit })
+}
 
-  const entries = await model
-    .find({ siteId, resourceType: 'content', resourceId })
-    .sort({ createdAt: -1, _id: -1 })
-    .limit(capped)
-    .lean<AuditEntryRecord[]>()
-
-  return entries.map(entry => ({
+function toAdminAuditEntry(entry: AuditEntryRecord): AdminContentAudit {
+  return {
     id: String(entry._id),
     action: entry.action,
     revision: entry.revision,
@@ -128,5 +146,5 @@ export async function listContentAudit(
     },
     requestId: entry.requestId ?? null,
     createdAt: new Date(entry.createdAt).toISOString(),
-  }))
+  }
 }

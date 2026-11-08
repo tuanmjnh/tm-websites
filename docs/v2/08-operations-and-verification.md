@@ -305,6 +305,18 @@ Defaults are conservative placeholders (50 snapshots per record, 365 days of aud
 | *Delete menu*, confirm | The menu disappears from the list; the audit page shows the `delete` row with the session actor; linked pages are untouched |
 | Database check | Menus live in `site_menus`; a migrated database's legacy `menus` documents are **not** touched or indexed |
 
+### Record history smoke (P2.d)
+
+| Check | Expected |
+| --- | --- |
+| `GET /api/v1/admin/categories/:id/history` after an edit | `200` with the `update` row (actor, revision, `changedFields`), newest first |
+| Same route with another site's id, an unknown id or a malformed id | `404 CATEGORY_NOT_FOUND` / `404` / `422 CATEGORY_ID_INVALID` — never an empty `200` |
+| `GET /api/v1/admin/media/:id/history` after a metadata edit | `200` with the `update` row and its `changedFields`; a record with no activity returns `200` with `[]` |
+| Same route with an unknown or malformed id | `404 MEDIA_NOT_FOUND` / `422 MEDIA_ID_INVALID` |
+| Either route without a session | `401` |
+
+Coverage: the `pnpm test:audit` checks listed in [05](05-feature-parity.md). Probe records and their audit rows must be removed afterwards.
+
 ### Public site projection smoke (P2.d)
 
 | Check | Expected |

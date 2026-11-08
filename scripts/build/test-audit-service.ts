@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { AuditQueryError, listAuditEntries } from '../../tm-cms/server/services/auditService.js'
-import { recordContentAudit } from '../../tm-cms/server/services/contentAudit.js'
+import { listRecordAudit, recordContentAudit } from '../../tm-cms/server/services/contentAudit.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 
@@ -159,6 +159,45 @@ async function integration() {
         () => listAuditEntries(Audit, SITE, { limit: 2, cursor: 'not-a-cursor' }),
         (error: unknown) => error instanceof AuditQueryError && error.code === 'AUDIT_QUERY_INVALID',
       )
+    })
+
+    await check('a record history filters by its own type and id', async () => {
+      const media = await listRecordAudit(Audit, SITE, {
+        resourceType: 'media',
+        resourceId: 'media_landing/hero.png_3',
+      })
+      assert.equal(media.length, 1)
+      assert.equal(media[0]!.action, 'update')
+      assert.equal(media[0]!.changedFields.includes('locales'), true)
+
+      const content = await listRecordAudit(Audit, SITE, {
+        resourceType: 'content',
+        resourceId: 'content_bai-viet-a_2',
+      })
+      assert.equal(content.length, 1, 'the create row of the same key stays out')
+      assert.equal(content[0]!.action, 'publish')
+
+      const wrongType = await listRecordAudit(Audit, SITE, {
+        resourceType: 'category',
+        resourceId: 'media_landing/hero.png_3',
+      })
+      assert.deepEqual(wrongType, [], 'an id alone never matches another type')
+
+      const otherSite = await listRecordAudit(Audit, OTHER_SITE, {
+        resourceType: 'content',
+        resourceId: 'content_bai-viet-a_1',
+      })
+      assert.equal(otherSite.length, 1, 'the same id is scoped to its site')
+    })
+
+    await check('a record history caps at 50 rows and rejects nothing else', async () => {
+      const capped = await listRecordAudit(Audit, SITE, {
+        resourceType: 'content',
+        resourceId: 'content_bai-viet-a_2',
+        limit: 500,
+      })
+      assert.equal(capped.length, 1)
+      assert.equal((await listRecordAudit(Audit, SITE, { resourceType: 'content', resourceId: 'nope' })).length, 0)
     })
 
     await check('a category delete keeps the transition the command wrote', async () => {

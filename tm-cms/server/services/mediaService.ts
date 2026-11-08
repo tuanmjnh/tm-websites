@@ -136,6 +136,21 @@ export function toAdminMedia(record: MediaRecord, origin: string): AdminMedia {
   }
 }
 
+export async function getMedia(
+  model: Model<MediaDocument>,
+  siteId: string,
+  origin: string,
+  id: string,
+): Promise<AdminMedia> {
+  const record = await model
+    .findOne({ _id: objectId(id, 'MEDIA_ID_INVALID'), siteId })
+    .lean<MediaRecord | null>()
+  if (!record) {
+    throw new MediaServiceError(404, 'MEDIA_NOT_FOUND', 'Media not found')
+  }
+  return toAdminMedia(record, origin)
+}
+
 export async function listMedia(
   model: Model<MediaDocument>,
   siteId: string,

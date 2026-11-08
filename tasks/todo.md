@@ -340,12 +340,22 @@ The collection is `site_menus` because every migrated database already contains 
 
 The projection exposes only company identity, SEO defaults, locales and menus — `PublicSiteSchema.parse` at the endpoint rejects a leaked admin field (revision, actor, module switches, stored targets). A menu item is resolved on read: `content` key → catch-all path, `category` key → `/danh-muc/<slug>` for the locale (default locale, then key, as fallback), `url` → only a rooted path or absolute `http(s)` link; items without a label or with an unresolvable target are dropped. Verified over HTTP on `:4006` (`?locale=vi|en`, `s-maxage=60`) and in the browser (settings brand name instead of the Hub name, probe `main`/`footer` menus rendered in the header and footer, meta description and footer contact block from the settings document, English labels after switching locale); probe `settings`/`site_menus` were removed afterwards. The browser tab served a stale service-worker shell at first and needed its worker/caches cleared before it reflected the new data. Still open: the logo id is not resolved to a URL (Q13), `seo.titleTemplate` is not applied globally, and menu links are not validated against existing records.
 
+### P2.d — category and media history (landed 2026-11-08)
+
+| Slice | Evidence |
+| --- | --- |
+| `listRecordAudit` filters by resource type and id (`listContentAudit` delegates), and `getMedia` gives the media route the same 404 semantics as the other domains | `tm-cms/server/services/contentAudit.ts`, `tm-cms/server/services/mediaService.ts` |
+| `GET /api/v1/admin/categories/:id/history` (`content.read`) and `GET /api/v1/admin/media/:id/history` (`media.read`), newest first, capped at 50 | `tm-cms/server/api/v1/admin/categories/[id]/history.get.ts`, `tm-cms/server/api/v1/admin/media/[id]/history.get.ts` |
+| Suites: `pnpm test:audit` now 9 live checks (trail scoping by type/id/site, cap, unknown id) | `scripts/build/test-audit-service.ts` |
+
+A category or media id alone is ambiguous across collections, so the resource type is part of the query; the record is resolved before the trail is read, which keeps another site's id a 404 instead of an empty list. Verified over HTTP on `:4005` with probe records (category edit -> one `update` row with the actor and `changedFields`; media edit -> one `update` row for `title`; unknown media id `404 MEDIA_NOT_FOUND`, malformed `422`, anonymous `401`). Probe records and audit rows were removed afterwards. Still open: neither CMS page renders the trail yet, and neither domain has revision snapshots.
+
 ## Next slices
 
 1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub. The settings document already holds the contact address a form would notify.
 2. **SYS-02 wiring**: the projection and the metadata wiring exist, so what remains is per-locale site names, resolving the logo id to a media URL (Q13), a global title template once pages agree on who owns titles, retiring `/api/public/site-config` with the catalog slice, and enabling `default`/`thanhtung`/`hoangvi` once Q2 names their databases.
 3. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
-4. **P2.c (rest) — retention scheduling**: `pnpm prune:retention` exists but needs Q16's periods and a scheduler (Q12) before a site can rely on it; category/media still lack a per-record history endpoint.
+4. **P2.c (rest) — retention scheduling**: `pnpm prune:retention` exists but needs Q16's periods and a scheduler (Q12) before a site can rely on it. Category and media history endpoints now exist; only the CMS pages that would show them are missing.
 
 Blocked on owner decisions (see [`questions.md`](questions.md)): WEB-09 durable revalidation and media in the public projection need Q12 (cache/revalidation infrastructure) and Q13 (media provider/public origin); importing the existing catalog/content data and enabling `default`/`thanhtung`/`hoangvi` need Q2; revoke/entitlement freshness needs Q6; moving the models into a shared server package needs Q11.
 
