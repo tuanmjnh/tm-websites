@@ -264,6 +264,13 @@
         "unavailable": "Không tải được nhật ký thao tác, thử lại sau."
       }
     },
+    "history": {
+      "title": "Lịch sử thao tác",
+      "reload": "Tải lại",
+      "empty": "Bản ghi này chưa có thao tác nào",
+      "revision": "Bản sửa",
+      "loadFailed": "Không tải được lịch sử thao tác của bản ghi này."
+    },
     "categories": {
       "title": "Danh mục nội dung",
       "description": "Cây danh mục dùng chung cho trang, bài viết và bộ lọc trên website",

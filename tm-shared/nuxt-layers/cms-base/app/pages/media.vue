@@ -542,6 +542,8 @@ if (canRead.value) await load()
           <UFormField :label="t('admin.media.fields.folder')">
             <UInput v-model="editForm.folder" class="w-full font-mono" placeholder="landing/hero" />
           </UFormField>
+          <RecordHistory v-if="editing" resource-type="media" :resource-id="editing.id" />
+
           <p v-if="editError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ editError }}</p>
         </div>
       </template>

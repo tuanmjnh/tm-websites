@@ -332,6 +332,8 @@ if (canRead.value) await load()
             </div>
           </div>
 
+          <RecordHistory v-if="editing" resource-type="category" :resource-id="editing.id" />
+
           <p v-if="formError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ formError }}</p>
         </div>
       </template>

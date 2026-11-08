@@ -314,6 +314,8 @@ Defaults are conservative placeholders (50 snapshots per record, 365 days of aud
 | `GET /api/v1/admin/media/:id/history` after a metadata edit | `200` with the `update` row and its `changedFields`; a record with no activity returns `200` with `[]` |
 | Same route with an unknown or malformed id | `404 MEDIA_NOT_FOUND` / `422 MEDIA_ID_INVALID` |
 | Either route without a session | `401` |
+| Open a category or media record's edit dialog | An *Activity* block lists that record's rows (`action`, `Revision`, actor, changed fields, time); *Reload* refetches it and the list is empty only when the record truly has no activity |
+| A read that fails (session without the read capability) | The block shows the failure text rather than an empty list |
 
 Coverage: the `pnpm test:audit` checks listed in [05](05-feature-parity.md). Probe records and their audit rows must be removed afterwards.
 

@@ -264,6 +264,13 @@
         "unavailable": "Could not load the audit trail; try again."
       }
     },
+    "history": {
+      "title": "Activity",
+      "reload": "Reload",
+      "empty": "This record has no activity yet",
+      "revision": "Revision",
+      "loadFailed": "This record's activity could not be loaded."
+    },
     "categories": {
       "title": "Content categories",
       "description": "One category tree shared by pages, posts and the storefront filters",
