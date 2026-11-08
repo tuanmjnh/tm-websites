@@ -255,6 +255,18 @@ Cart storage is per origin (`tm-cart:v1:<site>`), so clearing site data empties 
 
 Bulk runs with the local Hub on `:4000` (or `TM_AUTH_MODE=mock` for local-only UI work). Probe uploads must be deleted, and their bytes removed from the media root, after a manual check.
 
+### Audit log smoke (P2.c rest)
+
+| Check | Expected |
+| --- | --- |
+| Create then publish a content record, open `/audit` | Two rows, newest first: `Create` (`— → draft`) and `Publish` (`draft → published`) with revision, actor, changed-field chips |
+| Pick an action in the filter, then type a key or actor into the search box | The list narrows to the matching rows, `N entries match the filters` follows the filter, and clearing the search restores both rows |
+| Force a page smaller than the result set (`limit=1` twice via the API) | `hasMore` on the first page, the cursor returns the next older row, no row appears twice, `total` stays the filter count |
+| `resourceType=foo`, `limit=101`, `from=not-a-date`, `cursor=zzz` | `422 AUDIT_QUERY_INVALID`; anonymous request `401` |
+| Session without `apps.logs.read` | The page shows the permission message and issues no request |
+
+Probe content, its audit entries and revisions must be deleted afterwards; the sequence above is also covered by `pnpm test:audit` (7 checks), which needs no CMS server.
+
 ## Customer build matrix
 
 Read the registry before each run. At this baseline: CMS supports default, sentuan, bagpost, thanhtung, hoangvi; Web supports default, sentuan, bagpost. Disabled app/customer combinations should fail, not silently build another customer.

@@ -285,14 +285,24 @@ Still open in WEB-08: no locale-prefixed URLs/hreflang, no per-record OG images,
 
 Verified over HTTP on `:4005`: two identical creates with one key produced one record and a replay header; the history returned create + update entries with the session actor; the CMS modal rendered both. Probe data was removed afterwards.
 
-Still open in P2.c: audit covers content only, no retention policy, no concurrent-key race test, no idempotency for public writes.
+### P2.c (rest) — audit read surface (landed 2026-11-08)
+
+| Slice | Evidence |
+| --- | --- |
+| `GET /api/v1/admin/audit`: site-scoped business trail with resource/action/actor/id/search/date filters and an `_id` cursor, `apps.logs.read`, `no-store` | `tm-cms/server/api/v1/admin/audit/index.get.ts`, `tm-cms/server/services/auditService.ts`, `flow-contracts/src/audit-admin.ts` |
+| The Audit Log page reads that endpoint instead of the Hub IAM proxy, with filter selects, debounced search, "load more" and an empty state | `cms-base/app/pages/audit.vue`, `.../composables/useAuditAdmin.ts`, `tm-cms/i18n/locales/{vi,en}.json` |
+| Suites: `pnpm test:audit` 7 live checks (site scope, filters, search, paging, invalid cursor) | `scripts/build/test-audit-service.ts` |
+
+Verified over HTTP on `:4005` (2 entries, filters, paging, `422` cases, `401` anonymous) and in the browser (rows, stats, action filter, search empty state, `200` requests). Probe record, audit entries and revisions were removed afterwards.
+
+Still open in P2.c: audit covers content only, no retention/pruning policy for `audit_logs` or `content_revisions`, no concurrent-key race test, no idempotency for public writes, no per-record history for category/media.
 
 ## Next slices
 
 1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub.
 2. **P2.d — other domains on the same foundation**: configs/settings move onto the same model + audit + idempotency pattern; prove a CMS-only customer (`thanhtung`, `hoangvi`) can bind a database once Q2 names them.
 3. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
-4. **P2.c (rest) — audit and retention UI**: the audit log page reads the entries the bulk commands write; the remaining work is filtering by resource/action and a retention policy for `content_revisions`.
+4. **P2.c (rest) — retention**: the audit page now filters by resource/action/actor and pages with a cursor; what is left is a retention policy so `audit_logs` and `content_revisions` do not grow without bound, plus per-record history for category/media.
 
 Blocked on owner decisions (see [`questions.md`](questions.md)): WEB-09 durable revalidation and media in the public projection need Q12 (cache/revalidation infrastructure) and Q13 (media provider/public origin); importing the existing catalog/content data and enabling `default`/`thanhtung`/`hoangvi` need Q2; revoke/entitlement freshness needs Q6; moving the models into a shared server package needs Q11.
 

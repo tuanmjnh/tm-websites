@@ -176,19 +176,48 @@
     },
     "audit": {
       "title": "Nhật ký thao tác",
-      "description": "Hoạt động ghi dữ liệu của ứng dụng CMS này trong TM Hub",
+      "description": "Nhật ký thao tác ghi trong cơ sở dữ liệu của site: ai đã đổi bản ghi nào",
       "listTitle": "Hoạt động gần đây",
-      "listDescription": "Thay đổi được TM Hub ghi nhận qua audit log",
+      "listDescription": "Do CMS ghi lại cùng lúc với mỗi lệnh nội dung, danh mục và media",
       "noEntries": "Chưa có bản ghi nhật ký nào",
       "unknownAction": "thay đổi",
       "unknownModel": "bản ghi",
       "systemActor": "Hệ thống",
-      "permissionDenied": "Tài khoản không có quyền đọc nhật ký trong TM Hub (apps.logs.read).",
+      "permissionDenied": "Tài khoản không có quyền đọc nhật ký thao tác (apps.logs.read).",
       "stats": {
         "total": "Số bản ghi",
         "actors": "Người thao tác",
         "models": "Đối tượng",
         "latest": "Hoạt động mới nhất"
+      },
+      "revision": "bản",
+      "loadMore": "Tải thêm",
+      "matching": "{count} bản ghi khớp bộ lọc",
+      "filters": {
+        "search": "Tìm theo khoá bản ghi hoặc người thao tác",
+        "allResources": "Mọi đối tượng",
+        "allActions": "Mọi hành động"
+      },
+      "resources": {
+        "content": "Nội dung",
+        "category": "Danh mục",
+        "media": "Media"
+      },
+      "actions": {
+        "create": "Tạo",
+        "update": "Cập nhật",
+        "publish": "Xuất bản",
+        "schedule": "Hẹn giờ",
+        "unpublish": "Bỏ xuất bản",
+        "archive": "Lưu trữ",
+        "restore": "Khôi phục",
+        "delete": "Xoá",
+        "revert": "Quay lại bản cũ"
+      },
+      "errors": {
+        "forbidden": "Tài khoản không có quyền đọc nhật ký thao tác.",
+        "invalid": "Bộ lọc không hợp lệ, hãy kiểm tra lại khoảng thời gian hoặc từ khoá.",
+        "unavailable": "Không tải được nhật ký thao tác, thử lại sau."
       }
     },
     "categories": {

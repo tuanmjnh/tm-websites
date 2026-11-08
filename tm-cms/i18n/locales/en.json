@@ -176,19 +176,48 @@
     },
     "audit": {
       "title": "Audit Log",
-      "description": "Write activity recorded for this CMS application in TM Hub",
+      "description": "The site's own audit trail: who changed which record",
       "listTitle": "Recent activity",
-      "listDescription": "Changes recorded by TM Hub audit logging",
+      "listDescription": "Written by the CMS alongside every content, category and media command",
       "noEntries": "No audit entries have been recorded yet",
       "unknownAction": "change",
       "unknownModel": "record",
       "systemActor": "System",
-      "permissionDenied": "Your account cannot read audit logs in TM Hub (apps.logs.read).",
+      "permissionDenied": "This account cannot read the audit trail (apps.logs.read).",
       "stats": {
         "total": "Entries",
         "actors": "Actors",
         "models": "Records",
         "latest": "Latest activity"
+      },
+      "revision": "rev",
+      "loadMore": "Load more",
+      "matching": "{count} entries match the filters",
+      "filters": {
+        "search": "Search by record key or actor",
+        "allResources": "All resources",
+        "allActions": "All actions"
+      },
+      "resources": {
+        "content": "Content",
+        "category": "Category",
+        "media": "Media"
+      },
+      "actions": {
+        "create": "Create",
+        "update": "Update",
+        "publish": "Publish",
+        "schedule": "Schedule",
+        "unpublish": "Unpublish",
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete",
+        "revert": "Revert"
+      },
+      "errors": {
+        "forbidden": "This account cannot read the audit trail.",
+        "invalid": "The filters are not valid; check the time range or the search term.",
+        "unavailable": "Could not load the audit trail; try again."
       }
     },
     "categories": {
