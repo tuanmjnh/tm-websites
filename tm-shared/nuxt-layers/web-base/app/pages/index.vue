@@ -5,7 +5,7 @@ import { buildCanonicalUrl } from '@tm/flow-utils/seo'
 const { t, locale } = useI18n()
 const config = useRuntimeConfig()
 const requestUrl = useRequestURL()
-const { companyName } = useSiteConfig()
+const { brandName, seo } = usePublicSite()
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
 const canonical = buildCanonicalUrl(baseUrl, '/')
@@ -15,12 +15,13 @@ const { result: featured, items: featuredItems } = useCatalogList(featuredQuery)
 const { categories } = useCatalogCategories()
 const topCategories = computed(() => categories.value.filter(category => !category.parentId).slice(0, 6))
 
-const siteDescription = computed(() => t('home.seo.description', { company: companyName.value }))
+// The settings document owns the site description; the translated copy is the fallback.
+const siteDescription = computed(() => seo.value?.defaultDescription || t('home.seo.description', { company: brandName.value }))
 
 useSeoMeta({
-  title: () => companyName.value,
+  title: () => brandName.value,
   description: () => siteDescription.value,
-  ogTitle: () => companyName.value,
+  ogTitle: () => brandName.value,
   ogDescription: () => siteDescription.value,
   ogType: 'website',
   ogUrl: canonical,
@@ -37,7 +38,7 @@ useHead({
       innerHTML: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'Organization',
-        name: companyName.value,
+        name: brandName.value,
         url: `${baseUrl}/`,
         logo: `${baseUrl}/branding/logo.svg`,
       }).replace(/</g, '\\u003c'),
@@ -57,7 +58,7 @@ useHead({
 
         <h1 class="text-3xl font-extrabold tracking-tight text-highlighted sm:text-5xl">
           {{ t('home.hero.title') }}
-          <span class="text-primary">{{ companyName }}</span>
+          <span class="text-primary">{{ brandName }}</span>
         </h1>
 
         <p class="mx-auto mt-4 max-w-xl text-sm text-muted sm:text-base">

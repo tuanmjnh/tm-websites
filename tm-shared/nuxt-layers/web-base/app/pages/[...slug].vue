@@ -5,7 +5,7 @@ import { buildCanonicalUrl, resolveSiteUrl } from '@tm/flow-utils/seo'
 
 const route = useRoute()
 const config = useRuntimeConfig()
-const { customer } = useCustomerConfig()
+const { brandName } = usePublicSite()
 const { t, locale } = useI18n()
 const requestUrl = useRequestURL()
 
@@ -107,7 +107,7 @@ useHead(() => {
     inLanguage: current.locale,
     isPartOf: {
       '@type': 'WebSite',
-      name: customer.value?.companyName || '',
+      name: brandName.value,
       url: `${baseUrl}/`,
     },
   }

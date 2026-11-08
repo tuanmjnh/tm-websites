@@ -8,7 +8,7 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const requestUrl = useRequestURL()
 
-const { companyName } = useSiteConfig()
+const { brandName } = usePublicSite()
 const slug = computed(() => catalogSegmentFromParam(route.params.slug) ?? '')
 const { result, pending } = useCatalogItem(slug)
 
@@ -136,7 +136,7 @@ useHead(() => {
     sku: item.value.sku || undefined,
     image: gallery.value.length ? gallery.value : undefined,
     category: primaryCategory.value ? readLocalized(primaryCategory.value.name, locale.value) : undefined,
-    brand: { '@type': 'Brand', name: companyName.value },
+    brand: { '@type': 'Brand', name: brandName.value },
     offers: {
       '@type': 'Offer',
       url: canonical.value,

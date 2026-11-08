@@ -1,63 +1,19 @@
 <script setup lang="ts">
-import type { PublicSite } from '@tm/flow-contracts/site-public'
-import {
-  PUBLIC_MENU_FOOTER,
-  PUBLIC_MENU_HEADER,
-  findPublicMenu,
-  publicMenuLabel,
-} from '@tm/flow-contracts/site-public'
-
 const { t, locale, locales, setLocale } = useI18n()
 const route = useRoute()
-const { companyName, siteConfig, socialLinks } = useSiteConfig()
+const { socialLinks } = useSiteConfig()
 
-// The CMS owns the menus; the storefront only reads the public projection. When a
-// site has not saved settings yet (or the read fails) the built-in navigation is
-// kept, so the header is never empty.
-const { data: publicSite } = await useAsyncData(
-  'public-site',
-  async () => {
-    try {
-      const response = await $fetch<{ success: boolean, data: PublicSite }>('/api/public/site', {
-        query: { locale: locale.value },
-      })
-      return response.data
-    } catch {
-      return null
-    }
-  },
-  { watch: [locale] },
-)
-
-const menuLinks = (key: string) => {
-  const menu = findPublicMenu(publicSite.value?.menus ?? [], key)
-  if (!menu?.items.length) return null
-  return menu.items
-    .map(item => ({ label: publicMenuLabel(item.label, locale.value), to: item.href }))
-    .filter(link => link.label)
-}
-
-const fallbackNav = computed(() => [
-  { label: t('nav.home'), to: '/' },
-  { label: t('nav.products'), to: '/products' },
-  { label: t('nav.categories'), to: '/categories' },
-  { label: t('nav.about'), to: '/about' },
-  { label: t('nav.contact'), to: '/contact' },
-  { label: t('nav.search'), to: '/tim-kiem' },
-])
-
-const navLinks = computed(() => menuLinks(PUBLIC_MENU_HEADER) ?? fallbackNav.value)
-
-const fallbackFooterLinks = computed(() => [
-  { label: t('nav.products'), to: '/products' },
-  { label: t('nav.categories'), to: '/categories' },
-  { label: t('nav.about'), to: '/about' },
-  { label: t('nav.contact'), to: '/contact' },
-])
-
-const footerLinks = computed(() => menuLinks(PUBLIC_MENU_FOOTER) ?? fallbackFooterLinks.value)
-
-const brandName = computed(() => publicSite.value?.company.name || companyName.value)
+// Brand, contact details and both menus come from the CMS-owned settings and
+// site menus; the composable keeps the static navigation and Hub identity as the
+// fallback so the header is never empty on a site that has not saved them.
+const {
+  brandName,
+  contactEmail,
+  contactPhone,
+  contactAddress,
+  headerLinks: navLinks,
+  footerLinks,
+} = usePublicSite()
 
 const isActive = (to: string) => to === '/' ? route.path === '/' : route.path.startsWith(to)
 
@@ -79,12 +35,6 @@ const switchLocale = async () => {
 // The cart lives in localStorage, so the badge can only be filled after mount.
 const { count: cartCount, hydrate: hydrateCart } = useCart()
 onMounted(() => hydrateCart())
-
-// The site settings document is now the source of truth; Hub's public config
-// stays as the fallback for sites that have not saved it yet.
-const contactEmail = computed(() => publicSite.value?.company.email || siteConfig.value.supportEmail || '')
-const contactPhone = computed(() => publicSite.value?.company.phone || siteConfig.value.supportPhone || '')
-const contactAddress = computed(() => publicSite.value?.company.address || siteConfig.value.address || '')
 </script>
 
 <template>
