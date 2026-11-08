@@ -1,6 +1,6 @@
 # 10 — Documentation reset verification
 
-Date: 2026-11-06, extended 2026-11-07. Scope: documentation and AI guidance only.
+Date: 2026-11-06, extended 2026-11-07 and re-verified 2026-11-08. Scope: documentation and AI guidance only.
 
 ## Deliverables
 
@@ -30,6 +30,29 @@ An independent read-only review of the canonical guides, decision record, host i
 
 No application PASS is claimed by this record.
 
+## Re-verification (2026-11-08)
+
+Re-ran the parent-authored Node filesystem verifier on 2026-11-08, after the fixes below, and made the checker's active set match the 2026-11-07 definition: every Markdown file in the checkout except the 17 manifest originals, with the archive entry `docs/archive/v1/INDEX.md` counted as navigation and therefore link-checked.
+
+| Check | Observed result |
+| --- | --- |
+| Active Markdown set | 29 files: root `README.md`/`AGENTS.md`, `docs/v2/README.md` plus guides 01–12, the ADR, the archive entry `INDEX.md`, `tasks/questions.md`, `tasks/todo.md`, three host instruction files and seven CMS project-skill guides |
+| Archived originals | 17 files, all present in `manifest.json`, no unmanifested extras |
+| Local Markdown destinations | 186 checked, zero missing targets |
+| Source inventory | 1,265 paths checked, zero missing files |
+| Legacy feature paths | 854 paths checked (635 CMS, 219 website), zero missing files |
+| Archive integrity | 17 of 17 original SHA-256 hashes matched |
+| Active Markdown whitespace | Zero trailing-whitespace findings |
+| External documentation links | Six links recorded, not network-availability tested |
+
+Verifier output: `{"activeMarkdown":29,"archivedOriginals":17,"archiveHashesMatched":17,"localLinksChecked":186,"externalNotFetched":6,"sourceInventory":{"total":1265,"missing":0},"legacyFeaturePaths":{"total":854,"missing":0},"trailingWhitespace":0,"errorCount":0,"errors":[]}`
+
+Distinct checker bugs were found and fixed during this run, and are recorded so the figures are not mistaken for untouched prior results: record paths were read from nonexistent `archivedPath`/`path` fields instead of `archived`; the unmanifested-extra scan resolved its relative paths against the checkout root rather than against the archive directory; and inventory paths were resolved against one base for both files, although `source-inventory.json` groups them under a per-project directory while `legacy-feature-paths.json` bakes that directory into every entry. All were defects in the checker, not in the inventories: the corrected checker resolves every one of the 1,265 and 854 entries on disk.
+
+The destination count is higher than the 2026-11-07 figure of 175 because the intervening slices added documents and links (settings, menus, audit, retention, cart, search, crawl policy, plus the storefront route rows added now). The current figure was not recomputed against the older week's matcher, so only this row is claimed for 2026-11-08.
+
+The two storefront routes documented in [04](04-data-and-api.md) are not equivalent: `GET /api/public/site` reads the customer database and is asserted against `PublicSiteSchema`, while `GET /api/public/site-config` still calls `fetchHubPublicConfig`. The storefront layout now renders identity and navigation from the first; the second supplies only the catalog currency and social links and is retired with the catalog slice, so it must not be read as a parallel identity source in the meantime.
+
 ## Evidence boundaries
 
 The source inventory covers selected first-party feature directories: 920 CMS paths, 215 legacy website paths and 130 target paths. These counts are file inventory, not feature counts or behavior coverage. No environment-file contents or credential values are included.
@@ -46,4 +69,4 @@ The current `superpowers` ignore rule also matches archived subdirectories with 
 
 Local test artifacts created by the parallel implementation pass were also added to `.gitignore`: `cms-cookies.txt`, `cookies.txt`, `bulk-*.json` and `.inspect*.cjs`. `cms-cookies.txt` held live `tm_access_token` / `tm_refresh_token` values and was previously eligible to be committed; only cookie names were inspected, never the values. These files were not deleted, because the running session may still need them — they are only excluded from version control. Rotate those tokens rather than relying on the ignore rule alone, since the file remains on disk.
 
-The next implementation phase is P1, subject to the authorization prerequisites in [the IAM guide](03-hub-auth.md). Completing this documentation does not complete the application rebuild.
+The ordered delivery order still starts with the P1 authorization prerequisites in [the IAM guide](03-hub-auth.md). The slices landed since 2026-11-07 do not close a phase: P3, P4 and the commerce rows still depend on P1's authoritative context and P2's transaction proof, and the owner questions Q1–Q16 remain unanswered. Completing documentation does not complete the application rebuild.

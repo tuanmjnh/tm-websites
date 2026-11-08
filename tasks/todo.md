@@ -327,12 +327,23 @@ Open items: Hub roles need `configs.write` for a real admin to save; the public 
 | `/menus` editor: menu list, name, ordered items with up/down/edit/remove, item dialog with per-type target hints, unsaved marker, delete confirmation; nav entry and audit filter option | `cms-base/app/pages/menus.vue`, `.../composables/useMenuAdmin.ts`, `tm-cms/i18n/locales/{vi,en}.json` |
 | Suites: `pnpm test:menus` 12 live checks | `scripts/build/test-menu-service.ts` |
 
-The collection is `site_menus` because every migrated database already contains the legacy shop `menus` documents (9 in `sen-tuan`, none with a `siteId`); they all collided on the new unique index, so they stay untouched until the import slice. Verified over HTTP (`201`/`409`/`422`/`403`/`401`, idempotent replay) and in the browser (add item, reorder, save -> `Revision 3`/`4`, create and delete through the dialogs); probe menus, audit rows and keys were removed afterwards. Still open: no public projection or storefront navigation yet, items cannot nest, there is no drag-and-drop ordering, no bulk actions, and links are not validated against existing content/category records (a typo saves and simply 404s later).
+The collection is `site_menus` because every migrated database already contains the legacy shop `menus` documents (9 in `sen-tuan`, none with a `siteId`); they all collided on the new unique index, so they stay untouched until the import slice. Verified over HTTP (`201`/`409`/`422`/`403`/`401`, idempotent replay) and in the browser (add item, reorder, save -> `Revision 3`/`4`, create and delete through the dialogs); probe menus, audit rows and keys were removed afterwards. Still open: items cannot nest, there is no drag-and-drop ordering, no bulk actions, and links are not validated against existing content/category records (a typo saves and simply 404s later). The storefront side landed in the slice below.
+
+### P2.d (rest) — storefront site projection (landed 2026-11-08)
+
+| Slice | Evidence |
+| --- | --- |
+| `PublicSite` contract (company, SEO defaults, locales, resolved menus) with pure builders `buildPublicSite`/`toPublicMenu`/`publicMenuHref`/`publicMenuLabel`, exported as `@tm/flow-contracts/site-public` | `tm-shared/packages/flow-contracts/src/site-public.ts` |
+| Read-only `settings`/`site_menus` views with public projections, locale-aware category slug map, and `GET /api/public/site` cached per locale | `tm-web/server/models/sitePublic.ts`, `tm-web/server/utils/publicSite.ts`, `tm-web/server/api/public/site.get.ts` |
+| Storefront layout: brand, contact block, header nav and footer *Explore* list come from the projection, with the static nav and Hub company name as fallback | `web-base/app/layouts/default.vue` |
+| Suites: `pnpm test:web-site` 10 pure checks, `pnpm test:web-site-db` 6 live checks | `scripts/build/test-web-site.ts`, `scripts/build/test-web-site-db.ts` |
+
+The projection exposes only company identity, SEO defaults, locales and menus — `PublicSiteSchema.parse` at the endpoint rejects a leaked admin field (revision, actor, module switches, stored targets). A menu item is resolved on read: `content` key → catch-all path, `category` key → `/danh-muc/<slug>` for the locale (default locale, then key, as fallback), `url` → only a rooted path or absolute `http(s)` link; items without a label or with an unresolvable target are dropped. Verified over HTTP on `:4006` (`?locale=vi|en`, `s-maxage=60`) and in the browser (settings brand name instead of the Hub name, probe `main`/`footer` menus rendered in the header and footer, English labels after switching locale); probe `settings`/`site_menus` were removed afterwards. Still open: the logo id is not resolved to a URL (Q13), the SEO defaults are not wired into page metadata yet, and menu links are not validated against existing records.
 
 ## Next slices
 
 1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub. The settings document already holds the contact address a form would notify.
-2. **SYS-02 public projection**: menus and the settings document now exist (`site_menus`, `settings`); what remains is the read-side projection the storefront would consume (site name, SEO defaults, logo, header/footer navigation) and enabling `default`/`thanhtung`/`hoangvi` once Q2 names their databases.
+2. **SYS-02 wiring**: the projection exists, so what remains is per-locale site names, resolving the logo id to a media URL (Q13), wiring the SEO defaults into each page's `useSeoMeta`, retiring `/api/public/site-config` with the catalog slice, and enabling `default`/`thanhtung`/`hoangvi` once Q2 names their databases.
 3. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
 4. **P2.c (rest) — retention scheduling**: `pnpm prune:retention` exists but needs Q16's periods and a scheduler (Q12) before a site can rely on it; category/media still lack a per-record history endpoint.
 

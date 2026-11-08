@@ -1,0 +1,157 @@
+import assert from 'node:assert/strict'
+import {
+  PUBLIC_MENU_FOOTER,
+  PUBLIC_MENU_HEADER,
+  PublicSiteSchema,
+  buildPublicSite,
+  emptyPublicSite,
+  findPublicMenu,
+  publicMenuHref,
+  publicMenuLabel,
+  toPublicMenu,
+} from '../../tm-shared/packages/flow-contracts/src/site-public.js'
+
+let checks = 0
+
+function check(name: string, fn: () => void) {
+  try {
+    fn()
+    checks++
+    console.log(`   ✅ ${name}`)
+  } catch (error) {
+    console.error(`   ❌ ${name}`)
+    console.error(`      ${(error as Error).message}`)
+    process.exitCode = 1
+  }
+}
+
+const settings = {
+  siteId: 'sentuan',
+  revision: 4,
+  company: {
+    name: 'Sen Tuấn',
+    legalName: 'Công ty Sen Tuấn',
+    taxId: '0101',
+    email: 'hello@sentuan.vn',
+    phone: '0909',
+    address: 'Hà Nội',
+    logoMediaId: 'logo1',
+  },
+  seo: { titleTemplate: '%s | Sen Tuấn', defaultDescription: 'Trang sức', defaultImageMediaId: 'img1' },
+  locales: { default: 'vi', enabled: ['vi', 'en'] },
+  // Private fields the projection must drop.
+  modules: { content: true, catalog: false },
+  updatedBy: { id: 'user_admin', name: 'Admin', email: 'admin@example.com' },
+}
+
+const mainMenu = {
+  siteId: 'sentuan',
+  key: 'main',
+  name: 'Menu chính',
+  revision: 3,
+  items: [
+    { label: { vi: 'Giới thiệu', en: 'About us' }, link: { type: 'content', target: 'gioi-thieu' } },
+    { label: { vi: 'Trang sức', en: '' }, link: { type: 'category', target: 'trang-suc' } },
+    { label: { vi: 'Liên hệ', en: 'Contact' }, link: { type: 'url', target: '/lien-he' } },
+    { label: { vi: 'Nội bộ', en: '' }, link: { type: 'url', target: '/api/v1/admin/content' } },
+    { label: { vi: '', en: '' }, link: { type: 'url', target: '/khong-nhan' } },
+    { label: { vi: 'Hỏng' }, link: { type: 'url', target: 'javascript:alert(1)' } },
+  ],
+}
+
+check('a content key becomes the catch-all path, folders included', () => {
+  assert.equal(publicMenuHref({ type: 'content', target: 'gioi-thieu' }), '/gioi-thieu')
+  assert.equal(publicMenuHref({ type: 'content', target: 'pages/dich-vu' }), '/dich-vu')
+  assert.equal(publicMenuHref({ type: 'content', target: '  ' }), null)
+})
+
+check('a category uses the resolved locale slug, then the key', () => {
+  assert.equal(publicMenuHref({ type: 'category', target: 'trang-suc' }, 'trang-suc-vn'), '/danh-muc/trang-suc-vn')
+  assert.equal(publicMenuHref({ type: 'category', target: 'trang-suc' }), '/danh-muc/trang-suc')
+  assert.equal(publicMenuHref({ type: 'category', target: 'a/b' }, null), '/danh-muc/b')
+})
+
+check('url targets keep rooted paths and absolute links only', () => {
+  assert.equal(publicMenuHref({ type: 'url', target: '/lien-he' }), '/lien-he')
+  assert.equal(publicMenuHref({ type: 'url', target: 'https://example.com/x' }), 'https://example.com/x')
+  assert.equal(publicMenuHref({ type: 'url', target: '//evil.example' }), null)
+  assert.equal(publicMenuHref({ type: 'url', target: 'lien-he' }), null)
+  assert.equal(publicMenuHref({ type: 'url', target: 'javascript:alert(1)' }), null)
+  assert.equal(publicMenuHref({ type: 'search', target: '/x' }), null)
+})
+
+check('labels fall back from the locale to vi then en', () => {
+  assert.equal(publicMenuLabel({ vi: 'Giới thiệu', en: 'About us' }, 'en'), 'About us')
+  assert.equal(publicMenuLabel({ vi: 'Giới thiệu', en: '' }, 'en'), 'Giới thiệu')
+  assert.equal(publicMenuLabel({ vi: '', en: 'About us' }, 'vi'), 'About us')
+  assert.equal(publicMenuLabel({ vi: '', en: '' }, 'vi'), '')
+})
+
+check('a stored menu drops unusable items and keeps the rest in order', () => {
+  const menu = toPublicMenu(mainMenu, () => 'trang-suc')
+  assert.ok(menu)
+  assert.equal(menu.key, 'main')
+  assert.deepEqual(menu.items.map(item => item.href), ['/gioi-thieu', '/danh-muc/trang-suc', '/lien-he', '/api/v1/admin/content'])
+  assert.equal(menu.items.length, 4, 'the empty-label item and the unrooted target are dropped')
+  assert.equal(toPublicMenu({ ...mainMenu, key: '' }), null)
+})
+
+check('the projection exposes the public allowlist only', () => {
+  const site = buildPublicSite({ settings, menus: [mainMenu, { key: 'footer', items: [] }] })
+
+  assert.equal(site.company.name, 'Sen Tuấn')
+  assert.equal(site.company.legalName, undefined, 'the legal name is not part of the projection yet')
+  assert.equal(site.company.logoMediaId, 'logo1')
+  assert.equal(site.seo.titleTemplate, '%s | Sen Tuấn')
+  assert.deepEqual(site.locales, { default: 'vi', enabled: ['vi', 'en'] })
+  assert.deepEqual(Object.keys(site).sort(), ['company', 'locales', 'menus', 'seo'])
+  assert.equal((site as Record<string, unknown>).modules, undefined)
+  assert.equal((site as Record<string, unknown>).revision, undefined)
+  assert.equal((site as Record<string, unknown>).updatedBy, undefined)
+  assert.equal(PublicSiteSchema.safeParse(site).success, true)
+})
+
+check('menus keep both keys, sorted, and an empty menu survives', () => {
+  const site = buildPublicSite({ settings, menus: [mainMenu, { key: 'footer', items: [] }, { key: 'zzz' }] })
+  assert.deepEqual(site.menus.map(menu => menu.key), ['footer', 'main', 'zzz'])
+  assert.deepEqual(findPublicMenu(site.menus, PUBLIC_MENU_HEADER)?.items.length, 4)
+  assert.equal(findPublicMenu(site.menus, PUBLIC_MENU_FOOTER)?.items.length, 0)
+  assert.equal(findPublicMenu(site.menus, 'missing'), null)
+})
+
+check('a site without a settings document reads the defaults', () => {
+  const site = buildPublicSite({ settings: null, menus: [] })
+  assert.deepEqual(site.company, emptyPublicSite().company)
+  assert.equal(site.seo.titleTemplate, '%s')
+  assert.deepEqual(site.locales.enabled, ['vi'])
+  assert.deepEqual(site.menus, [])
+  assert.equal(PublicSiteSchema.safeParse(site).success, true)
+})
+
+check('a partially written settings document never yields empty arrays or nulls', () => {
+  const site = buildPublicSite({
+    settings: { company: { name: 'Sen Tuấn' }, locales: { enabled: 'vi' } },
+    menus: [{ key: 'main', items: 'nope' }],
+  })
+  assert.equal(site.company.name, 'Sen Tuấn')
+  assert.deepEqual(site.locales.enabled, ['vi'])
+  assert.equal(site.locales.default, 'vi')
+  assert.deepEqual(site.menus, [{ key: 'main', items: [] }])
+})
+
+check('category slug overrides are applied per menu item', () => {
+  const site = buildPublicSite({
+    settings,
+    menus: [mainMenu],
+    categorySlugs: new Map([['trang-suc', 'jewelry']]),
+  })
+  assert.equal(site.menus[0]!.items[1]!.href, '/danh-muc/jewelry')
+
+  const plain = buildPublicSite({ settings, menus: [mainMenu], categorySlugs: { 'trang-suc': 'do-trang-suc' } })
+  assert.equal(plain.menus[0]!.items[1]!.href, '/danh-muc/do-trang-suc')
+})
+
+console.log(`\n${checks} checks passed`)
+if (process.exitCode) {
+  console.error('Web site projection checks failed')
+}

@@ -1,9 +1,43 @@
 <script setup lang="ts">
+import type { PublicSite } from '@tm/flow-contracts/site-public'
+import {
+  PUBLIC_MENU_FOOTER,
+  PUBLIC_MENU_HEADER,
+  findPublicMenu,
+  publicMenuLabel,
+} from '@tm/flow-contracts/site-public'
+
 const { t, locale, locales, setLocale } = useI18n()
 const route = useRoute()
 const { companyName, siteConfig, socialLinks } = useSiteConfig()
 
-const navLinks = computed(() => [
+// The CMS owns the menus; the storefront only reads the public projection. When a
+// site has not saved settings yet (or the read fails) the built-in navigation is
+// kept, so the header is never empty.
+const { data: publicSite } = await useAsyncData(
+  'public-site',
+  async () => {
+    try {
+      const response = await $fetch<{ success: boolean, data: PublicSite }>('/api/public/site', {
+        query: { locale: locale.value },
+      })
+      return response.data
+    } catch {
+      return null
+    }
+  },
+  { watch: [locale] },
+)
+
+const menuLinks = (key: string) => {
+  const menu = findPublicMenu(publicSite.value?.menus ?? [], key)
+  if (!menu?.items.length) return null
+  return menu.items
+    .map(item => ({ label: publicMenuLabel(item.label, locale.value), to: item.href }))
+    .filter(link => link.label)
+}
+
+const fallbackNav = computed(() => [
   { label: t('nav.home'), to: '/' },
   { label: t('nav.products'), to: '/products' },
   { label: t('nav.categories'), to: '/categories' },
@@ -11,6 +45,19 @@ const navLinks = computed(() => [
   { label: t('nav.contact'), to: '/contact' },
   { label: t('nav.search'), to: '/tim-kiem' },
 ])
+
+const navLinks = computed(() => menuLinks(PUBLIC_MENU_HEADER) ?? fallbackNav.value)
+
+const fallbackFooterLinks = computed(() => [
+  { label: t('nav.products'), to: '/products' },
+  { label: t('nav.categories'), to: '/categories' },
+  { label: t('nav.about'), to: '/about' },
+  { label: t('nav.contact'), to: '/contact' },
+])
+
+const footerLinks = computed(() => menuLinks(PUBLIC_MENU_FOOTER) ?? fallbackFooterLinks.value)
+
+const brandName = computed(() => publicSite.value?.company.name || companyName.value)
 
 const isActive = (to: string) => to === '/' ? route.path === '/' : route.path.startsWith(to)
 
@@ -33,9 +80,11 @@ const switchLocale = async () => {
 const { count: cartCount, hydrate: hydrateCart } = useCart()
 onMounted(() => hydrateCart())
 
-const contactEmail = computed(() => siteConfig.value.supportEmail || '')
-const contactPhone = computed(() => siteConfig.value.supportPhone || '')
-const contactAddress = computed(() => siteConfig.value.address || '')
+// The site settings document is now the source of truth; Hub's public config
+// stays as the fallback for sites that have not saved it yet.
+const contactEmail = computed(() => publicSite.value?.company.email || siteConfig.value.supportEmail || '')
+const contactPhone = computed(() => publicSite.value?.company.phone || siteConfig.value.supportPhone || '')
+const contactAddress = computed(() => publicSite.value?.company.address || siteConfig.value.address || '')
 </script>
 
 <template>
@@ -45,9 +94,9 @@ const contactAddress = computed(() => siteConfig.value.address || '')
     <header class="sticky top-0 z-30 border-b border-default bg-elevated/40 backdrop-blur-xl">
       <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <NuxtLink to="/" class="flex min-w-0 items-center gap-2.5">
-          <NuxtImg src="/branding/logo.svg" :alt="companyName" width="32" height="32" class="size-8 shrink-0" />
+          <NuxtImg src="/branding/logo.svg" :alt="brandName" width="32" height="32" class="size-8 shrink-0" />
           <span class="truncate text-base font-semibold tracking-tight text-highlighted">
-            {{ companyName }}
+            {{ brandName }}
           </span>
         </NuxtLink>
 
@@ -109,8 +158,8 @@ const contactAddress = computed(() => siteConfig.value.address || '')
         <div class="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div class="md:col-span-2">
             <div class="flex items-center gap-2.5">
-              <NuxtImg src="/branding/logo.svg" :alt="companyName" width="28" height="28" class="size-7" />
-              <h3 class="text-sm font-semibold text-highlighted">{{ companyName }}</h3>
+              <NuxtImg src="/branding/logo.svg" :alt="brandName" width="28" height="28" class="size-7" />
+              <h3 class="text-sm font-semibold text-highlighted">{{ brandName }}</h3>
             </div>
             <p class="mt-3 max-w-sm text-xs text-muted">
               {{ t('site.tagline') }}
@@ -135,9 +184,9 @@ const contactAddress = computed(() => siteConfig.value.address || '')
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider text-highlighted">{{ t('site.explore') }}</h4>
             <ul class="mt-3 space-y-1.5 text-xs text-muted">
-              <li><NuxtLink to="/products" class="transition-colors hover:text-primary">{{ t('nav.products') }}</NuxtLink></li>
-              <li><NuxtLink to="/categories" class="transition-colors hover:text-primary">{{ t('nav.categories') }}</NuxtLink></li>
-              <li><NuxtLink to="/products?sort=newest" class="transition-colors hover:text-primary">{{ t('catalog.sort.newest') }}</NuxtLink></li>
+              <li v-for="link in footerLinks" :key="`${link.to}:${link.label}`">
+                <NuxtLink :to="link.to" class="transition-colors hover:text-primary">{{ link.label }}</NuxtLink>
+              </li>
             </ul>
           </div>
 
@@ -164,7 +213,7 @@ const contactAddress = computed(() => siteConfig.value.address || '')
         </div>
 
         <div class="mt-8 border-t border-default/40 pt-4 text-center text-xs text-muted">
-          © {{ new Date().getFullYear() }} {{ companyName }}. {{ t('site.rights') }}
+          © {{ new Date().getFullYear() }} {{ brandName }}. {{ t('site.rights') }}
         </div>
       </div>
     </footer>

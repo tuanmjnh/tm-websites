@@ -4,6 +4,8 @@ This replaces the old Hub-business/MVP plan. It is not a claim that old code sho
 
 **Status note (2026-11-07):** uncommitted work already implements parts of P1 (verified context, CSRF origin guard, proxy auth denial) and P2 (customer DB binding, content/category/media services, idempotency, audit, migrations), with `pnpm test:iam|db|content|categories|media|bulk` scripts. Those scripts were **not run by the documentation reset**, so the phases remain in progress. P3 public content read is also partially wired. Treat the phase table as the dependency map, and the dated slice records in [05](05-feature-parity.md) as the status.
 
+**Status note (2026-11-08):** later slices added settings, site menus, a site-scoped audit read API, retention pruning, Web catalog/site readers, cart re-quoting, discovery, unified search and crawl policy, each with its own script and dated record in [05](05-feature-parity.md). The phase table below is unchanged deliberately: phase exit gates are end-to-end criteria, not a sum of slice tests. P1's authoritative-session gate and P2's two-tenant transaction gate remain open, and no phase is marked done because its scripts pass. Read the dated records for what was actually run, on which tree.
+
 ## Phase sequence
 
 | Phase | Deliverable | Dependencies | Exit gate |

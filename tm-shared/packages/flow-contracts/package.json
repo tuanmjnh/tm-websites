@@ -16,6 +16,7 @@
     "./content-public": "./src/content-public.ts",
     "./media-admin": "./src/media-admin.ts",
     "./menu-admin": "./src/menu-admin.ts",
+    "./site-public": "./src/site-public.ts",
     "./public-content": "./src/public-content.ts"
   },
   "dependencies": {

@@ -54,7 +54,13 @@ pnpm test:content
 pnpm test:categories
 pnpm test:media
 pnpm test:bulk
+pnpm test:audit
+pnpm test:retention
+pnpm test:settings
+pnpm test:menus
 pnpm test:web-content
+pnpm test:web-cart
+pnpm test:web-site
 pnpm --dir tm-shared run typecheck
 pnpm typecheck
 pnpm lint
@@ -298,6 +304,19 @@ Defaults are conservative placeholders (50 snapshots per record, 365 days of aud
 | Save from a form another admin already changed | The conflict message is shown and the page reloads the current revision |
 | *Delete menu*, confirm | The menu disappears from the list; the audit page shows the `delete` row with the session actor; linked pages are untouched |
 | Database check | Menus live in `site_menus`; a migrated database's legacy `menus` documents are **not** touched or indexed |
+
+### Public site projection smoke (P2.d)
+
+| Check | Expected |
+| --- | --- |
+| `GET /api/public/site?locale=vi` on a site with saved settings and menus | `200` with company identity, SEO defaults, locales and both menus, `cache-control: s-maxage=60, stale-while-revalidate=300` |
+| Same request with `?locale=en` | Menu labels in English; a category without an `en` slug still resolves (storefront default locale, then the key) |
+| Same request on a site with no settings or menus | `200` with empty company fields, `%s` title template and no menus — never a `500` |
+| Any response body | No `revision`, `updatedBy`, `modules` or stored link target appears in it |
+| Storefront header/footer with saved menus | Brand is the settings display name, the header follows the `main` menu and the footer *Explore* list the `footer` menu |
+| Storefront with menus missing or an API failure | The static navigation and Hub company name are shown instead; the page still renders |
+
+Coverage: `pnpm test:web-site` (10 pure checks) and `pnpm test:web-site-db` (6 live checks, disposable database). Probe settings/menus must be removed afterwards.
 
 ### Site settings smoke (P2.d)
 

@@ -31,7 +31,9 @@ The [path inventory](source-inventory.json) records source candidates without op
 | Health | [health.get.ts](../../tm-cms/server/api/health.get.ts) | Reports `status/hub/database` without leaking URI/tenant | Monitoring integration |
 | Contracts | [flow-contracts](../../tm-shared/packages/flow-contracts/src) | Admin content/category/media and public content Zod contracts | Contract tests for every new schema |
 
-Test scripts exist under [scripts/build](../../scripts/build) (`test-cms-iam`, `test-content-service`, `test-category-service`, `test-media-service`, `test-database-binding`, `test-web-content-db`, `test-bulk-service`, `test-content-model`). **They were not executed during this documentation pass**; their presence is not a PASS.
+Test scripts exist under [scripts/build](../../scripts/build). As of 2026-11-08 they are `test-cms-iam`, `test-database-binding`, `test-content-model`, `test-content-service`, `test-category-service`, `test-media-service`, `test-bulk-service`, `test-audit-service`, `test-retention-service`, `test-settings-service`, `test-menu-service`, `test-web-content`, `test-web-content-db`, `test-web-cart`, `test-web-site`, `test-web-site-db`, `test-hub-contracts`, `test-layer-priority`, plus the operator command [prune-retention.ts](../../scripts/ops/prune-retention.ts).
+
+**The documentation reset itself executed none of them.** Pass/fail claims come only from the dated slice records at the end of [05](05-feature-parity.md), each tied to one slice and one run; a script's presence is not a PASS and no slice's evidence certifies a later revision.
 
 Open decisions blocking scope are recorded in [tasks/questions.md](../../tasks/questions.md): production MongoDB URI/database names, Hub session-revocation contract, whether Hub content may be exported, media provider choice, deploy ownership, AI scope. Until answered, the defaults in that file apply.
 
