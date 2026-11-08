@@ -10,7 +10,7 @@ import { z } from 'zod'
  * revision the action produced.
  */
 
-export const ADMIN_AUDIT_RESOURCE_TYPES = ['content', 'category', 'media'] as const
+export const ADMIN_AUDIT_RESOURCE_TYPES = ['content', 'category', 'media', 'settings'] as const
 export type AdminAuditResourceType = (typeof ADMIN_AUDIT_RESOURCE_TYPES)[number]
 
 export const ADMIN_AUDIT_ACTIONS = [

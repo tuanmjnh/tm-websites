@@ -6,6 +6,7 @@ import { syncIdempotencyIndexes } from './idempotency'
 import { syncCategoryIndexes } from './category'
 import { syncContentRevisionIndexes } from './revision'
 import { syncMediaIndexes } from './media'
+import { syncSettingsIndexes } from './settings'
 
 /**
  * Migration-version records. Every schema change that ships must carry a stable
@@ -197,6 +198,16 @@ export const MIGRATIONS: readonly Migration[] = [
     checksum: 'media-indexes@1',
     apply: async (connection) => {
       await syncMediaIndexes(connection)
+    },
+  },
+  {
+    // P2.d: one settings document per site. The unique index is what turns a
+    // concurrent first save into one document instead of two.
+    id: 'settings-indexes',
+    version: 6,
+    checksum: 'settings-indexes@1',
+    apply: async (connection) => {
+      await syncSettingsIndexes(connection)
     },
   },
 ]

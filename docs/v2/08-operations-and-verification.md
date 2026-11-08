@@ -287,6 +287,20 @@ TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=sen-tuan \
 
 Defaults are conservative placeholders (50 snapshots per record, 365 days of audit) and stay dry-run unless `--apply` is passed. The real periods are still an owner decision (Q16). Coverage: `pnpm test:retention` (5 checks, disposable database).
 
+### Site settings smoke (P2.d)
+
+| Check | Expected |
+| --- | --- |
+| Open `/configs` on a site that was never saved | *Site settings* shows empty company fields, default locale `VI`, only `VI` enabled, only *Content* on, and `Settings revision 0` |
+| Change the display name, enable `EN`, switch *Catalog* on, save | `200`, "Site settings saved.", `Settings revision 1`, and `GET /api/v1/admin/settings` returns the saved document with `updatedBy` = the session user |
+| Save again without editing | "There is nothing to save." (`422 SETTINGS_UPDATE_UNCHANGED`) |
+| Bump the revision through the API, then save the stale form | "Someone else saved these settings…" (`409 SETTINGS_REVISION_CONFLICT`), nothing overwritten |
+| Try to uncheck the current default locale | The checkbox is disabled; changing the default in the select keeps both enabled |
+| A session without `configs.write` | Fields and Save are disabled, the read-only note is shown, `PATCH` → `403`; a session without `configs.read` → `403` on `GET` and the page shows the permission message |
+| Hub unreachable / Hub session rejected | The Hub card shows its own error while the settings card still loads and saves |
+
+Probe documents, audit entries and idempotency keys must be removed afterwards. The service-level sequence is `pnpm test:settings` (8 checks).
+
 ## Customer build matrix
 
 Read the registry before each run. At this baseline: CMS supports default, sentuan, bagpost, thanhtung, hoangvi; Web supports default, sentuan, bagpost. Disabled app/customer combinations should fail, not silently build another customer.

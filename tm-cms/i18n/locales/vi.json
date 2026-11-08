@@ -172,6 +172,40 @@
         "public": "Khóa công khai",
         "secret": "Khóa bí mật",
         "categories": "Nhóm cấu hình"
+      },
+      "site": {
+        "title": "Cấu hình site",
+        "description": "Thông tin công ty, SEO mặc định, ngôn ngữ và module bật cho site này",
+        "save": "Lưu cấu hình",
+        "saved": "Đã lưu cấu hình site.",
+        "readOnly": "Tài khoản chỉ có quyền đọc cấu hình (configs.read), không sửa được.",
+        "revision": "Bản cấu hình {revision}",
+        "fields": {
+          "name": "Tên hiển thị",
+          "legalName": "Tên pháp lý",
+          "taxId": "Mã số thuế",
+          "email": "Email liên hệ",
+          "phone": "Số điện thoại",
+          "address": "Địa chỉ",
+          "titleTemplate": "Tiêu đề SEO (%s = tên trang)",
+          "defaultDescription": "Mô tả SEO mặc định",
+          "defaultLocale": "Ngôn ngữ mặc định",
+          "enabledLocales": "Ngôn ngữ bật",
+          "modules": "Module"
+        },
+        "modules": {
+          "content": "Nội dung",
+          "catalog": "Sản phẩm",
+          "orders": "Đơn hàng",
+          "inventory": "Kho"
+        },
+        "errors": {
+          "conflict": "Cấu hình đã được người khác sửa. Tải lại trang rồi sửa lại.",
+          "noChanges": "Không có thay đổi nào để lưu.",
+          "invalid": "Dữ liệu chưa hợp lệ: kiểm tra email, ngôn ngữ mặc định và danh sách ngôn ngữ bật.",
+          "forbidden": "Tài khoản không có quyền sửa cấu hình (configs.write).",
+          "unavailable": "Không lưu được cấu hình, thử lại sau."
+        }
       }
     },
     "audit": {
@@ -201,7 +235,8 @@
       "resources": {
         "content": "Nội dung",
         "category": "Danh mục",
-        "media": "Media"
+        "media": "Media",
+        "settings": "Cấu hình"
       },
       "actions": {
         "create": "Tạo",

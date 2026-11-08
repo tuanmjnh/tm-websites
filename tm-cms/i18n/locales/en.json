@@ -172,6 +172,40 @@
         "public": "Public keys",
         "secret": "Secret keys",
         "categories": "Categories"
+      },
+      "site": {
+        "title": "Site settings",
+        "description": "Company identity, SEO defaults, locales and enabled modules for this site",
+        "save": "Save settings",
+        "saved": "Site settings saved.",
+        "readOnly": "This account can only read settings (configs.read), not change them.",
+        "revision": "Settings revision {revision}",
+        "fields": {
+          "name": "Display name",
+          "legalName": "Legal name",
+          "taxId": "Tax id",
+          "email": "Contact email",
+          "phone": "Phone",
+          "address": "Address",
+          "titleTemplate": "SEO title (%s = page name)",
+          "defaultDescription": "Default SEO description",
+          "defaultLocale": "Default locale",
+          "enabledLocales": "Enabled locales",
+          "modules": "Modules"
+        },
+        "modules": {
+          "content": "Content",
+          "catalog": "Catalog",
+          "orders": "Orders",
+          "inventory": "Inventory"
+        },
+        "errors": {
+          "conflict": "Someone else saved these settings. Reload the page and apply your change again.",
+          "noChanges": "There is nothing to save.",
+          "invalid": "The data is not valid: check the email, the default locale and the enabled locales.",
+          "forbidden": "This account cannot change settings (configs.write).",
+          "unavailable": "Could not save the settings; try again."
+        }
       }
     },
     "audit": {
@@ -201,7 +235,8 @@
       "resources": {
         "content": "Content",
         "category": "Category",
-        "media": "Media"
+        "media": "Media",
+        "settings": "Settings"
       },
       "actions": {
         "create": "Create",

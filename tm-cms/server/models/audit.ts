@@ -7,7 +7,7 @@ import type { Connection, Model } from 'mongoose'
  * without calling Hub for a token or a session.
  */
 
-export const AUDIT_RESOURCE_TYPES = ['content', 'category', 'media'] as const
+export const AUDIT_RESOURCE_TYPES = ['content', 'category', 'media', 'settings'] as const
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number]
 
 export const AUDIT_ACTIONS = [

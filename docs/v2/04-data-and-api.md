@@ -41,6 +41,7 @@ Only what a migration has actually created is listed here; the table above remai
 | `content-revision-indexes` v3 | `content_revisions` | Immutable snapshot per content revision (site, content id, revision, status, action, changed fields, the editable fields, actor, request id). Unique `(siteId, contentId, revision)` so a retried command can never fork the history; a snapshot never stores status/`publishedAt`/`deletedAt`, so restoring an old version restores wording only. |
 | `media-indexes` v5 | `media` | Binary files are **not** stored in Mongo: a row keeps the site, folder, storage key, MIME type, byte size, checksum, kind, title/alt, revision, uploader and delete stamp. Unique `(siteId, storageKey)`; `(siteId, folder, createdAt)` and `(siteId, kind)` cover the library filters. Bytes live behind the storage adapter (`TM_MEDIA_DIR`, default `.data/media`) under `<site>/<yyyy>/<uuid>.<ext>`. |
 | `category-indexes` v4 | `categories` | Editorial category tree for this site: immutable `key`, optional `parent` key, `order` (0–9999), a monotonic `revision` and one localized `{ locale, name, slug }` per language. Unique `(siteId, key)` and `(siteId, locale, slug)`; the tree depth is validated in the service (max 5 levels) because MongoDB cannot express it as an index. |
+| `settings-indexes` v6 | `settings` | One document per site holding business configuration only: company identity (display/legal name, tax id, contact), SEO defaults, enabled locales with their default, and the module switches (`content`, `catalog`, `orders`, `inventory`). Unique `(siteId)` makes a concurrent first save resolve to one document; the monotonic `revision` is the editor lock and `updatedBy` stores the session actor. Endpoints and credentials stay in Hub's connection registry — nothing secret belongs in this collection. |
 | `content-indexes` v1 | `content`, `tm_migrations` | `content` stores a normalized slug per locale, a draft/scheduled/published/archived/deleted status, a publish window and a monotonic `revision`; unique `(siteId, key)` and `(siteId, locale, slug)`. Each locale also declares a body `format` (`markdown` | `html` | `text`) so the storefront never guesses how to render it. Applied migrations are recorded in `tm_migrations` with id, version, checksum and timestamp. |
 
 ### Implemented admin content API (v1)
@@ -99,6 +100,15 @@ Uploads are limited to `image/png`, `image/jpeg`, `image/webp`, `image/avif`, `i
 | `GET /media/<site>/<yyyy>/<uuid>.<ext>` | — | the bytes | Public and site-scoped (a key from another site is `404`); `Content-Type` from the stored MIME type, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Cache-Control: public, max-age=31536000, immutable` and `Cross-Origin-Resource-Policy: cross-origin` so the storefront may embed it |
 
 Capabilities: `media.read` to list, `media.upload` for uploads and metadata edits, `media.delete` to remove. Every mutation records one `audit_logs` entry with `resourceType: media`. A content record carries a `media` array (≤20 ids) that is part of the edit draft, the revision snapshot, the restore path and `changedFields`, so attachments are versioned with the record.
+
+### Implemented admin settings API (v1)
+
+| Route | Input | Output | Rules |
+| --- | --- | --- | --- |
+| `GET /api/v1/admin/settings` | — | `{ success, data: AdminSiteSettings }` | Returns the saved document, or the defaults with `revision: 0` and `updatedAt: null` for a site that was never saved. Capability `configs.read`; `no-store`. |
+| `PATCH /api/v1/admin/settings` | `revision`, optional `company`/`seo`/`locales`/`modules` sections | `{ success, data: AdminSiteSettings }` | Sections merge into the stored document; untouched sections are never cleared. Capability `configs.write`, same-origin mutation check, `Idempotency-Key` support. Stale revision → `409 SETTINGS_REVISION_CONFLICT`, an empty diff → `422 SETTINGS_UPDATE_UNCHANGED`, a default locale that is not enabled → `422 SETTINGS_LOCALES_INVALID`, a malformed email/locale/field → `422 SETTINGS_PAYLOAD_INVALID`. One `audit_logs` entry (`resourceType: settings`, `resourceKey: site-settings`) per accepted save, listing the changed sections. |
+
+The document never carries a secret: Hub keeps endpoints and credentials, so `GET` can return it whole to an authenticated admin.
 
 ### Implemented public content read (Web)
 

@@ -305,10 +305,23 @@ Verified over HTTP on `:4005` (2 entries, filters, paging, `422` cases, `401` an
 
 Still open in P2.c: audit covers content only, the retention periods are placeholder defaults pending Q16 and nothing schedules the command, no concurrent-key race test, no idempotency for public writes, no per-record history for category/media.
 
+### P2.d — site settings (landed 2026-11-08)
+
+| Slice | Evidence |
+| --- | --- |
+| One settings document per site (company, SEO defaults, locales, module switches), unique `siteId`, monotonic revision, `updatedBy` | `tm-cms/server/models/settings.ts`, migration `settings-indexes` v6, `flow-contracts/src/settings-admin.ts` |
+| `GET`/`PATCH /api/v1/admin/settings` with merge semantics, revision lock, `Idempotency-Key`, audit entry (`resourceType: settings`) | `tm-cms/server/api/v1/admin/settings/**`, `tm-cms/server/services/settingsService.ts` |
+| `/configs` edits and saves the document; a Hub failure no longer blanks the page | `cms-base/app/pages/configs.vue`, `.../composables/useSettingsAdmin.ts`, `tm-cms/i18n/locales/{vi,en}.json` |
+| Suites: `pnpm test:settings` 8 live checks | `scripts/build/test-settings-service.ts` |
+
+Verified over HTTP on `:4005` (defaults, first save, idempotent replay, `409`, `422` cases, audit rows) and in the browser (card render, save → revision 1, unchanged message, stale-form conflict message). Probe document, audit entries and idempotency keys were removed afterwards.
+
+Open items: Hub roles need `configs.write` for a real admin to save; menus, media picking for logo/default image and the public projection are still missing; only `sentuan` was exercised (Q2).
+
 ## Next slices
 
-1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub.
-2. **P2.d — other domains on the same foundation**: configs/settings move onto the same model + audit + idempotency pattern; prove a CMS-only customer (`thanhtung`, `hoangvi`) can bind a database once Q2 names them.
+1. **WEB-07 — forms**: contact/newsletter needs an email or CRM provider decision, so it starts with the provider choice rather than a local-only stub. The settings document already holds the contact address a form would notify.
+2. **P2.d — settings leftovers**: the site settings document (company, SEO defaults, locales, modules) now sits on the same model + audit + idempotency pattern; what remains is menus, a media picker for the logo/default image, the public projection and enabling `default`/`thanhtung`/`hoangvi` once Q2 names their databases.
 3. **WEB-06 — checkout**: builds on the cart quote, but needs a payment provider decision plus the same server-side repricing rules.
 4. **P2.c (rest) — retention scheduling**: `pnpm prune:retention` exists but needs Q16's periods and a scheduler (Q12) before a site can rely on it; category/media still lack a per-record history endpoint.
 
