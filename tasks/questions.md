@@ -2,7 +2,7 @@
 
 > Trả lời ngắn theo mã: `Q1: a`, `Q2: 1) ...` là đủ. Câu nào không trả lời, tôi sẽ tiếp tục theo **mặc định** ghi ở cột cuối và ghi rõ trong queue.
 >
-> Cập nhật: 2026-11-06. Bối cảnh: đang ở P1 (IAM) → P2 (nền nghiệp vụ MongoDB) của [roadmap](../docs/v2/07-delivery-roadmap.md).
+> Cập nhật: 2026-11-09. Bối cảnh: P1 (IAM) và P2 (nền nghiệp vụ MongoDB) đã có phần lớn; các slice P2/P3 của CMS và storefront đã chạy và commit trên `main`. Những gì còn lại đều rơi vào câu hỏi dưới đây.
 
 ## A. Chặn tiến độ ngay (cần trả lời trước P3)
 
@@ -42,6 +42,32 @@
 3. **DB binding**: tên database do registry quyết định; `TM_MONGO_DB` chỉ được lặp lại đúng tên đó, lệch → 503 `DATABASE_BINDING_MISMATCH`.
 4. **Health endpoint** `GET /api/health`: chỉ trả `status/hub/database`, không lộ URI/tenant/credential.
 5. **Chưa** tạo package `@tm/flow-server`, **chưa** ghi/xoá dữ liệu Hub, **chưa** migrate dữ liệu, **chưa** commit.
+
+## F. Câu hỏi mới phát sinh sau P2/P3 (2026-11-09)
+
+Đây là những quyết định đang thực sự giữ các slice tiếp theo lại; mỗi câu ghi rõ *nếu bạn không trả lời thì tôi làm gì* và *mở khoá được gì*.
+
+| ID | Câu hỏi | Mặc định nếu không trả lời | Mở khoá |
+| --- | --- | --- | --- |
+| Q17 | Thanh toán cho WEB-06 dùng cổng nào: chỉ COD/chuyển khoản thủ công, VNPay, MoMo, ZaloPay, hay Stripe? Và đơn hàng lưu ở đâu (Mongo của customer, hay đẩy sang hệ thống khác)? | Chưa làm checkout; chỉ giữ giỏ hàng client-side | WEB-06: bắt buộc tính lại giá ở server, chống đặt trùng, từ chối khi hết hàng — cả ba đều cần biết đơn hàng nằm ở đâu |
+| Q18 | Form liên hệ/đăng ký nhận tin (WEB-07) gửi đi đâu: lưu Mongo rồi hiển thị trong CMS, gửi email qua provider (tên provider + địa chỉ nhận), hay bắn webhook sang CRM? | Chưa làm form; chỉ có trang tĩnh | WEB-07: cần đích đến để viết retry/failure handling thay vì làm giả |
+| Q19 | Ảnh public của storefront phục vụ từ đâu? CMS hiện lưu file trên đĩa của chính nó, còn Web là deployment riêng, nên cần một origin công khai: Cloudinary (Q13), bucket R2/S3, hay để Web proxy qua CMS? | Chưa đưa media vào projection công khai | MED-01 + logo trong SYS-02 + OG image; cũng là điều kiện để nội dung có ảnh hiển thị thật trên Web |
+| Q20 | URL có phân biệt ngôn ngữ không? Hiện storefront dùng cookie (`no_prefix`), nên `/san-pham` và `/products` không cùng một URL và `hreflang` không phát được. Có đổi sang tiền tố `/vi/...`, `/en/...` không? | Giữ `no_prefix`; không phát `hreflang`, canonical theo từng locale đang chọn | WEB-08: hreflang, canonical chuẩn, sitemap đa ngôn ngữ, và redirect khi đổi ngôn ngữ |
+| Q21 | Có cần job nền chạy định kỳ (publish theo `publishAt`, prune retention) trên hạ tầng nào: cron của Vercel, worker riêng, hay chấp nhận chạy tay? | Chạy tay như hiện tại (`pnpm prune:retention`), publish theo lịch chưa tự chạy | Q12 + Q16: retention tự động và publish hẹn giờ |
+| Q22 | Bản ghi content/config/media legacy trong TM Hub: cho phép export → import một lần rồi Hub chỉ đọc, hay giữ Hub là nguồn trong suốt giai đoạn chuyển tiếp? (cùng Q5, nhưng giờ cần câu trả lời để làm slice import) | Không import; chỉ dữ liệu tạo mới trong Mongo | Q5 + Q2: bật `default`/`thanhtung`/`hoangvi` với dữ liệu thật |
+
+## G. Hiện trạng của các câu cũ (để bạn khỏi trả lời lại cái đã xong)
+
+| ID | Hiện trạng 2026-11-09 |
+| --- | --- |
+| Q2 | `sentuan` chạy với DB `sen-tuan`; `default`/`thanhtung`/`hoangvi` vẫn chưa có database nên chưa bật được module nghiệp vụ. |
+| Q3 | Giữ tên cũ (`sen-tuan`, `bag-post`) theo mặc định; chưa có migration nào đụng tới. |
+| Q5 | Chưa import gì từ Hub; xem Q22. |
+| Q11 | Theo mặc định: chưa tạo package `@tm/flow-server`, model/service nằm trong `tm-cms/server/`. Muốn chuyển thì nói, hành vi không đổi. |
+| Q12 | Đã có purge endpoint dùng chung secret, purge toàn bộ handler cache của storefront khi lưu settings/menu; chưa ký, chưa scoped theo tenant/tag, chưa có job bền vững. Xem Q21. |
+| Q13 | Vẫn chờ credential Cloudinary; media đang lưu đĩa local của CMS. Xem Q19. |
+| Q14 | Không deploy gì; chỉ build và chạy local. |
+| Q16 | `pnpm prune:retention` tồn tại, mặc định dry-run, tạm 50 bản/nội dung và 365 ngày audit — cần con số chính thức. |
 
 ## E. Điều kiện môi trường đã quan sát
 
