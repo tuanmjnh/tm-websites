@@ -179,6 +179,7 @@
         "description": "Company identity, SEO defaults, locales and enabled modules for this site",
         "save": "Save settings",
         "saved": "Site settings saved.",
+        "savedNotRevalidated": "Site settings saved. The website cache could not be cleared, so the change will appear in about a minute.",
         "readOnly": "This account can only read settings (configs.read), not change them.",
         "revision": "Settings revision {revision}",
         "fields": {

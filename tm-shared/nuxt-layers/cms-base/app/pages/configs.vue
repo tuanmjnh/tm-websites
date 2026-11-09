@@ -137,8 +137,13 @@ async function saveSite() {
     modules: { ...form.modules },
   }
   try {
-    applySettings(await saveSettings(patch))
-    settingsMessage.value = t('admin.configs.site.saved')
+    const saved = await saveSettings(patch)
+    applySettings(saved.settings)
+    // The save is committed either way; only the storefront refresh can fail, and
+    // then the site picks the change up on its own cache window.
+    settingsMessage.value = saved.revalidateFailed
+      ? t('admin.configs.site.savedNotRevalidated')
+      : t('admin.configs.site.saved')
   } catch (error) {
     settingsMessage.value = t(`admin.configs.site.errors.${describeSettingsError(error)}`)
   } finally {

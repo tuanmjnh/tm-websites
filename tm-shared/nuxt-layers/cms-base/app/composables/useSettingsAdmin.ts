@@ -1,6 +1,25 @@
 import type { AdminSiteSettings, AdminSiteSettingsPatch } from '@tm/flow-contracts/settings-admin'
 
 /**
+ * What the CMS did about the storefront cache. The server reports the outcome in
+ * `x-storefront-revalidate` rather than the body: the save itself succeeded even
+ * when the purge did not.
+ */
+export type StorefrontRevalidateOutcome =
+  | 'revalidated'
+  | 'not-configured'
+  | 'http-error'
+  | 'request-failed'
+
+export interface SettingsSaveResult {
+  settings: AdminSiteSettings
+  /** `null` when the response carried no header (an older server, a proxy that strips it). */
+  revalidate: StorefrontRevalidateOutcome | null
+  /** The storefront may still be serving the previous document. */
+  revalidateFailed: boolean
+}
+
+/**
  * Site settings client. The document is small and always read whole, so the page
  * keeps one copy (the revision it loaded) and sends that revision back with the
  * save; the server refuses a stale one instead of overwriting a colleague.
@@ -13,9 +32,22 @@ export const useSettingsAdmin = () => {
     return payload.data
   }
 
-  const saveSettings = async (patch: AdminSiteSettingsPatch): Promise<AdminSiteSettings> => {
-    const payload = await plainFetch('/api/v1/admin/settings', { method: 'PATCH', body: patch }) as { data: AdminSiteSettings }
-    return payload.data
+  const saveSettings = async (patch: AdminSiteSettingsPatch): Promise<SettingsSaveResult> => {
+    let header: string | null = null
+    const payload = await plainFetch('/api/v1/admin/settings', {
+      method: 'PATCH',
+      body: patch,
+      onResponse: ({ response }: { response: { headers: Headers } }) => {
+        header = response.headers.get('x-storefront-revalidate')
+      },
+    }) as { data: AdminSiteSettings }
+
+    const revalidate = header as StorefrontRevalidateOutcome | null
+    return {
+      settings: payload.data,
+      revalidate,
+      revalidateFailed: revalidate === 'http-error' || revalidate === 'request-failed',
+    }
   }
 
   const describeError = (error: unknown): string => {

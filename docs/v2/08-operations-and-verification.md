@@ -362,6 +362,7 @@ Coverage: the `pnpm test:audit` checks listed in [05](05-feature-parity.md). Pro
 | Save settings, or create/update/delete a menu, with `TM_WEB_REVALIDATE_URL` and `TM_REVALIDATE_SECRET` set | `200` and `x-storefront-revalidate: revalidated`; `GET /api/public/site` shows the new value on the next request instead of after the 60s window |
 | The same save with either variable missing | `200` with `x-storefront-revalidate: not-configured`; no request leaves the CMS |
 | The same save while the storefront is stopped or holds another secret | Still `200` with `http-error` / `request-failed`, the data is saved, and the CMS log shows one `[storefront-revalidate]` warning |
+| The same save in the browser (`/configs`) | When the purge failed the page says the settings were saved but the site cache could not be cleared and will refresh in about a minute; when the purge worked it shows the plain saved message |
 | `POST <storefront>/api/_internal/purge` with no secret or a wrong one | `401 INVALID_REVALIDATE_SECRET`; with `REVALIDATE_SECRET` unset the route answers `503 REVALIDATE_DISABLED` |
 | Retry the same `Idempotency-Key` | `200` with `idempotent-replay: true` and no second purge |
 

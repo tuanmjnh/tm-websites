@@ -179,6 +179,7 @@
         "description": "Thông tin công ty, SEO mặc định, ngôn ngữ và module bật cho site này",
         "save": "Lưu cấu hình",
         "saved": "Đã lưu cấu hình site.",
+        "savedNotRevalidated": "Đã lưu cấu hình site. Chưa xoá được cache trang web, nên thay đổi sẽ hiện sau khoảng một phút.",
         "readOnly": "Tài khoản chỉ có quyền đọc cấu hình (configs.read), không sửa được.",
         "revision": "Bản cấu hình {revision}",
         "fields": {
