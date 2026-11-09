@@ -173,6 +173,14 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Live: a seeded settings document with `seo.titleTemplate = '%s · Sen Tuấn'` turned `Products` into `Products · Sen Tuấn` and `Danh mục` into `Danh mục · Sen Tuấn`, while `/` stayed `Sen Tuấn` and `/gioi-thieu` stayed `Giới thiệu Sen Tuấn`; deleting the document reverted every title to the bare form, so nothing is hardcoded. The probe document was removed afterwards (`settings 0 / menus 0 / audit 0`).
 - Note: `/api/public/site` is cached for 60s, so a saved template reaches the storefront after that window (the same cache as the menu slice).
 
+### P2.d — promote a menu child (2026-11-09)
+
+- Target files: `cms-base/app/pages/menus.vue` (`promoteChild`), `tm-cms/i18n/locales/{vi,en}.json` (`admin.menus.promoteChild`).
+- Before this, a nested row could only move up by being recreated as a top-level item and having the old one deleted, which lost its place in the header. The child row now has a *Move to top level* button (outdent icon, next to edit) that lifts it out of `children` and inserts it directly under its former parent; nothing else changes order.
+- The total number of rows does not change, so `MENU_MAX_CHILDREN` and `MENU_MAX_ITEMS` are unaffected and the save still goes through the revision guard.
+- Verified in the browser on `:4005`: `Jewellery → [Rings, Necklaces], About` became `1 Jewellery (1 child) / 1.1 Rings / 2 Necklaces / 3 About`, **Save** moved the menu to revision 2, and the API read back `Trang sức → [Nhẫn], Dây chuyền, Giới thiệu` with `itemCount` still 4. Probes removed (`site_menus 0 / audit 0`).
+- Still open: the reverse action (demote a top-level row into its previous sibling) needs a target choice, so it remains an edit.
+
 ### P2.d — two-level menus with drag-and-drop (2026-11-09)
 
 - Target files: `flow-contracts/src/menu-admin.ts` (`AdminMenuChildItemSchema`, `AdminMenuItemSchema.children`, `countMenuItems`), `tm-cms/server/models/menu.ts` (recursive normalize), `tm-cms/server/services/menuService.ts` (`flattenItems`, total `itemCount`), `tm-cms/server/services/menuReferences.ts` (`menuLinksTo`, JS filter), `flow-contracts/src/site-public.ts` (`PublicMenuLeafSchema`), `tm-web/server/utils/publicSite.ts`, `web-base/app/composables/usePublicSite.ts`, `web-base/app/layouts/default.vue`, `cms-base/app/pages/menus.vue`, `tm-cms/i18n/locales/{vi,en}.json`.

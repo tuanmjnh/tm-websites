@@ -366,6 +366,7 @@
       },
       "addChild": "Add a child item",
       "removeChild": "Remove child",
+      "promoteChild": "Move to top level",
       "childCount": "{count} children",
       "childCreateTitle": "Add a child item",
       "childEditTitle": "Edit child item",

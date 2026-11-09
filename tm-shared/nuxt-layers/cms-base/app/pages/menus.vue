@@ -386,6 +386,22 @@ function removeItem(index: number) {
   draftItems.value = draftItems.value.filter((_, position) => position !== index)
 }
 
+/**
+ * Promoting a child is the only way to move a row between levels without
+ * retyping its label and target: the row is lifted out of `children` and placed
+ * directly under its former parent, so nothing else changes order. The total
+ * number of rows is unchanged, so neither cap needs re-checking.
+ */
+function promoteChild(index: number, childIndex: number) {
+  const parent = draftItems.value[index]
+  const child = parent?.children[childIndex]
+  if (!parent || !child) return
+  const next = [...draftItems.value]
+  next[index] = { ...parent, children: parent.children.filter((_, position) => position !== childIndex) }
+  next.splice(index + 1, 0, { label: child.label, link: child.link, children: [] })
+  draftItems.value = next
+}
+
 function removeChild(index: number, childIndex: number) {
   draftItems.value = draftItems.value.map((item, position) => (position === index
     ? { ...item, children: item.children.filter((_, child) => child !== childIndex) }
@@ -620,6 +636,7 @@ if (canRead.value) await loadMenus()
                     <div v-if="canWrite" class="flex items-center gap-1">
                       <UButton icon="i-lucide-arrow-up" color="neutral" variant="ghost" size="xs" :disabled="childIndex === 0" :title="t('admin.menus.moveUp')" @click="moveChild(index, childIndex, -1)" />
                       <UButton icon="i-lucide-arrow-down" color="neutral" variant="ghost" size="xs" :disabled="childIndex === item.children.length - 1" :title="t('admin.menus.moveDown')" @click="moveChild(index, childIndex, 1)" />
+                      <UButton icon="i-lucide-outdent" color="neutral" variant="ghost" size="xs" :title="t('admin.menus.promoteChild')" @click="promoteChild(index, childIndex)" />
                       <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="xs" :title="t('common.edit')" @click="openItem(index, childIndex)" />
                       <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" :title="t('admin.menus.removeChild')" @click="removeChild(index, childIndex)" />
                     </div>

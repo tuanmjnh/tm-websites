@@ -366,6 +366,7 @@
       },
       "addChild": "Thêm mục con",
       "removeChild": "Xoá mục con",
+      "promoteChild": "Chuyển lên cấp 1",
       "childCount": "{count} mục con",
       "childCreateTitle": "Thêm mục con",
       "childEditTitle": "Sửa mục con",

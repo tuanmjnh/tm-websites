@@ -352,6 +352,15 @@ The projection exposes only company identity, SEO defaults, locales and menus �
 
 The lookup is opt-in through `MenuWriteMeta.refs`, so service callers without content/category collections keep the previous behaviour while both admin routes always pass them. Verified over HTTP on `:4005` (probe category + draft page: `422` with `Item 1: no category with the key "khong-co-that" exists in this site`, then `200` with the real keys) and in the browser (inline error plus toast, header still `Revision 2`, draft kept the bad target). Probe menu, category, page and audit rows were removed afterwards (`site_menus 0 / categories 0 / audit 0`). The item dialog now offers a picker instead of a typed key (verified below). Deleting a referenced record is refused as well — see the reverse-guard slice below.
 
+### P2.d — promote a menu child without retyping it (landed 2026-11-09)
+
+| Slice | Evidence |
+| --- | --- |
+| Child rows get *Move to top level* (outdent icon): removed from `children`, inserted directly under its former parent, total row count unchanged so neither cap needs re-checking; save keeps the normal revision guard | `cms-base/app/pages/menus.vue` (`promoteChild`), `tm-cms/i18n/locales/{vi,en}.json` |
+| Browser `:4005`: probe `Jewellery → [Rings, Necklaces], About` → `1 Jewellery (1 child) / 1.1 Rings / 2 Necklaces / 3 About` with the unsaved marker; Save → revision 2; API read back `Trang sức → [Nhẫn], Dây chuyền, Giới thiệu`, `itemCount 4`; probes removed (`site_menus 0 / audit 0`) | `:4005/menus`, admin API |
+
+Still open: no one-action demotion of a top-level row into its previous sibling, and no touch drag.
+
 ### P2.d — one title template for every page (landed 2026-11-09)
 
 | Slice | Evidence |
@@ -372,7 +381,7 @@ The lookup is opt-in through `MenuWriteMeta.refs`, so service callers without co
 | Public projection + storefront: `children` in `PublicMenuLeaf`, category slugs for child links, header dropdown on hover/focus, footer flattening | `flow-contracts/src/site-public.ts`, `tm-web/server/utils/publicSite.ts`, `web-base/app/composables/usePublicSite.ts`, `web-base/app/layouts/default.vue` |
 | Suites: `test:menus` 16, `test:web-site` 10, `test:web-site-db` 6, `test:content` 27, `test:categories` 12 | `scripts/build/test-menu-service.ts` |
 
-Verified over HTTP and in the browser on `:4005`/`:4006` (drag reorder persisted at revision 2, child added at revision 3, dropdown rendered both links with resolved hrefs). Probes removed (`site_menus 0 / audit 0`). Still open: no drag on touch, a child cannot be promoted to top level in one action, and the dropdown does not repeat the parent link inside itself.
+Verified over HTTP and in the browser on `:4005`/`:4006` (drag reorder persisted at revision 2, child added at revision 3, dropdown rendered both links with resolved hrefs). Probes removed (`site_menus 0 / audit 0`). A child row now has a *Move to top level* action that lifts it under its former parent without retyping. Still open: no drag on touch, no one-action demotion of a top-level row into its previous sibling, and the dropdown does not repeat the parent link inside itself.
 
 ### P2.d — the editor warns before the delete (landed 2026-11-09)
 
