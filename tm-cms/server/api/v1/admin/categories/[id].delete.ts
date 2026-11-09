@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Category, Content, Audit, Revision, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ Category, Content, Audit, Revision, IdempotencyKey, Menu }) =>
       executeIdempotent(
         {
           model: IdempotencyKey,
@@ -36,7 +36,10 @@ export default defineEventHandler(async (event) => {
           payload: { revision },
         },
         async () => {
-          const removed = await deleteCategory(Category, Content, siteId, id, revision, writeMetaOf(event, user, Audit, Revision))
+          const removed = await deleteCategory(Category, Content, siteId, id, revision, {
+            ...writeMetaOf(event, user, Audit, Revision),
+            menus: Menu,
+          })
           return {
             statusCode: 200,
             value: successResponse({ data: removed, message: 'Đã xoá danh mục nội dung' }),

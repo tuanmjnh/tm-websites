@@ -8,6 +8,7 @@ import {
   updateCategory,
 } from '../../tm-cms/server/services/categoryService.js'
 import { createContent } from '../../tm-cms/server/services/contentService.js'
+import { createMenu, deleteMenu } from '../../tm-cms/server/services/menuService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 
@@ -59,7 +60,7 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Category, Content, Audit, Revision } = await prepareDatabase(connection)
+    const { Category, Content, Audit, Revision, Menu } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR }, revision: { model: Revision, actor: ACTOR } }
 
     const jewelry = await createCategory(Category, SITE, category('trang-suc', 'Trang sức'), meta)
@@ -188,6 +189,30 @@ async function integration() {
       const removed = await deleteCategory(Category, Content, SITE, ring.id, ring.revision, meta)
       assert.equal(removed.key, 'nhan')
       assert.equal((await listCategories(Category, SITE)).data.some(entry => entry.key === 'nhan'), false)
+    })
+
+    await check('a category a menu links to cannot be deleted until the menu is fixed', async () => {
+      const target = await createCategory(Category, SITE, category('menu-guard', 'Menu guard'), meta)
+      const menu = await createMenu(Menu, SITE, {
+        key: 'guard-footer',
+        name: 'Guard footer',
+        items: [{ label: { vi: 'Menu guard', en: '' }, link: { type: 'category', target: 'menu-guard' } }],
+      })
+
+      await assert.rejects(
+        () => deleteCategory(Category, Content, SITE, target.id, target.revision, { ...meta, menus: Menu }),
+        (error: unknown) => {
+          assert.ok(isCategoryError(409, 'CATEGORY_IN_MENU')(error))
+          const details = (error as CategoryServiceError).details as { menus: Array<{ key: string }> }
+          assert.deepEqual(details.menus.map(entry => entry.key), ['guard-footer'])
+          return true
+        },
+      )
+      assert.equal((await getCategory(Category, SITE, target.id)).revision, 1, 'the refused delete changes nothing')
+
+      await deleteMenu(Menu, SITE, menu.id, 1)
+      const removed = await deleteCategory(Category, Content, SITE, target.id, target.revision, { ...meta, menus: Menu })
+      assert.equal(removed.key, 'menu-guard')
     })
 
     await check('the category tree is site-scoped', async () => {

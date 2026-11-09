@@ -9,6 +9,7 @@ import {
   normalizeCategoryInput,
 } from '../models/category'
 import { recordContentAudit } from './contentAudit'
+import { findMenuReferences } from './menuReferences'
 import type { ContentWriteMeta } from './contentService'
 
 /**
@@ -349,6 +350,18 @@ export async function deleteCategory(
   const inUse = await contentModel.countDocuments({ siteId, categories: record.key })
   if (inUse > 0) {
     throw new CategoryServiceError(409, 'CATEGORY_IN_USE', 'Content still uses this category', { content: inUse })
+  }
+
+  if (meta?.menus) {
+    const menus = await findMenuReferences(meta.menus, siteId, 'category', record.key)
+    if (menus.length > 0) {
+      throw new CategoryServiceError(
+        409,
+        'CATEGORY_IN_MENU',
+        'A menu links to this category; update the menu before deleting it',
+        { menus },
+      )
+    }
   }
 
   const deleted = await model.findOneAndDelete({ _id: record._id, siteId, revision }).lean<CategoryRecord | null>()

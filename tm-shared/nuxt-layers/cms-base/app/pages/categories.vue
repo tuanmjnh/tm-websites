@@ -95,6 +95,12 @@ const errorMessages: Record<string, string> = {
 
 const describeError = (e: unknown) => {
   const code = errorCode(e)
+  if (code === 'CATEGORY_IN_MENU') {
+    const body = (e as { data?: { data?: { error?: { details?: unknown } } } })?.data
+    const details = body?.data?.error?.details as { menus?: Array<{ name?: string, key?: string }> } | undefined
+    const names = (details?.menus ?? []).map(menu => menu.name || menu.key || '').filter(Boolean).join(', ')
+    return t('admin.categories.errors.inMenu', { menus: names })
+  }
   if (code && errorMessages[code]) return t(errorMessages[code]!)
   const status = (e as { statusCode?: number, status?: number })?.statusCode ?? (e as { status?: number })?.status
   if (status === 401) return t('admin.errors.unauthorized')

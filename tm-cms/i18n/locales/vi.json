@@ -310,7 +310,8 @@
         "payloadInvalid": "Dữ liệu danh mục không hợp lệ",
         "notFound": "Không tìm thấy danh mục",
         "keyRequired": "Cần nhập khóa danh mục",
-        "nameRequired": "Cần nhập tên cho ít nhất một ngôn ngữ"
+        "nameRequired": "Cần nhập tên cho ít nhất một ngôn ngữ",
+        "inMenu": "Danh mục này đang được menu {menus} dùng — sửa menu đó trước khi xoá."
       }
     },
     "menus": {
@@ -572,7 +573,9 @@
         "revisionNotFound": "Không tìm thấy phiên bản nội dung này",
         "revisionCurrent": "Đây đã là phiên bản hiện tại",
         "revisionUnchanged": "Bản này giống hệt nội dung hiện tại",
-        "localeRequired": "Cần ít nhất một ngôn ngữ có tiêu đề hoặc slug"
+        "localeRequired": "Cần ít nhất một ngôn ngữ có tiêu đề hoặc slug",
+        "inMenu": "Nội dung này đang được menu {menus} dùng — sửa menu đó trước khi xoá.",
+        "inMenuShort": "Một menu đang trỏ tới nội dung này — sửa menu trước khi xoá."
       },
       "format": {
         "markdown": "Markdown",

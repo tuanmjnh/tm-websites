@@ -310,7 +310,8 @@
         "payloadInvalid": "The category payload is invalid",
         "notFound": "Category not found",
         "keyRequired": "Enter a category key",
-        "nameRequired": "Enter a name for at least one locale"
+        "nameRequired": "Enter a name for at least one locale",
+        "inMenu": "The menu {menus} links to this category — update it before deleting."
       }
     },
     "menus": {
@@ -572,7 +573,9 @@
         "revisionNotFound": "Content version not found",
         "revisionCurrent": "This is already the current version",
         "revisionUnchanged": "This version matches the current content",
-        "localeRequired": "At least one locale needs a title or slug"
+        "localeRequired": "At least one locale needs a title or slug",
+        "inMenu": "The menu {menus} links to this page — update it before deleting.",
+        "inMenuShort": "A menu links to this page — update the menu before deleting."
       },
       "format": {
         "markdown": "Markdown",

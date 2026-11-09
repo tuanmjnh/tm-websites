@@ -10,6 +10,7 @@ import {
   updateContent,
 } from '../../tm-cms/server/services/contentService.js'
 import { listContentAudit } from '../../tm-cms/server/services/contentAudit.js'
+import { createMenu, deleteMenu } from '../../tm-cms/server/services/menuService.js'
 import {
   getContentRevision,
   listContentRevisions,
@@ -70,7 +71,7 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Content, Audit, Revision, IdempotencyKey } = await prepareDatabase(connection)
+    const { Content, Audit, Revision, IdempotencyKey, Menu } = await prepareDatabase(connection)
     const meta = (actor = ACTOR) => ({
       audit: { model: Audit, actor },
       revision: { model: Revision, actor },
@@ -216,8 +217,33 @@ async function integration() {
       assert.equal(restored.status, 'draft')
     })
 
-    await check('delete is soft and restore brings the record back', async () => {
+    await check('a page a menu links to cannot be deleted until the menu is fixed', async () => {
+      const menu = await createMenu(Menu, SITE, {
+        key: 'guard-main',
+        name: 'Guard main',
+        items: [{ label: { vi: 'Giới thiệu', en: 'About us' }, link: { type: 'content', target: 'pages/about' } }],
+      })
+
+      await assert.rejects(
+        () => runContentEvent(Content, SITE, created.id, { event: 'delete', revision: 8 }, FUTURE, { ...meta(), menus: Menu }),
+        (error: unknown) => {
+          assert.ok(isServiceError(409, 'CONTENT_IN_MENU')(error))
+          const details = (error as ContentServiceError).details as { menus: Array<{ key: string, name: string }> }
+          assert.deepEqual(details.menus.map(entry => entry.key), ['guard-main'])
+          assert.equal(details.menus[0]!.name, 'Guard main')
+          return true
+        },
+      )
+      assert.equal((await getContent(Content, SITE, created.id)).revision, 8, 'the refused delete changes nothing')
+
+      await deleteMenu(Menu, SITE, menu.id, 1)
       const deleted = await runContentEvent(Content, SITE, created.id, { event: 'delete', revision: 8 }, FUTURE, meta())
+      assert.equal(deleted.status, 'deleted')
+    })
+
+    await check('delete is soft and restore brings the record back', async () => {
+      const deleted = await getContent(Content, SITE, created.id)
+      assert.equal(deleted.status, 'deleted')
       assert.equal(deleted.status, 'deleted')
       assert.ok(deleted.deletedAt)
       assert.equal(await findPublicContent(Content, SITE, 'pages/about', 'vi', FUTURE), null)

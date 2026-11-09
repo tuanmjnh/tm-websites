@@ -8,6 +8,7 @@ import type {
   ContentType,
   PublicContentProjection,
 } from '../models/content'
+import type { MenuDocument } from '../models/menu'
 import {
   ContentInvariantError,
   applyContentTransition,
@@ -21,6 +22,7 @@ import {
   recordContentAudit,
   type ContentAuditMeta,
 } from './contentAudit'
+import { findMenuReferences } from './menuReferences'
 import {
   captureContentRevision,
   getContentRevision,
@@ -85,6 +87,12 @@ export interface ContentEventInput {
 export interface ContentWriteMeta {
   audit?: ContentAuditMeta
   revision?: ContentRevisionMeta
+  /**
+   * Menus of this site. A write that would break a saved navigation link (a
+   * delete of a referenced page) uses it to refuse instead of leaving a menu
+   * item that points at nothing.
+   */
+  menus?: Model<MenuDocument>
 }
 
 const CONTENT_STATUSES: ContentStatus[] = ['draft', 'scheduled', 'published', 'archived', 'deleted']
@@ -396,6 +404,18 @@ export async function runContentEvent(
   const record = await model.findOne({ _id: objectId(id, 'CONTENT_ID_INVALID'), siteId }).lean<ContentRecord>()
   if (!record) {
     throw new ContentServiceError(404, 'CONTENT_NOT_FOUND', 'Content record not found')
+  }
+
+  if (input.event === 'delete' && !record.deletedAt && meta?.menus) {
+    const menus = await findMenuReferences(meta.menus, siteId, 'content', record.key)
+    if (menus.length > 0) {
+      throw new ContentServiceError(
+        409,
+        'CONTENT_IN_MENU',
+        'A menu links to this content; update the menu before deleting it',
+        { menus },
+      )
+    }
   }
 
   let publishAt = record.publishAt ? new Date(record.publishAt) : null

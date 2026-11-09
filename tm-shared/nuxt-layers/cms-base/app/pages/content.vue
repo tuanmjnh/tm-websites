@@ -179,6 +179,15 @@ const toIso = (value: string) => {
 
 const describeError = (e: unknown) => {
   const code = errorCode(e)
+  if (code === 'CONTENT_IN_MENU') {
+    // The server names the menus that point at this page; the editor needs them
+    // to know what to change before the delete can go through.
+    const body = (e as { data?: { data?: { error?: { details?: unknown } } } })?.data
+    const details = body?.data?.error?.details as { menus?: Array<{ name?: string, key?: string }> } | undefined
+    const names = (details?.menus ?? []).map(menu => menu.name || menu.key || '').filter(Boolean).join(', ')
+    return t('admin.content.errors.inMenu', { menus: names })
+  }
+
   const known: Record<string, string> = {
     CONTENT_KEY_EXISTS: 'admin.content.errors.keyExists',
     CONTENT_SLUG_EXISTS: 'admin.content.errors.slugExists',
@@ -612,6 +621,7 @@ const bulkRowError = (row: AdminContentBulkRow) => {
     CONTENT_REVISION_CONFLICT: 'admin.content.errors.revisionConflict',
     CONTENT_TRANSITION_INVALID: 'admin.content.errors.transitionInvalid',
     CONTENT_NOT_FOUND: 'admin.content.errors.notFound',
+    CONTENT_IN_MENU: 'admin.content.errors.inMenuShort',
     CONTENT_BULK_DUPLICATE: 'admin.content.bulk.duplicate',
   }
   const key = row.error?.code ? known[row.error.code] : undefined

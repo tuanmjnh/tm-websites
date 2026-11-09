@@ -28,8 +28,11 @@ export default defineEventHandler(async (event) => {
   )
 
   try {
-    const result = await withPreparedDb(event, ({ Content, Audit, Revision }) =>
-      runBulkContentCommand(Content, siteId, body, new Date(), writeMetaOf(event, user, Audit, Revision)))
+    const result = await withPreparedDb(event, ({ Content, Audit, Revision, Menu }) =>
+      runBulkContentCommand(Content, siteId, body, new Date(), {
+        ...writeMetaOf(event, user, Audit, Revision),
+        menus: Menu,
+      }))
 
     setResponseStatus(event, 200)
     setHeader(event, 'cache-control', 'no-store')
