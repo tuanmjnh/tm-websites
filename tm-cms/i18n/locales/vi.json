@@ -369,7 +369,8 @@
         "targetInvalid": "Đích không hợp lệ với loại liên kết",
         "targetRequired": "Cần nhập đích liên kết",
         "payloadInvalid": "Dữ liệu menu không hợp lệ",
-        "notFound": "Không tìm thấy menu"
+        "notFound": "Không tìm thấy menu",
+        "targetNotFound": "Liên kết đang trỏ tới một trang hoặc danh mục không tồn tại trong site này. Chọn lại mục có thật rồi lưu."
       }
     },
     "content": {

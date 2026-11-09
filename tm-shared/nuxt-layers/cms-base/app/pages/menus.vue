@@ -75,6 +75,7 @@ const errorMessages: Record<string, string> = {
   MENU_LABEL_INVALID: 'admin.menus.errors.labelInvalid',
   MENU_TARGET_INVALID: 'admin.menus.errors.targetInvalid',
   MENU_TARGET_REQUIRED: 'admin.menus.errors.targetRequired',
+  MENU_TARGET_NOT_FOUND: 'admin.menus.errors.targetNotFound',
   MENU_LINK_TYPE_INVALID: 'admin.menus.errors.targetInvalid',
   MENU_PAYLOAD_INVALID: 'admin.menus.errors.payloadInvalid',
   MENU_NOT_FOUND: 'admin.menus.errors.notFound',

@@ -316,6 +316,8 @@ Defaults are conservative placeholders (50 snapshots per record, 365 days of aud
 | Either route without a session | `401` |
 | Open a category or media record's edit dialog | An *Activity* block lists that record's rows (`action`, `Revision`, actor, changed fields, time); *Reload* refetches it and the list is empty only when the record truly has no activity |
 | A read that fails (session without the read capability) | The block shows the failure text rather than an empty list |
+| Save a menu item whose `content`/`category` target does not exist (or is soft-deleted, or belongs to another site) | `422 MENU_TARGET_NOT_FOUND` with `details.missing`; the editor shows the *target does not exist* message and keeps the draft, and the revision does not move |
+| Save the same menu with a page/category that does exist, plus a `/path` item | `200`, revision +1, one `audit_logs` row with `changedFields: ["items"]` |
 
 Coverage: the `pnpm test:audit` checks listed in [05](05-feature-parity.md). Probe records and their audit rows must be removed afterwards.
 

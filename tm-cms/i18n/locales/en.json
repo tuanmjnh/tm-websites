@@ -369,7 +369,8 @@
         "targetInvalid": "The target does not match the link type",
         "targetRequired": "A link target is required",
         "payloadInvalid": "The menu payload is not valid",
-        "notFound": "Menu not found"
+        "notFound": "Menu not found",
+        "targetNotFound": "A link points at a page or category that does not exist in this site. Pick an existing record and save again."
       }
     },
     "content": {

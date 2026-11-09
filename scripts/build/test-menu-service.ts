@@ -53,7 +53,7 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Menu, Audit } = await prepareDatabase(connection)
+    const { Menu, Audit, Content, Category } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ADMIN, requestId: 'req_menu' } }
 
     let mainId = ''
@@ -203,6 +203,60 @@ async function integration() {
         () => getMenu(Menu, SITE, mainId),
         isMenuError(404, 'MENU_NOT_FOUND'),
       )
+    })
+
+    await check('links must point at a page or category that exists in this site', async () => {
+      // Only the fields the lookup reads: the service checks references, not status.
+      const page = (key: string, deletedAt: Date | null) => ({
+        siteId: SITE,
+        key,
+        status: 'draft',
+        deletedAt,
+        locales: [{ locale: 'vi', slug: key }],
+      })
+      await Content.collection.insertOne(page('gioi-thieu', null))
+      await Content.collection.insertOne(page('tin-cu', new Date()))
+      await Category.collection.insertOne({ siteId: SITE, key: 'trang-suc' })
+      await Category.collection.insertOne({ siteId: OTHER_SITE, key: 'bag-post' })
+
+      const withRefs = { ...meta, refs: { content: Content, category: Category } }
+      const menu = await createMenu(Menu, SITE, { key: 'menu-refs', name: 'Menu refs' }, withRefs)
+      const saved = await updateMenu(Menu, SITE, menu.id, { revision: 1, items }, withRefs)
+      assert.equal(saved.revision, 2, 'existing page, category and path all save')
+
+      await assert.rejects(
+        () => updateMenu(Menu, SITE, menu.id, {
+          revision: 2,
+          items: [...items, { label: { vi: 'Mất' }, link: { type: 'content', target: 'khong-ton-tai' } }],
+        }, withRefs),
+        (error: unknown) => {
+          assert.ok(isMenuError(422, 'MENU_TARGET_NOT_FOUND')(error))
+          const details = (error as MenuServiceError).details as { missing: Array<{ index: number, target: string }> }
+          assert.deepEqual(details.missing, [{ index: 3, type: 'content', target: 'khong-ton-tai' }])
+          return true
+        },
+      )
+
+      await assert.rejects(
+        () => updateMenu(Menu, SITE, menu.id, {
+          revision: 2,
+          items: [{ label: { vi: 'Tin cũ' }, link: { type: 'content', target: 'tin-cu' } }],
+        }, withRefs),
+        isMenuError(422, 'MENU_TARGET_NOT_FOUND'),
+        'a soft-deleted page is not a target',
+      )
+
+      await assert.rejects(
+        () => updateMenu(Menu, SITE, menu.id, {
+          revision: 2,
+          items: [{ label: { vi: 'Bag' }, link: { type: 'category', target: 'bag-post' } }],
+        }, withRefs),
+        isMenuError(422, 'MENU_TARGET_NOT_FOUND'),
+        'another site\'s category key is not a target',
+      )
+
+      assert.equal((await getMenu(Menu, SITE, menu.id)).revision, 2, 'a refused save writes nothing')
+      await deleteMenu(Menu, SITE, menu.id, 2, meta)
     })
   } finally {
     await closeDatabaseConnections()

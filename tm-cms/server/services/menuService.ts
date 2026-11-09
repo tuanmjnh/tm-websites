@@ -2,8 +2,11 @@ import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
 import type { AdminMenu, AdminMenuSummary } from '@tm/flow-contracts/menu-admin'
 import type { AuditActor, AuditEntryDocument } from '../models/audit'
+import type { CategoryDocument } from '../models/category'
+import type { ContentDocument } from '../models/content'
 import {
   type MenuDocument,
+  type MenuItem,
   MenuInvariantError,
   normalizeMenuItems,
   normalizeMenuKey,
@@ -32,11 +35,73 @@ export class MenuServiceError extends Error {
 
 export interface MenuWriteMeta {
   audit: { model: Model<AuditEntryDocument>, actor?: AuditActor, requestId?: string | null }
+  /**
+   * Collections a `content` / `category` link must point at. Endpoints pass them
+   * so a menu cannot be saved with a target the storefront would render as a dead
+   * link; the service skips the lookup when a caller (tests, future importers)
+   * writes items without it.
+   */
+  refs?: { content: Model<ContentDocument>, category: Model<CategoryDocument> }
 }
 
 export type MenuRecord = MenuDocument & { _id: Types.ObjectId }
 
 const NAME_MAX = 120
+
+/**
+ * Refuse targets that do not resolve inside this site. A path target is a literal
+ * the editor owns, but a content key or category key is a reference: saving one
+ * that matches neither a record here nor in another site's database would publish
+ * a link nobody can follow. A soft-deleted page counts as missing.
+ */
+async function assertLinksExist(
+  refs: MenuWriteMeta['refs'],
+  siteId: string,
+  items: MenuItem[],
+): Promise<void> {
+  if (!refs) return
+
+  const contentKeys = new Set<string>()
+  const categoryKeys = new Set<string>()
+  for (const item of items) {
+    if (item.link.type === 'content') contentKeys.add(item.link.target)
+    if (item.link.type === 'category') categoryKeys.add(item.link.target)
+  }
+  if (contentKeys.size === 0 && categoryKeys.size === 0) return
+
+  const [foundContent, foundCategory] = await Promise.all([
+    contentKeys.size
+      ? refs.content
+          .find({ siteId, key: { $in: [...contentKeys] }, deletedAt: null })
+          .distinct('key') as Promise<string[]>
+      : Promise.resolve<string[]>([]),
+    categoryKeys.size
+      ? refs.category.find({ siteId, key: { $in: [...categoryKeys] } }).distinct('key') as Promise<string[]>
+      : Promise.resolve<string[]>([]),
+  ])
+
+  const knownContent = new Set(foundContent)
+  const knownCategory = new Set(foundCategory)
+  const missing = items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => (item.link.type === 'content'
+      ? !knownContent.has(item.link.target)
+      : item.link.type === 'category'
+        ? !knownCategory.has(item.link.target)
+        : false))
+    .map(({ item, index }) => ({ index, type: item.link.type, target: item.link.target }))
+
+  if (missing.length > 0) {
+    const [first] = missing
+    const kind = first!.type === 'content' ? 'page' : 'category'
+    throw new MenuServiceError(
+      422,
+      'MENU_TARGET_NOT_FOUND',
+      `Item ${first!.index + 1}: no ${kind} with the key "${first!.target}" exists in this site`,
+      { missing },
+    )
+  }
+}
 
 function iso(value: Date | null | undefined): string | null {
   return value ? new Date(value).toISOString() : null
@@ -150,6 +215,8 @@ export async function createMenu(
     }
   })()
 
+  await assertLinksExist(meta?.refs, siteId, items)
+
   let created
   try {
     created = await model.create({ siteId, key, name, items, revision: 1 })
@@ -209,6 +276,8 @@ export async function updateMenu(
       return translateInvariant(error)
     }
   })()
+
+  await assertLinksExist(meta?.refs, siteId, items)
 
   const changedFields: string[] = []
   if (name !== record.name) changedFields.push('name')

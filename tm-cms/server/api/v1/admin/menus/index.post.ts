@@ -25,11 +25,14 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Menu, Audit, Revision, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ Menu, Audit, Revision, IdempotencyKey, Content, Category }) =>
       executeIdempotent(
         { model: IdempotencyKey, siteId, action: 'menu.create', key: idempotencyKey, payload: body },
         async () => {
-          const created = await createMenu(Menu, siteId, body, writeMetaOf(event, user, Audit, Revision))
+          const created = await createMenu(Menu, siteId, body, {
+            ...writeMetaOf(event, user, Audit, Revision),
+            refs: { content: Content, category: Category },
+          })
           return {
             statusCode: 201,
             value: successResponse({ data: created, message: 'Đã tạo menu' }),
