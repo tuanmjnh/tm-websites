@@ -4,6 +4,7 @@ import { MENU_LABEL_MAX, MENU_LINK_TYPES, MENU_MAX_ITEMS, emptyMenuItem } from '
 
 const { t, locale } = useI18n()
 const toast = useToast()
+const route = useRoute()
 const { hasCapability } = useHub()
 const { list, get, create, save, remove, linkOptions, errorCode } = useMenuAdmin()
 
@@ -105,6 +106,12 @@ async function loadMenus() {
   error.value = null
   try {
     menus.value = await list()
+    // A warning elsewhere in the CMS links straight to the menu that needs
+    // fixing (`/menus?menu=<id>`), so that menu opens instead of the first one.
+    const requested = typeof route.query.menu === 'string' ? route.query.menu : null
+    if (requested && menus.value.some(entry => entry.id === requested)) {
+      selectedId.value = requested
+    }
     if (!menus.value.some(entry => entry.id === selectedId.value)) {
       selectedId.value = menus.value[0]?.id ?? null
     }

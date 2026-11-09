@@ -360,7 +360,7 @@ The lookup is opt-in through `MenuWriteMeta.refs`, so service callers without co
 | Warning block in the page detail dialog and the category edit dialog, hidden when there is nothing to warn about | `cms-base/app/pages/content.vue`, `cms-base/app/pages/categories.vue`, `cms-base/app/composables/{useContentAdmin,useCategoryAdmin}.ts`, `tm-cms/i18n/locales/{vi,en}.json` |
 | Suites: `pnpm test:content` 27 checks, `pnpm test:categories` 12 checks (reference list matches the refusal, foreign id 404, empty after the menu is gone) | `scripts/build/test-content-service.ts`, `scripts/build/test-category-service.ts` |
 
-Verified over HTTP on `:4005` (both routes `200` with the probe menu, unknown id `404`, anonymous `401`) and in the browser (the page detail and the category dialog both named `Probe ref menu`). Probes were removed afterwards (`site_menus 0 / categories 0 / audit 0 / content_revisions 0`). Still open: the warning lists menus but does not link to them, so fixing a menu still means opening `/menus` yourself.
+Each warning entry links to `/menus?menu=<id>` and the menu editor selects that menu on load. Verified over HTTP on `:4005` (both routes `200` with the probe menu, unknown id `404`, anonymous `401`) and in the browser (the page detail and the category dialog both named `Probe ref menu`; the link opened `ZZZ linked menu` while `AAA first menu` was first in the list). Probes were removed afterwards (`site_menus 0 / categories 0 / audit 0 / content_revisions 0`). Still open: fixing a menu does not clear the warning until the record is reopened.
 
 ### P2.d — a menu reference blocks the delete (landed 2026-11-09)
 

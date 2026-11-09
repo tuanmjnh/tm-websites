@@ -358,7 +358,10 @@ if (canRead.value) await load()
             <p class="text-xs font-semibold text-highlighted">{{ t('admin.categories.menuLinks') }}</p>
             <ul class="mt-1 flex flex-col gap-1 text-xs text-default">
               <li v-for="menu in editingMenuRefs" :key="menu.id">
-                {{ menu.name }} <span class="font-mono text-[11px] text-muted">{{ menu.key }}</span>
+                <NuxtLink :to="`/menus?menu=${encodeURIComponent(menu.id)}`" class="underline decoration-dotted underline-offset-2">
+                  {{ menu.name }}
+                </NuxtLink>
+                <span class="font-mono text-[11px] text-muted">{{ menu.key }}</span>
               </li>
             </ul>
             <p class="mt-1 text-xs text-muted">{{ t('admin.categories.menuLinksHint') }}</p>
