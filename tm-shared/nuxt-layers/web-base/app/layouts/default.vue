@@ -51,15 +51,39 @@ onMounted(() => hydrateCart())
         </NuxtLink>
 
         <nav class="hidden items-center gap-6 text-sm font-medium md:flex">
-          <NuxtLink
+          <div
             v-for="link in navLinks"
-            :key="link.to"
-            :to="link.to"
-            class="transition-colors hover:text-primary"
-            :class="isActive(link.to) ? 'text-primary' : 'text-default'"
+            :key="`${link.to}:${link.label}`"
+            class="group relative"
           >
-            {{ link.label }}
-          </NuxtLink>
+            <NuxtLink
+              :to="link.to"
+              class="flex items-center gap-1 transition-colors hover:text-primary"
+              :class="isActive(link.to) ? 'text-primary' : 'text-default'"
+            >
+              {{ link.label }}
+              <UIcon
+                v-if="link.children?.length"
+                name="i-lucide-chevron-down"
+                class="size-3.5 transition-transform group-hover:rotate-180"
+                aria-hidden="true"
+              />
+            </NuxtLink>
+            <ul
+              v-if="link.children?.length"
+              class="hidden absolute left-0 top-full z-40 mt-2 min-w-48 rounded-[4px] border border-default bg-elevated/95 p-1 shadow-lg backdrop-blur-xl group-hover:block group-focus-within:block"
+            >
+              <li v-for="child in link.children" :key="`${child.to}:${child.label}`">
+                <NuxtLink
+                  :to="child.to"
+                  class="block rounded-[4px] px-3 py-2 text-sm font-normal transition-colors hover:bg-elevated/70 hover:text-primary"
+                  :class="isActive(child.to) ? 'text-primary' : 'text-default'"
+                >
+                  {{ child.label }}
+                </NuxtLink>
+              </li>
+            </ul>
+          </div>
         </nav>
 
         <div class="flex items-center gap-2">

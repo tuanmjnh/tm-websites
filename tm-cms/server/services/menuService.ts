@@ -10,6 +10,7 @@ import type { AuditActor, AuditEntryDocument } from '../models/audit'
 import type { CategoryDocument } from '../models/category'
 import type { ContentDocument } from '../models/content'
 import {
+  type MenuChildItem,
   type MenuDocument,
   type MenuItem,
   MenuInvariantError,
@@ -108,6 +109,26 @@ export async function listMenuLinkOptions(
   }
 }
 
+interface PositionedItem {
+  /** Top-level position, kept so an old client still understands `details`. */
+  index: number
+  /** `2` or `2.1`: the row the editor sees. */
+  path: string
+  item: MenuChildItem
+}
+
+/** Every row of a menu, children included, with the position it renders at. */
+function flattenItems(items: MenuItem[]): PositionedItem[] {
+  const rows: PositionedItem[] = []
+  items.forEach((item, index) => {
+    rows.push({ index, path: String(index + 1), item })
+    item.children.forEach((child, childIndex) => {
+      rows.push({ index, path: `${index + 1}.${childIndex + 1}`, item: child })
+    })
+  })
+  return rows
+}
+
 async function assertLinksExist(
   refs: MenuRefModels | undefined,
   siteId: string,
@@ -115,9 +136,10 @@ async function assertLinksExist(
 ): Promise<void> {
   if (!refs) return
 
+  const rows = flattenItems(items)
   const contentKeys = new Set<string>()
   const categoryKeys = new Set<string>()
-  for (const item of items) {
+  for (const { item } of rows) {
     if (item.link.type === 'content') contentKeys.add(item.link.target)
     if (item.link.type === 'category') categoryKeys.add(item.link.target)
   }
@@ -136,14 +158,13 @@ async function assertLinksExist(
 
   const knownContent = new Set(foundContent)
   const knownCategory = new Set(foundCategory)
-  const missing = items
-    .map((item, index) => ({ item, index }))
+  const missing = rows
     .filter(({ item }) => (item.link.type === 'content'
       ? !knownContent.has(item.link.target)
       : item.link.type === 'category'
         ? !knownCategory.has(item.link.target)
         : false))
-    .map(({ item, index }) => ({ index, type: item.link.type, target: item.link.target }))
+    .map(({ item, index, path }) => ({ index, path, type: item.link.type, target: item.link.target }))
 
   if (missing.length > 0) {
     const [first] = missing
@@ -151,7 +172,7 @@ async function assertLinksExist(
     throw new MenuServiceError(
       422,
       'MENU_TARGET_NOT_FOUND',
-      `Item ${first!.index + 1}: no ${kind} with the key "${first!.target}" exists in this site`,
+      `Item ${first!.path}: no ${kind} with the key "${first!.target}" exists in this site`,
       { missing },
     )
   }
@@ -161,10 +182,17 @@ function iso(value: Date | null | undefined): string | null {
   return value ? new Date(value).toISOString() : null
 }
 
-function itemsOf(record: MenuRecord) {
-  return (record.items ?? []).map(item => ({
+function leafOf(item: MenuChildItem) {
+  return {
     label: { vi: item.label?.vi ?? '', en: item.label?.en ?? '' },
     link: { type: item.link?.type, target: item.link?.target ?? '' },
+  }
+}
+
+function itemsOf(record: MenuRecord) {
+  return (record.items ?? []).map(item => ({
+    ...leafOf(item),
+    children: (item.children ?? []).map(child => leafOf(child)),
   }))
 }
 
@@ -177,7 +205,7 @@ export function toAdminMenu(record: MenuRecord): AdminMenu {
     name: record.name,
     revision: record.revision,
     items,
-    itemCount: items.length,
+    itemCount: items.reduce((total, item) => total + 1 + item.children.length, 0),
     createdAt: iso(record.createdAt),
     updatedAt: iso(record.updatedAt),
   }

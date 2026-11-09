@@ -2,12 +2,14 @@ import { z } from 'zod'
 
 /**
  * Site menus: the navigation a customer owns, edited in the CMS and rendered by
- * the storefront later.
+ * the storefront.
  *
  * A menu is an immutable `key` (`main`, `footer`) plus an ordered list of items.
  * An item carries a per-locale label and one link target: a content key, a
- * category key, or a path/URL the editor typed. Only ids and keys are stored, so
- * a renamed record changes its own title without rewriting every menu.
+ * category key, or a path/URL the editor typed. A top-level item may also carry
+ * children, which is the one nesting level a storefront header can render as a
+ * dropdown. Only ids and keys are stored, so a renamed record changes its own
+ * title without rewriting every menu.
  */
 
 export const MENU_LOCALES = ['vi', 'en'] as const
@@ -16,8 +18,10 @@ export type MenuLocale = (typeof MENU_LOCALES)[number]
 export const MENU_LINK_TYPES = ['content', 'category', 'url'] as const
 export type MenuLinkType = (typeof MENU_LINK_TYPES)[number]
 
-/** A navigation block is small; the cap keeps one document bounded. */
+/** A navigation block is small; the caps keep one document bounded. */
 export const MENU_MAX_ITEMS = 30
+/** Children a single top-level item may hold. */
+export const MENU_MAX_CHILDREN = 10
 export const MENU_LABEL_MAX = 80
 export const MENU_TARGET_MAX = 300
 
@@ -26,12 +30,25 @@ const LabelSchema = z.object({
   en: z.string().trim().max(MENU_LABEL_MAX),
 })
 
-export const AdminMenuItemSchema = z.object({
+const MenuLinkSchema = z.object({
+  type: z.enum(MENU_LINK_TYPES),
+  target: z.string().trim().max(MENU_TARGET_MAX),
+})
+
+/** A row inside a dropdown: the same label and link, but no children of its own. */
+export const AdminMenuChildItemSchema = z.object({
   label: LabelSchema,
-  link: z.object({
-    type: z.enum(MENU_LINK_TYPES),
-    target: z.string().trim().max(MENU_TARGET_MAX),
-  }),
+  link: MenuLinkSchema,
+})
+
+export type AdminMenuChildItem = z.infer<typeof AdminMenuChildItemSchema>
+
+export const AdminMenuItemSchema = AdminMenuChildItemSchema.extend({
+  /**
+   * Always present so the editor never has to tell "no children" from "not
+   * loaded"; one level only, which the model enforces when it normalizes a save.
+   */
+  children: z.array(AdminMenuChildItemSchema).max(MENU_MAX_CHILDREN).default([]),
 })
 
 export type AdminMenuItem = z.infer<typeof AdminMenuItemSchema>
@@ -85,7 +102,16 @@ function trimmed(max: number) {
 }
 
 export function emptyMenuItem(): AdminMenuItem {
+  return { label: { vi: '', en: '' }, link: { type: 'url', target: '/' }, children: [] }
+}
+
+export function emptyMenuChildItem(): AdminMenuChildItem {
   return { label: { vi: '', en: '' }, link: { type: 'url', target: '/' } }
+}
+
+/** Top-level rows plus their children: what `itemCount` reports. */
+export function countMenuItems(items: readonly AdminMenuItem[]): number {
+  return items.reduce((total, item) => total + 1 + (item.children?.length ?? 0), 0)
 }
 
 /**

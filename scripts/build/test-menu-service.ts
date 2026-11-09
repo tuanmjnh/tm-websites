@@ -8,6 +8,7 @@ import {
   listMenus,
   updateMenu,
 } from '../../tm-cms/server/services/menuService.js'
+import { findMenuReferences } from '../../tm-cms/server/services/menuReferences.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 
@@ -236,8 +237,8 @@ async function integration() {
         }, withRefs),
         (error: unknown) => {
           assert.ok(isMenuError(422, 'MENU_TARGET_NOT_FOUND')(error))
-          const details = (error as MenuServiceError).details as { missing: Array<{ index: number, target: string }> }
-          assert.deepEqual(details.missing, [{ index: 3, type: 'content', target: 'khong-ton-tai' }])
+          const details = (error as MenuServiceError).details as { missing: Array<{ index: number, path: string, target: string }> }
+          assert.deepEqual(details.missing, [{ index: 3, path: '4', type: 'content', target: 'khong-ton-tai' }])
           return true
         },
       )
@@ -261,6 +262,102 @@ async function integration() {
       )
 
       assert.equal((await getMenu(Menu, SITE, menu.id)).revision, 2, 'a refused save writes nothing')
+      await deleteMenu(Menu, SITE, menu.id, 2, meta)
+    })
+
+    await check('children are stored, counted and returned in order', async () => {
+      const menu = await createMenu(Menu, SITE, { key: 'menu-nested', name: 'Menu nested' }, meta)
+      const saved = await updateMenu(Menu, SITE, menu.id, {
+        revision: 1,
+        items: [
+          {
+            label: { vi: 'Trang sức', en: 'Jewellery' },
+            link: { type: 'url', target: '/trang-suc' },
+            children: [
+              { label: { vi: 'Nhẫn', en: 'Rings' }, link: { type: 'url', target: '/trang-suc/nhan' } },
+              { label: { vi: 'Dây chuyền' }, link: { type: 'url', target: '/trang-suc/day-chuyen' } },
+            ],
+          },
+          { label: { vi: 'Liên hệ' }, link: { type: 'url', target: '/lien-he' } },
+        ],
+      }, meta)
+
+      assert.equal(saved.itemCount, 4, 'the count includes children, so the list view is not misleading')
+      assert.deepEqual(saved.items[0]!.children.map(child => child.link.target), ['/trang-suc/nhan', '/trang-suc/day-chuyen'])
+      assert.deepEqual(saved.items[1]!.children, [], 'an item without children reads back with an empty list')
+
+      const loaded = await getMenu(Menu, SITE, menu.id)
+      assert.equal(loaded.items[0]!.children.length, 2)
+
+      await assert.rejects(
+        () => updateMenu(Menu, SITE, menu.id, {
+          revision: 2,
+          items: [{
+            label: { vi: 'Sâu' },
+            link: { type: 'url', target: '/a' },
+            children: [{ label: { vi: 'Cấp 2' }, link: { type: 'url', target: '/b' }, children: [{ label: { vi: 'Cấp 3' }, link: { type: 'url', target: '/c' } }] }],
+          }],
+        }, meta),
+        isMenuError(422, 'MENU_DEPTH_LIMIT'),
+        'one level of children is the limit',
+      )
+
+      await assert.rejects(
+        () => updateMenu(Menu, SITE, menu.id, {
+          revision: 2,
+          items: [{
+            label: { vi: 'Quá nhiều' },
+            link: { type: 'url', target: '/a' },
+            children: Array.from({ length: 11 }, (_, index) => ({ label: { vi: `Con ${index + 1}` }, link: { type: 'url', target: `/c-${index + 1}` } })),
+          }],
+        }, meta),
+        isMenuError(422, 'MENU_CHILDREN_LIMIT'),
+      )
+
+      await assert.rejects(
+        () => updateMenu(Menu, SITE, menu.id, {
+          revision: 2,
+          items: Array.from({ length: 31 }, (_, index) => ({ label: { vi: `Dòng ${index + 1}` }, link: { type: 'url', target: `/d-${index + 1}` } })),
+        }, meta),
+        isMenuError(422, 'MENU_ITEMS_LIMIT'),
+        'children count towards the menu limit',
+      )
+
+      assert.equal((await getMenu(Menu, SITE, menu.id)).revision, 2, 'a refused save writes nothing')
+      await deleteMenu(Menu, SITE, menu.id, 2, meta)
+    })
+
+    await check('a child link is validated and found by the reverse lookup', async () => {
+      const menu = await createMenu(Menu, SITE, { key: 'menu-child-ref', name: 'Menu child ref' }, meta)
+      await assert.rejects(
+        () => updateMenu(Menu, SITE, menu.id, {
+          revision: 1,
+          items: [{
+            label: { vi: 'Cha' },
+            link: { type: 'url', target: '/cha' },
+            children: [{ label: { vi: 'Con' }, link: { type: 'content', target: 'khong-ton-tai' } }],
+          }],
+        }, { ...meta, refs: { content: Content, category: Category } }),
+        (error: unknown) => {
+          assert.ok(isMenuError(422, 'MENU_TARGET_NOT_FOUND')(error))
+          const details = (error as MenuServiceError).details as { missing: Array<{ path: string, target: string }> }
+          assert.deepEqual(details.missing, [{ index: 0, path: '1.1', type: 'content', target: 'khong-ton-tai' }])
+          return true
+        },
+        'the error names the child row, not just the parent',
+      )
+
+      await updateMenu(Menu, SITE, menu.id, {
+        revision: 1,
+        items: [{
+          label: { vi: 'Cha' },
+          link: { type: 'url', target: '/cha' },
+          children: [{ label: { vi: 'Con' }, link: { type: 'content', target: 'gioi-thieu' } }],
+        }],
+      }, meta)
+
+      const references = await findMenuReferences(Menu, SITE, 'content', 'gioi-thieu')
+      assert.ok(references.some(entry => entry.key === 'menu-child-ref'), 'a link only a child carries still blocks the delete')
       await deleteMenu(Menu, SITE, menu.id, 2, meta)
     })
 

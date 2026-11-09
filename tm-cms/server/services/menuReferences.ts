@@ -11,6 +11,20 @@ import type { MenuDocument } from '../models/menu'
 
 export type { MenuReference }
 
+/**
+ * A site owns only a handful of menus, so the filter runs in JS over the whole
+ * list: that walks top-level rows and their children with the same code, where a
+ * query would need a nested `$elemMatch` that Mongo matches per array.
+ */
+export function menuLinksTo(
+  items: readonly { link?: { type?: string, target?: string }, children?: readonly { link?: { type?: string, target?: string } }[] }[],
+  type: 'content' | 'category',
+  target: string,
+): boolean {
+  const matches = (link?: { type?: string, target?: string }) => link?.type === type && link?.target === target
+  return items.some(item => matches(item.link) || (item.children ?? []).some(child => matches(child.link)))
+}
+
 export async function findMenuReferences(
   model: Model<MenuDocument>,
   siteId: string,
@@ -18,10 +32,12 @@ export async function findMenuReferences(
   target: string,
 ): Promise<MenuReference[]> {
   const records = await model
-    .find({ siteId, items: { $elemMatch: { 'link.type': type, 'link.target': target } } })
+    .find({ siteId })
     .sort({ key: 1 })
-    .select('key name')
-    .lean<Array<{ _id: unknown, key: string, name: string }>>()
+    .select('key name items')
+    .lean<Array<{ _id: unknown, key: string, name: string, items?: MenuDocument['items'] }>>()
 
-  return records.map(record => ({ id: String(record._id), key: record.key, name: record.name }))
+  return records
+    .filter(record => menuLinksTo(record.items ?? [], type, target))
+    .map(record => ({ id: String(record._id), key: record.key, name: record.name }))
 }

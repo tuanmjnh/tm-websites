@@ -9,6 +9,8 @@ import {
 export interface PublicSiteLink {
   label: string
   to: string
+  /** Dropdown rows. Empty for a plain link. */
+  children?: PublicSiteLink[]
 }
 
 /**
@@ -51,7 +53,13 @@ export const usePublicSite = () => {
     const menu = findPublicMenu(publicSite.value?.menus ?? [], key)
     if (!menu?.items.length) return null
     return menu.items
-      .map(item => ({ label: publicMenuLabel(item.label, locale.value), to: item.href }))
+      .map(item => ({
+        label: publicMenuLabel(item.label, locale.value),
+        to: item.href,
+        children: item.children
+          .map(child => ({ label: publicMenuLabel(child.label, locale.value), to: child.href }))
+          .filter(child => child.label),
+      }))
       .filter(link => link.label)
   }
 
@@ -72,7 +80,11 @@ export const usePublicSite = () => {
   ])
 
   const headerLinks = computed(() => menuLinks(PUBLIC_MENU_HEADER) ?? fallbackHeaderLinks.value)
-  const footerLinks = computed(() => menuLinks(PUBLIC_MENU_FOOTER) ?? fallbackFooterLinks.value)
+  /** The footer is a flat column, so a parent's children are listed after it. */
+  const footerLinks = computed<PublicSiteLink[]>(() => {
+    const links = menuLinks(PUBLIC_MENU_FOOTER) ?? fallbackFooterLinks.value
+    return links.flatMap(link => [link, ...(link.children ?? [])])
+  })
 
   return {
     publicSite,

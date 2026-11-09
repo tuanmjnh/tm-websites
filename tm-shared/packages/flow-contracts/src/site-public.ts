@@ -16,11 +16,18 @@ export type PublicMenuLocale = (typeof PUBLIC_MENU_LOCALES)[number]
 export const PUBLIC_MENU_HEADER = 'main'
 export const PUBLIC_MENU_FOOTER = 'footer'
 
-export const PublicMenuItemSchema = z.object({
+export const PublicMenuLeafSchema = z.object({
   /** Both labels are kept so the client can fall back without a second call. */
   label: z.object({ vi: z.string(), en: z.string() }),
   /** Already resolved: a URL path or an absolute link, safe to pass to NuxtLink. */
   href: z.string(),
+})
+
+export type PublicMenuLeaf = z.infer<typeof PublicMenuLeafSchema>
+
+/** A header row may own a dropdown; those rows are leaves. */
+export const PublicMenuItemSchema = PublicMenuLeafSchema.extend({
+  children: z.array(PublicMenuLeafSchema).default([]),
 })
 
 export type PublicMenuItem = z.infer<typeof PublicMenuItemSchema>
@@ -134,10 +141,7 @@ export function toPublicMenu(
   const key = readString(doc.key)
   if (!key) return null
 
-  const rawItems = Array.isArray(doc.items) ? doc.items : []
-  const items: PublicMenuItem[] = []
-
-  for (const raw of rawItems) {
+  const toLeaf = (raw: unknown): PublicMenuLeaf | null => {
     const item = readRecord(raw)
     const label = readRecord(item.label)
     const link = readRecord(item.link)
@@ -148,13 +152,28 @@ export function toPublicMenu(
       { type, target },
       type === 'category' ? resolveCategorySlug(target) ?? null : null,
     )
-    if (!href) continue
+    if (!href) return null
 
     const vi = readString(label.vi)
     const en = readString(label.en)
-    if (!vi && !en) continue
+    if (!vi && !en) return null
 
-    items.push({ label: { vi, en }, href })
+    return { label: { vi, en }, href }
+  }
+
+  const rawItems = Array.isArray(doc.items) ? doc.items : []
+  const items: PublicMenuItem[] = []
+
+  for (const raw of rawItems) {
+    const leaf = toLeaf(raw)
+    if (!leaf) continue
+
+    const rawChildren = Array.isArray(readRecord(raw).children) ? (readRecord(raw).children as unknown[]) : []
+    const children = rawChildren
+      .map(child => toLeaf(child))
+      .filter((child): child is PublicMenuLeaf => child !== null)
+
+    items.push({ ...leaf, children })
   }
 
   return { key, items }

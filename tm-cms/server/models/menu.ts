@@ -1,9 +1,10 @@
 import { Schema } from 'mongoose'
 import type { Connection, Model } from 'mongoose'
-import type { AdminMenuItem } from '@tm/flow-contracts/menu-admin'
+import type { AdminMenuChildItem, AdminMenuItem } from '@tm/flow-contracts/menu-admin'
 import {
   MENU_LABEL_MAX,
   MENU_LINK_TYPES,
+  MENU_MAX_CHILDREN,
   MENU_MAX_ITEMS,
   MENU_TARGET_MAX,
 } from '@tm/flow-contracts/menu-admin'
@@ -11,9 +12,11 @@ import { normalizeSlug } from './content'
 
 /**
  * Site menus. A menu is an immutable key plus an ordered item list; an item is a
- * per-locale label and exactly one link target. Targets are references (a content
- * key, a category key) or a literal path, never a resolved URL, so renaming a
- * record never rewrites menus and a locale switch only swaps the label.
+ * per-locale label and exactly one link target, and a top-level item may own
+ * children (one nesting level, rendered as a dropdown). Targets are references (a
+ * content key, a category key) or a literal path, never a resolved URL, so
+ * renaming a record never rewrites menus and a locale switch only swaps the
+ * label.
  *
  * The collection is `site_menus`, not `menus`: every migrated customer database
  * already carries the legacy shop `menus` documents (no `siteId`, so they all
@@ -34,9 +37,13 @@ export class MenuInvariantError extends Error {
   }
 }
 
-export interface MenuItem {
+export interface MenuChildItem {
   label: { vi: string, en: string }
   link: { type: (typeof MENU_LINK_TYPES)[number], target: string }
+}
+
+export interface MenuItem extends MenuChildItem {
+  children: MenuChildItem[]
 }
 
 export interface MenuDocument {
@@ -65,18 +72,18 @@ export function normalizeMenuKey(value: unknown): string {
   return key
 }
 
-function assertTarget(type: MenuItem['link']['type'], target: string, index: number): void {
+function assertTarget(type: MenuChildItem['link']['type'], target: string, path: string): void {
   if (type === 'content' && !CONTENT_TARGET_PATTERN.test(target)) {
-    throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${index + 1}: the content key looks invalid`)
+    throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${path}: the content key looks invalid`)
   }
   if (type === 'category' && !KEY_PATTERN.test(target)) {
-    throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${index + 1}: the category key looks invalid`)
+    throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${path}: the category key looks invalid`)
   }
   if (type === 'url') {
     const absolute = /^https?:\/\/[^\s]+$/.test(target)
     const rootedPath = target.startsWith('/') && !target.startsWith('//')
     if (!absolute && !rootedPath) {
-      throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${index + 1}: use a path starting with "/" or a full URL`)
+      throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${path}: use a path starting with "/" or a full URL`)
     }
   }
 }
@@ -86,7 +93,12 @@ function assertTarget(type: MenuItem['link']['type'], target: string, index: num
  * the target is checked against its link type. One bad item fails the whole save
  * so a menu is never half-written.
  */
-export function normalizeMenuItem(input: unknown, index = 0): AdminMenuItem {
+/**
+ * Label and link of one row. `path` is the position the editor sees (`2` for the
+ * second top-level item, `2.1` for its first child), so an error names the row
+ * that has to change instead of a flat index.
+ */
+function normalizeLeaf(input: unknown, path: string): { label: { vi: string, en: string }, link: MenuChildItem['link'] } {
   const source = readRecord(input)
   const label = readRecord(source.label)
   const link = readRecord(source.link)
@@ -94,37 +106,61 @@ export function normalizeMenuItem(input: unknown, index = 0): AdminMenuItem {
   const vi = typeof label.vi === 'string' ? label.vi.trim() : ''
   const en = typeof label.en === 'string' ? label.en.trim() : ''
   if (!vi && !en) {
-    throw new MenuInvariantError('MENU_LABEL_REQUIRED', `Item ${index + 1}: at least one label is required`)
+    throw new MenuInvariantError('MENU_LABEL_REQUIRED', `Item ${path}: at least one label is required`)
   }
   if (vi.length > MENU_LABEL_MAX || en.length > MENU_LABEL_MAX) {
-    throw new MenuInvariantError('MENU_LABEL_INVALID', `Item ${index + 1}: labels are limited to ${MENU_LABEL_MAX} characters`)
+    throw new MenuInvariantError('MENU_LABEL_INVALID', `Item ${path}: labels are limited to ${MENU_LABEL_MAX} characters`)
   }
 
   const rawType = typeof link.type === 'string' ? link.type : ''
   if (!(MENU_LINK_TYPES as readonly string[]).includes(rawType)) {
-    throw new MenuInvariantError('MENU_LINK_TYPE_INVALID', `Item ${index + 1}: unknown link type`)
+    throw new MenuInvariantError('MENU_LINK_TYPE_INVALID', `Item ${path}: unknown link type`)
   }
 
   const target = typeof link.target === 'string' ? link.target.trim() : ''
   if (!target) {
-    throw new MenuInvariantError('MENU_TARGET_REQUIRED', `Item ${index + 1}: a link target is required`)
+    throw new MenuInvariantError('MENU_TARGET_REQUIRED', `Item ${path}: a link target is required`)
   }
   if (target.length > MENU_TARGET_MAX) {
-    throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${index + 1}: the target is limited to ${MENU_TARGET_MAX} characters`)
+    throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${path}: the target is limited to ${MENU_TARGET_MAX} characters`)
   }
 
-  const type = rawType as MenuItem['link']['type']
-  assertTarget(type, target, index)
+  const type = rawType as MenuChildItem['link']['type']
+  assertTarget(type, target, path)
 
   return { label: { vi, en }, link: { type, target } }
 }
 
+export function normalizeMenuItem(input: unknown, index = 0): AdminMenuItem {
+  const source = readRecord(input)
+  const path = String(index + 1)
+  const leaf = normalizeLeaf(source, path)
+
+  const rawChildren = Array.isArray(source.children) ? source.children : []
+  if (rawChildren.length > MENU_MAX_CHILDREN) {
+    throw new MenuInvariantError('MENU_CHILDREN_LIMIT', `Item ${path}: a menu item holds at most ${MENU_MAX_CHILDREN} children`)
+  }
+
+  const children: AdminMenuChildItem[] = rawChildren.map((child, childIndex) => {
+    const childPath = `${path}.${childIndex + 1}`
+    const record = readRecord(child)
+    if (Array.isArray(record.children) && record.children.length > 0) {
+      throw new MenuInvariantError('MENU_DEPTH_LIMIT', `Item ${childPath}: menus support one level of children`)
+    }
+    return normalizeLeaf(record, childPath)
+  })
+
+  return { ...leaf, children }
+}
+
 export function normalizeMenuItems(input: unknown): AdminMenuItem[] {
   const list = Array.isArray(input) ? input : []
-  if (list.length > MENU_MAX_ITEMS) {
+  const items = list.map((entry, index) => normalizeMenuItem(entry, index))
+  const total = items.reduce((sum, item) => sum + 1 + item.children.length, 0)
+  if (total > MENU_MAX_ITEMS) {
     throw new MenuInvariantError('MENU_ITEMS_LIMIT', `A menu holds at most ${MENU_MAX_ITEMS} items`)
   }
-  return list.map((entry, index) => normalizeMenuItem(entry, index))
+  return items
 }
 
 const LabelMongooseSchema = new Schema(
@@ -143,10 +179,19 @@ const LinkMongooseSchema = new Schema(
   { _id: false },
 )
 
+const MenuChildItemMongooseSchema = new Schema(
+  {
+    label: { type: LabelMongooseSchema, required: true },
+    link: { type: LinkMongooseSchema, required: true },
+  },
+  { _id: false },
+)
+
 const MenuItemMongooseSchema = new Schema(
   {
     label: { type: LabelMongooseSchema, required: true },
     link: { type: LinkMongooseSchema, required: true },
+    children: { type: [MenuChildItemMongooseSchema], default: () => [] },
   },
   { _id: false },
 )

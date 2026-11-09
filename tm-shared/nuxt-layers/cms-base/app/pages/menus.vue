@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import type { AdminMenu, AdminMenuSummary, MenuLinkOptions } from '@tm/flow-contracts/menu-admin'
-import { MENU_LABEL_MAX, MENU_LINK_TYPES, MENU_MAX_ITEMS, emptyMenuItem } from '@tm/flow-contracts/menu-admin'
+import type { AdminMenu, AdminMenuChildItem, AdminMenuItem, AdminMenuSummary, MenuLinkOptions } from '@tm/flow-contracts/menu-admin'
+import {
+  MENU_LABEL_MAX,
+  MENU_LINK_TYPES,
+  MENU_MAX_CHILDREN,
+  MENU_MAX_ITEMS,
+  countMenuItems,
+  emptyMenuChildItem,
+  emptyMenuItem,
+} from '@tm/flow-contracts/menu-admin'
 
 const { t, locale } = useI18n()
 const toast = useToast()
@@ -19,7 +27,7 @@ const selectedId = ref<string | null>(null)
 const detail = ref<AdminMenu | null>(null)
 const detailLoading = ref(false)
 const draftName = ref('')
-const draftItems = ref<ReturnType<typeof emptyMenuItem>[]>([])
+const draftItems = ref<AdminMenuItem[]>([])
 const saving = ref(false)
 const saveError = ref<string | null>(null)
 
@@ -29,7 +37,12 @@ const createError = ref<string | null>(null)
 const createForm = reactive({ key: '', name: '' })
 
 const itemOpen = ref(false)
-const itemIndex = ref<number | null>(null)
+/**
+ * Which row the item dialog is editing. `index === null` creates a top-level
+ * item, `child === null` edits one, `child === -1` appends a child, and a child
+ * index edits that child.
+ */
+const itemTarget = ref<{ index: number | null, child: number | null }>({ index: null, child: null })
 const itemError = ref<string | null>(null)
 const itemForm = reactive({
   vi: '',
@@ -55,6 +68,30 @@ const dirty = computed(() => {
     || JSON.stringify(draftItems.value) !== JSON.stringify(detail.value.items)
 })
 
+const totalItems = computed(() => countMenuItems(draftItems.value))
+
+const itemDialogTitle = computed(() => {
+  const target = itemTarget.value
+  if (target.index === null) return t('admin.menus.itemCreateTitle')
+  if (target.child === null) return t('admin.menus.itemEditTitle')
+  if (target.child < 0) return t('admin.menus.childCreateTitle')
+  return t('admin.menus.childEditTitle')
+})
+
+/** Position of the row the dialog edits, for the parent hint. */
+const itemParentLabel = computed(() => {
+  const target = itemTarget.value
+  return target.index === null ? '' : labelOf(draftItems.value[target.index] ?? emptyMenuItem())
+})
+
+function cloneItem(item: AdminMenuItem): AdminMenuItem {
+  return {
+    label: { ...item.label },
+    link: { ...item.link },
+    children: (item.children ?? []).map(child => ({ label: { ...child.label }, link: { ...child.link } })),
+  }
+}
+
 const labelOf = (item: { label: { vi: string, en: string } }) =>
   item.label[locale.value as 'vi' | 'en'] || item.label.vi || item.label.en || '—'
 
@@ -79,6 +116,8 @@ const errorMessages: Record<string, string> = {
   MENU_UPDATE_UNCHANGED: 'admin.menus.errors.unchanged',
   MENU_KEY_IMMUTABLE: 'admin.menus.errors.keyImmutable',
   MENU_ITEMS_LIMIT: 'admin.menus.errors.itemsLimit',
+  MENU_CHILDREN_LIMIT: 'admin.menus.errors.childrenLimit',
+  MENU_DEPTH_LIMIT: 'admin.menus.errors.depthLimit',
   MENU_LABEL_REQUIRED: 'admin.menus.errors.labelRequired',
   MENU_LABEL_INVALID: 'admin.menus.errors.labelInvalid',
   MENU_TARGET_INVALID: 'admin.menus.errors.targetInvalid',
@@ -140,10 +179,7 @@ async function selectMenu(id: string) {
     const menu = await get(id)
     detail.value = menu
     draftName.value = menu.name
-    draftItems.value = menu.items.map(item => ({
-      label: { ...item.label },
-      link: { ...item.link },
-    }))
+    draftItems.value = menu.items.map(cloneItem)
   } catch (e) {
     saveError.value = describeError(e)
     resetDetail()
@@ -164,7 +200,7 @@ async function saveMenu() {
     })
     detail.value = updated
     draftName.value = updated.name
-    draftItems.value = updated.items.map(item => ({ label: { ...item.label }, link: { ...item.link } }))
+    draftItems.value = updated.items.map(cloneItem)
     menus.value = menus.value.map(entry => (entry.id === updated.id
       ? { ...entry, name: updated.name, revision: updated.revision, itemCount: updated.itemCount, updatedAt: updated.updatedAt }
       : entry))
@@ -243,14 +279,21 @@ function onTypeChange(type: string) {
   if (type !== 'url') void ensureLinkChoices()
 }
 
-function openItem(index: number | null) {
+function openItem(index: number | null, child: number | null = null) {
   itemError.value = null
-  itemIndex.value = index
-  const source = index === null ? emptyMenuItem() : draftItems.value[index]
-  itemForm.vi = source?.label.vi ?? ''
-  itemForm.en = source?.label.en ?? ''
-  itemForm.type = source?.link.type ?? 'url'
-  itemForm.target = source?.link.target ?? ''
+  itemTarget.value = { index, child }
+  const parent = index === null ? null : draftItems.value[index]
+  const source: AdminMenuChildItem = index === null
+    ? emptyMenuItem()
+    : child === null
+      ? parent ?? emptyMenuChildItem()
+      : child < 0
+        ? emptyMenuChildItem()
+        : parent?.children[child] ?? emptyMenuChildItem()
+  itemForm.vi = source.label.vi
+  itemForm.en = source.label.en
+  itemForm.type = source.link.type
+  itemForm.target = source.link.target
   itemOpen.value = true
   if (itemForm.type !== 'url') void ensureLinkChoices()
 }
@@ -273,30 +316,116 @@ function submitItem() {
     itemError.value = t('admin.menus.errors.targetRequired')
     return
   }
-  if (itemIndex.value === null) {
-    if (draftItems.value.length >= MENU_MAX_ITEMS) {
+  const target = itemTarget.value
+  if (target.index === null) {
+    if (totalItems.value >= MENU_MAX_ITEMS) {
       itemError.value = t('admin.menus.errors.itemsLimit')
       return
     }
-    draftItems.value = [...draftItems.value, next]
+    draftItems.value = [...draftItems.value, { ...next, children: [] }]
+  } else if (target.child === null) {
+    draftItems.value = draftItems.value.map((item, index) => (index === target.index
+      ? { ...next, children: item.children }
+      : item))
+  } else if (target.child < 0) {
+    const parent = draftItems.value[target.index]
+    if (!parent) return
+    if (parent.children.length >= MENU_MAX_CHILDREN) {
+      itemError.value = t('admin.menus.errors.childrenLimit')
+      return
+    }
+    if (totalItems.value >= MENU_MAX_ITEMS) {
+      itemError.value = t('admin.menus.errors.itemsLimit')
+      return
+    }
+    draftItems.value = draftItems.value.map((item, index) => (index === target.index
+      ? { ...item, children: [...item.children, next] }
+      : item))
   } else {
-    draftItems.value = draftItems.value.map((item, index) => (index === itemIndex.value ? next : item))
+    draftItems.value = draftItems.value.map((item, index) => (index === target.index
+      ? { ...item, children: item.children.map((child, position) => (position === target.child ? next : child)) }
+      : item))
   }
   itemOpen.value = false
 }
 
+/**
+ * One reorder routine for both levels: `'root'` is the top-level list, a number
+ * is the children list of that top-level row. Drag and the arrow buttons both
+ * land here, so the two ways of moving a row cannot drift apart.
+ */
+function reorder(list: 'root' | number, from: number, to: number) {
+  if (from === to) return
+  if (list === 'root') {
+    if (from < 0 || from >= draftItems.value.length || to < 0 || to >= draftItems.value.length) return
+    const next = [...draftItems.value]
+    const [moved] = next.splice(from, 1)
+    if (moved) next.splice(to, 0, moved)
+    draftItems.value = next
+    return
+  }
+  draftItems.value = draftItems.value.map((item, index) => {
+    if (index !== list) return item
+    if (from < 0 || from >= item.children.length || to < 0 || to >= item.children.length) return item
+    const children = [...item.children]
+    const [moved] = children.splice(from, 1)
+    if (moved) children.splice(to, 0, moved)
+    return { ...item, children }
+  })
+}
+
 function moveItem(index: number, delta: number) {
-  const target = index + delta
-  if (target < 0 || target >= draftItems.value.length) return
-  const next = [...draftItems.value]
-  const [moved] = next.splice(index, 1)
-  if (moved) next.splice(target, 0, moved)
-  draftItems.value = next
+  reorder('root', index, index + delta)
+}
+
+function moveChild(index: number, childIndex: number, delta: number) {
+  reorder(index, childIndex, childIndex + delta)
 }
 
 function removeItem(index: number) {
   draftItems.value = draftItems.value.filter((_, position) => position !== index)
 }
+
+function removeChild(index: number, childIndex: number) {
+  draftItems.value = draftItems.value.map((item, position) => (position === index
+    ? { ...item, children: item.children.filter((_, child) => child !== childIndex) }
+    : item))
+}
+
+/** Drag state is the list identity plus the row, not `dataTransfer`. */
+const drag = ref<{ list: 'root' | number, index: number } | null>(null)
+const dragOver = ref<{ list: 'root' | number, index: number } | null>(null)
+
+function onDragStart(list: 'root' | number, index: number, event: DragEvent) {
+  drag.value = { list, index }
+  // Firefox refuses to start a drag unless some data is attached.
+  event.dataTransfer?.setData('text/plain', String(index))
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(list: 'root' | number, index: number) {
+  if (!drag.value || drag.value.list !== list) return
+  dragOver.value = { list, index }
+}
+
+function onDrop(list: 'root' | number, index: number) {
+  const from = drag.value
+  drag.value = null
+  dragOver.value = null
+  if (!from || from.list !== list) return
+  reorder(list, from.index, index)
+}
+
+function onDragEnd() {
+  drag.value = null
+  dragOver.value = null
+}
+
+const isDragTarget = (list: 'root' | number, index: number) =>
+  dragOver.value?.list === list && dragOver.value.index === index
+
+const isDragging = (list: 'root' | number, index: number) =>
+  drag.value?.list === list && drag.value.index === index
 
 function askDelete() {
   deleteError.value = null
@@ -401,6 +530,7 @@ if (canRead.value) await loadMenus()
 
             <div class="flex flex-wrap items-center justify-between gap-2">
               <p class="text-xs text-muted">{{ t('admin.menus.itemsHint') }}</p>
+              <p v-if="draftItems.length > 1 && canWrite" class="text-[11px] text-muted">{{ t('admin.menus.dragHint') }}</p>
               <UButton
                 v-if="canWrite"
                 icon="i-lucide-plus"
@@ -408,7 +538,7 @@ if (canRead.value) await loadMenus()
                 variant="soft"
                 size="xs"
                 :label="t('admin.menus.addItem')"
-                :disabled="draftItems.length >= MENU_MAX_ITEMS"
+                :disabled="totalItems >= MENU_MAX_ITEMS"
                 @click="openItem(null)"
               />
             </div>
@@ -420,24 +550,81 @@ if (canRead.value) await loadMenus()
             <div v-else class="overflow-hidden rounded-[4px] border border-default/60">
               <div
                 v-for="(item, index) in draftItems"
-                :key="index"
-                class="flex flex-wrap items-center gap-3 border-b border-default/40 px-3 py-2 text-sm last:border-b-0"
+                :key="`root-${index}`"
+                class="border-b border-default/40 last:border-b-0"
               >
-                <span class="w-5 text-[11px] text-muted">{{ index + 1 }}</span>
-                <div class="min-w-0 flex-1">
-                  <p class="truncate font-medium text-highlighted">{{ labelOf(item) }}</p>
-                  <p class="flex items-center gap-1 text-[11px] text-muted">
-                    <UIcon :name="linkIcon(item.link.type)" class="size-3" />
-                    <span class="font-mono">{{ item.link.target }}</span>
-                    <UBadge color="neutral" variant="subtle" size="sm">{{ t(`admin.menus.types.${item.link.type}`) }}</UBadge>
-                  </p>
+                <div
+                  class="flex flex-wrap items-center gap-3 px-3 py-2 text-sm"
+                  :class="[
+                    isDragging('root', index) ? 'opacity-50' : '',
+                    isDragTarget('root', index) ? 'bg-primary/10' : '',
+                  ]"
+                  :draggable="canWrite"
+                  @dragstart="onDragStart('root', index, $event)"
+                  @dragover.prevent="onDragOver('root', index)"
+                  @drop.prevent="onDrop('root', index)"
+                  @dragend="onDragEnd()"
+                >
+                  <UIcon v-if="canWrite" name="i-lucide-grip-vertical" class="size-4 shrink-0 cursor-grab text-muted" />
+                  <span class="w-5 text-[11px] text-muted">{{ index + 1 }}</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate font-medium text-highlighted">{{ labelOf(item) }}</p>
+                    <p class="flex flex-wrap items-center gap-1 text-[11px] text-muted">
+                      <UIcon :name="linkIcon(item.link.type)" class="size-3" />
+                      <span class="font-mono">{{ item.link.target }}</span>
+                      <UBadge color="neutral" variant="subtle" size="sm">{{ t(`admin.menus.types.${item.link.type}`) }}</UBadge>
+                      <span v-if="item.children.length">{{ t('admin.menus.childCount', { count: item.children.length }) }}</span>
+                    </p>
+                  </div>
+                  <div v-if="canWrite" class="flex items-center gap-1">
+                    <UButton
+                      icon="i-lucide-corner-down-right"
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      :disabled="item.children.length >= MENU_MAX_CHILDREN || totalItems >= MENU_MAX_ITEMS"
+                      :title="t('admin.menus.addChild')"
+                      @click="openItem(index, -1)"
+                    />
+                    <UButton icon="i-lucide-arrow-up" color="neutral" variant="ghost" size="xs" :disabled="index === 0" :title="t('admin.menus.moveUp')" @click="moveItem(index, -1)" />
+                    <UButton icon="i-lucide-arrow-down" color="neutral" variant="ghost" size="xs" :disabled="index === draftItems.length - 1" :title="t('admin.menus.moveDown')" @click="moveItem(index, 1)" />
+                    <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="xs" :title="t('common.edit')" @click="openItem(index)" />
+                    <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" :title="t('admin.menus.remove')" @click="removeItem(index)" />
+                  </div>
                 </div>
-                <div v-if="canWrite" class="flex items-center gap-1">
-                  <UButton icon="i-lucide-arrow-up" color="neutral" variant="ghost" size="xs" :disabled="index === 0" :title="t('admin.menus.moveUp')" @click="moveItem(index, -1)" />
-                  <UButton icon="i-lucide-arrow-down" color="neutral" variant="ghost" size="xs" :disabled="index === draftItems.length - 1" :title="t('admin.menus.moveDown')" @click="moveItem(index, 1)" />
-                  <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="xs" :title="t('common.edit')" @click="openItem(index)" />
-                  <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" :title="t('admin.menus.remove')" @click="removeItem(index)" />
-                </div>
+
+                <ul v-if="item.children.length" class="border-t border-default/30 bg-elevated/20">
+                  <li
+                    v-for="(child, childIndex) in item.children"
+                    :key="`child-${index}-${childIndex}`"
+                    class="flex flex-wrap items-center gap-3 px-3 py-1.5 pl-10 text-sm"
+                    :class="[
+                      isDragging(index, childIndex) ? 'opacity-50' : '',
+                      isDragTarget(index, childIndex) ? 'bg-primary/10' : '',
+                    ]"
+                    :draggable="canWrite"
+                    @dragstart="onDragStart(index, childIndex, $event)"
+                    @dragover.prevent="onDragOver(index, childIndex)"
+                    @drop.prevent="onDrop(index, childIndex)"
+                    @dragend="onDragEnd()"
+                  >
+                    <UIcon v-if="canWrite" name="i-lucide-grip-vertical" class="size-3.5 shrink-0 cursor-grab text-muted" />
+                    <span class="w-8 text-[11px] text-muted">{{ index + 1 }}.{{ childIndex + 1 }}</span>
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-default">{{ labelOf(child) }}</p>
+                      <p class="flex items-center gap-1 text-[11px] text-muted">
+                        <UIcon :name="linkIcon(child.link.type)" class="size-3" />
+                        <span class="font-mono">{{ child.link.target }}</span>
+                      </p>
+                    </div>
+                    <div v-if="canWrite" class="flex items-center gap-1">
+                      <UButton icon="i-lucide-arrow-up" color="neutral" variant="ghost" size="xs" :disabled="childIndex === 0" :title="t('admin.menus.moveUp')" @click="moveChild(index, childIndex, -1)" />
+                      <UButton icon="i-lucide-arrow-down" color="neutral" variant="ghost" size="xs" :disabled="childIndex === item.children.length - 1" :title="t('admin.menus.moveDown')" @click="moveChild(index, childIndex, 1)" />
+                      <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="xs" :title="t('common.edit')" @click="openItem(index, childIndex)" />
+                      <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" :title="t('admin.menus.removeChild')" @click="removeChild(index, childIndex)" />
+                    </div>
+                  </li>
+                </ul>
               </div>
             </div>
 
@@ -505,11 +692,14 @@ if (canRead.value) await loadMenus()
 
     <UModal
       v-model:open="itemOpen"
-      :title="itemIndex === null ? t('admin.menus.itemCreateTitle') : t('admin.menus.itemEditTitle')"
+      :title="itemDialogTitle"
       :ui="{ content: 'w-[calc(100vw-2rem)] max-w-lg' }"
     >
       <template #body>
         <div class="flex flex-col gap-4">
+          <p v-if="itemTarget.index !== null" class="rounded-sm border border-default/60 bg-elevated/40 px-2 py-1 text-[11px] text-muted">
+            {{ t('admin.menus.parentOf', { name: itemParentLabel }) }}
+          </p>
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <UFormField :label="t('admin.content.locales.vi')">
               <UInput v-model="itemForm.vi" class="w-full" :maxlength="MENU_LABEL_MAX" placeholder="Giới thiệu" />

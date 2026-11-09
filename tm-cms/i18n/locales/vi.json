@@ -364,6 +364,13 @@
         "missing": "không còn tồn tại",
         "empty": "Site chưa có trang hay danh mục nào để chọn — tạo nội dung trước."
       },
+      "addChild": "Thêm mục con",
+      "removeChild": "Xoá mục con",
+      "childCount": "{count} mục con",
+      "childCreateTitle": "Thêm mục con",
+      "childEditTitle": "Sửa mục con",
+      "parentOf": "Nằm trong: {name}",
+      "dragHint": "Kéo một dòng để đổi thứ tự, hoặc dùng nút mũi tên.",
       "errors": {
         "keyExists": "Khoá này đã được dùng cho menu khác",
         "keyInvalid": "Khoá menu không hợp lệ",
@@ -378,7 +385,9 @@
         "targetRequired": "Cần nhập đích liên kết",
         "payloadInvalid": "Dữ liệu menu không hợp lệ",
         "notFound": "Không tìm thấy menu",
-        "targetNotFound": "Liên kết đang trỏ tới một trang hoặc danh mục không tồn tại trong site này. Chọn lại mục có thật rồi lưu."
+        "targetNotFound": "Liên kết đang trỏ tới một trang hoặc danh mục không tồn tại trong site này. Chọn lại mục có thật rồi lưu.",
+        "childrenLimit": "Mỗi mục menu có tối đa 10 mục con",
+        "depthLimit": "Menu chỉ hỗ trợ một cấp mục con"
       }
     },
     "content": {

@@ -39,14 +39,22 @@ export async function readPublicSite(event: H3Event, locale: string): Promise<Pu
       PublicSiteMenuModel.find({}).select(PUBLIC_MENU_PROJECTION).sort({ key: 1 }).lean<Record<string, unknown>[]>(),
     ])
 
+    // Children resolve to the same landing pages as their parent, so their
+    // category keys have to be collected too or a dropdown link loses its slug.
     const categoryKeys = new Set<string>()
     for (const menu of menuDocs) {
       const items = Array.isArray(menu.items) ? menu.items : []
       for (const raw of items) {
-        const link = (raw as { link?: { type?: unknown, target?: unknown } }).link
-        if (link?.type !== 'category' || typeof link.target !== 'string') continue
-        const key = link.target.trim()
-        if (key) categoryKeys.add(key)
+        const item = raw as {
+          link?: { type?: unknown, target?: unknown }
+          children?: Array<{ link?: { type?: unknown, target?: unknown } }>
+        }
+        const links = [item.link, ...(Array.isArray(item.children) ? item.children.map(child => child.link) : [])]
+        for (const link of links) {
+          if (link?.type !== 'category' || typeof link.target !== 'string') continue
+          const key = link.target.trim()
+          if (key) categoryKeys.add(key)
+        }
       }
     }
 

@@ -364,6 +364,13 @@
         "missing": "no longer exists",
         "empty": "This site has no page or category to pick yet — create content first."
       },
+      "addChild": "Add a child item",
+      "removeChild": "Remove child",
+      "childCount": "{count} children",
+      "childCreateTitle": "Add a child item",
+      "childEditTitle": "Edit child item",
+      "parentOf": "Inside: {name}",
+      "dragHint": "Drag a row to reorder it, or use the arrows.",
       "errors": {
         "keyExists": "Another menu already uses this key",
         "keyInvalid": "The menu key is not valid",
@@ -378,7 +385,9 @@
         "targetRequired": "A link target is required",
         "payloadInvalid": "The menu payload is not valid",
         "notFound": "Menu not found",
-        "targetNotFound": "A link points at a page or category that does not exist in this site. Pick an existing record and save again."
+        "targetNotFound": "A link points at a page or category that does not exist in this site. Pick an existing record and save again.",
+        "childrenLimit": "A menu item holds at most 10 children",
+        "depthLimit": "Menus support one level of children"
       }
     },
     "content": {
