@@ -10,6 +10,7 @@ import {
   publicMenuLabel,
   toPublicMenu,
 } from '../../tm-shared/packages/flow-contracts/src/site-public.js'
+import { applySeoTitleTemplate } from '../../tm-shared/packages/flow-utils/src/seo.js'
 
 let checks = 0
 
@@ -137,6 +138,19 @@ check('a partially written settings document never yields empty arrays or nulls'
   assert.deepEqual(site.locales.enabled, ['vi'])
   assert.equal(site.locales.default, 'vi')
   assert.deepEqual(site.menus, [{ key: 'main', items: [] }])
+})
+
+check('a page title is rendered through the template saved in settings', () => {
+  assert.equal(applySeoTitleTemplate('Trang sức', '%s | Sen Tuấn'), 'Trang sức | Sen Tuấn')
+  assert.equal(applySeoTitleTemplate('Trang sức', '%s'), 'Trang sức')
+  assert.equal(applySeoTitleTemplate('Trang sức', ''), 'Trang sức')
+  assert.equal(applySeoTitleTemplate('  Trang sức  ', '  '), 'Trang sức')
+  assert.equal(applySeoTitleTemplate('Trang sức', 'Sen Tuấn'), 'Trang sức | Sen Tuấn')
+  assert.equal(applySeoTitleTemplate('', '%s | Sen Tuấn'), 'Sen Tuấn', 'an empty page title leaves no dangling separator')
+  assert.equal(applySeoTitleTemplate('', ''), '')
+  assert.equal(applySeoTitleTemplate('Sen Tuấn', '%s · Sen Tuấn'), 'Sen Tuấn', 'the brand is not repeated on the home page')
+  assert.equal(applySeoTitleTemplate('Giới thiệu Sen Tuấn', '%s | Sen Tuấn'), 'Giới thiệu Sen Tuấn', 'a title that already names the brand keeps its wording')
+  assert.equal(applySeoTitleTemplate('Sen Tuấn', 'Sen Tuấn | %s'), 'Sen Tuấn')
 })
 
 check('category slug overrides are applied per menu item', () => {

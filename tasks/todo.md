@@ -339,7 +339,7 @@ The collection is `site_menus` because every migrated database already contains 
 | `usePublicSite()` composable: one cached read, brand/contact/SEO/menus with static fallbacks; consumed by the layout, the home page metadata and the product JSON-LD | `web-base/app/composables/usePublicSite.ts`, `web-base/app/layouts/default.vue`, `web-base/app/pages/index.vue`, `web-base/app/pages/[...slug].vue`, `web-base/app/pages/products/[slug].vue` |
 | Suites: `pnpm test:web-site` 10 pure checks, `pnpm test:web-site-db` 6 live checks | `scripts/build/test-web-site.ts`, `scripts/build/test-web-site-db.ts` |
 
-The projection exposes only company identity, SEO defaults, locales and menus — `PublicSiteSchema.parse` at the endpoint rejects a leaked admin field (revision, actor, module switches, stored targets). A menu item is resolved on read: `content` key → catch-all path, `category` key → `/danh-muc/<slug>` for the locale (default locale, then key, as fallback), `url` → only a rooted path or absolute `http(s)` link; items without a label or with an unresolvable target are dropped. Verified over HTTP on `:4006` (`?locale=vi|en`, `s-maxage=60`) and in the browser (settings brand name instead of the Hub name, probe `main`/`footer` menus rendered in the header and footer, meta description and footer contact block from the settings document, English labels after switching locale); probe `settings`/`site_menus` were removed afterwards. The browser tab served a stale service-worker shell at first and needed its worker/caches cleared before it reflected the new data. Still open: the logo id is not resolved to a URL (Q13) and `seo.titleTemplate` is not applied globally.
+The projection exposes only company identity, SEO defaults, locales and menus — `PublicSiteSchema.parse` at the endpoint rejects a leaked admin field (revision, actor, module switches, stored targets). A menu item is resolved on read: `content` key → catch-all path, `category` key → `/danh-muc/<slug>` for the locale (default locale, then key, as fallback), `url` → only a rooted path or absolute `http(s)` link; items without a label or with an unresolvable target are dropped. Verified over HTTP on `:4006` (`?locale=vi|en`, `s-maxage=60`) and in the browser (settings brand name instead of the Hub name, probe `main`/`footer` menus rendered in the header and footer, meta description and footer contact block from the settings document, English labels after switching locale); probe `settings`/`site_menus` were removed afterwards. The browser tab served a stale service-worker shell at first and needed its worker/caches cleared before it reflected the new data. Still open: the logo id is not resolved to a URL (Q13).
 
 ### P2.d — menu link reference validation (landed 2026-11-09)
 
@@ -351,6 +351,16 @@ The projection exposes only company identity, SEO defaults, locales and menus �
 | Suites: `pnpm test:menus` 14 live checks (resolving targets save, unknown key, soft-deleted page, another site's category, revision untouched, picker scoping and labels) | `scripts/build/test-menu-service.ts` |
 
 The lookup is opt-in through `MenuWriteMeta.refs`, so service callers without content/category collections keep the previous behaviour while both admin routes always pass them. Verified over HTTP on `:4005` (probe category + draft page: `422` with `Item 1: no category with the key "khong-co-that" exists in this site`, then `200` with the real keys) and in the browser (inline error plus toast, header still `Revision 2`, draft kept the bad target). Probe menu, category, page and audit rows were removed afterwards (`site_menus 0 / categories 0 / audit 0`). The item dialog now offers a picker instead of a typed key (verified below). Deleting a referenced record is refused as well — see the reverse-guard slice below.
+
+### P2.d — one title template for every page (landed 2026-11-09)
+
+| Slice | Evidence |
+| --- | --- |
+| `applySeoTitleTemplate(pageTitle, template)`: `%s` placeholder, bare `%s`/empty = no suffix, template without `%s` = suffix, no dangling separator, no repeated brand | `flow-utils/src/seo.ts`, `scripts/build/test-web-site.ts` (11 checks) |
+| Applied once at the root so pages keep owning their title | `web-base/app/composables/useSiteSeoTitle.ts`, `tm-web/app/app.vue` |
+| Live: seeded template `%s · Sen Tuấn` → `Products · Sen Tuấn`, `Danh mục · Sen Tuấn`, `/` stayed `Sen Tuấn`, `/gioi-thieu` stayed `Giới thiệu Sen Tuấn`; deleting the document reverted every title | `:4006` SSR HTML, probe settings removed (`settings 0 / menus 0 / audit 0`) |
+
+`og:title` stays the page's own title (no company suffix on share cards). Still open: no per-locale title template.
 
 ### P2.d — two-level menus with drag-and-drop (landed 2026-11-09)
 
