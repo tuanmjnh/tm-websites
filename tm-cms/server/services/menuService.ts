@@ -1,6 +1,11 @@
 import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
-import type { AdminMenu, AdminMenuSummary } from '@tm/flow-contracts/menu-admin'
+import type {
+  AdminMenu,
+  AdminMenuSummary,
+  MenuLinkOptions,
+} from '@tm/flow-contracts/menu-admin'
+import { MENU_LINK_OPTIONS_LIMIT } from '@tm/flow-contracts/menu-admin'
 import type { AuditActor, AuditEntryDocument } from '../models/audit'
 import type { CategoryDocument } from '../models/category'
 import type { ContentDocument } from '../models/content'
@@ -41,12 +46,18 @@ export interface MenuWriteMeta {
    * link; the service skips the lookup when a caller (tests, future importers)
    * writes items without it.
    */
-  refs?: { content: Model<ContentDocument>, category: Model<CategoryDocument> }
+  refs?: MenuRefModels
 }
 
 export type MenuRecord = MenuDocument & { _id: Types.ObjectId }
 
 const NAME_MAX = 120
+
+/** The two collections a menu item may reference by key. */
+export interface MenuRefModels {
+  content: Model<ContentDocument>
+  category: Model<CategoryDocument>
+}
 
 /**
  * Refuse targets that do not resolve inside this site. A path target is a literal
@@ -54,8 +65,51 @@ const NAME_MAX = 120
  * that matches neither a record here nor in another site's database would publish
  * a link nobody can follow. A soft-deleted page counts as missing.
  */
+type LocaleTitle = { locale?: string, title?: string, name?: string }
+
+/** `vi`, then `en`, then the key: the same fallback the editor shows. */
+function optionLabel(key: string, locales: unknown): string {
+  const entries = Array.isArray(locales) ? (locales as LocaleTitle[]) : []
+  for (const code of ['vi', 'en']) {
+    const entry = entries.find(candidate => candidate.locale === code)
+    const text = (entry?.title ?? entry?.name ?? '').trim()
+    if (text) return text
+  }
+  return key
+}
+
+/**
+ * Reference choices for the menu item dialog, so an editor picks a page or a
+ * category instead of typing a key from memory. Soft-deleted pages are excluded
+ * because the save path refuses them too.
+ */
+export async function listMenuLinkOptions(
+  refs: MenuRefModels,
+  siteId: string,
+): Promise<MenuLinkOptions> {
+  const [content, categories] = await Promise.all([
+    refs.content
+      .find({ siteId, deletedAt: null })
+      .sort({ key: 1 })
+      .limit(MENU_LINK_OPTIONS_LIMIT)
+      .select('key locales')
+      .lean<Array<{ key: string, locales?: LocaleTitle[] }>>(),
+    refs.category
+      .find({ siteId })
+      .sort({ key: 1 })
+      .limit(MENU_LINK_OPTIONS_LIMIT)
+      .select('key locales')
+      .lean<Array<{ key: string, locales?: LocaleTitle[] }>>(),
+  ])
+
+  return {
+    content: content.map(entry => ({ key: entry.key, label: optionLabel(entry.key, entry.locales) })),
+    category: categories.map(entry => ({ key: entry.key, label: optionLabel(entry.key, entry.locales) })),
+  }
+}
+
 async function assertLinksExist(
-  refs: MenuWriteMeta['refs'],
+  refs: MenuRefModels | undefined,
   siteId: string,
   items: MenuItem[],
 ): Promise<void> {

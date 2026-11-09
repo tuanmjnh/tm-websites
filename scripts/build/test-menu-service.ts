@@ -4,6 +4,7 @@ import {
   createMenu,
   deleteMenu,
   getMenu,
+  listMenuLinkOptions,
   listMenus,
   updateMenu,
 } from '../../tm-cms/server/services/menuService.js'
@@ -216,7 +217,11 @@ async function integration() {
       })
       await Content.collection.insertOne(page('gioi-thieu', null))
       await Content.collection.insertOne(page('tin-cu', new Date()))
-      await Category.collection.insertOne({ siteId: SITE, key: 'trang-suc' })
+      await Category.collection.insertOne({
+        siteId: SITE,
+        key: 'trang-suc',
+        locales: [{ locale: 'vi', name: 'Trang sức', slug: 'trang-suc' }],
+      })
       await Category.collection.insertOne({ siteId: OTHER_SITE, key: 'bag-post' })
 
       const withRefs = { ...meta, refs: { content: Content, category: Category } }
@@ -257,6 +262,14 @@ async function integration() {
 
       assert.equal((await getMenu(Menu, SITE, menu.id)).revision, 2, 'a refused save writes nothing')
       await deleteMenu(Menu, SITE, menu.id, 2, meta)
+    })
+
+    await check('the item dialog is offered only this site\'s live references', async () => {
+      const options = await listMenuLinkOptions({ content: Content, category: Category }, SITE)
+      assert.deepEqual(options.content.map(entry => entry.key), ['gioi-thieu'], 'a soft-deleted page is not offered')
+      assert.equal(options.content[0]!.label, 'gioi-thieu', 'a record without a title falls back to its key')
+      assert.deepEqual(options.category.map(entry => entry.key), ['trang-suc'], 'another site\'s category is not offered')
+      assert.equal(options.category[0]!.label, 'Trang sức', 'the `vi` name is the label')
     })
   } finally {
     await closeDatabaseConnections()

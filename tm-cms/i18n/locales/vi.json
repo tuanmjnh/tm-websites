@@ -356,6 +356,11 @@
         "category": "Key của danh mục, ví dụ trang-suc",
         "url": "Đường dẫn bắt đầu bằng / hoặc URL đầy đủ"
       },
+      "targetPick": {
+        "placeholder": "Chọn trang hoặc danh mục",
+        "missing": "không còn tồn tại",
+        "empty": "Site chưa có trang hay danh mục nào để chọn — tạo nội dung trước."
+      },
       "errors": {
         "keyExists": "Khoá này đã được dùng cho menu khác",
         "keyInvalid": "Khoá menu không hợp lệ",

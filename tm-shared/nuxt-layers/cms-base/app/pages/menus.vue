@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { AdminMenu, AdminMenuSummary } from '@tm/flow-contracts/menu-admin'
+import type { AdminMenu, AdminMenuSummary, MenuLinkOptions } from '@tm/flow-contracts/menu-admin'
 import { MENU_LABEL_MAX, MENU_LINK_TYPES, MENU_MAX_ITEMS, emptyMenuItem } from '@tm/flow-contracts/menu-admin'
 
 const { t, locale } = useI18n()
 const toast = useToast()
 const { hasCapability } = useHub()
-const { list, get, create, save, remove, errorCode } = useMenuAdmin()
+const { list, get, create, save, remove, linkOptions, errorCode } = useMenuAdmin()
 
 const canRead = computed(() => hasCapability('configs.read'))
 const canWrite = computed(() => hasCapability('configs.write'))
@@ -36,6 +36,13 @@ const itemForm = reactive({
   type: 'url' as (typeof MENU_LINK_TYPES)[number],
   target: '',
 })
+
+// Reference choices for the item dialog. Loaded on first use and refreshed
+// whenever another menu is opened, so a page created in the meantime shows up.
+const linkChoices = ref<MenuLinkOptions>({ content: [], category: [] })
+const choicesLoaded = ref(false)
+const choicesLoading = ref(false)
+const choicesError = ref<string | null>(null)
 
 const deleteOpen = ref(false)
 const deleteBusy = ref(false)
@@ -119,6 +126,7 @@ function resetDetail() {
 
 async function selectMenu(id: string) {
   selectedId.value = id
+  choicesLoaded.value = false
   detailLoading.value = true
   saveError.value = null
   try {
@@ -189,6 +197,45 @@ async function submitCreate() {
   }
 }
 
+async function ensureLinkChoices() {
+  if (choicesLoaded.value || choicesLoading.value) return
+  choicesLoading.value = true
+  choicesError.value = null
+  try {
+    linkChoices.value = await linkOptions()
+    choicesLoaded.value = true
+  } catch (e) {
+    choicesError.value = describeError(e)
+  } finally {
+    choicesLoading.value = false
+  }
+}
+
+/**
+ * Options for the target select. A target that is not in the list is still shown
+ * (marked as missing) so an item saved before a record was deleted can be seen
+ * and replaced instead of looking empty.
+ */
+const targetItems = computed(() => {
+  if (itemForm.type === 'url') return []
+  const source = itemForm.type === 'content' ? linkChoices.value.content : linkChoices.value.category
+  const entries = source.map(entry => ({ value: entry.key, label: `${entry.label} · ${entry.key}` }))
+  const current = itemForm.target.trim()
+  if (current && !entries.some(entry => entry.value === current)) {
+    entries.unshift({ value: current, label: `${current} (${t('admin.menus.targetPick.missing')})` })
+  }
+  return entries
+})
+
+/**
+ * A target means something per link type (`/` is a URL, `trang-suc` a key), so
+ * changing the type clears it instead of leaving a value that cannot resolve.
+ */
+function onTypeChange(type: string) {
+  itemForm.target = ''
+  if (type !== 'url') void ensureLinkChoices()
+}
+
 function openItem(index: number | null) {
   itemError.value = null
   itemIndex.value = index
@@ -198,6 +245,7 @@ function openItem(index: number | null) {
   itemForm.type = source?.link.type ?? 'url'
   itemForm.target = source?.link.target ?? ''
   itemOpen.value = true
+  if (itemForm.type !== 'url') void ensureLinkChoices()
 }
 
 function submitItem() {
@@ -469,11 +517,28 @@ if (canRead.value) await loadMenus()
               :items="MENU_LINK_TYPES.map(type => ({ label: t(`admin.menus.types.${type}`), value: type }))"
               value-key="value"
               class="w-full"
+              @update:model-value="onTypeChange"
             />
           </UFormField>
           <UFormField :label="t('admin.menus.fields.target')">
-            <UInput v-model="itemForm.target" class="w-full font-mono" :placeholder="targetPlaceholder" />
-            <p class="mt-1 text-xs text-muted">{{ t(`admin.menus.targetHints.${itemForm.type}`) }}</p>
+            <USelect
+              v-if="itemForm.type !== 'url'"
+              v-model="itemForm.target"
+              :items="targetItems"
+              value-key="value"
+              :placeholder="choicesLoading ? t('common.loading') : t('admin.menus.targetPick.placeholder')"
+              class="w-full"
+              @update:open="(open: boolean) => { if (open) void ensureLinkChoices() }"
+            />
+            <UInput v-else v-model="itemForm.target" class="w-full font-mono" :placeholder="targetPlaceholder" />
+            <p v-if="itemForm.type !== 'url'" class="mt-1 text-xs text-muted">{{ t(`admin.menus.targetHints.${itemForm.type}`) }}</p>
+            <p v-if="itemForm.type !== 'url' && choicesError" class="mt-1 text-xs text-error">{{ choicesError }}</p>
+            <p
+              v-else-if="itemForm.type !== 'url' && !choicesLoading && !targetItems.length"
+              class="mt-1 text-xs text-warning"
+            >
+              {{ t('admin.menus.targetPick.empty') }}
+            </p>
           </UFormField>
           <p v-if="itemError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ itemError }}</p>
         </div>

@@ -1,4 +1,9 @@
-import type { AdminMenu, AdminMenuPatch, AdminMenuSummary } from '@tm/flow-contracts/menu-admin'
+import type {
+  AdminMenu,
+  AdminMenuPatch,
+  AdminMenuSummary,
+  MenuLinkOptions,
+} from '@tm/flow-contracts/menu-admin'
 
 /**
  * CMS menu client. Menus belong to the deployment's site, so a request never
@@ -38,10 +43,16 @@ export const useMenuAdmin = () => {
     return payload.data
   }
 
+  /** Pages and categories this site can link to, for the item dialog. */
+  const linkOptions = async (): Promise<MenuLinkOptions> => {
+    const payload = await plainFetch('/api/v1/admin/menus/link-options') as { data: MenuLinkOptions }
+    return payload.data
+  }
+
   const errorCode = (error: unknown): string | null => {
     const body = (error as { data?: { error?: { code?: string }, data?: { error?: { code?: string } } } })?.data
     return body?.error?.code ?? body?.data?.error?.code ?? null
   }
 
-  return { list, get, create, save, remove, errorCode }
+  return { list, get, create, save, remove, linkOptions, errorCode }
 }

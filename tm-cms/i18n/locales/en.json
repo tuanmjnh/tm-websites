@@ -356,6 +356,11 @@
         "category": "The category key, e.g. trang-suc",
         "url": "A path starting with / or a full URL"
       },
+      "targetPick": {
+        "placeholder": "Pick a page or category",
+        "missing": "no longer exists",
+        "empty": "This site has no page or category to pick yet — create content first."
+      },
       "errors": {
         "keyExists": "Another menu already uses this key",
         "keyInvalid": "The menu key is not valid",

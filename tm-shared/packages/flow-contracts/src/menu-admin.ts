@@ -87,3 +87,25 @@ function trimmed(max: number) {
 export function emptyMenuItem(): AdminMenuItem {
   return { label: { vi: '', en: '' }, link: { type: 'url', target: '/' } }
 }
+
+/**
+ * What the item dialog can offer instead of a typed key: the pages and categories
+ * this site actually has. A label is the `vi` title/name, then `en`, then the key,
+ * so an untranslated record still appears. The cap keeps one response small; the
+ * list is sorted by key for a stable order between opens.
+ */
+export const MENU_LINK_OPTIONS_LIMIT = 200
+
+export const MenuLinkOptionSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+})
+
+export type MenuLinkOption = z.infer<typeof MenuLinkOptionSchema>
+
+export const MenuLinkOptionsSchema = z.object({
+  content: z.array(MenuLinkOptionSchema),
+  category: z.array(MenuLinkOptionSchema),
+})
+
+export type MenuLinkOptions = z.infer<typeof MenuLinkOptionsSchema>
