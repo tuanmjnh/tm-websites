@@ -1,4 +1,5 @@
 import type { AdminCategory, AdminCategoryDraft, AdminCategoryNode } from '@tm/flow-contracts/category-admin'
+import type { MenuReference } from '@tm/flow-contracts/menu-admin'
 
 /**
  * CMS category tree client. Categories belong to the deployment's site, so the
@@ -34,6 +35,12 @@ export const useCategoryAdmin = () => {
     return payload.data
   }
 
+  /** Menus that link to one category, shown as a warning in the edit dialog. */
+  const menuReferences = async (id: string): Promise<MenuReference[]> => {
+    const payload = await plainFetch(`/api/v1/admin/categories/${encodeURIComponent(id)}/menu-references`) as { data: { menus: MenuReference[] } }
+    return payload.data.menus
+  }
+
   const update = async (id: string, draft: AdminCategoryDraft & { revision: number }): Promise<AdminCategory> => {
     const payload = await plainFetch(`/api/v1/admin/categories/${encodeURIComponent(id)}`, {
       method: 'PATCH',
@@ -55,5 +62,5 @@ export const useCategoryAdmin = () => {
     return body?.data?.error?.code || body?.error?.code || null
   }
 
-  return { list, create, update, remove, errorCode }
+  return { list, create, update, remove, menuReferences, errorCode }
 }

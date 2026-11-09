@@ -312,7 +312,9 @@
         "keyRequired": "Enter a category key",
         "nameRequired": "Enter a name for at least one locale",
         "inMenu": "The menu {menus} links to this category — update it before deleting."
-      }
+      },
+      "menuLinks": "Menus linking to this category",
+      "menuLinksHint": "Update the menu before deleting — the category cannot be deleted while a menu still links to it."
     },
     "menus": {
       "title": "Navigation menus",
@@ -558,7 +560,9 @@
         "revision": "Revision",
         "history": "Activity",
         "historyEmpty": "No changes recorded yet",
-        "historyReload": "Reload"
+        "historyReload": "Reload",
+        "menuLinks": "Menus linking to this page",
+        "menuLinksHint": "Update the menu before deleting — the page cannot be deleted while a menu still links to it."
       },
       "errors": {
         "keyExists": "Another record already uses this key",

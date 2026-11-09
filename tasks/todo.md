@@ -352,6 +352,16 @@ The projection exposes only company identity, SEO defaults, locales and menus �
 
 The lookup is opt-in through `MenuWriteMeta.refs`, so service callers without content/category collections keep the previous behaviour while both admin routes always pass them. Verified over HTTP on `:4005` (probe category + draft page: `422` with `Item 1: no category with the key "khong-co-that" exists in this site`, then `200` with the real keys) and in the browser (inline error plus toast, header still `Revision 2`, draft kept the bad target). Probe menu, category, page and audit rows were removed afterwards (`site_menus 0 / categories 0 / audit 0`). The item dialog now offers a picker instead of a typed key (verified below). Deleting a referenced record is refused as well — see the reverse-guard slice below.
 
+### P2.d — the editor warns before the delete (landed 2026-11-09)
+
+| Slice | Evidence |
+| --- | --- |
+| `GET /api/v1/admin/content/:id/menu-references` and `GET /api/v1/admin/categories/:id/menu-references` (`content.read`, record resolved first so a foreign id is 404), contract `MenuReference(s)Schema` | `tm-cms/server/services/{content,category}Service.ts`, `tm-cms/server/api/v1/admin/{content,categories}/[id]/menu-references.get.ts`, `flow-contracts/src/menu-admin.ts` |
+| Warning block in the page detail dialog and the category edit dialog, hidden when there is nothing to warn about | `cms-base/app/pages/content.vue`, `cms-base/app/pages/categories.vue`, `cms-base/app/composables/{useContentAdmin,useCategoryAdmin}.ts`, `tm-cms/i18n/locales/{vi,en}.json` |
+| Suites: `pnpm test:content` 27 checks, `pnpm test:categories` 12 checks (reference list matches the refusal, foreign id 404, empty after the menu is gone) | `scripts/build/test-content-service.ts`, `scripts/build/test-category-service.ts` |
+
+Verified over HTTP on `:4005` (both routes `200` with the probe menu, unknown id `404`, anonymous `401`) and in the browser (the page detail and the category dialog both named `Probe ref menu`). Probes were removed afterwards (`site_menus 0 / categories 0 / audit 0 / content_revisions 0`). Still open: the warning lists menus but does not link to them, so fixing a menu still means opening `/menus` yourself.
+
 ### P2.d — a menu reference blocks the delete (landed 2026-11-09)
 
 | Slice | Evidence |

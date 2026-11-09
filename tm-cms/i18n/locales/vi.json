@@ -312,7 +312,9 @@
         "keyRequired": "Cần nhập khóa danh mục",
         "nameRequired": "Cần nhập tên cho ít nhất một ngôn ngữ",
         "inMenu": "Danh mục này đang được menu {menus} dùng — sửa menu đó trước khi xoá."
-      }
+      },
+      "menuLinks": "Menu đang trỏ tới danh mục này",
+      "menuLinksHint": "Sửa menu trước khi xoá — danh mục sẽ không xoá được khi vẫn còn menu liên kết."
     },
     "menus": {
       "title": "Menu điều hướng",
@@ -558,7 +560,9 @@
         "revision": "Phiên bản",
         "history": "Lịch sử thay đổi",
         "historyEmpty": "Chưa có thay đổi nào được ghi lại",
-        "historyReload": "Tải lại"
+        "historyReload": "Tải lại",
+        "menuLinks": "Menu đang trỏ tới trang này",
+        "menuLinksHint": "Sửa menu trước khi xoá — nội dung sẽ không xoá được khi vẫn còn menu liên kết."
       },
       "errors": {
         "keyExists": "Khóa này đã được dùng cho một bản ghi khác",

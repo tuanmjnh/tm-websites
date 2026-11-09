@@ -12,6 +12,7 @@ import type {
   AdminContentStatusFilter,
   AdminContentType,
 } from '@tm/flow-contracts/content-admin'
+import type { MenuReference } from '@tm/flow-contracts/menu-admin'
 
 /**
  * CMS content client for the local MongoDB-backed admin API. Records belong to
@@ -96,6 +97,12 @@ export const useContentAdmin = () => {
   }
 
   /** Read-only activity trail for one record (newest first, capped by the API). */
+  /** Menus that link to one page, shown as a warning in the detail view. */
+  const menuReferences = async (id: string): Promise<MenuReference[]> => {
+    const payload = await plainFetch(`/api/v1/admin/content/${encodeURIComponent(id)}/menu-references`) as { data: { menus: MenuReference[] } }
+    return payload.data.menus
+  }
+
   const history = async (id: string, limit = 20): Promise<AdminContentAudit[]> => {
     const payload = await plainFetch(`/api/v1/admin/content/${encodeURIComponent(id)}/history`, {
       query: { limit },
@@ -140,5 +147,5 @@ export const useContentAdmin = () => {
     return typeof status === 'number' ? status : null
   }
 
-  return { list, get, create, update, runEvent, bulk, history, revisions, revision, restoreRevision, errorCode, errorStatus }
+  return { list, get, create, update, runEvent, bulk, history, menuReferences, revisions, revision, restoreRevision, errorCode, errorStatus }
 }

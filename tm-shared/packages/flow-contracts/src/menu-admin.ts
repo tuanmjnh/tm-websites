@@ -109,3 +109,21 @@ export const MenuLinkOptionsSchema = z.object({
 })
 
 export type MenuLinkOptions = z.infer<typeof MenuLinkOptionsSchema>
+
+/**
+ * The menus that point at one page or category. The editor shows them before a
+ * delete, and the delete itself refuses with the same shape.
+ */
+export const MenuReferenceSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  name: z.string(),
+})
+
+export type MenuReference = z.infer<typeof MenuReferenceSchema>
+
+export const MenuReferencesSchema = z.object({
+  menus: z.array(MenuReferenceSchema),
+})
+
+export type MenuReferences = z.infer<typeof MenuReferencesSchema>

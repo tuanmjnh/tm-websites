@@ -14,6 +14,7 @@ import type {
   AdminContentStatusFilter,
   AdminContentType,
 } from '@tm/flow-contracts/content-admin'
+import type { MenuReference } from '@tm/flow-contracts/menu-admin'
 import {
   ADMIN_CONTENT_BODY_FORMATS,
   ADMIN_CONTENT_STATUSES,
@@ -30,6 +31,7 @@ const {
   runEvent,
   bulk: runBulk,
   history,
+  menuReferences,
   revisions: fetchRevisions,
   revision: fetchRevision,
   restoreRevision: restoreRevisionApi,
@@ -56,6 +58,7 @@ const typeFilter = ref<'all' | AdminContentType>('all')
 
 const detailOpen = ref(false)
 const selected = ref<AdminContent | null>(null)
+const menuRefs = ref<MenuReference[]>([])
 const historyEntries = ref<AdminContentAudit[]>([])
 const historyLoading = ref(false)
 
@@ -247,6 +250,19 @@ async function load(reset = true) {
   }
 }
 
+/**
+ * Menus that link to this page. A failed read stays silent: the detail view is
+ * read-only, and the delete path has its own guard with the same information.
+ */
+async function loadMenuReferences(id: string) {
+  menuRefs.value = []
+  try {
+    menuRefs.value = await menuReferences(id)
+  } catch {
+    menuRefs.value = []
+  }
+}
+
 async function loadHistory(id: string) {
   historyLoading.value = true
   try {
@@ -380,12 +396,14 @@ const categoryLabel = (key: string) => {
 
 function openDetail(entry: AdminContent) {
   selected.value = entry
+  menuRefs.value = []
   historyEntries.value = []
   revisionEntries.value = []
   detailOpen.value = true
   if (!categoryOptions.value.length) void loadCategoryOptions()
   if (!mediaOptions.value.length) void loadMediaOptions()
   void loadHistory(entry.id)
+  void loadMenuReferences(entry.id)
   void loadRevisions(entry.id)
 }
 
@@ -941,6 +959,16 @@ onMounted(() => load())
             <UBadge v-for="category in selected.categories" :key="`cat-${category}`" color="secondary" variant="subtle" size="sm">
               {{ categoryLabel(category) }}
             </UBadge>
+          </div>
+
+          <div v-if="menuRefs.length" class="rounded-sm border border-warning/40 bg-warning/10 p-3">
+            <p class="text-xs font-semibold text-highlighted">{{ t('admin.content.detail.menuLinks') }}</p>
+            <ul class="mt-1 flex flex-col gap-1 text-xs text-default">
+              <li v-for="menu in menuRefs" :key="menu.id">
+                {{ menu.name }} <span class="font-mono text-[11px] text-muted">{{ menu.key }}</span>
+              </li>
+            </ul>
+            <p class="mt-1 text-xs text-muted">{{ t('admin.content.detail.menuLinksHint') }}</p>
           </div>
 
           <div class="rounded-sm border border-default/60 p-3">

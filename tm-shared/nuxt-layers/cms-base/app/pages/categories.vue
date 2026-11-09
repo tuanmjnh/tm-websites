@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { AdminCategory, AdminCategoryDraft, AdminCategoryNode } from '@tm/flow-contracts/category-admin'
+import type { MenuReference } from '@tm/flow-contracts/menu-admin'
 import { ADMIN_CATEGORY_MAX_DEPTH } from '@tm/flow-contracts/category-admin'
 
 const { t, locale } = useI18n()
 const toast = useToast()
 const { hasCapability } = useHub()
-const { list, create, update, remove, errorCode } = useCategoryAdmin()
+const { list, create, update, remove, menuReferences, errorCode } = useCategoryAdmin()
 
 const canRead = computed(() => hasCapability('content.read'))
 const canWrite = computed(() => hasCapability('content.write'))
@@ -125,8 +126,22 @@ async function load() {
   }
 }
 
+// Menus that link to the category being edited. Shown before a delete, and a
+// failed read stays silent because the delete path has its own guard.
+const editingMenuRefs = ref<MenuReference[]>([])
+
+async function loadEditingMenuRefs(id: string) {
+  editingMenuRefs.value = []
+  try {
+    editingMenuRefs.value = await menuReferences(id)
+  } catch {
+    editingMenuRefs.value = []
+  }
+}
+
 function resetForm() {
   editing.value = null
+  editingMenuRefs.value = []
   formError.value = null
   form.key = ''
   form.parent = null
@@ -154,6 +169,7 @@ function openEdit(node: AdminCategory) {
     form[entry.locale] = { name: entry.name, slug: entry.slug }
   }
   formOpen.value = true
+  void loadEditingMenuRefs(node.id)
 }
 
 function buildDraft(): AdminCategoryDraft {
@@ -336,6 +352,16 @@ if (canRead.value) await load()
                 <UInput v-model="form[code].slug" class="w-full font-mono" :placeholder="code === 'vi' ? 'trang-suc' : 'jewelry'" />
               </UFormField>
             </div>
+          </div>
+
+          <div v-if="editingMenuRefs.length" class="rounded-sm border border-warning/40 bg-warning/10 p-3">
+            <p class="text-xs font-semibold text-highlighted">{{ t('admin.categories.menuLinks') }}</p>
+            <ul class="mt-1 flex flex-col gap-1 text-xs text-default">
+              <li v-for="menu in editingMenuRefs" :key="menu.id">
+                {{ menu.name }} <span class="font-mono text-[11px] text-muted">{{ menu.key }}</span>
+              </li>
+            </ul>
+            <p class="mt-1 text-xs text-muted">{{ t('admin.categories.menuLinksHint') }}</p>
           </div>
 
           <RecordHistory v-if="editing" resource-type="category" :resource-id="editing.id" />

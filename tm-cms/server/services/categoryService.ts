@@ -1,6 +1,8 @@
 import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
 import type { AdminCategory, AdminCategoryNode } from '@tm/flow-contracts/category-admin'
+import type { MenuReference } from '@tm/flow-contracts/menu-admin'
+import type { MenuDocument } from '../models/menu'
 import type { ContentDocument } from '../models/content'
 import {
   CATEGORY_MAX_DEPTH,
@@ -316,6 +318,23 @@ export async function updateCategory(
   })
 
   return toAdminCategory(updated)
+}
+
+/**
+ * Menus that link to one category, for the edit dialog. The record is resolved
+ * first so another site's id is a 404 rather than an empty list.
+ */
+export async function listCategoryMenuReferences(
+  model: Model<CategoryDocument>,
+  menuModel: Model<MenuDocument>,
+  siteId: string,
+  id: string,
+): Promise<MenuReference[]> {
+  const record = await model.findOne({ _id: objectId(id, 'CATEGORY_ID_INVALID'), siteId }).lean<CategoryRecord | null>()
+  if (!record) {
+    throw new CategoryServiceError(404, 'CATEGORY_NOT_FOUND', 'Category not found')
+  }
+  return findMenuReferences(menuModel, siteId, 'category', record.key)
 }
 
 /**

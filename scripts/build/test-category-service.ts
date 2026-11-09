@@ -5,6 +5,7 @@ import {
   deleteCategory,
   getCategory,
   listCategories,
+  listCategoryMenuReferences,
   updateCategory,
 } from '../../tm-cms/server/services/categoryService.js'
 import { createContent } from '../../tm-cms/server/services/contentService.js'
@@ -210,7 +211,15 @@ async function integration() {
       )
       assert.equal((await getCategory(Category, SITE, target.id)).revision, 1, 'the refused delete changes nothing')
 
+      const references = await listCategoryMenuReferences(Category, Menu, SITE, target.id)
+      assert.deepEqual(references.map(entry => entry.key), ['guard-footer'])
+      await assert.rejects(
+        () => listCategoryMenuReferences(Category, Menu, OTHER_SITE, target.id),
+        isCategoryError(404, 'CATEGORY_NOT_FOUND'),
+      )
+
       await deleteMenu(Menu, SITE, menu.id, 1)
+      assert.deepEqual(await listCategoryMenuReferences(Category, Menu, SITE, target.id), [])
       const removed = await deleteCategory(Category, Content, SITE, target.id, target.revision, { ...meta, menus: Menu })
       assert.equal(removed.key, 'menu-guard')
     })

@@ -5,6 +5,7 @@ import {
   findPublicContent,
   getContent,
   listContent,
+  listContentMenuReferences,
   restoreContentRevision,
   runContentEvent,
   updateContent,
@@ -236,7 +237,17 @@ async function integration() {
       )
       assert.equal((await getContent(Content, SITE, created.id)).revision, 8, 'the refused delete changes nothing')
 
+      const references = await listContentMenuReferences(Content, Menu, SITE, created.id)
+      assert.deepEqual(references.map(entry => entry.key), ['guard-main'], 'the editor sees the same list the delete refuses with')
+      assert.equal(references[0]!.name, 'Guard main')
+      await assert.rejects(
+        () => listContentMenuReferences(Content, Menu, OTHER_SITE, created.id),
+        isServiceError(404, 'CONTENT_NOT_FOUND'),
+        'another site cannot read the references of this page',
+      )
+
       await deleteMenu(Menu, SITE, menu.id, 1)
+      assert.deepEqual(await listContentMenuReferences(Content, Menu, SITE, created.id), [], 'no menu means no warning')
       const deleted = await runContentEvent(Content, SITE, created.id, { event: 'delete', revision: 8 }, FUTURE, meta())
       assert.equal(deleted.status, 'deleted')
     })

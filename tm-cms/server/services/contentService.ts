@@ -1,6 +1,7 @@
 import { Types } from 'mongoose'
 import type { Connection, Model } from 'mongoose'
 import type { AdminContent } from '@tm/flow-contracts/content-admin'
+import type { MenuReference } from '@tm/flow-contracts/menu-admin'
 import type {
   ContentDocument,
   ContentEvent,
@@ -291,6 +292,23 @@ export async function createContent(
   })
 
   return toAdminContent(record)
+}
+
+/**
+ * Menus that link to one page, for the detail view. The record is resolved first
+ * so another site's id is a 404 rather than an empty list.
+ */
+export async function listContentMenuReferences(
+  model: Model<ContentDocument>,
+  menuModel: Model<MenuDocument>,
+  siteId: string,
+  id: string,
+): Promise<MenuReference[]> {
+  const record = await model.findOne({ _id: objectId(id, 'CONTENT_ID_INVALID'), siteId }).lean<ContentRecord | null>()
+  if (!record) {
+    throw new ContentServiceError(404, 'CONTENT_NOT_FOUND', 'Content record not found')
+  }
+  return findMenuReferences(menuModel, siteId, 'content', record.key)
 }
 
 export async function getContent(

@@ -1,4 +1,5 @@
 import type { Model } from 'mongoose'
+import type { MenuReference } from '@tm/flow-contracts/menu-admin'
 import type { MenuDocument } from '../models/menu'
 
 /**
@@ -8,11 +9,7 @@ import type { MenuDocument } from '../models/menu'
  * the editor has to change.
  */
 
-export interface MenuReference {
-  id: string
-  key: string
-  name: string
-}
+export type { MenuReference }
 
 export async function findMenuReferences(
   model: Model<MenuDocument>,
