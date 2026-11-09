@@ -33,6 +33,7 @@ These are source-observed inputs, not a new `.env` template and not proof that s
 | `TM_CURRENCY` | Current Web public currency default; domain money rules still need implementation |
 | `TM_IMAGE_DOMAINS` | Current image host list; maintain a deliberate allowlist |
 | `REVALIDATE_SECRET` | Current Web shared-secret purge; not signed replay-safe invalidation |
+| `TM_WEB_REVALIDATE_URL`, `TM_REVALIDATE_SECRET` | CMS side of the same pair: after a settings or menu save the CMS posts to `<storefront>/api/_internal/purge`. Both must be set — with either missing nothing is sent and the save still succeeds |
 | `TM_PWA_DISABLED` | Any non-empty value disables current PWA, including the string `false`; unset to allow production PWA |
 
 Current custom `TM_*` values are read in configuration/build paths. Do not assume changing an environment variable after deploying a built artifact updates it: verify Nitro runtime override behavior and generated output for each hosting mode. Never put secrets into `runtimeConfig.public` or customer assets.
@@ -334,7 +335,7 @@ Defaults are conservative placeholders (50 snapshots per record, 365 days of aud
 | Save the same menu with a page/category that does exist, plus a `/path` item | `200`, revision +1, one `audit_logs` row with `changedFields: ["items"]` |
 | Edit a menu with children | Rows render nested as `1`, `1.1`; each row has *Add a child item*, arrows and a drag handle, and a drag or an arrow saves the same order. A grandchild or an 11th child is refused with a message naming the row |
 | Type an SEO title template in Settings | The line under the field previews `sample page | suffix` as you type, and clearing it back to `%s` drops the suffix from the preview |
-| Change the SEO title template in Settings, then open any storefront page | The browser tab shows `page · suffix` from the template; the home page shows the brand without a repeated suffix, and setting the template back to `%s` removes it within the 60s public-site cache |
+| Change the SEO title template in Settings, then open any storefront page | The browser tab shows `page · suffix` from the template; the home page shows the brand without a repeated suffix, and setting the template back to `%s` removes it on the next request, because the save purges the public-site cache |
 | Promote a menu child | The child row's *Move to top level* button lifts it to the row right under its parent with its label and target intact; saving keeps the total item count |
 | Open the storefront header with a menu that has children | The parent shows a chevron and its children open on hover and on keyboard focus; footer children are listed under their parent |
 | Open the detail of a page (or the edit dialog of a category) a menu links to | A *Menus linking to …* block lists the menu names and keys with the hint that the record cannot be deleted yet, and each name opens that menu at `/menus?menu=<id>`; a record with no references shows no block, and a failed read hides it instead of blocking the dialog |
@@ -353,6 +354,18 @@ Coverage: the `pnpm test:audit` checks listed in [05](05-feature-parity.md). Pro
 | Any response body | No `revision`, `updatedBy`, `modules` or stored link target appears in it |
 | Storefront header/footer with saved menus | Brand is the settings display name, the header follows the `main` menu and the footer *Explore* list the `footer` menu |
 | Storefront with menus missing or an API failure | The static navigation and Hub company name are shown instead; the page still renders |
+
+### Storefront cache purge smoke (P2.d)
+
+| Check | Expected |
+| --- | --- |
+| Save settings, or create/update/delete a menu, with `TM_WEB_REVALIDATE_URL` and `TM_REVALIDATE_SECRET` set | `200` and `x-storefront-revalidate: revalidated`; `GET /api/public/site` shows the new value on the next request instead of after the 60s window |
+| The same save with either variable missing | `200` with `x-storefront-revalidate: not-configured`; no request leaves the CMS |
+| The same save while the storefront is stopped or holds another secret | Still `200` with `http-error` / `request-failed`, the data is saved, and the CMS log shows one `[storefront-revalidate]` warning |
+| `POST <storefront>/api/_internal/purge` with no secret or a wrong one | `401 INVALID_REVALIDATE_SECRET`; with `REVALIDATE_SECRET` unset the route answers `503 REVALIDATE_DISABLED` |
+| Retry the same `Idempotency-Key` | `200` with `idempotent-replay: true` and no second purge |
+
+Coverage: `pnpm test:revalidate` (8 checks). Start the storefront with `REVALIDATE_SECRET=<secret>` and the CMS with `TM_WEB_REVALIDATE_URL=http://localhost:4006 TM_REVALIDATE_SECRET=<same secret>`.
 
 Coverage: `pnpm test:web-site` (10 pure checks) and `pnpm test:web-site-db` (6 live checks, disposable database). Probe settings/menus must be removed afterwards.
 

@@ -33,6 +33,7 @@
     "test:settings": "tsx scripts/build/test-settings-service.ts",
     "test:menus": "tsx scripts/build/test-menu-service.ts",
     "test:web-site": "tsx scripts/build/test-web-site.ts",
+    "test:revalidate": "tsx scripts/build/test-storefront-revalidate.ts",
     "test:web-site-db": "tsx scripts/build/test-web-site-db.ts",
     "test:retention": "tsx scripts/build/test-retention-service.ts",
     "prune:retention": "tsx scripts/ops/prune-retention.ts",

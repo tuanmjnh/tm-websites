@@ -4,6 +4,7 @@ import { idempotencyKeyOf, requestIdOf } from '#server/utils/contentApi'
 import { executeIdempotent } from '#server/utils/idempotency'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 
 /**
  * `PATCH /api/v1/admin/settings` saves the sections the editor changed.
@@ -46,6 +47,9 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'cache-control', 'no-store')
     if (executed.replayed) setHeader(event, 'idempotent-replay', 'true')
 
+    if (!executed.replayed) {
+      setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'settings.update'))
+    }
     return executed.value
   } catch (error) {
     if (error instanceof SettingsServiceError) {

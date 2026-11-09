@@ -9,6 +9,7 @@ import { executeIdempotent } from '#server/utils/idempotency'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
 import { parseInput } from '#server/utils/validation'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 
 /**
  * `PATCH /api/v1/admin/menus/:id` saves the name and the whole item list against
@@ -46,6 +47,9 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'cache-control', 'no-store')
     if (executed.replayed) setHeader(event, 'idempotent-replay', 'true')
 
+    if (!executed.replayed) {
+      setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'menu.update'))
+    }
     return executed.value
   } catch (error) {
     return translateContentError(error)

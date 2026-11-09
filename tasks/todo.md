@@ -371,6 +371,16 @@ Still open: no one-action demotion of a top-level row into its previous sibling,
 
 `og:title` stays the page's own title (no company suffix on share cards). The settings field previews the rendered result while typing (`Preview: Trang mẫu` → `Preview: Trang mẫu | Sen Tuấn`), verified in the browser on `:4005/configs`. Still open: no per-locale title template.
 
+### P2.d — a save clears the storefront cache (landed 2026-11-09)
+
+| Slice | Evidence |
+| --- | --- |
+| `revalidateStorefront` pairs `TM_WEB_REVALIDATE_URL` with `TM_REVALIDATE_SECRET`, posts to the storefront's `POST /api/_internal/purge` and returns an outcome instead of throwing (the save is already committed; 5s timeout; skipped when either half is missing, never sent with an empty secret; not re-run on an idempotent replay) | `tm-cms/server/utils/storefrontRevalidate.ts`, `tm-cms/nuxt.config.ts` |
+| Settings and menu create/update/delete purge after the write and report it in `x-storefront-revalidate` | `tm-cms/server/api/v1/admin/settings/index.patch.ts`, `menus/index.post.ts`, `menus/[id].patch.ts`, `menus/[id].delete.ts` |
+| Suites: `pnpm test:revalidate` 8 checks | `scripts/build/test-storefront-revalidate.ts` |
+
+Live: cache warm at `''` -> `PATCH settings` `200` + `x-storefront-revalidate: revalidated` (33 handlers dropped) -> the site read `Probe Purge Co` on the next request; menu create and delete appeared/disappeared immediately; with the storefront killed the same save stayed `200` with `request-failed` and a server warning. A direct purge with no or a wrong secret is `401`. Probes removed (`settings 0 / site_menus 0 / audit 0 / idempotency_keys 0`). Still open: broad handler deletion rather than tenant/tag scoping, unsigned, and content publishes still rely on their own TTL.
+
 ### P2.d — two-level menus with drag-and-drop (landed 2026-11-09)
 
 | Slice | Evidence |

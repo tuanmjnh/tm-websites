@@ -9,6 +9,7 @@ import { executeIdempotent } from '#server/utils/idempotency'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
 import { parseInput } from '#server/utils/validation'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 
 /**
  * `POST /api/v1/admin/menus` creates an empty menu. The key is folded to a slug
@@ -44,6 +45,9 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'cache-control', 'no-store')
     if (executed.replayed) setHeader(event, 'idempotent-replay', 'true')
 
+    if (!executed.replayed) {
+      setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'menu.create'))
+    }
     return executed.value
   } catch (error) {
     return translateContentError(error)

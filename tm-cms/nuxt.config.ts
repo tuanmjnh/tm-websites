@@ -54,6 +54,11 @@ export default defineNuxtConfig({
     mongoDbOverride: process.env.TM_MONGO_DB || '',
     // Site that content records belong to; deployment-scoped, never request input.
     siteId: process.env.TM_SITE_ID || selected.customerId || '',
+    // Paired storefront for cache purges after a settings/menu save. Both halves
+    // are required: without TM_REVALIDATE_SECRET the call is skipped, never sent
+    // with an empty secret.
+    webRevalidateUrl: process.env.TM_WEB_REVALIDATE_URL || '',
+    revalidateSecret: process.env.TM_REVALIDATE_SECRET || '',
     public: {
       hubUrl: process.env.TM_HUB_URL || 'http://localhost:4000',
       hubAppId: process.env.TM_CMS_APP_ID || selected.appId,
