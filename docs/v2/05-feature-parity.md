@@ -214,7 +214,15 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Before this, a nested row could only move up by being recreated as a top-level item and having the old one deleted, which lost its place in the header. The child row now has a *Move to top level* button (outdent icon, next to edit) that lifts it out of `children` and inserts it directly under its former parent; nothing else changes order.
 - The total number of rows does not change, so `MENU_MAX_CHILDREN` and `MENU_MAX_ITEMS` are unaffected and the save still goes through the revision guard.
 - Verified in the browser on `:4005`: `Jewellery → [Rings, Necklaces], About` became `1 Jewellery (1 child) / 1.1 Rings / 2 Necklaces / 3 About`, **Save** moved the menu to revision 2, and the API read back `Trang sức → [Nhẫn], Dây chuyền, Giới thiệu` with `itemCount` still 4. Probes removed (`site_menus 0 / audit 0`).
-- Still open: the reverse action (demote a top-level row into its previous sibling) needs a target choice, so it remains an edit.
+- The reverse action landed as its own slice right after: see *demote a menu row* below.
+
+### P2.d — demote a menu row (2026-11-09)
+
+- Target files: `cms-base/app/pages/menus.vue` (`demoteItem`), `tm-cms/i18n/locales/{vi,en}.json` (`admin.menus.demoteItem`).
+- The target of a demotion is unambiguous — the row above — so it needs no dialog: `demoteItem` appends the top-level row as the last child of its previous sibling and removes it from the root list. Label and target are carried over, and the appended child is a leaf, so a demoted row cannot smuggle a grandchild in.
+- Ordering: because it only appends, the row keeps its reading position instead of jumping to the front of the sibling list. The total number of rows is unchanged, so only the per-parent cap matters: the button is disabled at `index 0` and when the parent already holds `MENU_MAX_CHILDREN` children, and `demoteItem` repeats that guard with the localized message in case it is called another way.
+- Live (`:4005/menus?menu=…`, probe menu of two rows): row 2's indent button was enabled and row 1's disabled, one click rendered `1.1 Probe two` under `1 Probe one` with `Unsaved` shown, and saving reached `Revision 2`. `GET /api/v1/admin/menus/<id>` read back `[(Probe one, [Probe two])]`, and `GET /api/public/site?locale=vi` on `:4006` returned the nested child with its `href`. Probe menu, audit rows and idempotency keys removed; typecheck clean.
+- Still open: no touch drag, and the dropdown does not repeat the parent link inside itself.
 
 ### P2.d — two-level menus with drag-and-drop (2026-11-09)
 

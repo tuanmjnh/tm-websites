@@ -372,6 +372,7 @@
       "addChild": "Thêm mục con",
       "removeChild": "Xoá mục con",
       "promoteChild": "Chuyển lên cấp 1",
+      "demoteItem": "Chuyển xuống làm mục con của mục phía trên",
       "childCount": "{count} mục con",
       "childCreateTitle": "Thêm mục con",
       "childEditTitle": "Sửa mục con",

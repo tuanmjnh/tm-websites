@@ -402,6 +402,26 @@ function promoteChild(index: number, childIndex: number) {
   draftItems.value = next
 }
 
+/**
+ * Demoting is the inverse of promoting: a top-level row becomes the last child of
+ * the row above it, so it keeps its label and target and nothing else moves. The
+ * total row count is unchanged; only the per-parent children cap can refuse it.
+ */
+function demoteItem(index: number) {
+  const parent = draftItems.value[index - 1]
+  const target = draftItems.value[index]
+  if (!parent || !target) return
+  if (parent.children.length >= MENU_MAX_CHILDREN) {
+    itemError.value = t('admin.menus.errors.childrenLimit')
+    return
+  }
+  const next = draftItems.value.map((item, position) => (position === index - 1
+    ? { ...item, children: [...item.children, { label: target.label, link: target.link, children: [] }] }
+    : item))
+  next.splice(index, 1)
+  draftItems.value = next
+}
+
 function removeChild(index: number, childIndex: number) {
   draftItems.value = draftItems.value.map((item, position) => (position === index
     ? { ...item, children: item.children.filter((_, child) => child !== childIndex) }
@@ -601,6 +621,15 @@ if (canRead.value) await loadMenus()
                       :disabled="item.children.length >= MENU_MAX_CHILDREN || totalItems >= MENU_MAX_ITEMS"
                       :title="t('admin.menus.addChild')"
                       @click="openItem(index, -1)"
+                    />
+                    <UButton
+                      icon="i-lucide-indent"
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      :disabled="index === 0 || (draftItems[index - 1]?.children.length ?? MENU_MAX_CHILDREN) >= MENU_MAX_CHILDREN"
+                      :title="t('admin.menus.demoteItem')"
+                      @click="demoteItem(index)"
                     />
                     <UButton icon="i-lucide-arrow-up" color="neutral" variant="ghost" size="xs" :disabled="index === 0" :title="t('admin.menus.moveUp')" @click="moveItem(index, -1)" />
                     <UButton icon="i-lucide-arrow-down" color="neutral" variant="ghost" size="xs" :disabled="index === draftItems.length - 1" :title="t('admin.menus.moveDown')" @click="moveItem(index, 1)" />
