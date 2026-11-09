@@ -13,13 +13,15 @@ import {
   CatalogItemModel,
   CATALOG_CATEGORY_PROJECTION,
   CATALOG_ITEM_DETAIL_PROJECTION,
+  CATALOG_ITEM_SITEMAP_PROJECTION,
   CATALOG_ITEM_SUMMARY_PROJECTION,
 } from '#server/models/catalog'
-import { withCatalogDb } from './mongo'
+import { getMongoTarget, withCatalogDb } from './mongo'
 import {
   toCatalogCategory,
   toCatalogItemDetail,
   toCatalogItemSummary,
+  toCatalogSitemapEntry,
   type CatalogMappingContext,
   type CatalogRecord,
 } from './catalogMapper'
@@ -40,6 +42,13 @@ export const PUBLISHED_ITEM_FILTER = {
 } as const
 
 const LIVE_CATEGORY_FILTER = { isDeleted: { $ne: true } } as const
+
+/**
+ * Upper bound for sitemap rows. A sitemap protocol file may hold 50k URLs; the
+ * remaining pages are crawled through the listing and category pages instead of
+ * loading every published product into memory.
+ */
+const CATALOG_SITEMAP_LIMIT = 5000
 
 const SORT_MAP: Record<PublicCatalogSort, Record<string, 1 | -1>> = {
   newest: { updatedAt: -1, _id: -1 },
@@ -223,5 +232,31 @@ export async function getCatalogCategoryBySlug(event: H3Event, slug: string): Pr
 
     if (!doc) return null
     return toCatalogCategory(doc as unknown as CatalogRecord)
+  })
+}
+
+/**
+ * Product URLs for `sitemap.xml`. A site without a catalog binding still serves
+ * a sitemap, so a missing database yields no rows instead of an error page.
+ */
+export async function listCatalogSitemapEntries(event: H3Event): Promise<{ path: string, lastmod: string | null }[]> {
+  if (!getMongoTarget(event)) return []
+
+  return withCatalogDb(event, async () => {
+    const docs = await CatalogItemModel
+      .find(PUBLISHED_ITEM_FILTER, CATALOG_ITEM_SITEMAP_PROJECTION)
+      .sort({ updatedAt: -1, _id: -1 })
+      .limit(CATALOG_SITEMAP_LIMIT)
+      .lean()
+
+    const entries: { path: string, lastmod: string | null }[] = []
+    const seen = new Set<string>()
+    for (const doc of docs as unknown as CatalogRecord[]) {
+      const entry = toCatalogSitemapEntry(doc)
+      if (!entry || seen.has(entry.path)) continue
+      seen.add(entry.path)
+      entries.push(entry)
+    }
+    return entries
   })
 }

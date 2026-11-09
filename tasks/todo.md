@@ -125,7 +125,7 @@ Still missing in P3: category tree, richer editorial formats, media attachments,
 | Web reads the customer `content` collection directly (no Hub, no admin API): `withSiteDb`, public projection/guard, locale fallback, key-or-slug resolution | `tm-web/server/models/contentPublic.ts`, `tm-web/server/utils/publicContent.ts`, `tm-web/server/api/public/content/[...slug].get.ts` |
 | Shared public DTO (subpath `@tm/flow-contracts/content-public`): `PublicContentSchema`, `normalizePublicLocale`, `PUBLIC_CONTENT_BODY_FORMATS`, `PublicContentEntrySchema` | `tm-shared/packages/flow-contracts/src/content-public.ts` |
 | Storefront rendering from the DTO, with sanitized HTML / safe Markdown / plain text per locale `format` | `tm-shared/nuxt-layers/web-base/app/pages/[...slug].vue`, `.../components/WebContentBody.vue` |
-| Sitemap built from published records only, locale-free URLs, `lastmod` from `updatedAt` | `tm-web/server/routes/sitemap.xml.ts` |
+| Sitemap built from published records only, locale-free URLs, `lastmod` from `updatedAt`; product detail URLs come from the same published filter and canonical slug as the storefront, de-duplicated and capped at 5000 | `tm-web/server/routes/sitemap.xml.ts`, `tm-web/server/utils/catalogService.ts` |
 | CMS editor picks the body format per locale (Markdown / HTML / Plain text), with a format-specific placeholder | `tm-shared/nuxt-layers/cms-base/app/pages/content.vue`, `tm-cms/i18n/locales/{vi,en}.json` |
 | Suites: `pnpm test:content` 42, `pnpm test:web-content` 24 contract + 12 live reader checks, `pnpm test:layers`, typecheck cms/web/shared, CMS lint, `validate:build:cms`, `build:cms` | `scripts/build/test-web-content.ts`, `scripts/build/test-web-content-db.ts` |
 

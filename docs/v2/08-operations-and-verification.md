@@ -186,6 +186,19 @@ curl -s http://localhost:4006/sitemap.xml | grep -o '<loc>[^<]*</loc>'
 
 Expected: `q` matches the localized title/slug/excerpt case-insensitively and treats `.*`/`[` as literal text; a term longer than 80 → `422`, an empty one is ignored. `categories` lists `{ key, slug, name, parent, locale }` only, `/categories/:slug` resolves the slug to the stored key (`404` for an unknown slug, `vi` fallback for a category without the requested locale), and `/danh-muc/<slug>` renders the landing page (empty state, never `404`, when the category has no published content). `/tag/<tag>` lists published records by tag, and both surfaces appear in `/sitemap.xml`. Remove probe categories/posts afterwards; the storefront reads the CMS collections directly, so a probe row is visible without any publish step.
 
+### Sitemap smoke (WEB-08)
+
+```bash
+curl -s -o /dev/null -w '%{http_code}
+' http://localhost:4006/sitemap.xml                    # 200
+curl -s http://localhost:4006/sitemap.xml | grep -c '<url>'                                     # every published row
+curl -s http://localhost:4006/sitemap.xml | grep -o '/products/[^<]*' | sort -u | wc -l         # published products
+curl -s -o /dev/null -w '%{http_code}
+' "http://localhost:4006/products/$(first-slug)"        # 200
+```
+
+Expected: one `<url>` per published content record, product, tag and category, each product URL carrying the `<lastmod>` of its `updatedAt`. A draft/scheduled/deleted product appears zero times, two records that share a slug appear once, and a site without a catalog binding still returns `200` with the content rows only.
+
 ### Public search page smoke (WEB-04)
 
 ```sh

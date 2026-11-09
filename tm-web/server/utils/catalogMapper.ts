@@ -58,6 +58,16 @@ function canonicalSlug(record: CatalogRecord): string {
   return last.toLowerCase()
 }
 
+/**
+ * Sitemap row for a published product. A record without a usable slug is
+ * skipped instead of producing the landing page URL twice.
+ */
+export function toCatalogSitemapEntry(record: CatalogRecord): { path: string, lastmod: string | null } | null {
+  const slug = canonicalSlug(record)
+  if (!slug) return null
+  return { path: catalogItemPath(slug), lastmod: toIsoDate(record.updatedAt) }
+}
+
 function toImages(value: unknown): string[] {
   const list = Array.isArray(value) ? value : []
   const images: string[] = []

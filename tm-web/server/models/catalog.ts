@@ -89,3 +89,6 @@ export const CATALOG_ITEM_SUMMARY_PROJECTION = [
 export const CATALOG_ITEM_DETAIL_PROJECTION = `${CATALOG_ITEM_SUMMARY_PROJECTION} description gallery sku uom attributes seo`
 
 export const CATALOG_CATEGORY_PROJECTION = 'title slug fullPath description thumbnail pid displayOrder updatedAt'
+
+/** Sitemap rows only need the URL source and the freshness stamp. */
+export const CATALOG_ITEM_SITEMAP_PROJECTION = 'slug fullPath updatedAt'

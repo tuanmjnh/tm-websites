@@ -1,12 +1,16 @@
 import { contentKeyToPath } from '@tm/flow-contracts'
 import { buildSitemapEntries, buildSitemapXml } from '@tm/flow-utils/seo'
+import { listCatalogSitemapEntries } from '#server/utils/catalogService'
 
 export default defineEventHandler(async (event) => {
   const baseUrl = getSiteBaseUrl(event)
-  const [contents, categories, tags] = await Promise.all([
+  const [contents, categories, tags, products] = await Promise.all([
     fetchAllPublishedContent(event),
     fetchPublicContentCategories(event),
     fetchPublicContentTags(event),
+    // A catalog that is not connected or not reachable must not take the whole
+    // sitemap (and with it the content pages) down.
+    listCatalogSitemapEntries(event).catch(() => []),
   ])
 
   const pages = contents.flatMap((content) => {
@@ -21,7 +25,7 @@ export default defineEventHandler(async (event) => {
     ...tags.map(tag => ({ path: `/tag/${encodeURIComponent(tag)}` })),
   ]
 
-  const xml = buildSitemapXml(buildSitemapEntries(baseUrl, [...pages, ...taxonomy]))
+  const xml = buildSitemapXml(buildSitemapEntries(baseUrl, [...pages, ...products, ...taxonomy]))
 
   setHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
   setHeader(event, 'Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600')
