@@ -260,3 +260,30 @@ export async function listCatalogSitemapEntries(event: H3Event): Promise<{ path:
     return entries
   })
 }
+
+/**
+ * Category landing pages (`/categories/<slug>`) for the sitemap. Same live
+ * filter as the category API, so a deleted category never becomes a crawler
+ * target; a category without a usable slug is skipped.
+ */
+export async function listCatalogCategorySitemapEntries(event: H3Event): Promise<{ path: string, lastmod: string | null }[]> {
+  if (!getMongoTarget(event)) return []
+
+  return withCatalogDb(event, async () => {
+    const docs = await CatalogItemCategoryModel
+      .find(LIVE_CATEGORY_FILTER, CATALOG_CATEGORY_PROJECTION)
+      .sort({ displayOrder: 1, 'title.vi': 1 })
+      .lean()
+
+    const entries: { path: string, lastmod: string | null }[] = []
+    const seen = new Set<string>()
+    for (const doc of docs as unknown as CatalogRecord[]) {
+      const category = toCatalogCategory(doc)
+      const path = category?.path ?? ''
+      if (!path || seen.has(path)) continue
+      seen.add(path)
+      entries.push({ path, lastmod: null })
+    }
+    return entries
+  })
+}

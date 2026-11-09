@@ -193,11 +193,12 @@ curl -s -o /dev/null -w '%{http_code}
 ' http://localhost:4006/sitemap.xml                    # 200
 curl -s http://localhost:4006/sitemap.xml | grep -c '<url>'                                     # every published row
 curl -s http://localhost:4006/sitemap.xml | grep -o '/products/[^<]*' | sort -u | wc -l         # published products
+curl -s http://localhost:4006/sitemap.xml | grep -o '/categories/[^<]*' | sort -u | wc -l      # live catalog categories
 curl -s -o /dev/null -w '%{http_code}
 ' "http://localhost:4006/products/$(first-slug)"        # 200
 ```
 
-Expected: one `<url>` per published content record, product, tag and category, each product URL carrying the `<lastmod>` of its `updatedAt`. A draft/scheduled/deleted product appears zero times, two records that share a slug appear once, and a site without a catalog binding still returns `200` with the content rows only.
+Expected: one `<url>` per published content record, product, tag and category, each product URL carrying the `<lastmod>` of its `updatedAt`. A draft/scheduled/deleted product appears zero times, a deleted category appears zero times, two records that share a slug appear once, and a site without a catalog binding still returns `200` with the content rows only.
 
 ### Public search page smoke (WEB-04)
 
