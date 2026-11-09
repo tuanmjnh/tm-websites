@@ -29,6 +29,14 @@ const CompanySchema = z.object({
 
 const SeoSchema = z.object({
   titleTemplate: trimmed(160),
+  /**
+   * Optional per-locale override. A locale with no entry (or an empty one) keeps
+   * using `titleTemplate`, so a single-language site never has to think about it.
+   */
+  titleTemplates: z.object({
+    vi: trimmed(160),
+    en: trimmed(160),
+  }).partial(),
   defaultDescription: trimmed(300),
   defaultImageMediaId: trimmed(64),
 })
@@ -84,6 +92,7 @@ export function defaultSiteSettings(siteId: string): AdminSiteSettings {
     },
     seo: {
       titleTemplate: '%s',
+      titleTemplates: {},
       defaultDescription: '',
       defaultImageMediaId: '',
     },

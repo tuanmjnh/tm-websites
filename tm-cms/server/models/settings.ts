@@ -26,6 +26,8 @@ export interface SiteSettingsCompany {
 
 export interface SiteSettingsSeo {
   titleTemplate: string
+  /** locale -> template; a missing or empty entry falls back to `titleTemplate`. */
+  titleTemplates: Record<string, string>
   defaultDescription: string
   defaultImageMediaId: string
 }
@@ -65,6 +67,7 @@ const CompanySchema = new Schema<SiteSettingsCompany>(
 const SeoSchema = new Schema<SiteSettingsSeo>(
   {
     titleTemplate: { type: String, default: '%s' },
+    titleTemplates: { type: Schema.Types.Mixed, default: () => ({}) },
     defaultDescription: { type: String, default: '' },
     defaultImageMediaId: { type: String, default: '' },
   },

@@ -29,6 +29,7 @@ const form = reactive({
   address: '',
   logoMediaId: '',
   titleTemplate: '%s',
+  titleTemplates: { vi: '', en: '' } as Record<string, string>,
   defaultDescription: '',
   defaultImageMediaId: '',
   defaultLocale: 'vi' as (typeof SETTINGS_LOCALES)[number],
@@ -45,6 +46,13 @@ const localeItems = computed(() => SETTINGS_LOCALES.map(value => ({ label: value
 // so the field previews a sample page title with the value being typed.
 const titlePreview = computed(() => applySeoTitleTemplate(t('admin.configs.site.titleSample'), form.titleTemplate))
 
+// One line per locale: an override renders its own preview, an empty one shows
+// what the shared template above would produce.
+const titlePreviewFor = (locale: string) => {
+  const template = form.titleTemplates[locale]?.trim() ? form.titleTemplates[locale]! : form.titleTemplate
+  return applySeoTitleTemplate(t('admin.configs.site.titleSample'), template)
+}
+
 function applySettings(settings: AdminSiteSettings) {
   form.revision = settings.revision
   form.companyName = settings.company.name
@@ -55,6 +63,7 @@ function applySettings(settings: AdminSiteSettings) {
   form.address = settings.company.address
   form.logoMediaId = settings.company.logoMediaId
   form.titleTemplate = settings.seo.titleTemplate
+  form.titleTemplates = { vi: settings.seo.titleTemplates?.vi ?? '', en: settings.seo.titleTemplates?.en ?? '' }
   form.defaultDescription = settings.seo.defaultDescription
   form.defaultImageMediaId = settings.seo.defaultImageMediaId
   form.defaultLocale = settings.locales.default
@@ -130,6 +139,7 @@ async function saveSite() {
     },
     seo: {
       titleTemplate: form.titleTemplate,
+      titleTemplates: { ...form.titleTemplates },
       defaultDescription: form.defaultDescription,
       defaultImageMediaId: form.defaultImageMediaId,
     },
@@ -291,6 +301,23 @@ onMounted(load)
               <UInput v-model="form.titleTemplate" size="sm" :disabled="!canWrite" :maxlength="160" />
               <p class="mt-1 text-[11px] text-muted">
                 {{ t('admin.configs.site.titlePreview', { title: titlePreview }) }}
+              </p>
+            </UFormField>
+            <UFormField
+              v-for="locale in SETTINGS_LOCALES"
+              :key="`title-template-${locale}`"
+              :label="t('admin.configs.site.fields.titleTemplateLocale', { locale: locale.toUpperCase() })"
+            >
+              <UInput
+                v-model="form.titleTemplates[locale]"
+                size="sm"
+                :disabled="!canWrite"
+                :maxlength="160"
+                :placeholder="form.titleTemplate"
+              />
+              <p class="mt-1 text-[11px] text-muted">
+                {{ t('admin.configs.site.titlePreview', { title: titlePreviewFor(locale) }) }}
+                · {{ t('admin.configs.site.fields.titleTemplateLocaleHint') }}
               </p>
             </UFormField>
             <UFormField :label="t('admin.configs.site.fields.defaultDescription')" class="sm:col-span-2">

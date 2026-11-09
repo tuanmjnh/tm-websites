@@ -112,6 +112,21 @@ check('the projection exposes the public allowlist only', () => {
   assert.equal(PublicSiteSchema.safeParse(site).success, true)
 })
 
+check('locale title templates are published for enabled locales only', () => {
+  const site = buildPublicSite({
+    settings: {
+      ...settings,
+      seo: { ...settings.seo, titleTemplates: { vi: '  %s · Sen Tuấn  ', en: '', fr: '%s | X' } },
+    },
+    menus: [],
+  })
+  assert.deepEqual(site.seo.titleTemplates, { vi: '%s · Sen Tuấn' }, 'empty and not-enabled locales are dropped')
+  assert.equal(PublicSiteSchema.safeParse(site).success, true)
+
+  const plain = buildPublicSite({ settings, menus: [] })
+  assert.deepEqual(plain.seo.titleTemplates, {}, 'a site without overrides publishes an empty map')
+})
+
 check('menus keep both keys, sorted, and an empty menu survives', () => {
   const site = buildPublicSite({ settings, menus: [mainMenu, { key: 'footer', items: [] }, { key: 'zzz' }] })
   assert.deepEqual(site.menus.map(menu => menu.key), ['footer', 'main', 'zzz'])

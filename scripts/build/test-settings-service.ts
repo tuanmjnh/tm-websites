@@ -153,6 +153,30 @@ async function integration() {
       assert.equal(await Settings.countDocuments({}), 2)
       assert.equal(await Audit.countDocuments({ siteId: OTHER_SITE }), 1)
     })
+
+    await check('locale title templates merge one locale at a time', async () => {
+      const withBoth = await updateSiteSettings(Settings, OTHER_SITE, {
+        revision: 1,
+        seo: { titleTemplates: { vi: '%s · Bạg Post', en: '%s | Bag Post' } },
+      }, meta)
+      assert.deepEqual(withBoth.seo.titleTemplates, { vi: '%s · Bạg Post', en: '%s | Bag Post' })
+      assert.equal(withBoth.seo.titleTemplate, '%s', 'the shared template is untouched')
+
+      const viOnly = await updateSiteSettings(Settings, OTHER_SITE, {
+        revision: withBoth.revision,
+        seo: { titleTemplates: { en: '' } },
+      }, meta)
+      assert.deepEqual(viOnly.seo.titleTemplates, { vi: '%s · Bạg Post' }, 'an empty string clears that locale only')
+
+      await assert.rejects(
+        () => updateSiteSettings(Settings, OTHER_SITE, {
+          revision: viOnly.revision,
+          seo: { titleTemplates: { fr: '%s | Fr' } as unknown as Record<string, string> },
+        }, meta),
+        isSettingsError(422, 'SETTINGS_UPDATE_UNCHANGED'),
+        'a locale that is not stored cannot change the document',
+      )
+    })
   } finally {
     await closeDatabaseConnections()
   }

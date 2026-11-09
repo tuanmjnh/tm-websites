@@ -190,6 +190,8 @@
           "phone": "Phone",
           "address": "Address",
           "titleTemplate": "SEO title (%s = page name)",
+          "titleTemplateLocale": "SEO title ({locale})",
+          "titleTemplateLocaleHint": "Leave empty to use the shared template above.",
           "defaultDescription": "Default SEO description",
           "defaultLocale": "Default locale",
           "enabledLocales": "Enabled locales",
@@ -217,7 +219,7 @@
         "pickMediaSearch": "Search by name or folder",
         "pickMediaEmpty": "The library has no images yet.",
         "titlePreview": "Preview: {title}",
-        "titleSample": "Trang mẫu"
+        "titleSample": "Sample page"
       }
     },
     "audit": {

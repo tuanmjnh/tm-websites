@@ -1,7 +1,9 @@
 import type { Model } from 'mongoose'
-import type { AdminSiteSettings, AdminSiteSettingsPatch } from '@tm/flow-contracts/settings-admin'
 import {
   AdminSiteSettingsPatchSchema,
+  type AdminSiteSettings,
+  type AdminSiteSettingsPatch,
+  type SettingsLocale,
   SETTINGS_LOCALES,
   SITE_MODULES,
   defaultSiteSettings,
@@ -49,6 +51,7 @@ function toAdminSettings(record: SettingsRecord): AdminSiteSettings {
     },
     seo: {
       titleTemplate: record.seo?.titleTemplate ?? '%s',
+      titleTemplates: normalizeTitleTemplates(record.seo?.titleTemplates),
       defaultDescription: record.seo?.defaultDescription ?? '',
       defaultImageMediaId: record.seo?.defaultImageMediaId ?? '',
     },
@@ -74,6 +77,17 @@ export async function getSiteSettings(
   return record ? toAdminSettings(record) : defaultSiteSettings(siteId)
 }
 
+/** Only known locales with a usable string, so a stray key never reaches the API. */
+function normalizeTitleTemplates(input: unknown): Partial<Record<SettingsLocale, string>> {
+  const source = (input && typeof input === 'object') ? input as Record<string, unknown> : {}
+  const result: Partial<Record<SettingsLocale, string>> = {}
+  for (const locale of SETTINGS_LOCALES) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
 function normalizeLocales(
   input: AdminSiteSettings['locales'],
 ): AdminSiteSettings['locales'] {
@@ -85,6 +99,28 @@ function normalizeLocales(
     throw new SettingsServiceError(422, 'SETTINGS_LOCALES_INVALID', 'The default locale must be one of the enabled locales')
   }
   return { default: input.default, enabled: [...enabled] }
+}
+
+/**
+ * `seo` is merged field by field, and `titleTemplates` key by key: saving only
+ * the English template must not drop the Vietnamese one, and sending an empty
+ * string for a locale is how the editor removes an override.
+ */
+function mergeSeoSettings(
+  current: AdminSiteSettings['seo'],
+  patch: AdminSiteSettingsPatch['seo'],
+): AdminSiteSettings['seo'] {
+  const next: AdminSiteSettings['seo'] = { ...current, ...(patch ?? {}) }
+  if (patch?.titleTemplates) {
+    const merged: Partial<Record<SettingsLocale, string>> = {}
+    for (const locale of SETTINGS_LOCALES) {
+      // An explicit empty string removes the override for that locale.
+      const value = locale in patch.titleTemplates ? patch.titleTemplates[locale] : current.titleTemplates[locale]
+      if (typeof value === 'string' && value.trim()) merged[locale] = value.trim()
+    }
+    next.titleTemplates = merged
+  }
+  return next
 }
 
 function sameSection<T>(left: T, right: T): boolean {
@@ -111,7 +147,7 @@ export async function updateSiteSettings(
   const merged: AdminSiteSettings = {
     ...current,
     company: { ...current.company, ...(patch.company ?? {}) },
-    seo: { ...current.seo, ...(patch.seo ?? {}) },
+    seo: mergeSeoSettings(current.seo, patch.seo),
     locales: normalizeLocales({ ...current.locales, ...(patch.locales ?? {}) }),
     modules: { ...current.modules, ...(patch.modules ?? {}) },
   }

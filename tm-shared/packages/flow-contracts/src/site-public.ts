@@ -49,6 +49,8 @@ export const PublicSiteSchema = z.object({
   }),
   seo: z.object({
     titleTemplate: z.string(),
+    /** Locale overrides; an absent locale keeps `titleTemplate`. */
+    titleTemplates: z.record(z.string(), z.string()),
     defaultDescription: z.string(),
     defaultImageMediaId: z.string(),
   }),
@@ -64,7 +66,7 @@ export type PublicSite = z.infer<typeof PublicSiteSchema>
 export function emptyPublicSite(): PublicSite {
   return {
     company: { name: '', email: '', phone: '', address: '', logoMediaId: '' },
-    seo: { titleTemplate: '%s', defaultDescription: '', defaultImageMediaId: '' },
+    seo: { titleTemplate: '%s', titleTemplates: {}, defaultDescription: '', defaultImageMediaId: '' },
     locales: { default: 'vi', enabled: ['vi'] },
     menus: [],
   }
@@ -184,6 +186,22 @@ export function toPublicMenu(
  * testable without a database connection. `categorySlugs` maps a category key
  * to the slug the storefront serves for the requested locale.
  */
+/**
+ * Locale templates are advisory: only enabled locales with a non-empty string are
+ * published, and the storefront falls back to `titleTemplate` for the rest.
+ */
+function readTitleTemplates(input: unknown, enabled: readonly string[]): Record<string, string> {
+  if (!input || typeof input !== 'object') return {}
+  const source = input as Record<string, unknown>
+  const allowed = enabled.length ? enabled : ['vi']
+  const result: Record<string, string> = {}
+  for (const locale of allowed) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
 export function buildPublicSite(input: {
   settings: Record<string, unknown> | null
   menus: readonly Record<string, unknown>[]
@@ -223,6 +241,7 @@ export function buildPublicSite(input: {
     },
     seo: {
       titleTemplate: readString(seo.titleTemplate, '%s'),
+      titleTemplates: readTitleTemplates(seo.titleTemplates, enabled),
       defaultDescription: readString(seo.defaultDescription),
       defaultImageMediaId: readString(seo.defaultImageMediaId),
     },

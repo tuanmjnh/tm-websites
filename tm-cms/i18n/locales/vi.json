@@ -190,6 +190,8 @@
           "phone": "Số điện thoại",
           "address": "Địa chỉ",
           "titleTemplate": "Tiêu đề SEO (%s = tên trang)",
+          "titleTemplateLocale": "Tiêu đề SEO ({locale})",
+          "titleTemplateLocaleHint": "Để trống thì dùng mẫu chung ở trên.",
           "defaultDescription": "Mô tả SEO mặc định",
           "defaultLocale": "Ngôn ngữ mặc định",
           "enabledLocales": "Ngôn ngữ bật",

@@ -369,7 +369,17 @@ Still open: no one-action demotion of a top-level row into its previous sibling,
 | Applied once at the root so pages keep owning their title | `web-base/app/composables/useSiteSeoTitle.ts`, `tm-web/app/app.vue` |
 | Live: seeded template `%s · Sen Tuấn` → `Products · Sen Tuấn`, `Danh mục · Sen Tuấn`, `/` stayed `Sen Tuấn`, `/gioi-thieu` stayed `Giới thiệu Sen Tuấn`; deleting the document reverted every title | `:4006` SSR HTML, probe settings removed (`settings 0 / menus 0 / audit 0`) |
 
-`og:title` stays the page's own title (no company suffix on share cards). The settings field previews the rendered result while typing (`Preview: Trang mẫu` → `Preview: Trang mẫu | Sen Tuấn`), verified in the browser on `:4005/configs`. Still open: no per-locale title template.
+`og:title` stays the page's own title (no company suffix on share cards). The settings field previews the rendered result while typing (`Preview: Trang mẫu` → `Preview: Trang mẫu | Sen Tuấn`), verified in the browser on `:4005/configs`.
+
+### P2.d — a title template per locale (landed 2026-11-09)
+
+| Slice | Evidence |
+| --- | --- |
+| `seo.titleTemplates` (optional map, enabled locales only) overrides the shared `seo.titleTemplate`; an empty entry falls back to it; patching merges key by key so saving EN does not drop VI | `flow-contracts/src/{settings-admin,site-public}.ts`, `tm-cms/server/models/settings.ts`, `tm-cms/server/services/settingsService.ts` |
+| Storefront picks the template for its current locale; the settings page adds one field per locale with a placeholder and preview | `web-base/app/composables/useSiteSeoTitle.ts`, `cms-base/app/pages/configs.vue`, `tm-cms/i18n/locales/{vi,en}.json` |
+| Suites: `pnpm test:settings` 9, `pnpm test:web-site` 12 | `scripts/build/test-settings-service.ts`, `scripts/build/test-web-site.ts` |
+
+Live: shared `%s · Sen Tuấn` + `en: '%s | Sen Tuan'` gave `<title>Sản phẩm · Sen Tuấn</title>` and, with the `i18n_redirected=en` cookie, `<title>Products | Sen Tuan</title>`; the CMS previews read `Sample page · Sen Tuấn` / `Sample page | Sen Tuan`, and the English sample title is no longer Vietnamese. Probes removed (`settings 0 / audit 0 / idempotency_keys 0`); deleting the document reverted both titles to bare. Still open: one template per locale, not per page type, and no per-locale default description/OG image.
 
 ### P2.d — a save clears the storefront cache (landed 2026-11-09)
 
