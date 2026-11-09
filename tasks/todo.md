@@ -369,7 +369,7 @@ Still open: no one-action demotion of a top-level row into its previous sibling,
 | Applied once at the root so pages keep owning their title | `web-base/app/composables/useSiteSeoTitle.ts`, `tm-web/app/app.vue` |
 | Live: seeded template `%s · Sen Tuấn` → `Products · Sen Tuấn`, `Danh mục · Sen Tuấn`, `/` stayed `Sen Tuấn`, `/gioi-thieu` stayed `Giới thiệu Sen Tuấn`; deleting the document reverted every title | `:4006` SSR HTML, probe settings removed (`settings 0 / menus 0 / audit 0`) |
 
-`og:title` stays the page's own title (no company suffix on share cards). Still open: no per-locale title template.
+`og:title` stays the page's own title (no company suffix on share cards). The settings field previews the rendered result while typing (`Preview: Trang mẫu` → `Preview: Trang mẫu | Sen Tuấn`), verified in the browser on `:4005/configs`. Still open: no per-locale title template.
 
 ### P2.d — two-level menus with drag-and-drop (landed 2026-11-09)
 

@@ -171,6 +171,7 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - `og:title` deliberately stays the page's own title: a share card should not repeat the company suffix that the document title needs for disambiguation.
 - Tests: `pnpm test:web-site` 11 checks (placeholder, bare `%s`, empty template, whitespace, template without placeholder, empty page title, brand already present, prefix template).
 - Live: a seeded settings document with `seo.titleTemplate = '%s · Sen Tuấn'` turned `Products` into `Products · Sen Tuấn` and `Danh mục` into `Danh mục · Sen Tuấn`, while `/` stayed `Sen Tuấn` and `/gioi-thieu` stayed `Giới thiệu Sen Tuấn`; deleting the document reverted every title to the bare form, so nothing is hardcoded. The probe document was removed afterwards (`settings 0 / menus 0 / audit 0`).
+- The settings field previews the result while it is typed (`Preview: Trang mẫu | Sen Tuấn`), using the same `applySeoTitleTemplate` as the storefront, so an editor does not have to publish to see what a page title will look like.
 - Note: `/api/public/site` is cached for 60s, so a saved template reaches the storefront after that window (the same cache as the menu slice).
 
 ### P2.d — promote a menu child (2026-11-09)

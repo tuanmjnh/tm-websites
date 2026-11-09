@@ -3,6 +3,7 @@ import type { AdminSiteSettings, AdminSiteSettingsPatch } from '@tm/flow-contrac
 import { SETTINGS_LOCALES, SITE_MODULES } from '@tm/flow-contracts/settings-admin'
 import type { AdminMedia } from '@tm/flow-contracts/media-admin'
 import type { HubAppConfigMeta } from '@tm/flow-contracts'
+import { applySeoTitleTemplate } from '@tm/flow-utils/seo'
 
 const { t } = useI18n()
 const { hasCapability } = useHub()
@@ -39,6 +40,10 @@ const saving = ref(false)
 const settingsMessage = ref<string | null>(null)
 
 const localeItems = computed(() => SETTINGS_LOCALES.map(value => ({ label: value.toUpperCase(), value })))
+
+// The template is only meaningful once an editor sees a page rendered through it,
+// so the field previews a sample page title with the value being typed.
+const titlePreview = computed(() => applySeoTitleTemplate(t('admin.configs.site.titleSample'), form.titleTemplate))
 
 function applySettings(settings: AdminSiteSettings) {
   form.revision = settings.revision
@@ -279,6 +284,9 @@ onMounted(load)
             </UFormField>
             <UFormField :label="t('admin.configs.site.fields.titleTemplate')">
               <UInput v-model="form.titleTemplate" size="sm" :disabled="!canWrite" :maxlength="160" />
+              <p class="mt-1 text-[11px] text-muted">
+                {{ t('admin.configs.site.titlePreview', { title: titlePreview }) }}
+              </p>
             </UFormField>
             <UFormField :label="t('admin.configs.site.fields.defaultDescription')" class="sm:col-span-2">
               <UInput v-model="form.defaultDescription" size="sm" :disabled="!canWrite" :maxlength="300" />

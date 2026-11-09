@@ -214,7 +214,9 @@
         "noMedia": "No image selected",
         "pickMedia": "Pick an image from the library",
         "pickMediaSearch": "Search by name or folder",
-        "pickMediaEmpty": "The library has no images yet."
+        "pickMediaEmpty": "The library has no images yet.",
+        "titlePreview": "Preview: {title}",
+        "titleSample": "Trang mẫu"
       }
     },
     "audit": {
