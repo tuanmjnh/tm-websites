@@ -54,6 +54,9 @@ const LocaleSchema = new Schema(
     excerpt: { type: String, default: '' },
     body: { type: String, default: '' },
     format: { type: String, default: 'markdown' },
+    // Snapshots are what a restore writes back, so every editable field has to
+    // be stored here or a restore would silently drop it.
+    keywords: { type: [String], default: [] },
     seo: {
       title: { type: String, default: '' },
       description: { type: String, default: '' },

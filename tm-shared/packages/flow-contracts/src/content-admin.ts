@@ -29,6 +29,8 @@ export const AdminContentLocaleSchema = z.object({
   excerpt: z.string(),
   body: z.string(),
   format: z.enum(ADMIN_CONTENT_BODY_FORMATS),
+  /** Free-form SEO keywords for this locale; stored as a de-duplicated list. */
+  keywords: z.array(z.string()),
   seo: z.object({
     title: z.string(),
     description: z.string(),

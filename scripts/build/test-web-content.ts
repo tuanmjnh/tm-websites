@@ -86,11 +86,13 @@ check('public CMS content parses the allowlisted record', () => {
     body: '# Giới thiệu',
     format: 'markdown',
     seo: { title: '', description: '', image: '' },
+    keywords: ['trang sức', 'quà tặng'],
     categories: ['pages'],
     tags: ['brand'],
     publishedAt: '2026-11-05T08:00:00.000Z',
     updatedAt: '2026-11-05T08:00:00.000Z',
   })
+  assert.deepEqual(record.keywords, ['trang sức', 'quà tặng'])
   assert.equal(record.locale, 'vi')
   assert.equal(record.type, 'page')
 })
@@ -106,12 +108,14 @@ check('public CMS content rejects unknown types and missing fields', () => {
     body: '',
     format: 'markdown',
     seo: { title: '', description: '', image: '' },
+    keywords: [],
     categories: [],
     tags: [],
     publishedAt: null,
     updatedAt: null,
   }
   assert.equal(PublicContentSchema.safeParse({ ...base, type: 'landing' }).success, false)
+  assert.equal(PublicContentSchema.safeParse({ ...base, keywords: undefined }).success, false)
   assert.equal(PublicContentSchema.safeParse({ ...base, title: undefined }).success, false)
   assert.equal(PublicContentSchema.safeParse({ ...base, seo: { title: '' } }).success, false)
   assert.equal(PublicContentSchema.safeParse({ ...base, format: 'xml' }).success, false)

@@ -49,6 +49,7 @@ export const PublicContentSchema = z.object({
   body: z.string(),
   format: z.enum(PUBLIC_CONTENT_BODY_FORMATS),
   seo: PublicContentSeoSchema,
+  keywords: z.array(z.string()),
   categories: z.array(z.string()),
   tags: z.array(z.string()),
   publishedAt: z.string().nullable(),

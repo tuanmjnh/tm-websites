@@ -24,6 +24,9 @@ const SITE_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/
 const ATTRIBUTE_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_.-]{0,59}$/
 const SLUG_MAX_LENGTH = 120
 const BODY_MAX_LENGTH = 200_000
+/** SEO keywords are a short list per locale, not a taxonomy: tags do that job. */
+export const KEYWORDS_MAX_COUNT = 20
+export const KEYWORD_MAX_LENGTH = 60
 
 export class ContentInvariantError extends Error {
   code: string
@@ -73,6 +76,7 @@ export const ContentLocaleSchema = z.object({
   excerpt: z.string().max(500).default(''),
   body: z.string().max(BODY_MAX_LENGTH).default(''),
   format: z.enum(CONTENT_BODY_FORMATS).default('markdown'),
+  keywords: z.array(z.string().trim().min(1).max(KEYWORD_MAX_LENGTH)).max(KEYWORDS_MAX_COUNT).default([]),
   seo: SeoSchema.default({ title: '', description: '', image: '' }),
 })
 
@@ -172,6 +176,7 @@ export function normalizeContentInput(input: unknown): ContentDraft {
     return {
       ...locale,
       slug: normalizeSlug(locale.slug ?? locale.title),
+      keywords: uniqueStrings(locale.keywords),
     }
   })
 
@@ -288,6 +293,7 @@ export interface PublicContentProjection {
   excerpt: string
   body: string
   format: ContentBodyFormat
+  keywords: string[]
   seo: ContentLocale['seo']
   publishedAt: string | null
   updatedAt: string | null
@@ -323,6 +329,7 @@ export function toPublicContent(
     excerpt: entry.excerpt,
     body: entry.body,
     format: entry.format ?? 'markdown',
+    keywords: entry.keywords ?? [],
     seo: entry.seo,
     publishedAt: record.publishedAt ? record.publishedAt.toISOString() : null,
     updatedAt: record.updatedAt ? record.updatedAt.toISOString() : null,
@@ -357,6 +364,7 @@ const ContentLocaleMongooseSchema = new Schema(
     excerpt: { type: String, default: '' },
     body: { type: String, default: '' },
     format: { type: String, enum: CONTENT_BODY_FORMATS, default: 'markdown' },
+    keywords: { type: [String], default: [] },
     seo: {
       title: { type: String, default: '' },
       description: { type: String, default: '' },

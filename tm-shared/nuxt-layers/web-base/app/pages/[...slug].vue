@@ -59,6 +59,7 @@ const canonical = computed(() => buildCanonicalUrl(baseUrl, route.path))
 
 const seoTitle = computed(() => content.value?.seo.title || content.value?.title || '')
 const seoDescription = computed(() => content.value?.seo.description || content.value?.excerpt || '')
+const seoKeywords = computed(() => content.value?.keywords ?? [])
 const categoryLabel = computed(() => content.value?.categories[0] || '')
 
 const ogImage = computed(() => resolveSiteUrl(baseUrl, content.value?.seo.image || '/branding/og-cover.png'))
@@ -89,6 +90,8 @@ useHead({
   link: [
     { rel: 'canonical', href: () => canonical.value },
   ],
+  // No empty tag when a page has no keywords: the editor owns this list.
+  meta: () => (seoKeywords.value.length ? [{ name: 'keywords', content: seoKeywords.value.join(', ') }] : []),
 })
 
 useHead(() => {

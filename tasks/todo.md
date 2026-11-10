@@ -544,6 +544,14 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence: `pnpm test:redirects` → 12 checks; HTTP `:4005`/`:4006` create/duplicate/invalid/loop/stale-revision/301/404 flows; browser create/toggle/delete on `/redirects`. Probes and their audit rows were deleted (`content_redirects` 0, `audit_logs` 1).
 - Limits: no automatic redirect when a slug changes, no wildcard/prefix rows, no 410 handling, no map import; a change reaches the storefront within 30s unless the purge secret is configured.
 
+### CNT-01 / CNT-02 — content keywords (landed 2026-11-10)
+
+- Contract/model: `keywords: string[]` on each content locale in `@tm/flow-contracts/content-admin` and `@tm/flow-contracts/content-public`; `content.ts` stores it per locale (20 max, 60 chars each, trimmed and de-duplicated, blanks dropped) and `revision.ts` keeps it in the snapshot so a restore cannot drop it.
+- Commands/UI: the existing content create/update accepts the field (snapshot + diff included), `/content` shows a "Từ khóa" input per locale, and saving no longer clears `seo.image`.
+- Storefront: the public projection carries the list and `[...slug].vue` emits `<meta name="keywords">` only when it is non-empty.
+- Evidence: `pnpm test:content` → 25 model + 30 live service checks (normalisation, dedupe, 20/60 limits as `422`, public read, restore of keywords); HTTP `:4005`/`:4006` create → publish → public API and rendered tag, `PATCH` replacing the list, a page without keywords rendering no tag; browser edit-and-save on `/content` produced revision 5 with the new keywords and kept the SEO image. Probe content, audit rows and revisions were deleted (`content` 3, `audit_logs` 1).
+- Limits: free text only — no global `keywords` collection, no rename/merge, no keyword filter in the admin list or public search, and no legacy keyword sync. Tags stay the taxonomy.
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

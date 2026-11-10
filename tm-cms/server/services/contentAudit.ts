@@ -59,6 +59,7 @@ export function contentFields(draft: ContentDraft | Record<string, unknown>): Re
         excerpt: locale.excerpt ?? '',
         body: locale.body ?? '',
         format: locale.format ?? 'markdown',
+        keywords: Array.isArray(locale.keywords) ? locale.keywords : [],
         seo: { title: seo.title ?? '', description: seo.description ?? '', image: seo.image ?? '' },
       }
     }),

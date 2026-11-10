@@ -123,6 +123,7 @@ export function toAdminContent(record: ContentRecord): AdminContent {
       excerpt: entry.excerpt ?? '',
       body: entry.body ?? '',
       format: entry.format ?? 'markdown',
+      keywords: entry.keywords ?? [],
       seo: {
         title: entry.seo?.title ?? '',
         description: entry.seo?.description ?? '',

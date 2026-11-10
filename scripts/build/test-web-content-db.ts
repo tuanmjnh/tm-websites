@@ -231,6 +231,7 @@ async function main() {
         'excerpt',
         'format',
         'key',
+        'keywords',
         'locale',
         'publishedAt',
         'seo',

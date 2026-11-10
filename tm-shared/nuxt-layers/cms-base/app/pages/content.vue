@@ -97,8 +97,10 @@ interface LocaleForm {
   excerpt: string
   body: string
   format: AdminContentBodyFormat
+  keywords: string
   seoTitle: string
   seoDescription: string
+  seoImage: string
 }
 
 const emptyLocale = (): LocaleForm => ({
@@ -107,8 +109,10 @@ const emptyLocale = (): LocaleForm => ({
   excerpt: '',
   body: '',
   format: 'markdown',
+  keywords: '',
   seoTitle: '',
   seoDescription: '',
+  seoImage: '',
 })
 
 const form = reactive({
@@ -479,8 +483,12 @@ function openEdit(entry: AdminContent) {
       excerpt: entryLocale.excerpt,
       body: entryLocale.body,
       format: entryLocale.format,
+      keywords: (entryLocale.keywords ?? []).join(', '),
       seoTitle: entryLocale.seo.title,
       seoDescription: entryLocale.seo.description,
+      // Carried through on save: the modal edits title/description only, and an
+      // image uploaded earlier must not be erased by an unrelated edit.
+      seoImage: entryLocale.seo.image,
     }
     activeLocale.value = entryLocale.locale
   }
@@ -502,7 +510,8 @@ function buildLocales(): AdminContentLocale[] {
         excerpt: entry.excerpt.trim(),
         body: entry.body,
         format: entry.format,
-        seo: { title: entry.seoTitle.trim(), description: entry.seoDescription.trim(), image: '' },
+        keywords: splitList(entry.keywords),
+        seo: { title: entry.seoTitle.trim(), description: entry.seoDescription.trim(), image: entry.seoImage.trim() },
       }
     })
     .filter(entry => entry.title || entry.slug)
@@ -1288,6 +1297,10 @@ onMounted(async () => {
               <UInput v-model="activeForm.seoDescription" class="w-full" />
             </UFormField>
           </div>
+
+          <UFormField :label="t('admin.content.fields.keywords')" :name="`keywords-${activeLocale}`" :hint="t('admin.content.fields.keywordsHint')">
+            <UInput v-model="activeForm.keywords" :placeholder="t('admin.content.fields.keywordsPlaceholder')" class="w-full" />
+          </UFormField>
 
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <UFormField :label="t('admin.content.fields.tags')" name="tags">

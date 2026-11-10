@@ -213,6 +213,7 @@ check('the public projection is an allowlist with no internal fields', () => {
     'excerpt',
     'format',
     'key',
+    'keywords',
     'locale',
     'publishedAt',
     'seo',

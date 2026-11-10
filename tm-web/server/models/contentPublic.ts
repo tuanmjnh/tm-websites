@@ -88,6 +88,7 @@ interface LocaleEntry {
   excerpt: string
   body: string
   format: PublicContentBodyFormat
+  keywords: string[]
   seo: { title: string; description: string; image: string }
 }
 
@@ -110,6 +111,7 @@ function readLocales(value: unknown): LocaleEntry[] {
       excerpt: typeof entry.excerpt === 'string' ? entry.excerpt : '',
       body: typeof entry.body === 'string' ? entry.body : '',
       format: readBodyFormat(entry.format),
+      keywords: readStrings(entry.keywords),
       seo: {
         title: typeof seo.title === 'string' ? seo.title : '',
         description: typeof seo.description === 'string' ? seo.description : '',
@@ -339,6 +341,7 @@ export function toPublicContent(
     body: entry.body,
     format: entry.format,
     seo: entry.seo,
+    keywords: entry.keywords,
     categories: readStrings(doc.categories),
     tags: readStrings(doc.tags),
     publishedAt: publishedAt ? publishedAt.toISOString() : null,

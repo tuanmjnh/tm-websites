@@ -113,6 +113,54 @@ async function integration() {
       )
     })
 
+    await check('keywords are trimmed and de-duplicated, and the public read carries them', async () => {
+      const keywordDraft = pageDraft('pages/keywords', 'tu-khoa', {
+        locales: [
+          {
+            locale: 'vi',
+            title: 'Từ khóa',
+            slug: 'tu-khoa',
+            keywords: [' Trang sức ', 'trang sức', '  ', 'Quà tặng'],
+          },
+        ],
+      })
+      const keywordPage = await createContent(Content, SITE, keywordDraft, meta())
+      assert.deepEqual(keywordPage.locales[0]!.keywords, ['Trang sức', 'trang sức', 'Quà tặng'])
+
+      await runContentEvent(Content, SITE, keywordPage.id, { event: 'publish', revision: 1 }, NOW, meta())
+      const projection = await findPublicContent(Content, SITE, 'pages/keywords', 'vi', NOW)
+      assert.deepEqual(projection?.keywords, ['Trang sức', 'trang sức', 'Quà tặng'])
+      assert.deepEqual(keywordPage.locales[0]!.seo, { title: '', description: '', image: '' })
+
+      // Back to draft so the status counts below only see the records they expect.
+      await runContentEvent(Content, SITE, keywordPage.id, { event: 'unpublish', revision: 2 }, NOW, meta())
+      assert.equal(await findPublicContent(Content, SITE, 'pages/keywords', 'vi', NOW), null)
+
+      // Keywords live in the revision snapshot too, so a restore brings them back.
+      await updateContent(Content, SITE, keywordPage.id, {
+        revision: 3,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Từ khóa', slug: 'tu-khoa', keywords: ['mới'] }],
+      }, meta())
+      const restored = await restoreContentRevision(Content, Revision, SITE, keywordPage.id, 2, 4, meta())
+      assert.deepEqual(restored.locales[0]!.keywords, ['Trang sức', 'trang sức', 'Quà tặng'])
+    })
+
+    await check('too many or too long keywords are a 422, not a silent truncation', async () => {
+      await assert.rejects(
+        () => createContent(Content, SITE, pageDraft('pages/kw-limit', 'kw-limit', {
+          locales: [{ locale: 'vi', title: 'X', slug: 'kw-limit', keywords: Array.from({ length: 21 }, (_, i) => `kw-${i}`) }],
+        })),
+        isServiceError(422, 'CONTENT_PAYLOAD_INVALID'),
+      )
+      await assert.rejects(
+        () => createContent(Content, SITE, pageDraft('pages/kw-long', 'kw-long', {
+          locales: [{ locale: 'vi', title: 'X', slug: 'kw-long', keywords: ['x'.repeat(61)] }],
+        })),
+        isServiceError(422, 'CONTENT_PAYLOAD_INVALID'),
+      )
+    })
+
     await check('another site cannot read the record', async () => {
       await assert.rejects(() => getContent(Content, OTHER_SITE, created.id), isServiceError(404, 'CONTENT_NOT_FOUND'))
       const foreign = await listContent(Content, OTHER_SITE, {})
@@ -341,9 +389,10 @@ async function integration() {
       assert.equal(search.data.length, 1)
       assert.equal(search.data[0]!.key, 'pages/services')
 
+      // Six records from the flows above plus the keyword page, which is back in draft.
       const counts = (await listContent(Content, SITE, { limit: 1 })).counts
-      assert.equal(counts.all, 6)
-      assert.equal(counts.draft, 6)
+      assert.equal(counts.all, 7)
+      assert.equal(counts.draft, 7)
       assert.equal(counts.published, 0)
     })
 
