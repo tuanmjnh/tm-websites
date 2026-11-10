@@ -19,6 +19,7 @@ const {
   update,
   runEvent,
   bulkUpdate,
+  bulkUpdateByFilter,
   listCategories,
   createCategory,
   updateCategory,
@@ -45,6 +46,7 @@ const selection = ref<string[]>([])
 const bulkOpen = ref(false)
 const bulkBusy = ref(false)
 const bulkError = ref<string | null>(null)
+const bulkScope = ref<'selected' | 'filter'>('selected')
 const bulkForm = ref({
   basePrice: null as number | null,
   salePrice: null as number | null,
@@ -67,8 +69,17 @@ function toggleOne(id: string) {
 function openBulk() {
   bulkError.value = null
   bulkForm.value = { basePrice: null, salePrice: null, stock: null }
+  bulkScope.value = selection.value.length ? 'selected' : 'filter'
   bulkOpen.value = true
 }
+
+/** The scope the server applies when the editor picks "every matching record". */
+const bulkFilter = computed(() => ({
+  ...(status.value === 'all' ? {} : { status: status.value as 'draft' | 'published' | 'archived' }),
+  ...(typeFilter.value === 'all' ? {} : { type: typeFilter.value }),
+  ...(tagFilter.value === 'all' ? {} : { tag: tagFilter.value }),
+  ...(search.value.trim() ? { q: search.value.trim() } : {}),
+}))
 
 /** Only the filled fields are sent; a blank field means "keep the current value". */
 async function applyBulk() {
@@ -86,11 +97,18 @@ async function applyBulk() {
   const rows = entries.value
     .filter(entry => selection.value.includes(entry.id))
     .map(entry => ({ id: entry.id, revision: entry.revision, ...patch }))
+  const byFilter = bulkScope.value === 'filter'
+  if (!byFilter && !rows.length) {
+    bulkError.value = t('admin.catalog.errors.bulkNothing')
+    return
+  }
 
   bulkBusy.value = true
   bulkError.value = null
   try {
-    const result = await bulkUpdate({ items: rows })
+    const result = byFilter
+      ? await bulkUpdateByFilter({ filter: bulkFilter.value, ...patch })
+      : await bulkUpdate({ items: rows })
     toast.add({
       title: t('admin.catalog.messages.bulkResult', { ok: result.succeeded, total: result.results.length }),
       color: result.failed ? 'warning' : 'success',
@@ -111,6 +129,11 @@ async function applyBulk() {
 }
 const typeFilter = ref<'all' | 'simple' | 'variable'>('all')
 const tagFilter = ref('all')
+
+const bulkScopeItems = computed(() => [
+  { label: t('admin.catalog.bulk.scopeSelected', { count: selection.value.length }), value: 'selected' },
+  { label: t('admin.catalog.bulk.scopeFilter'), value: 'filter' },
+])
 
 const statusItems = computed(() => [
   { label: t('admin.catalog.filters.allStatuses'), value: 'all' },
@@ -151,6 +174,8 @@ const statusColor = (value: AdminCatalogStatus) => {
 
 function messageFor(code: string | null) {
   if (code === 'CATALOG_REVISION_CONFLICT') return t('admin.catalog.errors.revisionConflict')
+  if (code === 'CATALOG_BULK_EMPTY') return t('admin.catalog.errors.bulkEmpty')
+  if (code === 'CATALOG_BULK_TOO_LARGE') return t('admin.catalog.errors.bulkTooLarge')
   if (code === 'CATALOG_KEY_EXISTS') return t('admin.catalog.errors.keyExists')
   if (code === 'CATALOG_CATEGORY_IN_USE') return t('admin.catalog.errors.categoryInUse')
   if (code === 'CATALOG_CATEGORY_HAS_CHILDREN') return t('admin.catalog.errors.categoryHasChildren')
@@ -548,8 +573,7 @@ async function removeCategory(category: AdminCatalogCategory) {
           variant="soft"
           size="sm"
           icon="i-lucide-check-square"
-          :label="t('admin.catalog.bulk.selected', { count: selection.length })"
-          :disabled="!selection.length"
+          :label="t('admin.catalog.bulk.open', { count: selection.length })"
           @click="openBulk"
         />
         <UBadge color="neutral" variant="subtle" size="sm">
@@ -806,7 +830,12 @@ async function removeCategory(category: AdminCatalogCategory) {
     <UModal v-model:open="bulkOpen" :title="t('admin.catalog.bulk.title')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
       <template #body>
         <div class="space-y-3">
-          <p class="text-sm text-muted">{{ t('admin.catalog.bulk.hint', { count: selection.length }) }}</p>
+          <URadioGroup v-model="bulkScope" :items="bulkScopeItems" :ui="{ fieldset: 'space-y-1' }" />
+          <p class="text-sm text-muted">
+            {{ bulkScope === 'filter'
+              ? t('admin.catalog.bulk.hintFilter')
+              : t('admin.catalog.bulk.hint', { count: selection.length }) }}
+          </p>
           <p v-if="bulkError" class="text-sm text-error">{{ bulkError }}</p>
           <UFormField :label="t('admin.catalog.fields.basePrice')">
             <UInput v-model.number="bulkForm.basePrice" type="number" class="w-full" :placeholder="t('admin.catalog.bulk.keep')" />

@@ -801,6 +801,10 @@
         "hint": "Applies to the {count} selected products. A blank field keeps the current value.",
         "keep": "Blank = keep current",
         "apply": "Apply",
+        "open": "Update in bulk ({count} selected)",
+        "scopeSelected": "Only the ticked rows ({count})",
+        "scopeFilter": "Every product matching the current filter",
+        "hintFilter": "Applies to every product matching the current filter (up to 500; deleted records are skipped). A blank field keeps the current value.",
         "selectAll": "Select all on this page",
         "selected": "{count} selected"
       },
@@ -886,6 +890,8 @@
       },
       "errors": {
         "bulkNothing": "Enter at least one value to update.",
+        "bulkEmpty": "No product matches the current filter.",
+        "bulkTooLarge": "The filter matches more than 500 products; narrow it first.",
         "revisionConflict": "Someone else changed this record; reload before saving.",
         "keyExists": "That key or slug is already in use.",
         "categoryInUse": "The category still has products, so it cannot be deleted.",

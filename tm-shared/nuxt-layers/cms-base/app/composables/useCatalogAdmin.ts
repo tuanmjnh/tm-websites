@@ -1,5 +1,6 @@
 import type {
   AdminCatalogCategory,
+  AdminCatalogBulkByFilterPatch,
   AdminCatalogBulkPatch,
   AdminCatalogBulkResult,
   AdminCatalogCategoryDraft,
@@ -77,6 +78,15 @@ export const useCatalogAdmin = () => {
     return payload.data
   }
 
+  /** Same patch, but the server selects every record matching the list filter. */
+  const bulkUpdateByFilter = async (patch: AdminCatalogBulkByFilterPatch): Promise<AdminCatalogBulkResult> => {
+    const payload = await plainFetch('/api/v1/admin/catalog/items/bulk-by-filter', {
+      method: 'POST',
+      body: patch,
+    }) as { data: AdminCatalogBulkResult }
+    return payload.data
+  }
+
   const listCategories = async (): Promise<AdminCatalogCategory[]> => {
     const payload = await plainFetch('/api/v1/admin/catalog/categories') as { data: AdminCatalogCategory[] }
     return payload.data
@@ -125,6 +135,7 @@ export const useCatalogAdmin = () => {
     update,
     runEvent,
     bulkUpdate,
+    bulkUpdateByFilter,
     listCategories,
     createCategory,
     updateCategory,

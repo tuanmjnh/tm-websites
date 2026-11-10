@@ -1,6 +1,7 @@
 import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
 import type {
+  AdminCatalogBulkByFilterPatch,
   AdminCatalogBulkResult,
   AdminCatalogBulkRow,
   AdminCatalogCategory,
@@ -72,6 +73,8 @@ const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 50
 const SEARCH_MAX = 80
 const TAG_MAX = 60
+/** Upper bound for a filter-scoped bulk update, so one click stays bounded. */
+const BULK_FILTER_MAX = 500
 
 function iso(value: Date | null | undefined): string | null {
   return value ? new Date(value).toISOString() : null
@@ -192,13 +195,16 @@ async function categoryKeysById(
   return records.map(record => record.key)
 }
 
-export async function listCatalogItems(
-  model: Model<CatalogItemDocument>,
+/**
+ * Shared by the admin list and the filter-scoped bulk update. Returns `null`
+ * when a category key matches nothing, so callers answer an empty page instead
+ * of widening the scope to every record of the site.
+ */
+async function buildItemFilter(
   categoryModel: Model<CatalogCategoryDocument>,
   siteId: string,
-  params: CatalogItemListParams = {},
-): Promise<CatalogItemListResult> {
-  const limit = Math.min(Math.max(Math.trunc(params.limit ?? DEFAULT_LIMIT), 1), MAX_LIMIT)
+  params: CatalogItemListParams,
+): Promise<Record<string, unknown> | null> {
   const filter: Record<string, unknown> = { siteId }
 
   if (params.status && params.status !== 'all') filter.status = params.status
@@ -212,14 +218,7 @@ export async function listCatalogItems(
     if (!id) {
       // A key filter also covers the subtree, the same way the public listing does.
       const root = await categoryModel.findOne({ siteId, key: params.category, isDeleted: { $ne: true } }, '_id').lean()
-      if (!root) {
-        return {
-          data: [],
-          nextCursor: null,
-          counts: await statusCounts(model, siteId),
-          hasMore: false,
-        }
-      }
+      if (!root) return null
       const descendants = await categoryModel
         .find({ siteId, ancestors: (root as { _id: Types.ObjectId })._id }, '_id')
         .lean<{ _id: Types.ObjectId }[]>()
@@ -239,6 +238,26 @@ export async function listCatalogItems(
       { 'slug.vi': pattern },
       { sku: pattern },
     ]
+  }
+
+  return filter
+}
+
+export async function listCatalogItems(
+  model: Model<CatalogItemDocument>,
+  categoryModel: Model<CatalogCategoryDocument>,
+  siteId: string,
+  params: CatalogItemListParams = {},
+): Promise<CatalogItemListResult> {
+  const limit = Math.min(Math.max(Math.trunc(params.limit ?? DEFAULT_LIMIT), 1), MAX_LIMIT)
+  const filter = await buildItemFilter(categoryModel, siteId, params)
+  if (!filter) {
+    return {
+      data: [],
+      nextCursor: null,
+      counts: await statusCounts(model, siteId),
+      hasMore: false,
+    }
   }
 
   if (params.cursor) {
@@ -887,4 +906,62 @@ export async function bulkUpdateCatalogItems(
 
   const succeeded = results.filter(row => row.ok).length
   return { results, succeeded, failed: results.length - succeeded }
+}
+
+/**
+ * The same partial patch, applied to everything matching the current list
+ * filter instead of the rows an editor ticked. Selection happens once here, and
+ * each selected record still goes through the per-row revision check and audit
+ * of `bulkUpdateCatalogItems`, so the two paths cannot drift. Soft-deleted
+ * records are excluded, and a filter that resolves to nothing (or to more than
+ * `BULK_FILTER_MAX` records) is refused instead of silently widening or
+ * truncating the batch.
+ */
+export async function bulkUpdateCatalogItemsByFilter(
+  model: Model<CatalogItemDocument>,
+  categoryModel: Model<CatalogCategoryDocument>,
+  siteId: string,
+  input: AdminCatalogBulkByFilterPatch,
+  meta?: CatalogWriteMeta,
+): Promise<AdminCatalogBulkResult> {
+  const filter = await buildItemFilter(categoryModel, siteId, {
+    status: input.filter.status,
+    type: input.filter.type,
+    tag: input.filter.tag,
+    category: input.filter.category,
+    q: input.filter.q,
+  })
+  if (!filter) throw new CatalogServiceError(404, 'CATALOG_BULK_EMPTY', 'No catalog item matches this filter')
+
+  if (input.filter.status === undefined) filter.status = { $ne: 'deleted' }
+
+  const patch = {
+    ...(input.basePrice === undefined ? {} : { basePrice: input.basePrice }),
+    ...(input.salePrice === undefined ? {} : { salePrice: input.salePrice }),
+    ...(input.stock === undefined ? {} : { stock: input.stock }),
+  }
+
+  const records = await model
+    .find(filter)
+    .sort({ _id: -1 })
+    .limit(BULK_FILTER_MAX + 1)
+    .select('_id revision')
+    .lean<{ _id: Types.ObjectId, revision: number }[]>()
+
+  if (!records.length) throw new CatalogServiceError(404, 'CATALOG_BULK_EMPTY', 'No catalog item matches this filter')
+  if (records.length > BULK_FILTER_MAX) {
+    throw new CatalogServiceError(
+      422,
+      'CATALOG_BULK_TOO_LARGE',
+      `This filter matches more than ${BULK_FILTER_MAX} catalog items`,
+      { limit: BULK_FILTER_MAX },
+    )
+  }
+
+  return bulkUpdateCatalogItems(
+    model,
+    siteId,
+    { items: records.map(record => ({ id: String(record._id), revision: record.revision, ...patch })) },
+    meta,
+  )
 }

@@ -9,6 +9,7 @@ import {
   listCatalogItems,
   listCatalogTags,
   bulkUpdateCatalogItems,
+  bulkUpdateCatalogItemsByFilter,
   runCatalogItemEvent,
   updateCatalogCategory,
   updateCatalogItem,
@@ -469,6 +470,101 @@ try {
     assert.equal(result.results[0]?.ok, true)
     const after = await getCatalogItem(CatalogItem, SITE, bulkB)
     assert.equal(after.revision, current.revision)
+  })
+
+  await check('a filter-scoped bulk updates every live record the filter matches', async () => {
+    const deleted = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'bulk-deleted',
+      title: { vi: 'Bulk deleted' },
+      slug: { vi: 'bulk-deleted' },
+      basePrice: 300000,
+      stock: 4,
+    })
+    const removed = await runCatalogItemEvent(CatalogItem, SITE, deleted.id, { event: 'delete', revision: deleted.revision })
+    assert.equal(removed.status, 'deleted')
+
+    const beforeB = await getCatalogItem(CatalogItem, SITE, bulkB)
+    const result = await bulkUpdateCatalogItemsByFilter(CatalogItem, CatalogCategory, SITE, {
+      filter: { q: 'bulk-' },
+      stock: 3,
+    })
+    assert.equal(result.failed, 0)
+    assert.equal(result.succeeded, 2)
+
+    const afterA = await getCatalogItem(CatalogItem, SITE, bulkA)
+    const afterB = await getCatalogItem(CatalogItem, SITE, bulkB)
+    assert.equal(afterA.stock, 3)
+    assert.equal(afterB.stock, 3)
+    assert.equal(afterA.basePrice, 150000)
+    assert.equal(afterB.revision, beforeB.revision + 1)
+
+    const stillDeleted = await getCatalogItem(CatalogItem, SITE, deleted.id)
+    assert.equal(stillDeleted.stock, 4)
+    assert.equal(stillDeleted.revision, removed.revision)
+  })
+
+  await check('a filter-scoped bulk refuses a filter that matches nothing', async () => {
+    await assert.rejects(
+      () => bulkUpdateCatalogItemsByFilter(CatalogItem, CatalogCategory, SITE, {
+        filter: { status: 'published', q: 'bulk-' },
+        stock: 1,
+      }),
+      isServiceError(404, 'CATALOG_BULK_EMPTY'),
+    )
+    await assert.rejects(
+      () => bulkUpdateCatalogItemsByFilter(CatalogItem, CatalogCategory, SITE, {
+        filter: { category: 'khong-ton-tai' },
+        stock: 1,
+      }),
+      isServiceError(404, 'CATALOG_BULK_EMPTY'),
+    )
+    const after = await getCatalogItem(CatalogItem, SITE, bulkA)
+    assert.equal(after.stock, 3)
+  })
+
+  await check('a filter-scoped bulk keeps per-row validation and audit', async () => {
+    const a = await getCatalogItem(CatalogItem, SITE, bulkA)
+    const result = await bulkUpdateCatalogItemsByFilter(CatalogItem, CatalogCategory, SITE, {
+      filter: { q: 'bulk-a' },
+      basePrice: 100000,
+      salePrice: 250000,
+    })
+    assert.equal(result.results.length, 1)
+    assert.equal(result.results[0]?.error?.code, 'CATALOG_SALE_PRICE_INVALID')
+    const after = await getCatalogItem(CatalogItem, SITE, bulkA)
+    assert.equal(after.basePrice, a.basePrice)
+    assert.equal(after.revision, a.revision)
+  })
+
+  await check('a filter-scoped bulk refuses a filter wider than 500 records', async () => {
+    const rows = Array.from({ length: 501 }, (_, index) => ({
+      siteId: SITE,
+      key: `cap-${index}`,
+      title: { vi: `Cap ${index}` },
+      slug: { vi: `cap-${index}` },
+      status: 'draft',
+      type: 'simple',
+      basePrice: 1000,
+      salePrice: null,
+      stock: 1,
+      revision: 1,
+      isActive: false,
+      isDeleted: false,
+      categories: [],
+      tags: [],
+      attributes: [],
+      variants: [],
+    }))
+    await CatalogItem.collection.insertMany(rows)
+    await assert.rejects(
+      () => bulkUpdateCatalogItemsByFilter(CatalogItem, CatalogCategory, SITE, {
+        filter: { q: 'cap-' },
+        stock: 2,
+      }),
+      isServiceError(422, 'CATALOG_BULK_TOO_LARGE'),
+    )
+    assert.equal(await CatalogItem.countDocuments({ siteId: SITE, stock: 2, key: /^cap-/ }), 0)
+    await CatalogItem.deleteMany({ siteId: SITE, key: /^cap-/ })
   })
 
 } finally {

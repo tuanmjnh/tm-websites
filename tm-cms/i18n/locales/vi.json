@@ -801,6 +801,10 @@
         "hint": "Áp dụng cho {count} sản phẩm đã chọn. Ô để trống giữ nguyên giá trị hiện tại.",
         "keep": "Để trống = giữ nguyên",
         "apply": "Áp dụng",
+        "open": "Cập nhật hàng loạt ({count} đã chọn)",
+        "scopeSelected": "Chỉ các dòng đã chọn ({count})",
+        "scopeFilter": "Mọi sản phẩm khớp bộ lọc hiện tại",
+        "hintFilter": "Áp dụng cho mọi sản phẩm khớp bộ lọc hiện tại (tối đa 500; bản đã xoá không bị đụng tới). Ô để trống giữ nguyên giá trị hiện tại.",
         "selectAll": "Chọn tất cả trên trang",
         "selected": "Đã chọn {count}"
       },
@@ -886,6 +890,8 @@
       },
       "errors": {
         "bulkNothing": "Nhập ít nhất một giá trị để cập nhật.",
+        "bulkEmpty": "Bộ lọc hiện tại không khớp sản phẩm nào.",
+        "bulkTooLarge": "Bộ lọc khớp hơn 500 sản phẩm; hãy thu hẹp phạm vi.",
         "revisionConflict": "Bản ghi đã bị người khác sửa; hãy tải lại trước khi lưu.",
         "keyExists": "Khóa hoặc slug này đã được dùng.",
         "categoryInUse": "Danh mục còn sản phẩm, không xoá được.",

@@ -151,6 +151,33 @@ export const AdminCatalogBulkPatchSchema = z.object({
 })
 export type AdminCatalogBulkPatch = z.infer<typeof AdminCatalogBulkPatchSchema>
 
+/**
+ * Selection by filter instead of explicit rows. Soft-deleted records are never
+ * touched, so `deleted` is not a valid scope here; an empty filter means "every
+ * live record of the site" and is capped server-side.
+ */
+export const ADMIN_CATALOG_BULK_STATUSES = ['draft', 'published', 'archived'] as const
+
+export const AdminCatalogBulkFilterSchema = z.object({
+  status: z.enum(ADMIN_CATALOG_BULK_STATUSES).optional(),
+  type: z.enum(ADMIN_CATALOG_ITEM_TYPES).optional(),
+  tag: z.string().max(60).optional(),
+  category: z.string().max(120).optional(),
+  q: z.string().max(80).optional(),
+})
+export type AdminCatalogBulkFilter = z.infer<typeof AdminCatalogBulkFilterSchema>
+
+export const AdminCatalogBulkByFilterPatchSchema = z.object({
+  filter: AdminCatalogBulkFilterSchema.default({}),
+  basePrice: z.number().nonnegative().optional(),
+  salePrice: z.number().nonnegative().nullable().optional(),
+  stock: z.number().int().optional(),
+}).refine(
+  patch => patch.basePrice !== undefined || patch.salePrice !== undefined || patch.stock !== undefined,
+  { message: 'At least one field must be provided', path: ['basePrice'] },
+)
+export type AdminCatalogBulkByFilterPatch = z.infer<typeof AdminCatalogBulkByFilterPatchSchema>
+
 export const AdminCatalogBulkRowSchema = z.object({
   id: z.string(),
   ok: z.boolean(),
