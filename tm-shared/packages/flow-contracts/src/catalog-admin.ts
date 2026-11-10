@@ -60,6 +60,8 @@ export const AdminCatalogItemSchema = z.object({
   basePrice: z.number(),
   salePrice: z.number().nullable(),
   sku: z.string(),
+  /** Empty means "no barcode"; a non-empty value is unique within the site. */
+  barcode: z.string(),
   uom: z.string(),
   stock: z.number(),
   manageStock: z.boolean(),
@@ -117,6 +119,7 @@ export const AdminCatalogItemDraftSchema = z.object({
   basePrice: z.number(),
   salePrice: z.number().nullable(),
   sku: z.string(),
+  barcode: z.string(),
   uom: z.string(),
   stock: z.number(),
   manageStock: z.boolean(),

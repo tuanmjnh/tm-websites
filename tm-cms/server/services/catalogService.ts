@@ -102,6 +102,10 @@ function translateInvariant(error: unknown): never {
 function translateWriteError(error: unknown): never {
   const code = (error as { code?: number })?.code
   if (code === 11000) {
+    const keyPattern = (error as { keyPattern?: Record<string, unknown> })?.keyPattern
+    if (keyPattern && 'barcode' in keyPattern) {
+      throw new CatalogServiceError(409, 'CATALOG_BARCODE_EXISTS', 'Another product already uses this barcode')
+    }
     throw new CatalogServiceError(409, 'CATALOG_KEY_EXISTS', 'Another record already uses this key or slug')
   }
   throw error
@@ -123,6 +127,7 @@ export function toAdminCatalogItem(record: CatalogItemRecord): AdminCatalogItem 
     basePrice: record.basePrice ?? 0,
     salePrice: record.salePrice ?? null,
     sku: record.sku ?? '',
+    barcode: record.barcode ?? '',
     uom: record.uom ?? '',
     stock: record.stock ?? 0,
     manageStock: record.manageStock !== false,
@@ -237,6 +242,7 @@ async function buildItemFilter(
       { 'title.en': pattern },
       { 'slug.vi': pattern },
       { sku: pattern },
+      { barcode: pattern },
     ]
   }
 
@@ -408,6 +414,7 @@ export async function updateCatalogItem(
           basePrice: draft.basePrice,
           salePrice: draft.salePrice,
           sku: draft.sku,
+          barcode: draft.barcode,
           uom: draft.uom,
           stock: draft.stock,
           manageStock: draft.manageStock,

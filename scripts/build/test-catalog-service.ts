@@ -204,11 +204,92 @@ try {
     assert.equal(stored.sales, 0)
   })
 
+  let barcodeItemId = ''
+  await check('a barcode is trimmed, returned and searchable', async () => {
+    const created = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'nhan-bac-barcode',
+      title: { vi: 'Nhẫn bạc có mã vạch' },
+      slug: { vi: 'nhan-bac-barcode' },
+      barcode: '  8930000000012  ',
+    })
+    barcodeItemId = created.id
+    assert.equal(created.barcode, '8930000000012')
+
+    const byBarcode = await listCatalogItems(CatalogItem, CatalogCategory, SITE, { q: '8930000000012' })
+    assert.deepEqual(byBarcode.data.map(item => item.key), ['nhan-bac-barcode'])
+  })
+
+  await check('a barcode already used in the site is refused, on create and on update', async () => {
+    await assert.rejects(
+      createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+        key: 'nhan-bac-barcode-2',
+        title: { vi: 'Nhẫn trùng mã' },
+        slug: { vi: 'nhan-bac-barcode-2' },
+        barcode: '8930000000012',
+      }),
+      isServiceError(409, 'CATALOG_BARCODE_EXISTS'),
+    )
+
+    const current = await getCatalogItem(CatalogItem, SITE, itemId)
+    await assert.rejects(
+      updateCatalogItem(CatalogItem, CatalogCategory, SITE, itemId, {
+        revision: current.revision,
+        key: 'nhan-bac',
+        title: { vi: 'Nhẫn bạc cao cấp' },
+        slug: { vi: 'nhan-bac' },
+        barcode: '8930000000012',
+      }),
+      isServiceError(409, 'CATALOG_BARCODE_EXISTS'),
+    )
+  })
+
+  await check('the same barcode is free in another site and many records may have none', async () => {
+    const foreign = await createCatalogItem(CatalogItem, CatalogCategory, OTHER_SITE, {
+      key: 'nhan-bac-barcode',
+      title: { vi: 'Nhẫn bạc có mã vạch' },
+      slug: { vi: 'nhan-bac-barcode' },
+      barcode: '8930000000012',
+    })
+    assert.equal(foreign.barcode, '8930000000012')
+    // Removed again: a later check asserts the other site holds no records at all.
+    await CatalogItem.deleteOne({ siteId: OTHER_SITE, key: 'nhan-bac-barcode' })
+
+    const noBarcode = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'nhan-khong-ma',
+      title: { vi: 'Nhẫn không mã' },
+      slug: { vi: 'nhan-khong-ma' },
+    })
+    assert.equal(noBarcode.barcode, '')
+  })
+
+  await check('clearing a barcode frees it for another product', async () => {
+    const current = await getCatalogItem(CatalogItem, SITE, barcodeItemId)
+    const cleared = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, barcodeItemId, {
+      revision: current.revision,
+      key: 'nhan-bac-barcode',
+      title: { vi: 'Nhẫn bạc có mã vạch' },
+      slug: { vi: 'nhan-bac-barcode' },
+      barcode: '',
+    })
+    assert.equal(cleared.barcode, '')
+
+    const moved = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'nhan-bac-barcode-3',
+      title: { vi: 'Nhẫn nhận mã vạch' },
+      slug: { vi: 'nhan-bac-barcode-3' },
+      barcode: '8930000000012',
+    })
+    assert.equal(moved.barcode, '8930000000012')
+    barcodeItemId = moved.id
+  })
+
   await check('the list filter composes status, tag, search and category subtree', async () => {
     const byStatus = await listCatalogItems(CatalogItem, CatalogCategory, SITE, { status: 'published' })
     assert.equal(byStatus.data.length, 1)
     assert.equal(byStatus.counts.published, 1)
-    assert.equal(byStatus.counts.draft, 0)
+    // Other checks create draft records, so the count is compared to the database
+    // rather than to a literal.
+    assert.equal(byStatus.counts.draft, await CatalogItem.countDocuments({ siteId: SITE, status: 'draft' }))
 
     const byTag = await listCatalogItems(CatalogItem, CatalogCategory, SITE, { tag: 'quà tặng' })
     assert.equal(byTag.data.length, 1)

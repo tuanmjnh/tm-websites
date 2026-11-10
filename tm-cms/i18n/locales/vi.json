@@ -821,7 +821,7 @@
         "published": "Đã xuất bản: {count}"
       },
       "filters": {
-        "searchPlaceholder": "Tìm theo khóa, tên, slug hoặc SKU...",
+        "searchPlaceholder": "Tìm theo khóa, tên, slug, SKU hoặc mã vạch...",
         "allStatuses": "Tất cả trạng thái",
         "allTypes": "Tất cả loại",
         "allTags": "Tất cả thẻ"
@@ -846,6 +846,8 @@
         "basePrice": "Giá gốc",
         "salePrice": "Giá khuyến mại",
         "sku": "SKU",
+        "barcode": "Mã vạch",
+        "barcodeHint": "Không bắt buộc, không trùng trong cùng site",
         "noSku": "chưa có SKU",
         "price": "Giá {price}",
         "uom": "Đơn vị tính",
@@ -894,6 +896,7 @@
         "bulkTooLarge": "Bộ lọc khớp hơn 500 sản phẩm; hãy thu hẹp phạm vi.",
         "revisionConflict": "Bản ghi đã bị người khác sửa; hãy tải lại trước khi lưu.",
         "keyExists": "Khóa hoặc slug này đã được dùng.",
+        "barcodeExists": "Mã vạch này đã thuộc về sản phẩm khác.",
         "categoryInUse": "Danh mục còn sản phẩm, không xoá được.",
         "categoryHasChildren": "Danh mục còn danh mục con, không xoá được.",
         "generic": "Không lưu được thay đổi. Vui lòng thử lại.",

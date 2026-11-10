@@ -177,6 +177,7 @@ function messageFor(code: string | null) {
   if (code === 'CATALOG_BULK_EMPTY') return t('admin.catalog.errors.bulkEmpty')
   if (code === 'CATALOG_BULK_TOO_LARGE') return t('admin.catalog.errors.bulkTooLarge')
   if (code === 'CATALOG_KEY_EXISTS') return t('admin.catalog.errors.keyExists')
+  if (code === 'CATALOG_BARCODE_EXISTS') return t('admin.catalog.errors.barcodeExists')
   if (code === 'CATALOG_CATEGORY_IN_USE') return t('admin.catalog.errors.categoryInUse')
   if (code === 'CATALOG_CATEGORY_HAS_CHILDREN') return t('admin.catalog.errors.categoryHasChildren')
   return t('admin.catalog.errors.generic')
@@ -250,6 +251,7 @@ const form = reactive({
   basePrice: 0,
   salePrice: null as number | null,
   sku: '',
+  barcode: '',
   uom: '',
   stock: 0,
   manageStock: true,
@@ -308,6 +310,7 @@ function resetForm() {
     basePrice: 0,
     salePrice: null,
     sku: '',
+    barcode: '',
     uom: '',
     stock: 0,
     manageStock: true,
@@ -346,6 +349,7 @@ function openEdit(item: AdminCatalogItem) {
     basePrice: item.basePrice,
     salePrice: item.salePrice,
     sku: item.sku,
+    barcode: item.barcode,
     uom: item.uom,
     stock: item.stock,
     manageStock: item.manageStock,
@@ -373,6 +377,7 @@ function payload(): AdminCatalogItemDraft {
     basePrice: Number(form.basePrice) || 0,
     salePrice: form.salePrice === null ? null : Number(form.salePrice),
     sku: form.sku,
+    barcode: form.barcode,
     uom: form.uom,
     stock: Number(form.stock) || 0,
     manageStock: form.manageStock,
@@ -612,7 +617,8 @@ async function removeCategory(category: AdminCatalogCategory) {
               </UBadge>
             </div>
             <p class="mt-1 truncate text-xs text-muted">
-              {{ item.key }} · {{ item.sku || t('admin.catalog.fields.noSku') }} ·
+              {{ item.key }} · {{ item.sku || t('admin.catalog.fields.noSku') }}
+              <template v-if="item.barcode"> · {{ item.barcode }}</template> ·
               {{ t('admin.catalog.fields.price', { price: item.basePrice.toLocaleString('vi-VN') }) }} ·
               {{ t('admin.catalog.fields.categoriesCount', { count: item.categories.length }) }}
             </p>
@@ -713,6 +719,9 @@ async function removeCategory(category: AdminCatalogCategory) {
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.sku')">
               <UInput v-model="form.sku" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.fields.barcode')" :hint="t('admin.catalog.fields.barcodeHint')">
+              <UInput v-model="form.barcode" class="w-full" />
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.uom')">
               <UInput v-model="form.uom" class="w-full" />

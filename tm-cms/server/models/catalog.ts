@@ -102,6 +102,8 @@ export const CatalogItemDraftSchema = z.object({
   basePrice: z.number().nonnegative().default(0),
   salePrice: z.number().nonnegative().nullable().default(null),
   sku: z.string().trim().max(80).default(''),
+  /** Scannable identifier; empty means none, and a value is unique per site. */
+  barcode: z.string().trim().max(64).default(''),
   uom: z.string().trim().max(40).default(''),
   stock: z.number().int().default(0),
   manageStock: z.boolean().default(true),
@@ -288,6 +290,7 @@ export function buildSearchString(input: {
   title?: Record<string, string>
   slug?: Record<string, string>
   sku?: string
+  barcode?: string
   shortDesc?: Record<string, string>
   tags?: string[]
 }): string {
@@ -296,6 +299,7 @@ export function buildSearchString(input: {
     ...Object.values(input.slug ?? {}),
     ...Object.values(input.shortDesc ?? {}),
     input.sku ?? '',
+    input.barcode ?? '',
     ...(input.tags ?? []),
   ]
   return parts
@@ -334,6 +338,7 @@ export interface CatalogItemDocument {
   basePrice: number
   salePrice: number | null
   sku: string
+  barcode: string
   uom: string
   stock: number
   manageStock: boolean
@@ -409,6 +414,7 @@ const CatalogItemSchema = new Schema<CatalogItemDocument>(
     basePrice: { type: Number, default: 0, required: true },
     salePrice: { type: Number, default: null },
     sku: { type: String, default: '' },
+    barcode: { type: String, default: '' },
     uom: { type: String, default: '' },
     stock: { type: Number, default: 0 },
     manageStock: { type: Boolean, default: true },
@@ -447,6 +453,12 @@ CatalogItemSchema.index({ siteId: 1, status: 1, publishedAt: -1 }, { name: 'cata
 CatalogItemSchema.index({ siteId: 1, tags: 1 }, { name: 'catalog_item_site_tag' })
 CatalogItemSchema.index({ siteId: 1, categories: 1 }, { name: 'catalog_item_site_category' })
 CatalogItemSchema.index({ siteId: 1, legacyId: 1 }, { name: 'catalog_item_site_legacy', sparse: true })
+// Two products must not claim the same barcode; records without one are excluded
+// so the common empty value does not collide with itself.
+CatalogItemSchema.index(
+  { siteId: 1, barcode: 1 },
+  { unique: true, name: 'catalog_item_site_barcode', partialFilterExpression: { barcode: { $gt: '' } } },
+)
 
 const CatalogCategorySchema = new Schema<CatalogCategoryDocument>(
   {

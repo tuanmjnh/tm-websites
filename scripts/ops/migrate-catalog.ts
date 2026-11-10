@@ -207,6 +207,7 @@ try {
       basePrice: number(record.basePrice),
       salePrice: record.salePrice === undefined || record.salePrice === null ? null : number(record.salePrice),
       sku: text(record.sku),
+      barcode: text(record.barcode),
       uom: text(record.uom),
       type: text(record.type) === 'variable' ? 'variable' : 'simple',
       stock: number(record.stock),
