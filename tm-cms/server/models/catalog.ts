@@ -120,6 +120,13 @@ export const CatalogItemDraftSchema = z.object({
   if (draft.salePrice !== null && draft.salePrice > draft.basePrice) {
     ctx.addIssue({ code: 'custom', path: ['salePrice'], message: 'salePrice cannot exceed basePrice' })
   }
+  if (draft.type === 'variable' && draft.variants.length === 0) {
+    ctx.addIssue({ code: 'custom', path: ['variants'], message: 'A variable product needs at least one variant' })
+  }
+  if (draft.type === 'simple' && draft.variants.length > 0) {
+    ctx.addIssue({ code: 'custom', path: ['variants'], message: 'A simple product cannot carry variants' })
+  }
+
   const skus = new Set<string>()
   for (const [index, variant] of draft.variants.entries()) {
     if (!variant.sku) {

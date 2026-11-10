@@ -847,6 +847,16 @@
         "thumbnail": "Ảnh đại diện (URL)",
         "gallery": "Thư viện ảnh",
         "galleryHint": "Mỗi dòng một URL",
+        "variants": "Biến thể",
+        "variantName": "Tên biến thể",
+        "variantsHint": "Sản phẩm có biến thể cần ít nhất một dòng SKU.",
+        "addVariant": "Thêm biến thể",
+        "removeVariant": "Xoá biến thể",
+        "attributes": "Thuộc tính",
+        "attributeName": "Tên thuộc tính",
+        "attributeValue": "Giá trị",
+        "addAttribute": "Thêm thuộc tính",
+        "removeAttribute": "Xoá thuộc tính",
         "seoTitle": "SEO title",
         "seoDescription": "SEO description",
         "categoriesCount": "{count} danh mục"
@@ -870,7 +880,9 @@
         "keyExists": "Khóa hoặc slug này đã được dùng.",
         "categoryInUse": "Danh mục còn sản phẩm, không xoá được.",
         "categoryHasChildren": "Danh mục còn danh mục con, không xoá được.",
-        "generic": "Không lưu được thay đổi. Vui lòng thử lại."
+        "generic": "Không lưu được thay đổi. Vui lòng thử lại.",
+        "variantRequired": "Sản phẩm có biến thể cần ít nhất một biến thể.",
+        "variantSkuRequired": "Mỗi biến thể cần có SKU."
       },
       "categories": {
         "title": "Danh mục sản phẩm",

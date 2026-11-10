@@ -847,6 +847,16 @@
         "thumbnail": "Thumbnail (URL)",
         "gallery": "Gallery",
         "galleryHint": "One URL per line",
+        "variants": "Variants",
+        "variantName": "Variant name",
+        "variantsHint": "A variable product needs at least one row with a SKU.",
+        "addVariant": "Add variant",
+        "removeVariant": "Remove variant",
+        "attributes": "Attributes",
+        "attributeName": "Attribute name",
+        "attributeValue": "Value",
+        "addAttribute": "Add attribute",
+        "removeAttribute": "Remove attribute",
         "seoTitle": "SEO title",
         "seoDescription": "SEO description",
         "categoriesCount": "{count} categories"
@@ -870,7 +880,9 @@
         "keyExists": "That key or slug is already in use.",
         "categoryInUse": "The category still has products, so it cannot be deleted.",
         "categoryHasChildren": "The category still has child categories, so it cannot be deleted.",
-        "generic": "The change could not be saved. Please try again."
+        "generic": "The change could not be saved. Please try again.",
+        "variantRequired": "A variable product needs at least one variant.",
+        "variantSkuRequired": "Every variant needs a SKU."
       },
       "categories": {
         "title": "Product categories",

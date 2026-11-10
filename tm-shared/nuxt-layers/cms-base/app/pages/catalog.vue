@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type {
+  AdminCatalogAttribute,
   AdminCatalogCategory,
   AdminCatalogEvent,
   AdminCatalogItem,
   AdminCatalogItemDraft,
   AdminCatalogStatus,
   AdminCatalogStatusFilter,
+  AdminCatalogVariant,
 } from '@tm/flow-contracts/catalog-admin'
 
 const { t } = useI18n()
@@ -159,9 +161,38 @@ const form = reactive({
   manageStock: true,
   categories: [] as string[],
   tags: '',
+  variants: [] as AdminCatalogVariant[],
+  attributes: [] as AdminCatalogAttribute[],
   seoTitle: '',
   seoDescription: '',
 })
+
+const emptyVariant = (): AdminCatalogVariant => ({
+  sku: '',
+  name: { vi: '' },
+  basePrice: Number(form.basePrice) || 0,
+  salePrice: null,
+  stock: 0,
+  manageStock: true,
+  isActive: true,
+  attributes: [],
+})
+
+function addVariant() {
+  form.variants.push(emptyVariant())
+}
+
+function removeVariant(index: number) {
+  form.variants.splice(index, 1)
+}
+
+function addAttribute() {
+  form.attributes.push({ name: { vi: '' }, value: { vi: '' } })
+}
+
+function removeAttribute(index: number) {
+  form.attributes.splice(index, 1)
+}
 
 function resetForm() {
   editingId.value = null
@@ -188,6 +219,8 @@ function resetForm() {
     manageStock: true,
     categories: [],
     tags: '',
+    variants: [],
+    attributes: [],
     seoTitle: '',
     seoDescription: '',
   })
@@ -224,6 +257,9 @@ function openEdit(item: AdminCatalogItem) {
     manageStock: item.manageStock,
     categories: categories.value.filter(category => categoryKeys.has(category.id)).map(category => category.key),
     tags: item.tags.join(', '),
+    // Cloned, so cancelling an edit does not mutate the row still shown in the list.
+    variants: JSON.parse(JSON.stringify(item.variants)) as AdminCatalogVariant[],
+    attributes: JSON.parse(JSON.stringify(item.attributes)) as AdminCatalogAttribute[],
     seoTitle: item.seo.title.vi ?? '',
     seoDescription: item.seo.description.vi ?? '',
   })
@@ -248,8 +284,19 @@ function payload(): AdminCatalogItemDraft {
     manageStock: form.manageStock,
     categories: form.categories,
     tags: form.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-    attributes: [],
-    variants: [],
+    attributes: form.attributes
+      .filter(attribute => (attribute.name.vi ?? '').trim() && (attribute.value.vi ?? '').trim())
+      .map(attribute => ({ name: attribute.name, value: attribute.value })),
+    variants: form.type === 'variable'
+      ? form.variants.map(variant => ({
+          ...variant,
+          sku: variant.sku.trim(),
+          name: variant.name,
+          basePrice: Number(variant.basePrice) || 0,
+          salePrice: variant.salePrice === null ? null : Number(variant.salePrice),
+          stock: Number(variant.stock) || 0,
+        }))
+      : [],
     seo: {
       title: { vi: form.seoTitle },
       description: { vi: form.seoDescription },
@@ -260,6 +307,16 @@ function payload(): AdminCatalogItemDraft {
 
 async function save() {
   if (!canWrite.value || saving.value) return
+  if (form.type === 'variable') {
+    if (!form.variants.length) {
+      formError.value = t('admin.catalog.errors.variantRequired')
+      return
+    }
+    if (form.variants.some(variant => !variant.sku.trim())) {
+      formError.value = t('admin.catalog.errors.variantSkuRequired')
+      return
+    }
+  }
   saving.value = true
   formError.value = null
   try {
@@ -551,6 +608,69 @@ async function removeCategory(category: AdminCatalogCategory) {
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.manageStock')">
               <USwitch v-model="form.manageStock" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.fields.variants')" class="sm:col-span-2">
+              <div class="w-full space-y-2">
+                <div
+                  v-for="(variant, index) in form.variants"
+                  :key="index"
+                  class="grid gap-2 rounded-md border border-default p-2 sm:grid-cols-6"
+                >
+                  <UInput v-model="variant.sku" :placeholder="t('admin.catalog.fields.sku')" />
+                  <UInput v-model="variant.name.vi" :placeholder="t('admin.catalog.fields.variantName')" />
+                  <UInput v-model.number="variant.basePrice" type="number" :placeholder="t('admin.catalog.fields.basePrice')" />
+                  <UInput v-model.number="variant.salePrice" type="number" :placeholder="t('admin.catalog.fields.salePrice')" />
+                  <UInput v-model.number="variant.stock" type="number" :placeholder="t('admin.catalog.fields.stock')" />
+                  <div class="flex items-center justify-between gap-2">
+                    <USwitch v-model="variant.isActive" />
+                    <UButton
+                      icon="i-lucide-trash-2"
+                      color="error"
+                      variant="ghost"
+                      size="xs"
+                      :aria-label="t('admin.catalog.fields.removeVariant')"
+                      @click="removeVariant(index)"
+                    />
+                  </div>
+                </div>
+                <p v-if="!form.variants.length" class="text-xs text-muted">
+                  {{ t('admin.catalog.fields.variantsHint') }}
+                </p>
+                <UButton
+                  size="xs"
+                  variant="soft"
+                  icon="i-lucide-plus"
+                  :label="t('admin.catalog.fields.addVariant')"
+                  @click="addVariant"
+                />
+              </div>
+            </UFormField>
+            <UFormField :label="t('admin.catalog.fields.attributes')" class="sm:col-span-2">
+              <div class="w-full space-y-2">
+                <div
+                  v-for="(attribute, index) in form.attributes"
+                  :key="index"
+                  class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+                >
+                  <UInput v-model="attribute.name.vi" :placeholder="t('admin.catalog.fields.attributeName')" />
+                  <UInput v-model="attribute.value.vi" :placeholder="t('admin.catalog.fields.attributeValue')" />
+                  <UButton
+                    icon="i-lucide-trash-2"
+                    color="error"
+                    variant="ghost"
+                    size="xs"
+                    :aria-label="t('admin.catalog.fields.removeAttribute')"
+                    @click="removeAttribute(index)"
+                  />
+                </div>
+                <UButton
+                  size="xs"
+                  variant="soft"
+                  icon="i-lucide-plus"
+                  :label="t('admin.catalog.fields.addAttribute')"
+                  @click="addAttribute"
+                />
+              </div>
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.categories')" class="sm:col-span-2">
               <USelectMenu v-model="form.categories" :items="categoryOptions" value-key="value" multiple class="w-full" />

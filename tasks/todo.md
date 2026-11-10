@@ -503,12 +503,19 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence (browser `:4005/catalog`): page renders 241 records with status/type/tag filters and `Tổng: 241 / Đã xuất bản: 229`; the edit modal opens with key locked and every field populated (title/slug/prices/SKU/uom/stock/3 categories); no console errors.
 - Limits: variants and attributes are stored and preserved on save but are **not editable** in the UI yet (no variant editor); media fields are URL strings, not media-library picks (blocked by Q19); the catalog category manager is a flat list with a parent select, without drag ordering; there is no bulk price/stock/import tool (that is CAT-02).
 
+### P4.a (rest) — variants and attributes editor (landed 2026-11-10)
+
+- Target files: `tm-cms/server/models/catalog.ts` (two new invariants), `cms-base/app/pages/catalog.vue` (variant/attribute rows in the item modal, payload and validation), `tm-cms/i18n/locales/{vi,en}.json` (`admin.catalog.fields.{variants,addVariant,attributes,…}`, `admin.catalog.errors.{variantRequired,variantSkuRequired}`), `scripts/build/test-catalog-service.ts` (five new checks).
+- Behaviour: a variable product now requires at least one variant and a simple product rejects variants, both server-side (`CATALOG_PAYLOAD_INVALID`) and in the modal before the request. Every variant row edits SKU, name, base/sale price, stock, active flag and is re-numbered by the same normalization used for created records; the item attribute list edits name/value. Opening the modal clones the stored variants/attributes, so cancelling never mutates the row still shown in the list, and saving sends them back instead of the empty arrays the first version submitted.
+- Evidence (service, disposable DB): `pnpm test:catalog` → 23 checks (five new): variable without variants → `422`, simple with variants → `422`, variants + attributes round-trip through create and list, two variants sharing a SKU (case-insensitive) → `422`, and an update replaces the variant set while keeping attributes and bumping the revision.
+- Evidence (browser, `:4005/catalog`, real `dem-bong-ep-vikosan`): the modal lists both existing variants (`SKU-HTFR44J8-7F-120X190`, `SKU-HTFR44J8-7F-150X190`) and the "Biến thể"/"Thuộc tính" sections; saving without edits returned "Đã lưu sản phẩm", and MongoDB still holds 2 variants with the same SKUs at revision 2 — the previous build would have wiped them.
+- Limits: variant attributes (size/colour options per variant) are preserved but still not editable row-by-row; there is no bulk variant generation, and a variant SKU is required (a legacy variant without one is skipped by the migration).
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
 
-1. **CAT-02 (partial) — variants and attributes editor.** The catalog module stores variants/attributes and the storefront renders them, but the CMS modal cannot edit them yet: today an editor can change everything else and the stored variants are preserved as-is. A variant table (SKU, options, price, stock, active) plus an attribute list is the next slice, and it needs no decision.
-2. **Catalog bulk price/stock update.** Editing 241 prices one record at a time is the remaining friction after P4.a; a bounded bulk command over the filtered selection can follow the existing content bulk shape (per-row outcomes, audit per row).
+1. **Catalog bulk price/stock update.** Editing 241 prices one record at a time is the remaining friction after P4.a; a bounded bulk command over the filtered selection can follow the existing content bulk shape (per-row outcomes, audit per row).
 
 Nothing else in the current docs is both unblocked and meaningful: each remaining gap is either decided out of scope, waiting for a credential, or a whole domain (orders, stock, finance, HR, CRM) that the v2 plan puts after the storefront parity work rather than in this queue.
 

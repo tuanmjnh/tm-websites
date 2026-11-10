@@ -302,6 +302,97 @@ try {
     assert.equal(restored.status, 'draft')
     assert.equal(restored.deletedAt, null)
   })
+
+  await check('a variable product needs at least one variant', async () => {
+    await assert.rejects(
+      createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+        key: 'bien-the-thieu',
+        type: 'variable',
+        title: { vi: 'Biến thể thiếu' },
+        slug: { vi: 'bien-the-thieu' },
+        basePrice: 100000,
+      }),
+      isServiceError(422, 'CATALOG_PAYLOAD_INVALID'),
+    )
+  })
+
+  await check('a simple product cannot carry variants', async () => {
+    await assert.rejects(
+      createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+        key: 'don-co-bien-the',
+        type: 'simple',
+        title: { vi: 'Đơn có biến thể' },
+        slug: { vi: 'don-co-bien-the' },
+        variants: [{ sku: 'X-1', basePrice: 1000 }],
+      }),
+      isServiceError(422, 'CATALOG_PAYLOAD_INVALID'),
+    )
+  })
+
+  let variantItemId = ''
+  await check('variants and attributes round-trip through create and list', async () => {
+    const created = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'dem-bien-the',
+      type: 'variable',
+      title: { vi: 'Đệm biến thể' },
+      slug: { vi: 'dem-bien-the' },
+      basePrice: 2000000,
+      attributes: [
+        { name: { vi: 'Chất liệu' }, value: { vi: 'Cao su non' } },
+      ],
+      variants: [
+        { sku: 'DEM-1M6', basePrice: 2000000, salePrice: 1800000, stock: 4, name: { vi: '1m6' } },
+        { sku: 'DEM-1M8', basePrice: 2400000, stock: 0, name: { vi: '1m8' } },
+      ],
+    })
+    variantItemId = created.id
+    assert.equal(created.variants.length, 2)
+    assert.equal(created.variants[0]?.sku, 'DEM-1M6')
+    assert.equal(created.variants[0]?.salePrice, 1800000)
+    assert.equal(created.attributes[0]?.value.vi, 'Cao su non')
+
+    const listed = await listCatalogItems(CatalogItem, CatalogCategory, SITE, { q: 'dem-bien-the' })
+    assert.equal(listed.data[0]?.variants.length, 2)
+  })
+
+  await check('two variants cannot share a SKU', async () => {
+    await assert.rejects(
+      createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+        key: 'dem-trung-sku',
+        type: 'variable',
+        title: { vi: 'Đệm trùng SKU' },
+        slug: { vi: 'dem-trung-sku' },
+        variants: [
+          { sku: 'TRUNG-1', basePrice: 1000 },
+          { sku: 'trung-1', basePrice: 2000 },
+        ],
+      }),
+      isServiceError(422, 'CATALOG_PAYLOAD_INVALID'),
+    )
+  })
+
+  await check('updating variants replaces the set without dropping attributes', async () => {
+    const before = await getCatalogItem(CatalogItem, SITE, variantItemId)
+    const updated = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, variantItemId, {
+      revision: before.revision,
+      key: 'dem-bien-the',
+      type: 'variable',
+      title: { vi: 'Đệm biến thể' },
+      slug: { vi: 'dem-bien-the' },
+      basePrice: 2000000,
+      attributes: before.attributes,
+      variants: [
+        { sku: 'DEM-1M6', basePrice: 2000000, stock: 5, isActive: true, manageStock: true },
+        { sku: 'DEM-2M', basePrice: 3000000, stock: 2, isActive: false, manageStock: true },
+      ],
+    })
+    assert.equal(updated.variants.length, 2)
+    assert.equal(updated.variants[1]?.sku, 'DEM-2M')
+    assert.equal(updated.variants[1]?.isActive, false)
+    assert.equal(updated.attributes.length, 1)
+    assert.equal(updated.revision, before.revision + 1)
+  })
+
 } finally {
   await connection.dropDatabase()
   await closeDatabaseConnections()
