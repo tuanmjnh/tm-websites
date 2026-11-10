@@ -552,6 +552,13 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence: `pnpm test:content` → 25 model + 30 live service checks (normalisation, dedupe, 20/60 limits as `422`, public read, restore of keywords); HTTP `:4005`/`:4006` create → publish → public API and rendered tag, `PATCH` replacing the list, a page without keywords rendering no tag; browser edit-and-save on `/content` produced revision 5 with the new keywords and kept the SEO image. Probe content, audit rows and revisions were deleted (`content` 3, `audit_logs` 1).
 - Limits: free text only — no global `keywords` collection, no rename/merge, no keyword filter in the admin list or public search, and no legacy keyword sync. Tags stay the taxonomy.
 
+### CNT-02 — content attributes editor (landed 2026-11-10)
+
+- The record modal (`cms-base/app/pages/content.vue`) now edits `attributes` as key/value rows with add/remove, instead of submitting `{}` and wiping whatever the API stored on every save.
+- Keys are checked client-side against the model's pattern (`attributeKeyRequired`/`attributeKeyInvalid`/`attributeDuplicate`) before the request; blank rows are dropped; untouched numbers and booleans keep their stored type while a new value is a string.
+- Evidence: `pnpm test:content` → 25 model + 30 live checks (attributes round-trip, unsafe key `422`); browser on a disposable `pages/probe-attributes` record with `{layout:'wide', count:5, featured:true}` loaded all three rows, refused a `9bad` key with the inline message, and saved `theme: gold` as revision 2 with the original types intact. Probe rows deleted (`content` 3, `audit_logs` 1).
+- Limits: flat key/value only, new values are strings, no attribute filter or public projection, no per-type attribute schema.
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

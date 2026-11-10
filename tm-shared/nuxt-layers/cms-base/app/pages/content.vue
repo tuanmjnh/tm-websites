@@ -115,12 +115,20 @@ const emptyLocale = (): LocaleForm => ({
   seoImage: '',
 })
 
+interface AttributeRow {
+  key: string
+  value: string
+  /** Kept so an untouched number/boolean keeps its stored type on save. */
+  original?: string | number | boolean
+}
+
 const form = reactive({
   type: 'page' as AdminContentType,
   key: '',
   categories: [] as string[],
   media: [] as string[],
   tags: '',
+  attributes: [] as AttributeRow[],
   publishAt: '',
   unpublishAt: '',
   locales: { vi: emptyLocale(), en: emptyLocale() } as Record<'vi' | 'en', LocaleForm>,
@@ -447,9 +455,46 @@ function resetForm() {
   form.categories = []
   form.media = []
   form.tags = ''
+  form.attributes = []
   form.publishAt = ''
   form.unpublishAt = ''
   form.locales = { vi: emptyLocale(), en: emptyLocale() }
+}
+
+// Attribute keys are part of the stored schema, so they follow the server's
+// pattern instead of accepting anything the editor types.
+const ATTRIBUTE_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_.-]{0,59}$/
+
+function addAttribute() {
+  form.attributes.push({ key: '', value: '' })
+}
+
+function removeAttribute(index: number) {
+  form.attributes.splice(index, 1)
+}
+
+/** Returns null and sets the form error when a row cannot be stored. */
+function buildAttributes(): Record<string, string | number | boolean> | null {
+  const attributes: Record<string, string | number | boolean> = {}
+  for (const row of form.attributes) {
+    const key = row.key.trim()
+    const value = row.value.trim()
+    if (!key && !value) continue
+    if (!key) {
+      formError.value = t('admin.content.errors.attributeKeyRequired')
+      return null
+    }
+    if (!ATTRIBUTE_KEY_PATTERN.test(key)) {
+      formError.value = t('admin.content.errors.attributeKeyInvalid')
+      return null
+    }
+    if (key in attributes) {
+      formError.value = t('admin.content.errors.attributeDuplicate')
+      return null
+    }
+    attributes[key] = row.original !== undefined && value === String(row.original) ? row.original : value
+  }
+  return attributes
 }
 
 function openCreate() {
@@ -472,6 +517,11 @@ function openEdit(entry: AdminContent) {
   void loadMediaOptions()
   form.media = [...entry.media]
   form.tags = entry.tags.join(', ')
+  form.attributes = Object.entries(entry.attributes ?? {}).map(([key, value]) => ({
+    key,
+    value: String(value),
+    original: value,
+  }))
   form.publishAt = toLocalInput(entry.publishAt)
   form.unpublishAt = toLocalInput(entry.unpublishAt)
 
@@ -527,6 +577,9 @@ async function submitForm() {
     return
   }
 
+  const attributes = buildAttributes()
+  if (!attributes) return
+
   const draft = {
     type: form.type,
     key: form.key.trim(),
@@ -534,7 +587,7 @@ async function submitForm() {
     categories: form.categories,
     media: form.media,
     tags: splitList(form.tags),
-    attributes: {},
+    attributes,
     publishAt: toIso(form.publishAt),
     unpublishAt: toIso(form.unpublishAt),
   }
@@ -1329,6 +1382,34 @@ onMounted(async () => {
               />
             </UFormField>
           </div>
+
+          <UFormField :label="t('admin.content.fields.attributes')" name="attributes" :hint="t('admin.content.fields.attributesHint')">
+            <div class="w-full space-y-2">
+              <div
+                v-for="(attribute, index) in form.attributes"
+                :key="index"
+                class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+              >
+                <UInput v-model="attribute.key" :placeholder="t('admin.content.fields.attributeKey')" />
+                <UInput v-model="attribute.value" :placeholder="t('admin.content.fields.attributeValue')" />
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  :aria-label="t('admin.content.fields.removeAttribute')"
+                  @click="removeAttribute(index)"
+                />
+              </div>
+              <UButton
+                size="xs"
+                variant="soft"
+                icon="i-lucide-plus"
+                :label="t('admin.content.fields.addAttribute')"
+                @click="addAttribute"
+              />
+            </div>
+          </UFormField>
 
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <UFormField :label="t('admin.content.fields.publishAt')" name="publishAt">

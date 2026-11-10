@@ -88,6 +88,7 @@ async function integration() {
       assert.equal(created.revision, 1)
       assert.equal(created.publishedAt, null)
       assert.deepEqual(created.tags, ['về chúng tôi'])
+      assert.deepEqual(created.attributes, { layout: 'wide' })
       assert.equal(created.locales[0]!.slug, 'gioi-thieu')
       assert.equal(typeof created.id, 'string')
     })
@@ -109,6 +110,11 @@ async function integration() {
     await check('an invalid payload is a 422, not a crash', async () => {
       await assert.rejects(
         () => createContent(Content, SITE, { type: 'page', key: 'pages/bad', locales: [] }),
+        isServiceError(422, 'CONTENT_PAYLOAD_INVALID'),
+      )
+      // Attribute keys follow the shared pattern; a value without a safe key is refused.
+      await assert.rejects(
+        () => createContent(Content, SITE, pageDraft('pages/bad-attr', 'bad-attr', { attributes: { '1bad key': 'x' } })),
         isServiceError(422, 'CONTENT_PAYLOAD_INVALID'),
       )
     })
