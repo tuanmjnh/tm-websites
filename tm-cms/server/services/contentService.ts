@@ -12,6 +12,7 @@ import type {
 import type { MenuDocument } from '../models/menu'
 import {
   ContentInvariantError,
+  KEYWORD_MAX_LENGTH,
   applyContentTransition,
   contentModel,
   isPubliclyVisible,
@@ -65,6 +66,8 @@ export interface ContentListParams {
   q?: string
   /** Exact tag match. Tags are stored normalized, so no pattern matching is needed. */
   tag?: string
+  /** Exact keyword match inside any locale; keywords are free text, so no folding. */
+  keyword?: string
   cursor?: string
   limit?: number
 }
@@ -208,10 +211,21 @@ export async function listContent(
     filter.tags = tag
   }
 
+  // Keywords live per locale, so the dotted path matches a value in any locale.
+  const keyword = (params.keyword ?? '').trim().slice(0, KEYWORD_MAX_LENGTH)
+  if (keyword) {
+    filter['locales.keywords'] = keyword
+  }
+
   const search = (params.q ?? '').trim().slice(0, SEARCH_MAX_LENGTH)
   if (search) {
     const pattern = new RegExp(escapeRegExp(search), 'i')
-    filter.$or = [{ key: pattern }, { 'locales.title': pattern }, { 'locales.slug': pattern }]
+    filter.$or = [
+      { key: pattern },
+      { 'locales.title': pattern },
+      { 'locales.slug': pattern },
+      { 'locales.keywords': pattern },
+    ]
   }
 
   if (params.cursor) {

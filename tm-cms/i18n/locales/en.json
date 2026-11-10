@@ -414,6 +414,7 @@
         "all": "All tags",
         "placeholder": "Filter by tag"
       },
+      "keywordFilter": "Filter by exact keyword",
       "listTitle": "Content entries",
       "listDescription": "Select a record to inspect, publish, schedule or archive it",
       "noEntries": "No content records match the current filters",

@@ -37,6 +37,8 @@ export interface ContentListQuery {
   q?: string
   /** Exact tag, as listed by the tag admin API. */
   tag?: string
+  /** Exact keyword inside any locale. */
+  keyword?: string
   cursor?: string
   limit?: number
 }

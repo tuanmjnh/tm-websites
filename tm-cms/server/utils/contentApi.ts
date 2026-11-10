@@ -22,6 +22,8 @@ export const ContentListQuerySchema = z.object({
   q: z.string().trim().max(80).optional(),
   /** Exact tag, as listed by `/api/v1/admin/tags`; the value is normalized the same way. */
   tag: z.string().trim().min(1).max(60).optional(),
+  /** Exact keyword inside any locale; free text, so the stored casing is what matches. */
+  keyword: z.string().trim().min(1).max(60).optional(),
   cursor: z.string().max(64).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
 })

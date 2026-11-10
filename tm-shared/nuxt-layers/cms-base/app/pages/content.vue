@@ -57,6 +57,7 @@ const search = ref('')
 const status = ref<AdminContentStatusFilter>('all')
 const typeFilter = ref<'all' | AdminContentType>('all')
 const tagFilter = ref('all')
+const keywordFilter = ref('')
 const tagOptions = ref<{ label: string, value: string }[]>([])
 
 const detailOpen = ref(false)
@@ -268,6 +269,7 @@ async function load(reset = true) {
       type: typeFilter.value === 'all' ? undefined : typeFilter.value,
       q: search.value.trim() || undefined,
       tag: tagFilter.value === 'all' ? undefined : tagFilter.value,
+      keyword: keywordFilter.value.trim() || undefined,
       cursor: reset ? undefined : nextCursor.value ?? undefined,
       limit: 20,
     })
@@ -763,6 +765,12 @@ watch(search, () => {
   if (debounce) clearTimeout(debounce)
   debounce = setTimeout(() => load(), 400)
 })
+// A keyword is typed, not picked, so it debounces like the search box.
+let keywordDebounce: ReturnType<typeof setTimeout> | undefined
+watch(keywordFilter, () => {
+  if (keywordDebounce) clearTimeout(keywordDebounce)
+  keywordDebounce = setTimeout(() => load(), 400)
+})
 watch([status, typeFilter, tagFilter], () => load())
 onMounted(async () => {
   await Promise.all([load(), loadTagOptions()])
@@ -837,6 +845,12 @@ onMounted(async () => {
           :items="tagItems"
           value-key="value"
           :placeholder="t('admin.content.tag.placeholder')"
+          class="w-full sm:w-52"
+        />
+        <UInput
+          v-model="keywordFilter"
+          icon="i-lucide-tag"
+          :placeholder="t('admin.content.keywordFilter')"
           class="w-full sm:w-52"
         />
       </div>

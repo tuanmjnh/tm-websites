@@ -570,6 +570,42 @@ async function integration() {
       assert.deepEqual(none.counts, unfiltered.counts)
     })
 
+    await check('a keyword filter matches one stored keyword exactly, in any locale', async () => {
+      const keywordPost = await createContent(Content, SITE, {
+        type: 'post',
+        key: 'posts/tu-khoa-loc',
+        locales: [
+          { locale: 'vi', title: 'Lọc từ khóa', slug: 'loc-tu-khoa', keywords: ['loc-tu-khoa', 'loc-qua-tang'] },
+          { locale: 'en', title: 'Keyword filter', slug: 'keyword-filter', keywords: ['loc-jewellery'] },
+        ],
+      })
+      await createContent(Content, OTHER_SITE, {
+        type: 'post',
+        key: 'posts/tu-khoa-loc',
+        locales: [{ locale: 'vi', title: 'Khác site', slug: 'loc-tu-khoa', keywords: ['loc-tu-khoa'] }],
+      })
+
+      const exact = await listContent(Content, SITE, { keyword: 'loc-tu-khoa', limit: 50 })
+      assert.deepEqual(exact.data.map(entry => entry.id), [keywordPost.id])
+
+      // Free text keeps its casing, so the uppercase spelling is a different value.
+      const upper = await listContent(Content, SITE, { keyword: 'LOC-TU-KHOA', limit: 50 })
+      assert.equal(upper.data.length, 0)
+
+      // A keyword stored on the `en` locale is found through the same dotted path.
+      const english = await listContent(Content, SITE, { keyword: 'loc-jewellery', limit: 50 })
+      assert.deepEqual(english.data.map(entry => entry.id), [keywordPost.id])
+
+      // The service trims the typed value, like the tag filter does.
+      const padded = await listContent(Content, SITE, { keyword: '  loc-qua-tang  ', limit: 50 })
+      assert.equal(padded.data.length, 1)
+
+      // Free-text search covers keywords as well as key/title/slug.
+      const search = await listContent(Content, SITE, { q: 'loc-jewellery', limit: 50 })
+      assert.deepEqual(search.data.map(entry => entry.id), [keywordPost.id])
+    })
+
+
   } finally {
     await connection.db?.dropDatabase().catch(() => undefined)
     await closeDatabaseConnections()

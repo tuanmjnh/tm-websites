@@ -559,6 +559,13 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence: `pnpm test:content` → 25 model + 30 live checks (attributes round-trip, unsafe key `422`); browser on a disposable `pages/probe-attributes` record with `{layout:'wide', count:5, featured:true}` loaded all three rows, refused a `9bad` key with the inline message, and saved `theme: gold` as revision 2 with the original types intact. Probe rows deleted (`content` 3, `audit_logs` 1).
 - Limits: flat key/value only, new values are strings, no attribute filter or public projection, no per-type attribute schema.
 
+### CNT-01 — keyword filter on the content list (landed 2026-11-10)
+
+- `listContent` accepts `keyword` (trimmed, max 60) and matches it exactly against `locales.keywords`, so a value on any locale selects the record; the free-text `q` search now covers keywords next to key/title/slug.
+- API query schema + `ContentListQuery` expose `keyword` (whitespace-only → `422`); the CMS toolbar has a debounced keyword input beside the tag filter; i18n `admin.content.keywordFilter`.
+- Evidence: `pnpm test:content` → 31 live checks (exact hit, case mismatch empty, `en` locale matched, padded value, site isolation, `q` by keyword); HTTP `:4005` probes for exact/padded/uppercase/shared/`q`/blank; browser filtering narrowed to one row and clearing restored the list. Probe rows deleted (`content` 3, `audit_logs` 1).
+- Limits: exact match only, one keyword at a time, no facet with counts, storefront search unchanged.
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

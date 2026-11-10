@@ -414,6 +414,7 @@
         "all": "Tất cả thẻ",
         "placeholder": "Lọc theo thẻ"
       },
+      "keywordFilter": "Lọc theo từ khóa chính xác",
       "listTitle": "Danh sách nội dung",
       "listDescription": "Chọn một bản ghi để xem, xuất bản, hẹn giờ hoặc lưu trữ",
       "noEntries": "Không có bản ghi nội dung khớp bộ lọc hiện tại",
