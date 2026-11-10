@@ -138,3 +138,30 @@ export const AdminCatalogCategoryDraftSchema = z.object({
   thumbnail: z.string().nullable(),
 })
 export type AdminCatalogCategoryDraft = z.infer<typeof AdminCatalogCategoryDraftSchema>
+
+/** Partial price/stock patch applied to many records at once (max 100 rows). */
+export const AdminCatalogBulkPatchSchema = z.object({
+  items: z.array(z.object({
+    id: z.string().min(1),
+    revision: z.number().int().min(1),
+    basePrice: z.number().nonnegative().optional(),
+    salePrice: z.number().nonnegative().nullable().optional(),
+    stock: z.number().int().optional(),
+  })).min(1).max(100),
+})
+export type AdminCatalogBulkPatch = z.infer<typeof AdminCatalogBulkPatchSchema>
+
+export const AdminCatalogBulkRowSchema = z.object({
+  id: z.string(),
+  ok: z.boolean(),
+  revision: z.number().nullable(),
+  error: z.object({ code: z.string(), message: z.string() }).nullable(),
+})
+export type AdminCatalogBulkRow = z.infer<typeof AdminCatalogBulkRowSchema>
+
+export const AdminCatalogBulkResultSchema = z.object({
+  results: z.array(AdminCatalogBulkRowSchema),
+  succeeded: z.number(),
+  failed: z.number(),
+})
+export type AdminCatalogBulkResult = z.infer<typeof AdminCatalogBulkResultSchema>

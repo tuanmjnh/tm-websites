@@ -1,5 +1,7 @@
 import type {
   AdminCatalogCategory,
+  AdminCatalogBulkPatch,
+  AdminCatalogBulkResult,
   AdminCatalogCategoryDraft,
   AdminCatalogEvent,
   AdminCatalogItem,
@@ -66,6 +68,15 @@ export const useCatalogAdmin = () => {
     return payload.data
   }
 
+  /** Applies a partial price/stock patch to many records; each row answers separately. */
+  const bulkUpdate = async (patch: AdminCatalogBulkPatch): Promise<AdminCatalogBulkResult> => {
+    const payload = await plainFetch('/api/v1/admin/catalog/items/bulk', {
+      method: 'POST',
+      body: patch,
+    }) as { data: AdminCatalogBulkResult }
+    return payload.data
+  }
+
   const listCategories = async (): Promise<AdminCatalogCategory[]> => {
     const payload = await plainFetch('/api/v1/admin/catalog/categories') as { data: AdminCatalogCategory[] }
     return payload.data
@@ -113,6 +124,7 @@ export const useCatalogAdmin = () => {
     create,
     update,
     runEvent,
+    bulkUpdate,
     listCategories,
     createCategory,
     updateCategory,

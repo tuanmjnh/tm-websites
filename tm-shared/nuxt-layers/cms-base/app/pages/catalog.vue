@@ -18,6 +18,7 @@ const {
   create,
   update,
   runEvent,
+  bulkUpdate,
   listCategories,
   createCategory,
   updateCategory,
@@ -40,6 +41,74 @@ const tagOptions = ref<{ label: string, value: string }[]>([])
 
 const search = ref('')
 const status = ref<AdminCatalogStatusFilter>('all')
+const selection = ref<string[]>([])
+const bulkOpen = ref(false)
+const bulkBusy = ref(false)
+const bulkError = ref<string | null>(null)
+const bulkForm = ref({
+  basePrice: null as number | null,
+  salePrice: null as number | null,
+  stock: null as number | null,
+})
+
+const allSelected = computed(() =>
+  entries.value.length > 0 && entries.value.every(entry => selection.value.includes(entry.id)))
+
+function toggleAll() {
+  selection.value = allSelected.value ? [] : entries.value.map(entry => entry.id)
+}
+
+function toggleOne(id: string) {
+  selection.value = selection.value.includes(id)
+    ? selection.value.filter(entry => entry !== id)
+    : [...selection.value, id]
+}
+
+function openBulk() {
+  bulkError.value = null
+  bulkForm.value = { basePrice: null, salePrice: null, stock: null }
+  bulkOpen.value = true
+}
+
+/** Only the filled fields are sent; a blank field means "keep the current value". */
+async function applyBulk() {
+  if (!canWrite.value || bulkBusy.value) return
+  const patch = {
+    ...(bulkForm.value.basePrice === null ? {} : { basePrice: Number(bulkForm.value.basePrice) }),
+    ...(bulkForm.value.salePrice === null ? {} : { salePrice: Number(bulkForm.value.salePrice) }),
+    ...(bulkForm.value.stock === null ? {} : { stock: Number(bulkForm.value.stock) }),
+  }
+  if (!Object.keys(patch).length) {
+    bulkError.value = t('admin.catalog.errors.bulkNothing')
+    return
+  }
+
+  const rows = entries.value
+    .filter(entry => selection.value.includes(entry.id))
+    .map(entry => ({ id: entry.id, revision: entry.revision, ...patch }))
+
+  bulkBusy.value = true
+  bulkError.value = null
+  try {
+    const result = await bulkUpdate({ items: rows })
+    toast.add({
+      title: t('admin.catalog.messages.bulkResult', { ok: result.succeeded, total: result.results.length }),
+      color: result.failed ? 'warning' : 'success',
+    })
+    if (result.failed) {
+      const first = result.results.find(row => !row.ok && row.error)
+      bulkError.value = first?.error ? messageFor(first.error.code) : null
+    } else {
+      bulkOpen.value = false
+      selection.value = []
+    }
+    await load()
+  } catch (caught) {
+    bulkError.value = messageFor(errorCode(caught))
+  } finally {
+    bulkBusy.value = false
+  }
+}
 const typeFilter = ref<'all' | 'simple' | 'variable'>('all')
 const tagFilter = ref('all')
 
@@ -473,6 +542,16 @@ async function removeCategory(category: AdminCatalogCategory) {
         <USelect v-model="status" :items="statusItems" value-key="value" class="w-44" />
         <USelect v-model="typeFilter" :items="typeItems" value-key="value" class="w-40" />
         <USelect v-model="tagFilter" :items="tagItems" value-key="value" class="w-48" />
+        <UButton
+          v-if="canWrite"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          icon="i-lucide-check-square"
+          :label="t('admin.catalog.bulk.selected', { count: selection.length })"
+          :disabled="!selection.length"
+          @click="openBulk"
+        />
         <UBadge color="neutral" variant="subtle" size="sm">
           {{ t('admin.catalog.stats.total', { count: counts.all ?? 0 }) }}
         </UBadge>
@@ -481,12 +560,23 @@ async function removeCategory(category: AdminCatalogCategory) {
         </UBadge>
       </div>
 
+      <div v-if="entries.length && canWrite" class="mb-2 flex items-center gap-2 text-xs text-muted">
+        <UCheckbox :model-value="allSelected" :aria-label="t('admin.catalog.bulk.selectAll')" @update:model-value="toggleAll" />
+        <span>{{ t('admin.catalog.bulk.selectAll') }}</span>
+      </div>
+
       <div class="space-y-2">
         <div
           v-for="item in entries"
           :key="item.id"
           class="flex flex-wrap items-center gap-3 rounded-lg border border-default px-3 py-3"
         >
+          <UCheckbox
+            v-if="canWrite"
+            :model-value="selection.includes(item.id)"
+            :aria-label="item.key"
+            @update:model-value="toggleOne(item.id)"
+          />
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
               <span class="truncate font-medium">{{ item.title.vi || item.key }}</span>
@@ -709,6 +799,30 @@ async function removeCategory(category: AdminCatalogCategory) {
             @click="formOpen = false"
           />
           <UButton :loading="saving" :disabled="!canWrite" :label="t('admin.catalog.save')" @click="save" />
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="bulkOpen" :title="t('admin.catalog.bulk.title')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
+      <template #body>
+        <div class="space-y-3">
+          <p class="text-sm text-muted">{{ t('admin.catalog.bulk.hint', { count: selection.length }) }}</p>
+          <p v-if="bulkError" class="text-sm text-error">{{ bulkError }}</p>
+          <UFormField :label="t('admin.catalog.fields.basePrice')">
+            <UInput v-model.number="bulkForm.basePrice" type="number" class="w-full" :placeholder="t('admin.catalog.bulk.keep')" />
+          </UFormField>
+          <UFormField :label="t('admin.catalog.fields.salePrice')">
+            <UInput v-model.number="bulkForm.salePrice" type="number" class="w-full" :placeholder="t('admin.catalog.bulk.keep')" />
+          </UFormField>
+          <UFormField :label="t('admin.catalog.fields.stock')">
+            <UInput v-model.number="bulkForm.stock" type="number" class="w-full" :placeholder="t('admin.catalog.bulk.keep')" />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('admin.catalog.cancel')" @click="bulkOpen = false" />
+          <UButton :loading="bulkBusy" :disabled="!canWrite" :label="t('admin.catalog.bulk.apply')" @click="applyBulk" />
         </div>
       </template>
     </UModal>

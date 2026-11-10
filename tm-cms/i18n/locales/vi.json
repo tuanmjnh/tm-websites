@@ -796,6 +796,14 @@
       "noEntries": "Không có định nghĩa nhà cung cấp nào"
     },
     "catalog": {
+      "bulk": {
+        "title": "Cập nhật giá và tồn kho",
+        "hint": "Áp dụng cho {count} sản phẩm đã chọn. Ô để trống giữ nguyên giá trị hiện tại.",
+        "keep": "Để trống = giữ nguyên",
+        "apply": "Áp dụng",
+        "selectAll": "Chọn tất cả trên trang",
+        "selected": "Đã chọn {count}"
+      },
       "title": "Sản phẩm & Danh mục",
       "description": "Danh mục và sản phẩm của website, dùng chung cho CMS và trang công khai",
       "permissionDenied": "Bạn không có quyền xem sản phẩm",
@@ -869,6 +877,7 @@
         "delete": "Xoá"
       },
       "messages": {
+        "bulkResult": "Đã cập nhật {ok}/{total} sản phẩm",
         "saved": "Đã lưu sản phẩm",
         "publish": "Đã xuất bản sản phẩm",
         "archive": "Đã lưu trữ sản phẩm",
@@ -876,6 +885,7 @@
         "delete": "Đã xoá sản phẩm"
       },
       "errors": {
+        "bulkNothing": "Nhập ít nhất một giá trị để cập nhật.",
         "revisionConflict": "Bản ghi đã bị người khác sửa; hãy tải lại trước khi lưu.",
         "keyExists": "Khóa hoặc slug này đã được dùng.",
         "categoryInUse": "Danh mục còn sản phẩm, không xoá được.",

@@ -8,6 +8,7 @@ import {
   listCatalogCategories,
   listCatalogItems,
   listCatalogTags,
+  bulkUpdateCatalogItems,
   runCatalogItemEvent,
   updateCatalogCategory,
   updateCatalogItem,
@@ -391,6 +392,83 @@ try {
     assert.equal(updated.variants[1]?.isActive, false)
     assert.equal(updated.attributes.length, 1)
     assert.equal(updated.revision, before.revision + 1)
+  })
+
+
+  let bulkA = ''
+  let bulkB = ''
+  await check('bulk price/stock updates only the rows that differ, per row', async () => {
+    const a = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'bulk-a',
+      title: { vi: 'Bulk A' },
+      slug: { vi: 'bulk-a' },
+      basePrice: 100000,
+      stock: 1,
+    })
+    const b = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'bulk-b',
+      title: { vi: 'Bulk B' },
+      slug: { vi: 'bulk-b' },
+      basePrice: 200000,
+    })
+    bulkA = a.id
+    bulkB = b.id
+
+    const result = await bulkUpdateCatalogItems(CatalogItem, SITE, {
+      items: [
+        { id: a.id, revision: a.revision, basePrice: 150000, salePrice: 120000, stock: 5 },
+        { id: b.id, revision: 99, basePrice: 1 },
+      ],
+    })
+    assert.equal(result.succeeded, 1)
+    assert.equal(result.failed, 1)
+    assert.equal(result.results[1]?.error?.code, 'CATALOG_REVISION_CONFLICT')
+
+    const updatedA = await getCatalogItem(CatalogItem, SITE, a.id)
+    assert.equal(updatedA.basePrice, 150000)
+    assert.equal(updatedA.salePrice, 120000)
+    assert.equal(updatedA.stock, 5)
+    assert.equal(updatedA.revision, a.revision + 1)
+
+    const untouchedB = await getCatalogItem(CatalogItem, SITE, b.id)
+    assert.equal(untouchedB.basePrice, 200000)
+  })
+
+  await check('a bulk row with salePrice above basePrice is refused', async () => {
+    const current = await getCatalogItem(CatalogItem, SITE, bulkA)
+    const result = await bulkUpdateCatalogItems(CatalogItem, SITE, {
+      items: [{ id: bulkA, revision: current.revision, basePrice: 100000, salePrice: 200000 }],
+    })
+    assert.equal(result.results[0]?.ok, false)
+    assert.equal(result.results[0]?.error?.code, 'CATALOG_SALE_PRICE_INVALID')
+    const after = await getCatalogItem(CatalogItem, SITE, bulkA)
+    assert.equal(after.basePrice, 150000)
+  })
+
+  await check('a repeated row and a foreign id fail without touching the good rows', async () => {
+    const current = await getCatalogItem(CatalogItem, SITE, bulkA)
+    const result = await bulkUpdateCatalogItems(CatalogItem, SITE, {
+      items: [
+        { id: bulkA, revision: current.revision, stock: 7 },
+        { id: bulkA, revision: current.revision, stock: 8 },
+        { id: '6af293983b8231e7d62544fe', revision: 1, stock: 1 },
+      ],
+    })
+    assert.equal(result.succeeded, 1)
+    assert.equal(result.results[1]?.error?.code, 'CATALOG_BULK_DUPLICATE')
+    assert.equal(result.results[2]?.error?.code, 'CATALOG_ITEM_NOT_FOUND')
+    const after = await getCatalogItem(CatalogItem, SITE, bulkA)
+    assert.equal(after.stock, 7)
+  })
+
+  await check('a no-change bulk row is ok and does not bump the revision', async () => {
+    const current = await getCatalogItem(CatalogItem, SITE, bulkB)
+    const result = await bulkUpdateCatalogItems(CatalogItem, SITE, {
+      items: [{ id: bulkB, revision: current.revision, basePrice: 200000, stock: 0 }],
+    })
+    assert.equal(result.results[0]?.ok, true)
+    const after = await getCatalogItem(CatalogItem, SITE, bulkB)
+    assert.equal(after.revision, current.revision)
   })
 
 } finally {

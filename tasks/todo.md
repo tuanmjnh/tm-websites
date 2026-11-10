@@ -511,13 +511,22 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence (browser, `:4005/catalog`, real `dem-bong-ep-vikosan`): the modal lists both existing variants (`SKU-HTFR44J8-7F-120X190`, `SKU-HTFR44J8-7F-150X190`) and the "Biến thể"/"Thuộc tính" sections; saving without edits returned "Đã lưu sản phẩm", and MongoDB still holds 2 variants with the same SKUs at revision 2 — the previous build would have wiped them.
 - Limits: variant attributes (size/colour options per variant) are preserved but still not editable row-by-row; there is no bulk variant generation, and a variant SKU is required (a legacy variant without one is skipped by the migration).
 
+### P4.a / CAT-02 — bulk price and stock (landed 2026-11-10)
+
+- Contract: `tm-shared/packages/flow-contracts/src/catalog-admin.ts` adds `AdminCatalogBulkItemSchema` (`id`, `revision`, optional `basePrice`/`salePrice`/`stock`), `AdminCatalogBulkPatchSchema` (1–100 rows) and `AdminCatalogBulkResultSchema` (`results[]` with `ok`/`revision`/`error`, plus `succeeded`/`failed`), exported from the package.
+- Service: `bulkUpdateCatalogItems` in `tm-cms/server/services/catalogService.ts` — one revision check per row, audit entry per changed row, and a no-op row (the value is already set) answers `ok` without bumping the revision. Duplicate ids → `CATALOG_BULK_DUPLICATE`, malformed id → `CATALOG_ID_INVALID`, missing row → `CATALOG_ITEM_NOT_FOUND`, stale revision → `CATALOG_REVISION_CONFLICT` (that row only), sale above base → `CATALOG_SALE_PRICE_INVALID`; one bad row never rolls back the good ones.
+- API: `POST /api/v1/admin/catalog/items/bulk` (`tm-cms/server/api/v1/admin/catalog/items/bulk.post.ts`) behind `content.write`, same origin check and `no-store` as the rest of the catalog surface.
+- Ui: `cms-base/app/pages/catalog.vue` gained a checkbox per row, a "select all on this page" toggle, an "Đã chọn N" button and a bulk modal (base price / sale price / stock; a blank field keeps the current value). `useCatalogAdmin.bulkUpdate` posts the selection with each row's revision and the toast reports `Đã cập nhật X/Y`. i18n `admin.catalog.bulk.*`, `messages.bulkResult`, `errors.bulkNothing` in both locales.
+- Evidence (service, disposable DB): `pnpm test:catalog` → 27 checks; the four new ones cover a mixed batch (good row applied, stale row refused), a duplicate id, a no-op row keeping its revision, and a foreign/unknown id failing alone.
+- Evidence (HTTP `:4005`): two disposable probe items — create `201`, bulk `200` with per-row results (`ok:true revision 2` for the good row, `CATALOG_REVISION_CONFLICT` for the stale one), no-op batch `200` leaving revisions at 2 and 1, `422` for 101 rows, `401` anonymous, `403` foreign Origin.
+- Evidence (browser `:4005/catalog`): filtered to `probe-bulk`, "select all" reported `Đã chọn 2`, the modal showed the right title/hint/labels, applying `135000` base price and stock `7` closed the dialog, toasted `Đã cập nhật 2/2 sản phẩm`, refreshed both rows to `Giá 135.000` and cleared the selection; MongoDB then held `basePrice 135000 / stock 7 / revision 2` on both. Probes, their audit rows were deleted afterwards (`catalog_items` back to 241), and the console showed no errors.
+- Limits: bulk covers price and stock only (no category/tag/status/variant fields), the selection is limited to the loaded page (50 rows, cap 100 by contract), there is no undo, and serial/IMEI/barcode/import remain open in CAT-02.
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
 
-1. **Catalog bulk price/stock update.** Editing 241 prices one record at a time is the remaining friction after P4.a; a bounded bulk command over the filtered selection can follow the existing content bulk shape (per-row outcomes, audit per row).
-
-Nothing else in the current docs is both unblocked and meaningful: each remaining gap is either decided out of scope, waiting for a credential, or a whole domain (orders, stock, finance, HR, CRM) that the v2 plan puts after the storefront parity work rather than in this queue.
+Nothing in the current docs is both unblocked and meaningful right now: each remaining gap is either decided out of scope, waiting for a credential, or a whole domain (orders, stock, finance, HR, CRM) that the v2 plan puts after the storefront parity work rather than in this queue.
 
 ### Deliberately not in scope (decided, not blocked)
 

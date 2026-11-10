@@ -1,6 +1,12 @@
 import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
-import type { AdminCatalogCategory, AdminCatalogItem, AdminCatalogStatusFilter } from '@tm/flow-contracts/catalog-admin'
+import type {
+  AdminCatalogBulkResult,
+  AdminCatalogBulkRow,
+  AdminCatalogCategory,
+  AdminCatalogItem,
+  AdminCatalogStatusFilter,
+} from '@tm/flow-contracts/catalog-admin'
 import type {
   CatalogCategoryDocument,
   CatalogEvent,
@@ -779,3 +785,106 @@ export async function listCatalogTags(
 }
 
 export { CATALOG_ITEM_TYPES, categoryKeysById }
+
+export interface CatalogBulkPatchRow {
+  id: string
+  revision: number
+  basePrice?: number
+  salePrice?: number | null
+  stock?: number
+}
+
+export interface CatalogBulkPatchInput {
+  items: CatalogBulkPatchRow[]
+}
+
+function bulkFailure(id: string, code: string, message: string): AdminCatalogBulkRow {
+  return { id, ok: false, revision: null, error: { code, message } }
+}
+
+/**
+ * Partial price/stock update over many records. Each row keeps its own
+ * optimistic-lock check and audit entry, so one stale row cannot roll back the
+ * others and a retry only re-applies what still differs. A row whose patch
+ * changes nothing is answered `ok` without bumping its revision, which keeps a
+ * retried batch from manufacturing revisions (and conflicts) out of thin air.
+ */
+export async function bulkUpdateCatalogItems(
+  model: Model<CatalogItemDocument>,
+  siteId: string,
+  input: CatalogBulkPatchInput,
+  meta?: CatalogWriteMeta,
+): Promise<AdminCatalogBulkResult> {
+  const results: AdminCatalogBulkRow[] = []
+  const seen = new Set<string>()
+
+  for (const row of input.items) {
+    if (seen.has(row.id)) {
+      results.push(bulkFailure(row.id, 'CATALOG_BULK_DUPLICATE', 'The same record is listed twice in this batch'))
+      continue
+    }
+    seen.add(row.id)
+
+    if (!Types.ObjectId.isValid(row.id)) {
+      results.push(bulkFailure(row.id, 'CATALOG_ID_INVALID', 'The identifier is not valid'))
+      continue
+    }
+
+    const record = await model
+      .findOne({ _id: new Types.ObjectId(row.id), siteId })
+      .lean<CatalogItemRecord>()
+    if (!record) {
+      results.push(bulkFailure(row.id, 'CATALOG_ITEM_NOT_FOUND', 'Catalog item not found'))
+      continue
+    }
+    if (record.revision !== row.revision) {
+      results.push(bulkFailure(row.id, 'CATALOG_REVISION_CONFLICT', 'Catalog item was changed by someone else; reload before saving'))
+      continue
+    }
+
+    const basePrice = row.basePrice ?? record.basePrice
+    const salePrice = row.salePrice === undefined ? record.salePrice : row.salePrice
+    if (salePrice !== null && salePrice > basePrice) {
+      results.push(bulkFailure(row.id, 'CATALOG_SALE_PRICE_INVALID', 'salePrice cannot exceed basePrice'))
+      continue
+    }
+
+    const patch: Record<string, number | null> = {}
+    if (row.basePrice !== undefined && row.basePrice !== record.basePrice) patch.basePrice = row.basePrice
+    if (row.salePrice !== undefined && row.salePrice !== record.salePrice) patch.salePrice = row.salePrice
+    if (row.stock !== undefined && row.stock !== record.stock) patch.stock = row.stock
+
+    if (!Object.keys(patch).length) {
+      results.push({ id: row.id, ok: true, revision: record.revision, error: null })
+      continue
+    }
+
+    const updated = await model.findOneAndUpdate(
+      { _id: record._id, siteId, revision: row.revision },
+      { $set: patch, $inc: { revision: 1 } },
+      { returnDocument: 'after' },
+    ).lean<CatalogItemRecord>()
+
+    if (!updated) {
+      results.push(bulkFailure(row.id, 'CATALOG_REVISION_CONFLICT', 'Catalog item was changed by someone else; reload before saving'))
+      continue
+    }
+
+    await recordContentAudit(meta?.audit, {
+      siteId,
+      resourceType: 'catalog_item',
+      resourceId: String(updated._id),
+      resourceKey: updated.key,
+      action: 'update',
+      revision: updated.revision,
+      fromStatus: record.status,
+      toStatus: updated.status,
+      changedFields: Object.keys(patch),
+    })
+
+    results.push({ id: row.id, ok: true, revision: updated.revision, error: null })
+  }
+
+  const succeeded = results.filter(row => row.ok).length
+  return { results, succeeded, failed: results.length - succeeded }
+}

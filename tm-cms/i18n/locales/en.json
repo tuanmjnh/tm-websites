@@ -796,6 +796,14 @@
       "noEntries": "No provider definitions available"
     },
     "catalog": {
+      "bulk": {
+        "title": "Bulk price and stock",
+        "hint": "Applies to the {count} selected products. A blank field keeps the current value.",
+        "keep": "Blank = keep current",
+        "apply": "Apply",
+        "selectAll": "Select all on this page",
+        "selected": "{count} selected"
+      },
       "title": "Products & categories",
       "description": "The site catalog, shared by the CMS and the public storefront",
       "permissionDenied": "You do not have permission to view the catalog",
@@ -869,6 +877,7 @@
         "delete": "Delete"
       },
       "messages": {
+        "bulkResult": "Updated {ok}/{total} products",
         "saved": "Product saved",
         "publish": "Product published",
         "archive": "Product archived",
@@ -876,6 +885,7 @@
         "delete": "Product deleted"
       },
       "errors": {
+        "bulkNothing": "Enter at least one value to update.",
         "revisionConflict": "Someone else changed this record; reload before saving.",
         "keyExists": "That key or slug is already in use.",
         "categoryInUse": "The category still has products, so it cannot be deleted.",
