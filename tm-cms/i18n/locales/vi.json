@@ -79,7 +79,8 @@
     "settings": "Cấu hình hệ thống",
     "categories": "Danh mục",
     "menus": "Menu điều hướng",
-    "tags": "Thẻ nội dung"
+    "tags": "Thẻ nội dung",
+    "redirects": "Chuyển hướng"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -251,7 +252,11 @@
         "content": "Nội dung",
         "category": "Danh mục",
         "media": "Media",
-        "settings": "Cấu hình"
+        "settings": "Cấu hình",
+        "menu": "Menu",
+        "catalog_item": "Sản phẩm",
+        "catalog_category": "Danh mục sản phẩm",
+        "redirect": "Chuyển hướng"
       },
       "actions": {
         "create": "Tạo",
@@ -943,6 +948,52 @@
         "sameName": "Tên mới trùng với tên hiện tại",
         "notFound": "Không còn nội dung nào dùng thẻ này",
         "invalid": "Tên thẻ không hợp lệ"
+      }
+    },
+    "redirects": {
+      "title": "Chuyển hướng URL",
+      "description": "Đưa đường dẫn cũ về trang mới để khách và công cụ tìm kiếm không gặp lỗi 404.",
+      "add": "Thêm chuyển hướng",
+      "createTitle": "Thêm chuyển hướng",
+      "editTitle": "Sửa chuyển hướng",
+      "deleteTitle": "Xoá chuyển hướng",
+      "deleteHint": "Xoá chuyển hướng từ {from}? Đường dẫn đó sẽ trả 404 nếu không còn trang nào khớp.",
+      "searchPlaceholder": "Tìm theo đường dẫn cũ, đích hoặc ghi chú...",
+      "summary": "{count} chuyển hướng",
+      "empty": "Chưa có chuyển hướng nào.",
+      "noMatch": "Không có chuyển hướng nào khớp bộ lọc.",
+      "permissionDenied": "Bạn không có quyền xem chuyển hướng.",
+      "formHint": "Đường dẫn tính từ gốc site, ví dụ /bai-viet/cu. Chỉ chuyển hướng trong cùng site.",
+      "active": "Đang bật",
+      "inactive": "Đang tắt",
+      "enable": "Bật chuyển hướng",
+      "disable": "Tắt chuyển hướng",
+      "enabled": "Đã bật chuyển hướng",
+      "disabled": "Đã tắt chuyển hướng",
+      "created": "Đã thêm chuyển hướng",
+      "saved": "Đã lưu chuyển hướng",
+      "deleted": "Đã xoá chuyển hướng",
+      "edit": "Sửa",
+      "delete": "Xoá",
+      "fields": {
+        "from": "Đường dẫn cũ",
+        "to": "Đường dẫn mới",
+        "statusCode": "Mã trạng thái",
+        "active": "Trạng thái",
+        "note": "Ghi chú",
+        "noteHint": "Ví dụ: gộp bài viết cũ"
+      },
+      "status": {
+        "permanent": "301 – Vĩnh viễn",
+        "temporary": "302 – Tạm thời"
+      },
+      "errors": {
+        "pathInvalid": "Đường dẫn phải bắt đầu bằng / và không chứa ? # hay khoảng trắng.",
+        "pathSame": "Đường dẫn cũ và mới không được giống nhau.",
+        "exists": "Đường dẫn này đã có chuyển hướng.",
+        "loop": "Chuyển hướng này sẽ tạo vòng lặp.",
+        "notFound": "Không tìm thấy chuyển hướng.",
+        "revisionConflict": "Chuyển hướng đã bị thay đổi ở phiên khác, hãy tải lại."
       }
     }
   },

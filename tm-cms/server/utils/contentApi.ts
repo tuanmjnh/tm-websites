@@ -10,6 +10,7 @@ import { MenuServiceError } from '#server/services/menuService'
 import { ContentServiceError } from '#server/services/contentService'
 import { TagServiceError } from '#server/services/tagService'
 import { CatalogServiceError } from '#server/services/catalogService'
+import { RedirectServiceError } from '#server/services/redirectService'
 import { MediaStorageError } from './mediaStorage'
 import { AdminTagRenameRequestSchema } from '@tm/flow-contracts/tag-admin'
 import { IdempotencyError, normalizeIdempotencyKey } from './idempotency'
@@ -128,6 +129,9 @@ export function translateContentError(error: unknown): never {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof MenuServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof RedirectServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof MediaServiceError) {

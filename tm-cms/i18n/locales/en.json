@@ -79,7 +79,8 @@
     "settings": "Settings",
     "categories": "Categories",
     "menus": "Menus",
-    "tags": "Content tags"
+    "tags": "Content tags",
+    "redirects": "Redirects"
   },
   "dashboard": {
     "title": "Control Center",
@@ -251,7 +252,11 @@
         "content": "Content",
         "category": "Category",
         "media": "Media",
-        "settings": "Settings"
+        "settings": "Settings",
+        "menu": "Menu",
+        "catalog_item": "Products",
+        "catalog_category": "Product categories",
+        "redirect": "Redirects"
       },
       "actions": {
         "create": "Create",
@@ -943,6 +948,52 @@
         "sameName": "The new name is the same as the current one",
         "notFound": "No content uses this tag any more",
         "invalid": "The tag name is not valid"
+      }
+    },
+    "redirects": {
+      "title": "URL redirects",
+      "description": "Send old paths to their new page so visitors and search engines never meet a 404.",
+      "add": "Add redirect",
+      "createTitle": "Add redirect",
+      "editTitle": "Edit redirect",
+      "deleteTitle": "Delete redirect",
+      "deleteHint": "Delete the redirect from {from}? That path will answer 404 unless another page matches it.",
+      "searchPlaceholder": "Search by old path, target or note...",
+      "summary": "{count} redirects",
+      "empty": "No redirects yet.",
+      "noMatch": "No redirect matches this filter.",
+      "permissionDenied": "You cannot view redirects.",
+      "formHint": "Paths are relative to the site root, for example /bai-viet/cu. Redirects stay inside this site.",
+      "active": "Active",
+      "inactive": "Inactive",
+      "enable": "Enable redirect",
+      "disable": "Disable redirect",
+      "enabled": "Redirect enabled",
+      "disabled": "Redirect disabled",
+      "created": "Redirect added",
+      "saved": "Redirect saved",
+      "deleted": "Redirect deleted",
+      "edit": "Edit",
+      "delete": "Delete",
+      "fields": {
+        "from": "Old path",
+        "to": "New path",
+        "statusCode": "Status code",
+        "active": "State",
+        "note": "Note",
+        "noteHint": "For example: merged an old post"
+      },
+      "status": {
+        "permanent": "301 – Permanent",
+        "temporary": "302 – Temporary"
+      },
+      "errors": {
+        "pathInvalid": "A path must start with / and contain no ? # or whitespace.",
+        "pathSame": "The old and new path cannot be the same.",
+        "exists": "This path already has a redirect.",
+        "loop": "This redirect would create a loop.",
+        "notFound": "Redirect not found.",
+        "revisionConflict": "The redirect changed elsewhere; reload before saving."
       }
     }
   },

@@ -535,6 +535,15 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence (browser `:4005/catalog`): the search placeholder reads "…SKU hoặc mã vạch…", rows show `PBC-4 · 8930000000099`, the modal lists the "Mã vạch" field, saving a duplicate kept the modal open with "Mã vạch này đã thuộc về sản phẩm khác.", and saving a unique value closed it and searching that barcode returned the single row.
 - Limits: barcode is a plain string — no checksum/format validation, no barcode scanning or label printing, and variants still have no barcode field of their own.
 
+### P3.g — legacy-URL redirect map (landed 2026-11-10)
+
+- Contract/model: `@tm/flow-contracts/redirect-admin` (301/302, draft/update/list schemas) and `tm-cms/server/models/redirect.ts` → `content_redirects` with `content_redirect_site_path_unique` plus a partial active-path index; the legacy `redirects` collection is untouched. Audit resource type `redirect` added to both enums.
+- Service/API: `redirectService` normalizes paths (leading slash, no trailing slash, no query/hash/whitespace/absolute URL), refuses self-targets, duplicate paths and any map that would loop (checked over the whole active map on create and update), and resolves a path through at most five hops. `GET/POST /api/v1/admin/redirects` + `PATCH/DELETE /api/v1/admin/redirects/:id`, `content.read`/`content.write`, same-origin, idempotent, audited, `no-store`.
+- CMS UI: `/redirects` page with old → target list, search, create/edit modal (301/302, active switch, note), inline enable/disable and guarded delete; nav entry gated by `content.read`; i18n `admin.redirects.*`, `nav.redirects` and the missing `admin.audit.resources.*` labels for menu/catalog/redirect.
+- Storefront: `tm-web/server/middleware/redirects.ts` answers the stored 301/302 before routing (skipping API, Nuxt assets, file paths and unbound sites); `publicRedirects` caches lookups per database for 30s and the internal purge route now clears that cache too.
+- Evidence: `pnpm test:redirects` → 12 checks; HTTP `:4005`/`:4006` create/duplicate/invalid/loop/stale-revision/301/404 flows; browser create/toggle/delete on `/redirects`. Probes and their audit rows were deleted (`content_redirects` 0, `audit_logs` 1).
+- Limits: no automatic redirect when a slug changes, no wildcard/prefix rows, no 410 handling, no map import; a change reaches the storefront within 30s unless the purge secret is configured.
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

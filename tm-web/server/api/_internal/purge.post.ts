@@ -43,6 +43,9 @@ export default defineEventHandler(async (event) => {
     await storage.removeItem(key)
   }
 
+  // The redirect map keeps its own short cache, outside Nitro's handler cache.
+  clearRedirectCache()
+
   setHeader(event, 'Cache-Control', 'no-store')
   return { success: true, removedCount: keys.length }
 })

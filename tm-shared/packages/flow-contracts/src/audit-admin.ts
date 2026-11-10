@@ -18,6 +18,7 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'menu',
   'catalog_item',
   'catalog_category',
+  'redirect',
 ] as const
 export type AdminAuditResourceType = (typeof ADMIN_AUDIT_RESOURCE_TYPES)[number]
 
