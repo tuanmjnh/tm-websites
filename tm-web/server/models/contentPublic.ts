@@ -209,7 +209,7 @@ export interface PublicContentListFilterOptions {
   type?: string
   tag?: string
   category?: string
-  /** Bounded, literal search over the localized title/slug/excerpt and the key. */
+  /** Bounded, literal search over the localized title/slug/excerpt/keywords and the key. */
   q?: string
   /** `_id` of the last row of the previous page (insertion order). */
   cursor?: string
@@ -245,11 +245,20 @@ export function buildPublishedListFilter(options: PublicContentListFilterOptions
   const term = options.q?.trim()
   if (term) {
     const pattern = new RegExp(escapePublicSearchTerm(term), 'i')
+    // Keywords belong to a locale entry, so they are matched inside the same
+    // locale subdocument: a keyword written only for `en` must not surface a
+    // listing the visitor reads in `vi`.
+    const locales = options.localeIn?.length
+      ? options.localeIn
+      : options.locale ? [options.locale] : []
     conditions.push({
       $or: [
         { 'locales.title': pattern },
         { 'locales.slug': pattern },
         { 'locales.excerpt': pattern },
+        locales.length
+          ? { locales: { $elemMatch: { locale: { $in: locales }, keywords: pattern } } }
+          : { 'locales.keywords': pattern },
         { key: pattern },
       ],
     })

@@ -43,7 +43,7 @@ async function check(name: string, fn: () => Promise<void> | void) {
   }
 }
 
-function localeEntry(locale: string, slug: string, title: string) {
+function localeEntry(locale: string, slug: string, title: string, keywords: string[] = []) {
   return {
     locale,
     slug,
@@ -51,6 +51,7 @@ function localeEntry(locale: string, slug: string, title: string) {
     excerpt: `${title} excerpt`,
     body: `# ${title}`,
     format: 'markdown',
+    keywords,
     seo: { title: '', description: '', image: '' },
   }
 }
@@ -61,7 +62,10 @@ function record(overrides: Record<string, unknown> = {}) {
     type: 'page',
     key: 'pages/gioi-thieu',
     status: 'published',
-    locales: [localeEntry('vi', 'gioi-thieu', 'Giới thiệu'), localeEntry('en', 'about-us', 'About us')],
+    locales: [
+      localeEntry('vi', 'gioi-thieu', 'Giới thiệu', ['nhan-hieu-ben-vung']),
+      localeEntry('en', 'about-us', 'About us', ['jewelry-care']),
+    ],
     categories: ['pages'],
     tags: ['brand'],
     attributes: {},
@@ -120,7 +124,12 @@ async function seed() {
   await PublicContentModel.collection.deleteMany({})
   await PublicContentModel.collection.insertMany([
     record(),
-    record({ key: 'pages/nhap', status: 'draft', locales: [localeEntry('vi', 'nhap', 'Bản nháp')], revision: 1 }),
+    record({
+      key: 'pages/nhap',
+      status: 'draft',
+      locales: [localeEntry('vi', 'nhap', 'Bản nháp', ['nhan-hieu-nhap'])],
+      revision: 1,
+    }),
     record({
       key: 'pages/hen-gio',
       status: 'scheduled',
@@ -311,6 +320,16 @@ async function main() {
       assert.deepEqual(await searchPublished('english', 'vi'), [])
       assert.deepEqual(await searchPublished('gioi', 'vi', { tag: 'brand' }), ['pages/gioi-thieu'])
       assert.deepEqual(await searchPublished('gioi', 'vi', { tag: 'other' }), [])
+    })
+
+    await check('search matches a keyword only inside the requested locale', async () => {
+      assert.deepEqual(await searchPublished('nhan-hieu-ben-vung'), ['pages/gioi-thieu'])
+      assert.deepEqual(await searchPublished('NHAN-HIEU-BEN-VUNG'), ['pages/gioi-thieu'])
+      // `jewelry-care` is stored on the `en` entry of the same record only.
+      assert.deepEqual(await searchPublished('jewelry-care', 'vi'), [])
+      assert.deepEqual(await searchPublished('jewelry-care', 'en'), ['pages/gioi-thieu'])
+      // A keyword on a draft never becomes a public result.
+      assert.deepEqual(await searchPublished('nhan-hieu-nhap'), [])
     })
 
     console.log('\n6. Content category landing pages')

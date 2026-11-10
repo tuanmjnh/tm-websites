@@ -566,11 +566,17 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence: `pnpm test:content` → 31 live checks (exact hit, case mismatch empty, `en` locale matched, padded value, site isolation, `q` by keyword); HTTP `:4005` probes for exact/padded/uppercase/shared/`q`/blank; browser filtering narrowed to one row and clearing restored the list. Probe rows deleted (`content` 3, `audit_logs` 1).
 - Limits: exact match only, one keyword at a time, no facet with counts, storefront search unchanged.
 
+### WEB-04 — keywords reach storefront search (landed 2026-11-10)
+
+- `buildPublishedListFilter` matches `q` against `locales.keywords` too, inside an `$elemMatch` limited to the requested locale + fallback so an `en`-only keyword cannot surface a `vi` listing; no route or contract change (`/api/public/content?q=`, `/tim-kiem`).
+- Evidence: `pnpm test:web-content` → 20 live reader checks (keyword-only hit, upper case, `en`-only keyword hidden from `vi`, draft keyword hidden); HTTP `:4006` probes for accented/upper/title/`.*`/unknown; browser `/tim-kiem?q=nhãn-hiệu-probe` rendered the card. Probe rows deleted (`content` 3, `audit_logs` 1).
+- Limits: no diacritic folding or synonyms; search page highlights only title/excerpt matches.
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
 
-Nothing in the current docs is both unblocked and meaningful right now: each remaining gap is either decided out of scope, waiting for a credential, or a whole domain (orders, stock, finance, HR, CRM) that the v2 plan puts after the storefront parity work rather than in this queue.
+Nothing in the current docs is both unblocked and meaningful right now (the two keyword search records above closed the last gap that did not need a decision or credential): each remaining gap is either decided out of scope, waiting for a credential, or a whole domain (orders, stock, finance, HR, CRM) that the v2 plan puts after the storefront parity work rather than in this queue.
 
 ### Deliberately not in scope (decided, not blocked)
 
