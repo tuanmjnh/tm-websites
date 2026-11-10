@@ -21,7 +21,9 @@
     "about": "About",
     "contact": "Contact",
     "switchLanguage": "Switch language",
-    "search": "Search"
+    "search": "Search",
+    "posts": "Posts",
+    "postCategories": "Post categories"
   },
   "home": {
     "seo": {
@@ -160,7 +162,13 @@
   },
   "categoryContent": {
     "subtitle": "Articles and pages in the “{name}” category",
-    "empty": "The “{name}” category has no published content yet"
+    "empty": "The “{name}” category has no published content yet",
+    "indexTitle": "Post categories",
+    "indexSubtitle": "Every topic currently published on this site.",
+    "emptyTitle": "No categories yet",
+    "emptyDescription": "Post categories appear here once an editor creates and publishes content.",
+    "browseAll": "Browse all post categories",
+    "allPosts": "See all posts"
   },
   "search": {
     "indexTitle": "Search",

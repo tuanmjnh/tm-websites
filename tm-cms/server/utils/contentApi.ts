@@ -8,7 +8,10 @@ import { CategoryServiceError } from '#server/services/categoryService'
 import { MediaServiceError } from '#server/services/mediaService'
 import { MenuServiceError } from '#server/services/menuService'
 import { ContentServiceError } from '#server/services/contentService'
+import { TagServiceError } from '#server/services/tagService'
+import { CatalogServiceError } from '#server/services/catalogService'
 import { MediaStorageError } from './mediaStorage'
+import { AdminTagRenameRequestSchema } from '@tm/flow-contracts/tag-admin'
 import { IdempotencyError, normalizeIdempotencyKey } from './idempotency'
 
 /** Query/body contracts for the admin content API. */
@@ -16,6 +19,8 @@ export const ContentListQuerySchema = z.object({
   status: z.enum(['all', 'draft', 'scheduled', 'published', 'archived', 'deleted']).optional(),
   type: z.enum(['page', 'post', 'fragment']).optional(),
   q: z.string().trim().max(80).optional(),
+  /** Exact tag, as listed by `/api/v1/admin/tags`; the value is normalized the same way. */
+  tag: z.string().trim().min(1).max(60).optional(),
   cursor: z.string().max(64).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
 })
@@ -41,6 +46,9 @@ export const MediaListQuerySchema = z.object({
 
 export const MediaUpdateBodySchema = z.record(z.string(), z.unknown())
 
+/** Tag commands take the shared schema, so the page and the server agree on limits. */
+export { AdminTagRenameRequestSchema }
+
 /** Menu writes are validated in the service, where the invariant codes live. */
 export const MenuBodySchema = z.record(z.string(), z.unknown())
 
@@ -49,6 +57,30 @@ export const MenuDeleteQuerySchema = z.object({
 })
 
 export const MediaDeleteQuerySchema = z.object({
+  revision: z.coerce.number().int().min(1),
+})
+
+/** Catalog list filters; `category` accepts a category key or its id. */
+export const CatalogItemListQuerySchema = z.object({
+  status: z.enum(['all', 'draft', 'published', 'archived', 'deleted']).optional(),
+  type: z.enum(['simple', 'variable']).optional(),
+  q: z.string().trim().max(80).optional(),
+  tag: z.string().trim().min(1).max(60).optional(),
+  category: z.string().trim().min(1).max(120).optional(),
+  cursor: z.string().max(64).optional(),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+})
+
+export const CatalogItemBodySchema = z.record(z.string(), z.unknown())
+export const CatalogCategoryBodySchema = z.record(z.string(), z.unknown())
+
+export const CatalogEventSchema = z.object({
+  event: z.enum(['publish', 'archive', 'restore', 'delete']),
+  revision: z.number().int().min(1),
+})
+
+/** DELETE needs the current revision so a stale tab cannot delete blindly. */
+export const CatalogDeleteQuerySchema = z.object({
   revision: z.coerce.number().int().min(1),
 })
 
@@ -84,6 +116,12 @@ export function revisionParamOf(event: H3Event): number {
 /** Stable service errors become HTTP errors with the same code the UI shows. */
 export function translateContentError(error: unknown): never {
   if (error instanceof ContentServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof CatalogServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof TagServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof CategoryServiceError) {

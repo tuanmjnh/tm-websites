@@ -1,4 +1,9 @@
-import type { AdminCategory, AdminCategoryDraft, AdminCategoryNode } from '@tm/flow-contracts/category-admin'
+import type {
+  AdminCategory,
+  AdminCategoryDraft,
+  AdminCategoryNode,
+  AdminCategoryReorderRequest,
+} from '@tm/flow-contracts/category-admin'
 import type { MenuReference } from '@tm/flow-contracts/menu-admin'
 
 /**
@@ -49,6 +54,14 @@ export const useCategoryAdmin = () => {
     return payload.data
   }
 
+  /** One drag-and-drop move; the server owns the resulting order values. */
+  const reorder = async (input: AdminCategoryReorderRequest): Promise<CategoryListResponse> => {
+    return await plainFetch('/api/v1/admin/categories/reorder', {
+      method: 'POST',
+      body: input,
+    }) as CategoryListResponse
+  }
+
   const remove = async (id: string, revision: number): Promise<{ id: string, key: string }> => {
     const payload = await plainFetch(`/api/v1/admin/categories/${encodeURIComponent(id)}`, {
       method: 'DELETE',
@@ -62,5 +75,5 @@ export const useCategoryAdmin = () => {
     return body?.data?.error?.code || body?.error?.code || null
   }
 
-  return { list, create, update, remove, menuReferences, errorCode }
+  return { list, create, update, remove, reorder, menuReferences, errorCode }
 }

@@ -43,5 +43,17 @@ export interface AdminCategoryDraft {
   locales: AdminCategoryLocale[]
 }
 
+/**
+ * One drag-and-drop move: put `key` under `parent` at `index` among its
+ * siblings. The server owns the resulting `order` values.
+ */
+export const AdminCategoryReorderRequestSchema = z.object({
+  key: z.string().min(1),
+  parent: z.string().nullable(),
+  index: z.number().int().min(0).max(1000),
+})
+
+export type AdminCategoryReorderRequest = z.infer<typeof AdminCategoryReorderRequestSchema>
+
 /** Client-side maximum, mirrored by the server invariant. */
 export const ADMIN_CATEGORY_MAX_DEPTH = 5

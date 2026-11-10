@@ -40,6 +40,7 @@ const {
 } = useContentAdmin()
 const { list: listCategories } = useCategoryAdmin()
 const { list: listMedia } = useMediaAdmin()
+const { list: listTags } = useTagAdmin()
 
 const canRead = computed(() => hasCapability('content.read'))
 const canWrite = computed(() => hasCapability('content.write'))
@@ -55,6 +56,8 @@ const nextCursor = ref<string | null>(null)
 const search = ref('')
 const status = ref<AdminContentStatusFilter>('all')
 const typeFilter = ref<'all' | AdminContentType>('all')
+const tagFilter = ref('all')
+const tagOptions = ref<{ label: string, value: string }[]>([])
 
 const detailOpen = ref(false)
 const selected = ref<AdminContent | null>(null)
@@ -128,6 +131,28 @@ const typeItems = computed(() => [
   { label: t('admin.content.type.all'), value: 'all' },
   ...ADMIN_CONTENT_TYPES.map(value => ({ label: t(`admin.content.type.${value}`), value })),
 ])
+
+const tagItems = computed(() => [
+  { label: t('admin.content.tag.all'), value: 'all' },
+  ...tagOptions.value,
+])
+
+/**
+ * The filter lists the tags this site actually uses, with their record counts, so
+ * an editor can pick one after a rename instead of typing it from memory.
+ */
+async function loadTagOptions() {
+  if (!canRead.value) return
+  try {
+    tagOptions.value = (await listTags()).map(tag => ({
+      label: `${tag.name} (${tag.count})`,
+      value: tag.name,
+    }))
+  } catch {
+    // A failed option fetch must not break the list; the filter simply stays empty.
+    tagOptions.value = []
+  }
+}
 
 const editorTypeItems = computed(() => ADMIN_CONTENT_TYPES.map(value => ({ label: t(`admin.content.type.${value}`), value })))
 
@@ -230,6 +255,7 @@ async function load(reset = true) {
       status: status.value,
       type: typeFilter.value === 'all' ? undefined : typeFilter.value,
       q: search.value.trim() || undefined,
+      tag: tagFilter.value === 'all' ? undefined : tagFilter.value,
       cursor: reset ? undefined : nextCursor.value ?? undefined,
       limit: 20,
     })
@@ -675,9 +701,10 @@ watch(search, () => {
   if (debounce) clearTimeout(debounce)
   debounce = setTimeout(() => load(), 400)
 })
-watch([status, typeFilter], () => load())
-
-onMounted(() => load())
+watch([status, typeFilter, tagFilter], () => load())
+onMounted(async () => {
+  await Promise.all([load(), loadTagOptions()])
+})
 </script>
 
 <template>
@@ -742,6 +769,13 @@ onMounted(() => load())
           :items="typeItems"
           value-key="value"
           class="w-full sm:w-40"
+        />
+        <USelect
+          v-model="tagFilter"
+          :items="tagItems"
+          value-key="value"
+          :placeholder="t('admin.content.tag.placeholder')"
+          class="w-full sm:w-52"
         />
       </div>
     </template>

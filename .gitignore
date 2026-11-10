@@ -6,7 +6,8 @@
 .cache
 .vercel
 .playwright-mcp
-.tmp-design
+.tmp-*
+.gate-*
 .superpowers
 scratch
 superpowers

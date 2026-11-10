@@ -1,8 +1,9 @@
 # Câu hỏi & vướng mắc cần bạn quyết
 
-> Trả lời ngắn theo mã: `Q1: a`, `Q2: 1) ...` là đủ. Câu nào không trả lời, tôi sẽ tiếp tục theo **mặc định** ghi ở cột cuối và ghi rõ trong queue.
+> Trạng thái: **toàn bộ Q1–Q22 và D1–D5 đã được chốt ngày 2026-11-09** — bảng quyết định ở [mục H](#h-trạng-thái-quyết-định-2026-11-09) và [ADR 0002](../docs/decisions/0002-owner-decisions.md).
+> Các bảng A–C giữ nguyên nội dung câu hỏi gốc để tra cứu; đừng hỏi lại. Bốn dữ kiện bên ngoài vẫn `WAITING_INPUT`: production `TM_MONGO_URI`, credential Cloudinary, credential/domain Vercel, snapshot dữ liệu legacy — xem [mục I](#i-waiting_input-dữ-kiện-chưa-được-cung-cấp).
 >
-> Cập nhật: 2026-11-09. Bối cảnh: P1 (IAM) và P2 (nền nghiệp vụ MongoDB) đã có phần lớn; các slice P2/P3 của CMS và storefront đã chạy và commit trên `main`. Những gì còn lại đều rơi vào câu hỏi dưới đây.
+> Cập nhật: 2026-11-09. Bối cảnh: P1 (IAM) và P2 (nền nghiệp vụ MongoDB) đã có phần lớn; các slice P2/P3 của CMS và storefront đã chạy trên `main`. Sau khi chốt, phần còn lại của queue không còn phụ thuộc câu hỏi nào ngoài bốn dữ kiện ở mục I.
 
 ## A. Chặn tiến độ ngay (cần trả lời trước P3)
 
@@ -43,6 +44,13 @@
 4. **Health endpoint** `GET /api/health`: chỉ trả `status/hub/database`, không lộ URI/tenant/credential.
 5. **Chưa** tạo package `@tm/flow-server`, **chưa** ghi/xoá dữ liệu Hub, **chưa** migrate dữ liệu, **chưa** commit.
 
+## E. Điều kiện môi trường đã quan sát
+
+- `tm-hub` local `:4000` chạy được, `db: ok`; Redis không chạy → mail/import queue của Hub offline (không chặn).
+- MongoDB 8.2.3 local `:27017` chạy được; test hai database cách ly đã PASS thật.
+- CMS dev `:4005` đang chạy với `TM_HUB_URL=http://localhost:4000`, `TM_MONGO_URI=mongodb://127.0.0.1:27017`, `TM_MONGO_DB=sen-tuan` → `/api/health` = `ok/configured/ok`.
+- Customer `default` chưa có `dataSources.mongo` → health sẽ là `database: unconfigured` cho tới khi Q2 được trả lời.
+
 ## F. Câu hỏi mới phát sinh sau P2/P3 (2026-11-09)
 
 Đây là những quyết định đang thực sự giữ các slice tiếp theo lại; mỗi câu ghi rõ *nếu bạn không trả lời thì tôi làm gì* và *mở khoá được gì*.
@@ -69,9 +77,47 @@
 | Q14 | Không deploy gì; chỉ build và chạy local. |
 | Q16 | `pnpm prune:retention` tồn tại, mặc định dry-run, tạm 50 bản/nội dung và 365 ngày audit — cần con số chính thức. |
 
-## E. Điều kiện môi trường đã quan sát
+## H. Trạng thái quyết định (2026-11-09)
 
-- `tm-hub` local `:4000` chạy được, `db: ok`; Redis không chạy → mail/import queue của Hub offline (không chặn).
-- MongoDB 8.2.3 local `:27017` chạy được; test hai database cách ly đã PASS thật.
-- CMS dev `:4005` đang chạy với `TM_HUB_URL=http://localhost:4000`, `TM_MONGO_URI=mongodb://127.0.0.1:27017`, `TM_MONGO_DB=sen-tuan` → `/api/health` = `ok/configured/ok`.
-- Customer `default` chưa có `dataSources.mongo` → health sẽ là `database: unconfigured` cho tới khi Q2 được trả lời.
+Mỗi câu đã chốt theo **mặc định ghi ở bảng gốc**, và quyết định đó là hành vi mong muốn từ nay. `RESOLVED` = không hỏi lại; `WAITING_INPUT` = đã quyết *không* dựng thứ thay thế, chỉ còn thiếu dữ kiện bên ngoài (mục I).
+
+| ID | Trạng thái | Quyết định đã chốt |
+| --- | --- | --- |
+| Q1 | **WAITING_INPUT** | Chỉ MongoDB local; production URI chưa cấp nên không cấu hình, không giả định môi trường deploy. |
+| Q2 | **WAITING_INPUT** | `default`/`thanhtung`/`hoangvi` chưa có database nên chưa bật module nghiệp vụ; `sentuan` giữ `sen-tuan`. Không tự đặt tên DB. |
+| Q3 | RESOLVED | Giữ tên database legacy (`sen-tuan`, `bag-post`), không migration đổi tên. |
+| Q4 | **WAITING_INPUT** | Không có snapshot legacy → không có migration dry-run, không viết code migration dựa trên fixture tự tạo. |
+| Q5 | RESOLVED (deferred) | Hub tiếp tục là nguồn chuyển tiếp, chỉ đọc; không export/import. Xem Q22. |
+| Q6 | RESOLVED | Không sửa `tm-hub`; revoke tức thời nằm ngoài scope, mọi tài liệu phải ghi rõ "chưa thu hồi tức thời". |
+| Q7 | RESOLVED | Cookie access/refresh 7 ngày, cookie TOTP 5 phút — khớp code hiện tại. |
+| Q8 | RESOLVED | CSRF bằng `Origin` + `SameSite=Lax`, không double-submit token. |
+| Q9 | RESOLVED | `TM_AUTH_MODE=mock` bị chặn ở production (`503 AUTH_MODE_FORBIDDEN`); không có kịch bản production cần mock. |
+| Q10 | RESOLVED (deferred) | Không làm UI passkey/OAuth trong đợt này; để sau P9. |
+| Q11 | RESOLVED | Không tạo `@tm/flow-server`; model/invariant/command ở lại `tm-cms/server/` đúng phạm vi đã duyệt. |
+| Q12 | RESOLVED | Không queue bền vững/cron/worker; invalidation vẫn là purge endpoint có secret, publish content dựa vào handler không cache + TTL CDN của sitemap. |
+| Q13 | **WAITING_INPUT** | Media đi Cloudinary; chưa có credential nên vẫn dùng adapter local, chưa chọn public origin. |
+| Q14 | **WAITING_INPUT** | Không deploy, không chuẩn bị `vercel.json`/CI/domain. Xem mục I. |
+| Q15 | RESOLVED | AI Workspace ra khỏi scope v2. |
+| Q16 | RESOLVED | Giữ 50 bản snapshot/nội dung và 365 ngày `audit_logs`; lệnh vẫn dry-run trừ khi `--apply`. |
+| Q17 | RESOLVED (deferred) | Chưa làm checkout; giỏ hàng client-side, tính lại giá ở server, không lưu đơn. Ba bất biến (reprice, chống trùng, từ chối hết hàng) vẫn là yêu cầu khi mở WEB-06. |
+| Q18 | RESOLVED (deferred) | Chưa làm form cho tới khi có đích đến thật; không dựng stub âm thầm bỏ dữ liệu. |
+| Q19 | **WAITING_INPUT** | Public media origin chưa chọn (Cloudinary/R2/proxy) → media chưa vào projection công khai, logo chưa resolve. |
+| Q20 | RESOLVED | Giữ `no_prefix` (đổi ngôn ngữ bằng cookie), không phát `hreflang`, canonical theo locale đang chọn. |
+| Q21 | RESOLVED | Không job nền; `pnpm prune:retention` và publish hẹn giờ vẫn chạy tay. |
+| Q22 | RESOLVED (deferred) | Giữ Hub là nguồn chuyển tiếp cho content/config/media legacy; chưa có slice import. |
+| Q23 | RESOLVED | Chọn hướng collection mới: CMS ghi `catalog_items`/`catalog_categories`, `pnpm migrate:catalog` migrate dữ liệu legacy (idempotent theo `legacyId`), reader storefront trỏ sang collection mới; legacy `items`/`item_categories` giữ nguyên để rollback. Đã verify 241 item/229 published khớp legacy. |
+| D1 | RESOLVED | Chặn `/api/v1/auth/**` ở proxy Hub; path nghiệp vụ giữ nguyên cho tới khi từng domain migrate. |
+| D2 | RESOLVED | `appId` lệch → `403 APP_MISMATCH`; thiếu `TM_TENANT_ID` → `503`. |
+| D3 | RESOLVED | Tên DB do registry quyết định; `TM_MONGO_DB` lệch → `503 DATABASE_BINDING_MISMATCH`. |
+| D4 | RESOLVED | `/api/health` chỉ trả `status/hub/database`. |
+| D5 | RESOLVED | Không package dùng chung, không ghi/xoá Hub, không migrate dữ liệu. Phần "không commit" là lịch sử: quyền commit là theo từng yêu cầu, hiện **không** commit/deploy nếu chưa được yêu cầu lại. |
+
+## I. WAITING_INPUT — dữ kiện chưa được cung cấp
+
+| Dữ kiện | Chặn gì | Trong lúc chờ được làm gì |
+| --- | --- | --- |
+| Production `TM_MONGO_URI` | Mọi việc dữ liệu production, P10 | MongoDB local, database test dùng một lần |
+| Credential Cloudinary (hoặc origin media khác) | Media trong projection công khai, logo URL, OG image | Library/upload/attachment với adapter local |
+| Vercel token + domain từng customer | Deploy, CI, môi trường từng khách | Build và dev server local |
+| Snapshot dữ liệu legacy | Migration dry-run, bật 3 khách còn lại với dữ liệu thật | Chỉ dữ liệu tạo mới |
+| — | — | — |

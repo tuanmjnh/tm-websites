@@ -78,6 +78,17 @@ export function diffContentFields(before: unknown, after: unknown): string[] {
   return Object.keys(right).filter(field => different(left[field], right[field]))
 }
 
+/**
+ * Shallow diff for domains that store their whole payload in top-level fields
+ * (the catalog does): reports which submitted keys actually changed.
+ */
+export function diffFields(before: unknown, after: unknown): string[] {
+  const left = (before ?? {}) as Record<string, unknown>
+  const right = (after ?? {}) as Record<string, unknown>
+  const ignore = new Set(['revision', 'siteId', 'status', 'createdAt', 'updatedAt', '_id'])
+  return Object.keys(right).filter(field => !ignore.has(field) && different(left[field], right[field]))
+}
+
 export async function recordContentAudit(
   meta: ContentAuditMeta | undefined,
   input: RecordAuditInput,

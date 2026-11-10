@@ -63,6 +63,8 @@ export interface ContentListParams {
   status?: ContentStatusFilter
   type?: ContentType
   q?: string
+  /** Exact tag match. Tags are stored normalized, so no pattern matching is needed. */
+  tag?: string
   cursor?: string
   limit?: number
 }
@@ -98,6 +100,8 @@ export interface ContentWriteMeta {
 
 const CONTENT_STATUSES: ContentStatus[] = ['draft', 'scheduled', 'published', 'archived', 'deleted']
 const SEARCH_MAX_LENGTH = 80
+/** Matches the per-tag limit on the content model, so a truncated filter never silently misses. */
+const TAG_MAX_LENGTH = 60
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 50
 
@@ -196,6 +200,11 @@ export async function listContent(
   }
   if (params.type) {
     filter.type = params.type
+  }
+
+  const tag = (params.tag ?? '').trim().slice(0, TAG_MAX_LENGTH)
+  if (tag) {
+    filter.tags = tag
   }
 
   const search = (params.q ?? '').trim().slice(0, SEARCH_MAX_LENGTH)

@@ -78,7 +78,8 @@
     "connections": "Integrations",
     "settings": "Settings",
     "categories": "Categories",
-    "menus": "Menus"
+    "menus": "Menus",
+    "tags": "Content tags"
   },
   "dashboard": {
     "title": "Control Center",
@@ -319,7 +320,10 @@
         "inMenu": "The menu {menus} links to this category — update it before deleting."
       },
       "menuLinks": "Menus linking to this category",
-      "menuLinksHint": "Update the menu before deleting — the category cannot be deleted while a menu still links to it."
+      "menuLinksHint": "Update the menu before deleting — the category cannot be deleted while a menu still links to it.",
+      "dragHint": "Drag to reorder",
+      "rootDrop": "Drop here to move the category to the top level",
+      "moved": "Category moved"
     },
     "menus": {
       "title": "Navigation menus",
@@ -401,6 +405,10 @@
       "title": "Content",
       "description": "Website content stored in the customer MongoDB, shared by the CMS and the public website",
       "search": "Search by key, title or slug...",
+      "tag": {
+        "all": "All tags",
+        "placeholder": "Filter by tag"
+      },
       "listTitle": "Content entries",
       "listDescription": "Select a record to inspect, publish, schedule or archive it",
       "noEntries": "No content records match the current filters",
@@ -786,6 +794,125 @@
       "listTitle": "Providers",
       "listDescription": "Code-registry integrations that back media, storage and OAuth",
       "noEntries": "No provider definitions available"
+    },
+    "catalog": {
+      "title": "Products & categories",
+      "description": "The site catalog, shared by the CMS and the public storefront",
+      "permissionDenied": "You do not have permission to view the catalog",
+      "noItems": "No products yet. Create the first one to begin.",
+      "new": "New product",
+      "edit": "Edit product",
+      "save": "Save",
+      "cancel": "Close",
+      "stats": {
+        "total": "Total: {count}",
+        "published": "Published: {count}"
+      },
+      "filters": {
+        "searchPlaceholder": "Search by key, name, slug or SKU...",
+        "allStatuses": "All statuses",
+        "allTypes": "All types",
+        "allTags": "All tags"
+      },
+      "status": {
+        "draft": "Draft",
+        "published": "Published",
+        "archived": "Archived",
+        "deleted": "Deleted"
+      },
+      "type": {
+        "simple": "Simple product",
+        "variable": "Variable product"
+      },
+      "fields": {
+        "key": "Key",
+        "type": "Type",
+        "titleVi": "Name (VI)",
+        "titleEn": "Name (EN)",
+        "slugVi": "Slug (VI)",
+        "slugEn": "Slug (EN)",
+        "basePrice": "Base price",
+        "salePrice": "Sale price",
+        "sku": "SKU",
+        "noSku": "no SKU",
+        "price": "Price {price}",
+        "uom": "Unit",
+        "stock": "Stock",
+        "manageStock": "Manage stock",
+        "categories": "Categories",
+        "tags": "Tags",
+        "tagsHint": "Separate with commas",
+        "summaryVi": "Summary (VI)",
+        "descriptionVi": "Description (VI)",
+        "thumbnail": "Thumbnail (URL)",
+        "gallery": "Gallery",
+        "galleryHint": "One URL per line",
+        "seoTitle": "SEO title",
+        "seoDescription": "SEO description",
+        "categoriesCount": "{count} categories"
+      },
+      "actions": {
+        "publish": "Publish",
+        "archive": "Archive",
+        "restore": "Restore",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "messages": {
+        "saved": "Product saved",
+        "publish": "Product published",
+        "archive": "Product archived",
+        "restore": "Product restored",
+        "delete": "Product deleted"
+      },
+      "errors": {
+        "revisionConflict": "Someone else changed this record; reload before saving.",
+        "keyExists": "That key or slug is already in use.",
+        "categoryInUse": "The category still has products, so it cannot be deleted.",
+        "categoryHasChildren": "The category still has child categories, so it cannot be deleted.",
+        "generic": "The change could not be saved. Please try again."
+      },
+      "categories": {
+        "title": "Product categories",
+        "name": "Category name",
+        "parent": "Parent category",
+        "noParent": "None (root category)",
+        "order": "Order",
+        "add": "Add category",
+        "empty": "No product categories yet."
+      }
+    },
+    "tags": {
+      "title": "Content tags",
+      "description": "Tags in use across content. Renaming one updates every record that carries it.",
+      "searchPlaceholder": "Search tags...",
+      "summary": "{tags} tags · {records} assignments",
+      "records": "{count} records",
+      "rename": "Rename tag",
+      "renameTitle": "Rename tag",
+      "renameHint": "The tag “{name}” is renamed on every record that uses it.",
+      "mergeHint": "The tag “{name}” already exists ({count} records) — the two will be merged.",
+      "fields": {
+        "name": "Tag name"
+      },
+      "empty": "No tags yet",
+      "noMatch": "No tag matches this search",
+      "permissionDenied": "This account cannot read content",
+      "renamed": "Tag renamed",
+      "renamedMany": "Tag renamed on {count} records",
+      "skipped": "{count} records were saved by someone else; run it again to include them",
+      "detach": "Detach tag",
+      "detachTitle": "Detach tag from content",
+      "detachHint": "Detach the tag “{name}” from {count} records?",
+      "detachGuard": "The tag is removed from every record that uses it; the records themselves are not deleted.",
+      "detached": "Tag detached from {count} records",
+      "errors": {
+        "required": "A tag name is required",
+        "tooLong": "A tag name is at most 60 characters",
+        "sameName": "The new name is the same as the current one",
+        "notFound": "No content uses this tag any more",
+        "invalid": "The tag name is not valid"
+      }
     }
   },
   "modules": {

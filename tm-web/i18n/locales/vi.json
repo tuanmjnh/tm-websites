@@ -21,7 +21,9 @@
     "about": "Giới thiệu",
     "contact": "Liên hệ",
     "switchLanguage": "Đổi ngôn ngữ",
-    "search": "Tìm kiếm"
+    "search": "Tìm kiếm",
+    "posts": "Bài viết",
+    "postCategories": "Danh mục bài viết"
   },
   "home": {
     "seo": {
@@ -160,7 +162,13 @@
   },
   "categoryContent": {
     "subtitle": "Bài viết và trang trong danh mục “{name}”",
-    "empty": "Danh mục “{name}” chưa có nội dung nào được đăng"
+    "empty": "Danh mục “{name}” chưa có nội dung nào được đăng",
+    "indexTitle": "Danh mục bài viết",
+    "indexSubtitle": "Tất cả chủ đề bài viết đang được xuất bản trên trang.",
+    "emptyTitle": "Chưa có danh mục",
+    "emptyDescription": "Danh mục bài viết sẽ xuất hiện ở đây khi quản trị viên tạo và xuất bản nội dung.",
+    "browseAll": "Xem tất cả danh mục bài viết",
+    "allPosts": "Xem tất cả bài viết"
   },
   "search": {
     "indexTitle": "Tìm kiếm",

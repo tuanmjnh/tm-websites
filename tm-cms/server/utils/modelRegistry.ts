@@ -8,6 +8,7 @@ import type { MediaDocument } from '../models/media'
 import type { SiteSettingsDocument } from '../models/settings'
 import type { MenuDocument } from '../models/menu'
 import type { ContentRevisionDocument } from '../models/revision'
+import type { CatalogCategoryDocument, CatalogItemDocument } from '../models/catalog'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
 import { idempotencyModel, syncIdempotencyIndexes } from '../models/idempotency'
@@ -16,6 +17,7 @@ import { mediaModel, syncMediaIndexes } from '../models/media'
 import { siteSettingsModel, syncSettingsIndexes } from '../models/settings'
 import { menuModel, syncMenuIndexes } from '../models/menu'
 import { contentRevisionModel, syncContentRevisionIndexes } from '../models/revision'
+import { catalogCategoryModel, catalogItemModel, syncCatalogIndexes } from '../models/catalog'
 import { MIGRATIONS, applyMigrations } from '../models/migrations'
 import { withCustomerDb } from './database'
 
@@ -34,6 +36,8 @@ export interface PreparedModels {
   Media: Model<MediaDocument>
   Settings: Model<SiteSettingsDocument>
   Menu: Model<MenuDocument>
+  CatalogItem: Model<CatalogItemDocument>
+  CatalogCategory: Model<CatalogCategoryDocument>
 }
 
 const preparation = new WeakMap<Connection, Promise<PreparedModels>>()
@@ -50,6 +54,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncMediaIndexes(connection)
   await syncSettingsIndexes(connection)
   await syncMenuIndexes(connection)
+  await syncCatalogIndexes(connection)
 
   if (migrations.applied.length > 0) {
     console.info(`[tm-db] applied migrations: ${migrations.applied.join(', ')}`)
@@ -64,6 +69,8 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     Media: mediaModel(connection),
     Settings: siteSettingsModel(connection),
     Menu: menuModel(connection),
+    CatalogItem: catalogItemModel(connection),
+    CatalogCategory: catalogCategoryModel(connection),
   }
 }
 

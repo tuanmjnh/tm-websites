@@ -22,6 +22,8 @@ export default defineEventHandler(async (event) => {
   // Landing pages are crawlable URLs too; an empty tag page is harmless to list,
   // a tag can gain published content at any time.
   const taxonomy = [
+    // The index is only worth a crawl entry when it lists something.
+    ...(categories.length ? [{ path: '/danh-muc' }] : []),
     ...categories.map(category => ({ path: `/danh-muc/${category.slug}` })),
     ...tags.map(tag => ({ path: `/tag/${encodeURIComponent(tag)}` })),
   ]

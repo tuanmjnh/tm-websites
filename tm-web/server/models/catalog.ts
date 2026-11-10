@@ -5,8 +5,8 @@ const { Schema, model } = mongoose
 /** The CMS owns these collections; the storefront never types or validates them. */
 export type CatalogDoc = Record<string, unknown>
 
-// The storefront reads collections written by the CMS, so the schemas stay
-// `strict: false` and every field is Mixed. Mongoose is used only to reuse a
+// The CMS owns `catalog_items`/`catalog_categories`; the storefront only reads
+// them. The schemas stay `strict: false` and every field is Mixed. Mongoose is used only to reuse a
 // pooled connection and to apply an explicit projection; nothing is validated
 // or written back here. The service never selects a field that is not part of
 // the public read model.
@@ -43,7 +43,7 @@ const itemSchema = new Schema<CatalogDoc>(
     seo: loose,
     updatedAt: loose,
   },
-  { ...sharedOptions, collection: 'items' }
+  { ...sharedOptions, collection: 'catalog_items' }
 )
 
 const itemCategorySchema = new Schema<CatalogDoc>(
@@ -59,7 +59,7 @@ const itemCategorySchema = new Schema<CatalogDoc>(
     seo: loose,
     updatedAt: loose,
   },
-  { ...sharedOptions, collection: 'item_categories' }
+  { ...sharedOptions, collection: 'catalog_categories' }
 )
 
 export const CatalogItemModel: Model<CatalogDoc> =

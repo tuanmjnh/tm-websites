@@ -457,6 +457,60 @@ function onDragEnd() {
   dragOver.value = null
 }
 
+/**
+ * A finger cannot start an HTML drag, so the grip runs a pointer drag of its
+ * own: the row only counts as dragged after a few pixels of movement (tapping
+ * the grip stays a tap), and the drop target is the row under the pointer, read
+ * from `data-menu-row-*` instead of from drag events. Mouse keeps the native
+ * drag above and returns here, so nothing starts twice.
+ */
+const pointerDrag = ref<{ list: 'root' | number, index: number, startX: number, startY: number, active: boolean } | null>(null)
+
+function onPointerDragStart(list: 'root' | number, index: number, event: PointerEvent) {
+  if (!canWrite.value || event.pointerType === 'mouse') return
+  pointerDrag.value = { list, index, startX: event.clientX, startY: event.clientY, active: false }
+  // Synthetic pointers (tests, some assistive tools) are not active pointers.
+  try {
+    (event.currentTarget as Element | null)?.setPointerCapture?.(event.pointerId)
+  } catch {}
+}
+
+function onPointerDragMove(event: PointerEvent) {
+  const state = pointerDrag.value
+  if (!state) return
+  if (!state.active) {
+    if (Math.hypot(event.clientX - state.startX, event.clientY - state.startY) < 6) return
+    state.active = true
+    drag.value = { list: state.list, index: state.index }
+  }
+  event.preventDefault()
+  const row = (document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null)
+    ?.closest<HTMLElement>('[data-menu-row-list]')
+  if (!row?.dataset.menuRowList) return
+  const list: 'root' | number = row.dataset.menuRowList === 'root' ? 'root' : Number(row.dataset.menuRowList)
+  const index = Number(row.dataset.menuRowIndex)
+  if (Number.isNaN(index) || drag.value?.list !== list) return
+  dragOver.value = { list, index }
+}
+
+function onPointerDragEnd() {
+  const state = pointerDrag.value
+  const over = dragOver.value
+  pointerDrag.value = null
+  if (!state?.active) {
+    onDragEnd()
+    return
+  }
+  // A pointer dropped outside its own list has no target: keep the order.
+  if (over && over.list === state.list && over.index !== state.index) onDrop(over.list, over.index)
+  else onDragEnd()
+}
+
+function onPointerDragCancel() {
+  pointerDrag.value = null
+  onDragEnd()
+}
+
 const isDragTarget = (list: 'root' | number, index: number) =>
   dragOver.value?.list === list && dragOver.value.index === index
 
@@ -596,12 +650,23 @@ if (canRead.value) await loadMenus()
                     isDragTarget('root', index) ? 'bg-primary/10' : '',
                   ]"
                   :draggable="canWrite"
+                  :data-menu-row-list="'root'"
+                  :data-menu-row-index="index"
                   @dragstart="onDragStart('root', index, $event)"
                   @dragover.prevent="onDragOver('root', index)"
                   @drop.prevent="onDrop('root', index)"
                   @dragend="onDragEnd()"
                 >
-                  <UIcon v-if="canWrite" name="i-lucide-grip-vertical" class="size-4 shrink-0 cursor-grab text-muted" />
+                  <span
+                    v-if="canWrite"
+                    class="inline-flex shrink-0 cursor-grab touch-none"
+                    @pointerdown="onPointerDragStart('root', index, $event)"
+                    @pointermove="onPointerDragMove"
+                    @pointerup="onPointerDragEnd"
+                    @pointercancel="onPointerDragCancel"
+                  >
+                    <UIcon name="i-lucide-grip-vertical" class="size-4 text-muted" />
+                  </span>
                   <span class="w-5 text-[11px] text-muted">{{ index + 1 }}</span>
                   <div class="min-w-0 flex-1">
                     <p class="truncate font-medium text-highlighted">{{ labelOf(item) }}</p>
@@ -648,12 +713,23 @@ if (canRead.value) await loadMenus()
                       isDragTarget(index, childIndex) ? 'bg-primary/10' : '',
                     ]"
                     :draggable="canWrite"
+                    :data-menu-row-list="String(index)"
+                    :data-menu-row-index="childIndex"
                     @dragstart="onDragStart(index, childIndex, $event)"
                     @dragover.prevent="onDragOver(index, childIndex)"
                     @drop.prevent="onDrop(index, childIndex)"
                     @dragend="onDragEnd()"
                   >
-                    <UIcon v-if="canWrite" name="i-lucide-grip-vertical" class="size-3.5 shrink-0 cursor-grab text-muted" />
+                    <span
+                      v-if="canWrite"
+                      class="inline-flex shrink-0 cursor-grab touch-none"
+                      @pointerdown="onPointerDragStart(index, childIndex, $event)"
+                      @pointermove="onPointerDragMove"
+                      @pointerup="onPointerDragEnd"
+                      @pointercancel="onPointerDragCancel"
+                    >
+                      <UIcon name="i-lucide-grip-vertical" class="size-3.5 text-muted" />
+                    </span>
                     <span class="w-8 text-[11px] text-muted">{{ index + 1 }}.{{ childIndex + 1 }}</span>
                     <div class="min-w-0 flex-1">
                       <p class="truncate text-default">{{ labelOf(child) }}</p>

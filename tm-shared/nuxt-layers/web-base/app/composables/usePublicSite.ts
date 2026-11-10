@@ -67,6 +67,11 @@ export const usePublicSite = () => {
     { label: t('nav.home'), to: '/' },
     { label: t('nav.products'), to: '/products' },
     { label: t('nav.categories'), to: '/categories' },
+    {
+      label: t('nav.posts'),
+      to: '/bai-viet',
+      children: [{ label: t('nav.postCategories'), to: '/danh-muc' }],
+    },
     { label: t('nav.about'), to: '/about' },
     { label: t('nav.contact'), to: '/contact' },
     { label: t('nav.search'), to: '/tim-kiem' },
@@ -75,6 +80,8 @@ export const usePublicSite = () => {
   const fallbackFooterLinks = computed<PublicSiteLink[]>(() => [
     { label: t('nav.products'), to: '/products' },
     { label: t('nav.categories'), to: '/categories' },
+    { label: t('nav.posts'), to: '/bai-viet' },
+    { label: t('nav.postCategories'), to: '/danh-muc' },
     { label: t('nav.about'), to: '/about' },
     { label: t('nav.contact'), to: '/contact' },
   ])

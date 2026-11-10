@@ -78,7 +78,8 @@
     "connections": "Tích hợp",
     "settings": "Cấu hình hệ thống",
     "categories": "Danh mục",
-    "menus": "Menu điều hướng"
+    "menus": "Menu điều hướng",
+    "tags": "Thẻ nội dung"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -319,7 +320,10 @@
         "inMenu": "Danh mục này đang được menu {menus} dùng — sửa menu đó trước khi xoá."
       },
       "menuLinks": "Menu đang trỏ tới danh mục này",
-      "menuLinksHint": "Sửa menu trước khi xoá — danh mục sẽ không xoá được khi vẫn còn menu liên kết."
+      "menuLinksHint": "Sửa menu trước khi xoá — danh mục sẽ không xoá được khi vẫn còn menu liên kết.",
+      "dragHint": "Kéo để sắp xếp",
+      "rootDrop": "Thả vào đây để đưa danh mục ra cấp gốc",
+      "moved": "Đã cập nhật vị trí danh mục"
     },
     "menus": {
       "title": "Menu điều hướng",
@@ -401,6 +405,10 @@
       "title": "Nội dung",
       "description": "Nội dung website lưu trong MongoDB của khách hàng, dùng chung cho CMS và website công khai",
       "search": "Tìm theo khóa, tiêu đề hoặc slug...",
+      "tag": {
+        "all": "Tất cả thẻ",
+        "placeholder": "Lọc theo thẻ"
+      },
       "listTitle": "Danh sách nội dung",
       "listDescription": "Chọn một bản ghi để xem, xuất bản, hẹn giờ hoặc lưu trữ",
       "noEntries": "Không có bản ghi nội dung khớp bộ lọc hiện tại",
@@ -786,6 +794,125 @@
       "listTitle": "Nhà cung cấp",
       "listDescription": "Các tích hợp từ registry hỗ trợ media, lưu trữ và OAuth",
       "noEntries": "Không có định nghĩa nhà cung cấp nào"
+    },
+    "catalog": {
+      "title": "Sản phẩm & Danh mục",
+      "description": "Danh mục và sản phẩm của website, dùng chung cho CMS và trang công khai",
+      "permissionDenied": "Bạn không có quyền xem sản phẩm",
+      "noItems": "Chưa có sản phẩm nào. Tạo sản phẩm đầu tiên để bắt đầu.",
+      "new": "Tạo sản phẩm",
+      "edit": "Sửa sản phẩm",
+      "save": "Lưu",
+      "cancel": "Đóng",
+      "stats": {
+        "total": "Tổng: {count}",
+        "published": "Đã xuất bản: {count}"
+      },
+      "filters": {
+        "searchPlaceholder": "Tìm theo khóa, tên, slug hoặc SKU...",
+        "allStatuses": "Tất cả trạng thái",
+        "allTypes": "Tất cả loại",
+        "allTags": "Tất cả thẻ"
+      },
+      "status": {
+        "draft": "Bản nháp",
+        "published": "Đã xuất bản",
+        "archived": "Lưu trữ",
+        "deleted": "Đã xóa"
+      },
+      "type": {
+        "simple": "Sản phẩm đơn",
+        "variable": "Sản phẩm có biến thể"
+      },
+      "fields": {
+        "key": "Khóa",
+        "type": "Loại",
+        "titleVi": "Tên (VI)",
+        "titleEn": "Tên (EN)",
+        "slugVi": "Slug (VI)",
+        "slugEn": "Slug (EN)",
+        "basePrice": "Giá gốc",
+        "salePrice": "Giá khuyến mại",
+        "sku": "SKU",
+        "noSku": "chưa có SKU",
+        "price": "Giá {price}",
+        "uom": "Đơn vị tính",
+        "stock": "Tồn kho",
+        "manageStock": "Quản lý tồn kho",
+        "categories": "Danh mục",
+        "tags": "Thẻ",
+        "tagsHint": "Ngăn cách bằng dấu phẩy",
+        "summaryVi": "Mô tả ngắn (VI)",
+        "descriptionVi": "Mô tả (VI)",
+        "thumbnail": "Ảnh đại diện (URL)",
+        "gallery": "Thư viện ảnh",
+        "galleryHint": "Mỗi dòng một URL",
+        "seoTitle": "SEO title",
+        "seoDescription": "SEO description",
+        "categoriesCount": "{count} danh mục"
+      },
+      "actions": {
+        "publish": "Xuất bản",
+        "archive": "Lưu trữ",
+        "restore": "Khôi phục",
+        "edit": "Sửa",
+        "delete": "Xoá"
+      },
+      "messages": {
+        "saved": "Đã lưu sản phẩm",
+        "publish": "Đã xuất bản sản phẩm",
+        "archive": "Đã lưu trữ sản phẩm",
+        "restore": "Đã khôi phục sản phẩm",
+        "delete": "Đã xoá sản phẩm"
+      },
+      "errors": {
+        "revisionConflict": "Bản ghi đã bị người khác sửa; hãy tải lại trước khi lưu.",
+        "keyExists": "Khóa hoặc slug này đã được dùng.",
+        "categoryInUse": "Danh mục còn sản phẩm, không xoá được.",
+        "categoryHasChildren": "Danh mục còn danh mục con, không xoá được.",
+        "generic": "Không lưu được thay đổi. Vui lòng thử lại."
+      },
+      "categories": {
+        "title": "Danh mục sản phẩm",
+        "name": "Tên danh mục",
+        "parent": "Danh mục cha",
+        "noParent": "Không có (danh mục gốc)",
+        "order": "Thứ tự",
+        "add": "Thêm danh mục",
+        "empty": "Chưa có danh mục sản phẩm."
+      }
+    },
+    "tags": {
+      "title": "Thẻ nội dung",
+      "description": "Các thẻ đang dùng trên nội dung. Đổi tên một lần là mọi nội dung dùng thẻ đó được cập nhật.",
+      "searchPlaceholder": "Tìm thẻ...",
+      "summary": "{tags} thẻ · {records} lượt gắn",
+      "records": "{count} nội dung",
+      "rename": "Đổi tên thẻ",
+      "renameTitle": "Đổi tên thẻ",
+      "renameHint": "Thẻ “{name}” sẽ đổi ở mọi nội dung đang dùng.",
+      "mergeHint": "Thẻ “{name}” đã tồn tại ({count} nội dung) — hai thẻ sẽ được gộp làm một.",
+      "fields": {
+        "name": "Tên thẻ"
+      },
+      "empty": "Chưa có thẻ nào",
+      "noMatch": "Không có thẻ khớp tìm kiếm",
+      "permissionDenied": "Tài khoản không có quyền đọc nội dung",
+      "renamed": "Đã đổi tên thẻ",
+      "renamedMany": "Đã đổi tên thẻ trên {count} nội dung",
+      "skipped": "{count} nội dung vừa được người khác lưu; chạy lại để cập nhật nốt",
+      "detach": "Gỡ thẻ",
+      "detachTitle": "Gỡ thẻ khỏi nội dung",
+      "detachHint": "Gỡ thẻ “{name}” khỏi {count} nội dung?",
+      "detachGuard": "Thẻ bị gỡ ở mọi nội dung đang dùng; bản thân nội dung không bị xoá.",
+      "detached": "Đã gỡ thẻ khỏi {count} nội dung",
+      "errors": {
+        "required": "Tên thẻ không được để trống",
+        "tooLong": "Tên thẻ tối đa 60 ký tự",
+        "sameName": "Tên mới trùng với tên hiện tại",
+        "notFound": "Không còn nội dung nào dùng thẻ này",
+        "invalid": "Tên thẻ không hợp lệ"
+      }
     }
   },
   "modules": {

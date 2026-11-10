@@ -6,6 +6,7 @@ import type { MenuDocument } from '../models/menu'
 import type { ContentDocument } from '../models/content'
 import {
   CATEGORY_MAX_DEPTH,
+  CATEGORY_MAX_ORDER,
   CategoryInvariantError,
   type CategoryDocument,
   normalizeCategoryInput,
@@ -318,6 +319,156 @@ export async function updateCategory(
   })
 
   return toAdminCategory(updated)
+}
+
+const ORDER_STEP = 10
+
+export interface CategoryReorderInput {
+  key: string
+  parent: string | null
+  /** Position among the target parent's children; clamped to the bucket. */
+  index: number
+}
+
+/**
+ * Writes one row's parent/order under the same optimistic lock the editor uses
+ * and records what changed. Orders it does not change are left untouched.
+ */
+async function writeCategoryPosition(
+  model: Model<CategoryDocument>,
+  siteId: string,
+  record: CategoryRecord,
+  parent: string | null,
+  order: number,
+  meta?: ContentWriteMeta,
+): Promise<void> {
+  const previousParent = record.parent ?? null
+  if (previousParent === parent && record.order === order) return
+
+  const changedFields: string[] = []
+  if (previousParent !== parent) changedFields.push('parent')
+  if (record.order !== order) changedFields.push('order')
+
+  const updated = await model.findOneAndUpdate(
+    { _id: record._id, siteId, revision: record.revision },
+    { $set: { parent, order }, $inc: { revision: 1 } },
+    { returnDocument: 'after' },
+  ).lean<CategoryRecord | null>()
+
+  if (!updated) {
+    throw new CategoryServiceError(
+      409,
+      'CATEGORY_REVISION_CONFLICT',
+      'Category was changed by someone else; reload before moving it',
+      { expected: record.revision },
+    )
+  }
+
+  await recordContentAudit(meta?.audit, {
+    siteId,
+    resourceType: 'category',
+    resourceId: String(updated._id),
+    resourceKey: updated.key,
+    action: 'update',
+    revision: updated.revision,
+    fromStatus: null,
+    toStatus: null,
+    changedFields,
+  })
+}
+
+/**
+ * One drag-and-drop move: place a category under a parent at a sibling index.
+ *
+ * Sibling orders are spaced by ten, so a move is normally a single row write
+ * between two neighbours. Only when two neighbours are adjacent (or a bucket has
+ * run out of room) is the whole sibling list renumbered, and only the rows whose
+ * order actually changed are written.
+ */
+export async function reorderCategory(
+  model: Model<CategoryDocument>,
+  siteId: string,
+  input: CategoryReorderInput,
+  meta?: ContentWriteMeta,
+): Promise<CategoryListResult> {
+  const key = typeof input.key === 'string' ? input.key.trim() : ''
+  if (!key) {
+    throw new CategoryServiceError(422, 'CATEGORY_KEY_INVALID', 'Category key is missing')
+  }
+
+  const record = await model.findOne({ siteId, key }).lean<CategoryRecord>()
+  if (!record) {
+    throw new CategoryServiceError(404, 'CATEGORY_NOT_FOUND', 'Category not found')
+  }
+
+  const parent = input.parent === null || input.parent === undefined || input.parent === ''
+    ? null
+    : String(input.parent).trim()
+  await assertParentAllowed(model, siteId, parent, record.key)
+
+  const siblings = await model
+    .find({ siteId, parent, key: { $ne: key } })
+    .sort({ order: 1, key: 1 })
+    .lean<CategoryRecord[]>()
+
+  const index = Math.min(
+    Math.max(Number.isInteger(input.index) ? input.index : siblings.length, 0),
+    siblings.length,
+  )
+
+  // Dropped back where it already sits: the computed midpoint would differ while
+  // the position would not, so compare the position, not the number.
+  if ((record.parent ?? null) === parent) {
+    const bucket = await model
+      .find({ siteId, parent })
+      .sort({ order: 1, key: 1 })
+      .lean<{ key: string }[]>()
+    if (bucket.findIndex(entry => entry.key === record.key) === index) {
+      return listCategories(model, siteId)
+    }
+  }
+
+  const before = siblings[index - 1] ?? null
+  const after = siblings[index] ?? null
+
+  let order = ORDER_STEP
+  let renumber = false
+
+  if (!before && !after) {
+    order = ORDER_STEP
+  } else if (!before && after) {
+    order = after.order - ORDER_STEP
+    renumber = order < 0
+  } else if (before && !after) {
+    order = before.order + ORDER_STEP
+    renumber = order > CATEGORY_MAX_ORDER
+  } else if (before && after) {
+    const gap = after.order - before.order
+    if (gap <= 1) renumber = true
+    else order = before.order + Math.floor(gap / 2)
+  }
+
+  if (renumber) {
+    const spacing = Math.max(1, Math.floor(CATEGORY_MAX_ORDER / (siblings.length + 1)))
+    const ordered: CategoryRecord[] = [...siblings.slice(0, index), record, ...siblings.slice(index)]
+
+    for (const [position, entry] of ordered.entries()) {
+      const isMoved = entry.key === record.key
+      await writeCategoryPosition(
+        model,
+        siteId,
+        entry,
+        isMoved ? parent : (entry.parent ?? null),
+        (position + 1) * spacing,
+        meta,
+      )
+    }
+
+    return listCategories(model, siteId)
+  }
+
+  await writeCategoryPosition(model, siteId, record, parent, order, meta)
+  return listCategories(model, siteId)
 }
 
 /**

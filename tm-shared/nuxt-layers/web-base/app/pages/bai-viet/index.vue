@@ -33,6 +33,15 @@ const tag = computed(() => readQuery('tag'))
 const category = computed(() => readQuery('category'))
 const q = computed(() => readQuery('q'))
 
+/**
+ * The listing filters on the stored category `key`, but a visitor must read the
+ * display name. The category row also supplies the landing slug, so the badge can
+ * link to `/danh-muc/<slug>` instead of repeating the raw key in the URL.
+ */
+const { categories, byKey } = usePublicContentCategories()
+const activeCategory = computed(() => (category.value ? byKey.value.get(category.value) ?? null : null))
+const categoryLabel = computed(() => activeCategory.value?.name || category.value)
+
 const search = ref(q.value)
 watch(q, value => { search.value = value })
 
@@ -129,6 +138,15 @@ useHead({
         <UButton type="submit" color="primary" variant="soft" size="sm" :label="t('post.searchAction')" />
       </form>
 
+      <NuxtLink
+        v-if="categories.length"
+        to="/danh-muc"
+        class="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+      >
+        <UIcon name="i-lucide-folder" class="size-3.5" aria-hidden="true" />
+        {{ t('categoryContent.browseAll') }}
+      </NuxtLink>
+
       <div v-if="tag || category || q" class="mt-4 flex flex-wrap items-center gap-2 text-xs">
         <UBadge v-if="q" color="primary" variant="subtle" size="sm">
           {{ t('post.filterQuery', { q }) }}
@@ -136,8 +154,17 @@ useHead({
         <UBadge v-if="tag" color="neutral" variant="subtle" size="sm">
           {{ t('post.filterTag', { tag }) }}
         </UBadge>
-        <UBadge v-if="category" color="secondary" variant="subtle" size="sm">
-          {{ category }}
+        <NuxtLink
+          v-if="category && activeCategory"
+          :to="`/danh-muc/${encodeURIComponent(activeCategory.slug)}`"
+          class="inline-flex"
+        >
+          <UBadge color="secondary" variant="subtle" size="sm">
+            {{ categoryLabel }}
+          </UBadge>
+        </NuxtLink>
+        <UBadge v-else-if="category" color="secondary" variant="subtle" size="sm">
+          {{ categoryLabel }}
         </UBadge>
         <UButton color="neutral" variant="ghost" size="xs" :label="t('post.clearFilter')" @click="clearFilters" />
       </div>

@@ -482,6 +482,39 @@ async function integration() {
       )
     })
 
+    await check('a tag filter narrows the list without another site or status leaking in', async () => {
+      const tagged = await createContent(Content, SITE, pageDraft('posts/uu-dai-he', 'uu-dai-he', {
+        type: 'post',
+        tags: ['mua-he', 'sale'],
+      }))
+      await createContent(Content, SITE, pageDraft('posts/kong-he', 'khong-he', { type: 'post', tags: ['sale'] }))
+      await createContent(Content, OTHER_SITE, pageDraft('posts/uu-dai-he', 'uu-dai-he', {
+        type: 'post',
+        tags: ['mua-he'],
+      }))
+
+      const summer = await listContent(Content, SITE, { tag: 'mua-he', limit: 50 })
+      assert.deepEqual(summer.data.map(entry => entry.id), [tagged.id])
+
+      const sale = await listContent(Content, SITE, { tag: 'sale', limit: 50 })
+      assert.equal(sale.data.length, 2)
+
+      // Padded input must match, because the record stores the tag trimmed.
+      const padded = await listContent(Content, SITE, { tag: '  mua-he  ', limit: 50 })
+      assert.equal(padded.data.length, 1)
+
+      const combined = await listContent(Content, SITE, { tag: 'sale', status: 'draft', limit: 50 })
+      assert.equal(combined.data.length, 2)
+      const otherStatus = await listContent(Content, SITE, { tag: 'sale', status: 'published', limit: 50 })
+      assert.equal(otherStatus.data.length, 0)
+
+      const none = await listContent(Content, SITE, { tag: 'khong-ton-tai', limit: 50 })
+      assert.equal(none.data.length, 0)
+      // Counts stay whole-site, matching every other filter.
+      const unfiltered = await listContent(Content, SITE, { limit: 1 })
+      assert.deepEqual(none.counts, unfiltered.counts)
+    })
+
   } finally {
     await connection.db?.dropDatabase().catch(() => undefined)
     await closeDatabaseConnections()

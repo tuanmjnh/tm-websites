@@ -6,7 +6,7 @@ import { ADMIN_CATEGORY_MAX_DEPTH } from '@tm/flow-contracts/category-admin'
 const { t, locale } = useI18n()
 const toast = useToast()
 const { hasCapability } = useHub()
-const { list, create, update, remove, menuReferences, errorCode } = useCategoryAdmin()
+const { list, create, update, remove, reorder, menuReferences, errorCode } = useCategoryAdmin()
 
 const canRead = computed(() => hasCapability('content.read'))
 const canWrite = computed(() => hasCapability('content.write'))
@@ -243,6 +243,104 @@ async function confirmDelete() {
   }
 }
 
+// Drag-and-drop ordering. The page keeps the server's tree as the only source of
+// truth and sends one move per drop; the response carries the new tree, so two
+// open editors converge instead of keeping their own order values.
+const dragging = ref<AdminCategory | null>(null)
+const dropTarget = ref<{ key: string, position: 'before' | 'inside' | 'after' } | null>(null)
+const moving = ref(false)
+
+const parentOf = computed(() => new Map(flat.value.map(entry => [entry.key, entry.parent ?? null])))
+
+function isInsideSubtree(candidateKey: string, ancestorKey: string) {
+  let current: string | null = candidateKey
+  const seen = new Set<string>()
+  while (current && !seen.has(current)) {
+    seen.add(current)
+    if (current === ancestorKey) return true
+    current = parentOf.value.get(current) ?? null
+  }
+  return false
+}
+
+/** Siblings of one parent, ordered the way the server orders them. */
+function siblingsOf(parent: string | null) {
+  return flat.value
+    .filter(entry => (entry.parent ?? null) === parent && entry.key !== dragging.value?.key)
+    .sort((left, right) => left.order - right.order || left.key.localeCompare(right.key))
+}
+
+function startDrag(node: AdminCategory) {
+  if (!canWrite.value) return
+  dragging.value = node
+}
+
+function endDrag() {
+  dragging.value = null
+  dropTarget.value = null
+}
+
+// A category can never be dropped into its own subtree; the server refuses it
+// too, but blocking it while dragging keeps the pointer from offering it.
+function canDropOn(node: AdminCategory) {
+  return Boolean(canWrite.value && dragging.value && !isInsideSubtree(node.key, dragging.value.key))
+}
+
+function hoverDrop(event: DragEvent, node: AdminCategory) {
+  if (!canDropOn(node)) return
+  event.preventDefault()
+  const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const ratio = (event.clientY - box.top) / Math.max(box.height, 1)
+  dropTarget.value = {
+    key: node.key,
+    position: ratio < 0.3 ? 'before' : ratio > 0.7 ? 'after' : 'inside',
+  }
+}
+
+async function dropOn(event: DragEvent, node: AdminCategory) {
+  if (!canDropOn(node) || !dragging.value || !dropTarget.value) return
+  event.preventDefault()
+
+  const position = dropTarget.value.position
+  let parent: string | null
+  let index: number
+
+  if (position === 'inside') {
+    parent = node.key
+    index = siblingsOf(node.key).length
+  } else {
+    parent = node.parent ?? null
+    const siblings = siblingsOf(parent)
+    const found = siblings.findIndex(entry => entry.key === node.key)
+    index = found < 0 ? siblings.length : found + (position === 'after' ? 1 : 0)
+  }
+
+  await moveTo(dragging.value.key, parent, index)
+}
+
+async function dropOnRoot(event: DragEvent) {
+  if (!canWrite.value || !dragging.value) return
+  event.preventDefault()
+  await moveTo(dragging.value.key, null, siblingsOf(null).length)
+}
+
+async function moveTo(key: string, parent: string | null, index: number) {
+  if (moving.value) return
+  moving.value = true
+  try {
+    const payload = await reorder({ key, parent, index })
+    flat.value = payload.data
+    tree.value = payload.tree
+    toast.add({ title: t('admin.categories.moved'), color: 'success' })
+  } catch (e) {
+    toast.add({ title: describeError(e), color: 'error' })
+    if (errorCode(e) === 'CATEGORY_REVISION_CONFLICT') await load()
+  } finally {
+    moving.value = false
+    endDrag()
+  }
+}
+
 if (canRead.value) await load()
 </script>
 
@@ -290,14 +388,44 @@ if (canRead.value) await load()
         />
       </template>
 
+      <div class="mb-2 flex flex-col gap-2">
+        <p v-if="canWrite" class="text-[11px] text-muted">{{ t('admin.categories.dragHint') }}</p>
+        <div
+          v-if="canWrite && dragging"
+          class="rounded-[4px] border border-dashed p-2 text-center text-[11px]"
+          :class="dropTarget?.key === '__root__' ? 'border-primary text-primary' : 'border-default text-muted'"
+          @dragover.prevent="dropTarget = { key: '__root__', position: 'inside' }"
+          @drop="dropOnRoot($event)"
+        >
+          {{ t('admin.categories.rootDrop') }}
+        </div>
+      </div>
+
       <div v-if="canRead && rows.length" class="overflow-hidden rounded-[4px] border border-default/60">
         <div
           v-for="{ node, depth } in rows"
           :key="node.id"
+          :draggable="canWrite"
           class="flex flex-wrap items-center gap-3 border-b border-default/40 px-3 py-2 text-sm last:border-b-0"
+          :class="{
+            'opacity-50': dragging?.key === node.key,
+            'border-t-2 border-t-primary': dropTarget?.key === node.key && dropTarget.position === 'before',
+            'border-b-2 border-b-primary': dropTarget?.key === node.key && dropTarget.position === 'after',
+            'bg-primary/10': dropTarget?.key === node.key && dropTarget.position === 'inside',
+          }"
+          @dragstart="startDrag(node)"
+          @dragend="endDrag"
+          @dragover="hoverDrop($event, node)"
+          @drop="dropOn($event, node)"
         >
           <div class="min-w-0 flex-1" :style="{ paddingLeft: `${depth * 1.25}rem` }">
             <div class="flex flex-wrap items-center gap-2">
+              <UIcon
+                v-if="canWrite"
+                name="i-lucide-grip-vertical"
+                class="size-4 cursor-grab text-muted"
+                :title="t('admin.categories.dragHint')"
+              />
               <UIcon :name="node.children.length ? 'i-lucide-folder-tree' : 'i-lucide-folder'" class="size-4 text-muted" />
               <span class="font-medium text-highlighted">{{ nodeName(node) }}</span>
               <span class="font-mono text-[11px] text-muted">{{ node.key }}</span>

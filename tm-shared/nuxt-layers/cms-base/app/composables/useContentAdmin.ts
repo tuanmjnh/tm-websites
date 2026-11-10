@@ -35,6 +35,8 @@ export interface ContentListQuery {
   status?: AdminContentStatusFilter
   type?: AdminContentType
   q?: string
+  /** Exact tag, as listed by the tag admin API. */
+  tag?: string
   cursor?: string
   limit?: number
 }

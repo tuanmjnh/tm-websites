@@ -89,8 +89,8 @@ function objectIds(ids: string[]) {
 
 /**
  * Resolves a `category` filter to every category id in its subtree.
- * Legacy categories store their ancestors inline, so descendants are found by
- * matching `ancestors._id` rather than a parent pointer.
+ * The CMS stores the ancestor ids on each category, so descendants are one
+ * indexed lookup instead of walking parent pointers.
  */
 async function resolveCategoryIds(value: string): Promise<string[] | null> {
   if (mongoose.Types.ObjectId.isValid(value)) return [value]
@@ -104,7 +104,7 @@ async function resolveCategoryIds(value: string): Promise<string[] | null> {
 
   const id = String((category as unknown as CatalogRecord)._id)
   const descendants = await CatalogItemCategoryModel
-    .find({ ...LIVE_CATEGORY_FILTER, 'ancestors._id': new mongoose.Types.ObjectId(id) }, '_id')
+    .find({ ...LIVE_CATEGORY_FILTER, ancestors: new mongoose.Types.ObjectId(id) }, '_id')
     .lean()
 
   return [id, ...(descendants as unknown as CatalogRecord[]).map(doc => String(doc._id))]

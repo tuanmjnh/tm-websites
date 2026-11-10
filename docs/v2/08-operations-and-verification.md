@@ -95,11 +95,26 @@ Run against a CMS dev server with a Hub session and a bound MongoDB. Replace hos
 curl -s -c cookies.txt -X POST http://localhost:4005/api/auth/login \
   -H 'content-type: application/json' -d '{"email":"...","password":"..."}'
 curl -s -b cookies.txt 'http://localhost:4005/api/v1/admin/content?limit=5'
+curl -s -b cookies.txt --get --data-urlencode 'tag=dịch vụ' http://localhost:4005/api/v1/admin/content
 curl -s -b cookies.txt -X POST http://localhost:4005/api/v1/admin/content \
   -H 'content-type: application/json' -d '{"type":"page","key":"pages/about","locales":[{"locale":"vi","title":"Giới thiệu","slug":"gioi-thieu"}]}'
 ```
 
-Expected: `GET` returns `{ success, data, meta.counts }`; `POST` returns `201` with `status: draft`, `revision: 1`; repeating the same `key` returns `409 CONTENT_KEY_EXISTS`; a `PATCH` without the current `revision` returns `409 CONTENT_REVISION_CONFLICT`; a mutation with a foreign `Origin` returns `403 CSRF_ORIGIN_MISMATCH`; a request without the session returns `401`. The record is visible in MongoDB only inside the database the registry assigns to that customer.
+Expected: `GET` returns `{ success, data, meta.counts }`; `POST` returns `201` with `status: draft`, `revision: 1`; repeating the same `key` returns `409 CONTENT_KEY_EXISTS`; a `PATCH` without the current `revision` returns `409 CONTENT_REVISION_CONFLICT`; a mutation with a foreign `Origin` returns `403 CSRF_ORIGIN_MISMATCH`; a request without the session returns `401`. A `tag=` filter returns only the records carrying that exact tag (composed with the other filters, `meta.counts` still whole-site); a blank or over-60-character tag is `422`. The record is visible in MongoDB only inside the database the registry assigns to that customer.
+
+### Catalog smoke (P4.a)
+
+Dry run first; the command never deletes the legacy collections, and a re-run updates the rows it migrated.
+
+```sh
+TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=sen-tuan pnpm migrate:catalog --site sentuan
+TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=sen-tuan pnpm migrate:catalog --site sentuan --apply
+curl -s -b cookies.txt 'http://localhost:4005/api/v1/admin/catalog/items?status=published&limit=5'
+curl -s -b cookies.txt 'http://localhost:4005/api/v1/admin/catalog/categories'
+curl -s http://localhost:4006/sitemap.xml | grep -c '/products/'
+```
+
+Expected: the dry run prints the legacy category/item counts and writes nothing; `--apply` writes the same number of `catalog_items`/`catalog_categories` rows (241/67 for `sen-tuan`, 229 published) with `legacyId` set; the API returns those rows with `meta.counts`; the sitemap product URL count equals the published count; a second `--apply` does not create duplicates. Publishing a draft through `POST /api/v1/admin/catalog/items/<id>/events` makes its `/products/<slug>` page return 200, and deleting it removes it from the sitemap and the public listing.
 
 ### Revision diff and restore smoke (P3.c)
 
@@ -172,6 +187,37 @@ curl -s -b cookies.txt -X POST http://localhost:4005/api/v1/admin/content/bulk \
 
 Expected: `200` + `{ action, results[], succeeded, failed }`, where every `results[]` row carries `ok`, `status`, `revision` and an `error` (`CONTENT_REVISION_CONFLICT`, `CONTENT_TRANSITION_INVALID`, `CONTENT_NOT_FOUND`, `CONTENT_BULK_DUPLICATE`). One bad row must never change another row's outcome and the request itself stays `200`; `schedule`, zero items or more than 50 → `422 CONTENT_BULK_INVALID`. Every applied row writes exactly one `audit_logs` entry and one `content_revisions` snapshot, so retrying a batch cannot fork the history. In the CMS `/content` list the select-all bar reports the selection, the dialog states the action before running, and failing rows are listed with their localized reason afterwards. Remove probe records together with their audit and revision rows instead of leaving them in a customer database.
 
+### Tag management smoke (P3.f rest)
+
+```sh
+curl -s -b cookies.txt http://localhost:4005/api/v1/admin/tags
+# Rename one tag everywhere it appears, then detach it entirely.
+curl -s -b cookies.txt -X POST http://localhost:4005/api/v1/admin/tags/rename \
+  -H 'content-type: application/json' -H 'origin: http://localhost:4005' \
+  -d '{"from":"typo","to":"fixed"}'
+curl -s -b cookies.txt -X POST http://localhost:4005/api/v1/admin/tags/rename \
+  -H 'content-type: application/json' -H 'origin: http://localhost:4005' \
+  -d '{"from":"fixed","to":null}'
+```
+
+Expected: the list answers `[{ "name": "...", "count": n }]`, most used first, scoped to the site, and counts include deleted records so a tag that only survives on deleted content can still be cleaned up. A rename returns `{ from, to, updated, skipped }`; every rewritten record has its `revision` bumped, an `update` audit row with `changedFields: ["tags"]` and a revision snapshot, so the content history explains the change. Renaming onto a tag that already exists merges them and leaves one tag; `to: null` removes the tag from every record without deleting the records; an unknown tag is `404 TAG_NOT_FOUND`, a blank name `422 TAG_REQUIRED`, the same name `422 TAG_RENAME_SAME`, a name over 60 characters `422 TAG_TOO_LONG`, and a stale record (saved by someone else between the read and the write) is counted in `skipped` instead of being overwritten — run the command again to include it. In the CMS, `/tags` lists the same counts, the rename dialog warns before a merge, and the detach dialog names the tag and its record count. Probe content, its revisions and its audit rows must be removed afterwards; the service suite uses a disposable database (`pnpm test:tags`).
+
+### Category drag-and-drop smoke (P3.e rest)
+
+```sh
+curl -s -b cookies.txt http://localhost:4005/api/v1/admin/categories
+# Put probe-order-b under probe-order-a as the first child.
+curl -s -b cookies.txt -X POST http://localhost:4005/api/v1/admin/categories/reorder \
+  -H 'content-type: application/json' -H 'origin: http://localhost:4005' \
+  -d '{"key":"probe-order-b","parent":"probe-order-a","index":0}'
+# Move it back to the top level at the first position.
+curl -s -b cookies.txt -X POST http://localhost:4005/api/v1/admin/categories/reorder \
+  -H 'content-type: application/json' -H 'origin: http://localhost:4005' \
+  -d '{"key":"probe-order-b","parent":null,"index":0}'
+```
+
+Expected: `200` with `data` (flat, ordered) plus `tree`, the same shape the list endpoint returns, so the editor re-renders from server truth. Sibling `order` values are spaced by ten and a drop takes the midpoint, so a normal move writes one row (siblings keep their `revision`); when neighbours are adjacent the bucket is renumbered once and every written row gets an `update` audit row. A drop back into the current position writes nothing. A move into the category's own subtree or onto itself is `422 CATEGORY_CYCLE`, a missing parent `422 CATEGORY_PARENT_NOT_FOUND`, a stale `revision` `409 CATEGORY_REVISION_CONFLICT`, and another site's key `404 CATEGORY_NOT_FOUND`. In the CMS, `/categories` rows are draggable from the grip: the top third of a row drops before it, the bottom third after it and the middle inside it, a dashed zone moves a row to the top level, and the tree re-renders after the toast. Remove smoke categories and their `audit_logs` rows afterwards; the service suite uses a disposable database (`pnpm test:category-order`).
+
 ### Content discovery smoke (WEB-02)
 
 ```sh
@@ -181,11 +227,12 @@ curl -s 'http://localhost:4006/api/public/content?q=.*'          # 0 rows, not a
 curl -s -o /dev/null -w '%{http_code}\n' "http://localhost:4006/api/public/content?q=$(printf 'a%.0s' {1..81})"  # 422
 curl -s http://localhost:4006/api/public/content/categories
 curl -s http://localhost:4006/api/public/content/categories/trang-suc
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:4006/danh-muc  # index page
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:4006/danh-muc/trang-suc
 curl -s http://localhost:4006/sitemap.xml | grep -o '<loc>[^<]*</loc>'
 ```
 
-Expected: `q` matches the localized title/slug/excerpt case-insensitively and treats `.*`/`[` as literal text; a term longer than 80 → `422`, an empty one is ignored. `categories` lists `{ key, slug, name, parent, locale }` only, `/categories/:slug` resolves the slug to the stored key (`404` for an unknown slug, `vi` fallback for a category without the requested locale), and `/danh-muc/<slug>` renders the landing page (empty state, never `404`, when the category has no published content). `/tag/<tag>` lists published records by tag, and both surfaces appear in `/sitemap.xml`. Remove probe categories/posts afterwards; the storefront reads the CMS collections directly, so a probe row is visible without any publish step.
+Expected: `q` matches the localized title/slug/excerpt case-insensitively and treats `.*`/`[` as literal text; a term longer than 80 → `422`, an empty one is ignored. `categories` lists `{ key, slug, name, parent, locale }` only, `/categories/:slug` resolves the slug to the stored key (`404` for an unknown slug, `vi` fallback for a category without the requested locale), and `/danh-muc/<slug>` renders the landing page (empty state, never `404`, when the category has no published content). `/tag/<tag>` lists published records by tag, `/danh-muc` groups every category under its parent (a child whose parent is missing in this locale is still listed) and only appears in `/sitemap.xml` while it has rows, and `/bai-viet?category=<key>` prints the category name linked to its landing page — an unknown key stays unlinked and prints as stored, never as a dead link. Both surfaces appear in `/sitemap.xml`. Remove probe categories/posts afterwards; the storefront reads the CMS collections directly, so a probe row is visible without any publish step.
 
 ### Sitemap smoke (WEB-08)
 
@@ -339,6 +386,7 @@ Defaults are conservative placeholders (50 snapshots per record, 365 days of aud
 | Change the SEO title template in Settings, then open any storefront page | The browser tab shows `page · suffix` from the template; the home page shows the brand without a repeated suffix, and setting the template back to `%s` removes it on the next request, because the save purges the public-site cache |
 | Promote a menu child | The child row's *Move to top level* button lifts it to the row right under its parent with its label and target intact; saving keeps the total item count |
 | Demote a top-level row | The indent button on any row but the first turns it into the last child of the row above (`1.1`), the first row's button is disabled, and saving keeps the total item count |
+| Reorder by touch | Dragging the grip with `pointerType: 'touch'` (or pen) swaps the rows without a keyboard, a tap on the grip changes nothing, and dropping outside the row's own list keeps the order |
 | Open the storefront header with a menu that has children | The parent shows a chevron and its children open on hover and on keyboard focus; footer children are listed under their parent |
 | Open the detail of a page (or the edit dialog of a category) a menu links to | A *Menus linking to …* block lists the menu names and keys with the hint that the record cannot be deleted yet, and each name opens that menu at `/menus?menu=<id>`; a record with no references shows no block, and a failed read hides it instead of blocking the dialog |
 | Delete a category or page a menu links to | `409 CATEGORY_IN_MENU` / `409 CONTENT_IN_MENU` with `details.menus`; the CMS names the menu in the delete dialog, keeps the record and its revision, and a bulk delete reports the refused row without touching the rest |
