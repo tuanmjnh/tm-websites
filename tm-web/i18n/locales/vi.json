@@ -45,6 +45,11 @@
       "title": "Danh mục sản phẩm",
       "subtitle": "Duyệt theo nhóm sản phẩm",
       "viewAll": "Xem tất cả danh mục"
+    },
+    "posts": {
+      "title": "Bài viết mới",
+      "subtitle": "Cập nhật từ nội dung đã xuất bản của cửa hàng",
+      "viewAll": "Xem tất cả bài viết"
     }
   },
   "catalog": {

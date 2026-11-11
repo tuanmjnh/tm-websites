@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PublicContentListItem } from '@tm/flow-contracts/content-public'
 import type { CatalogListQuery } from '../composables/useCatalog'
 import { buildCanonicalUrl } from '@tm/flow-utils/seo'
 
@@ -14,6 +15,26 @@ const featuredQuery = ref<CatalogListQuery>({ limit: 8, sort: 'newest' })
 const { result: featured, items: featuredItems } = useCatalogList(featuredQuery)
 const { categories } = useCatalogCategories()
 const topCategories = computed(() => categories.value.filter(category => !category.parentId).slice(0, 6))
+
+/**
+ * Latest published posts, read through the same public reader as `/bai-viet`: the
+ * route only returns published, in-window, allowlisted records. A broken reader
+ * hides the section instead of showing an error block on a marketing page.
+ */
+const { data: latestPosts } = await useAsyncData<PublicContentListItem[]>(
+  () => `home:posts:${locale.value}`,
+  async () => {
+    try {
+      const response = await $fetch<{ data: PublicContentListItem[] }>('/api/public/content', {
+        query: { type: 'post', locale: locale.value, limit: 3 },
+      })
+      return response.data
+    } catch {
+      return []
+    }
+  },
+  { watch: [locale], default: () => [] as PublicContentListItem[] }
+)
 
 // The settings document owns the site description; the translated copy is the fallback.
 const siteDescription = computed(() => seo.value?.defaultDescription || t('home.seo.description', { company: brandName.value }))
@@ -109,6 +130,20 @@ useHead({
       <div v-else class="rounded-[6px] border border-dashed border-default/70 bg-elevated/20 px-6 py-12 text-center text-sm text-muted">
         {{ t('catalog.empty.description') }}
       </div>
+    </section>
+
+    <section v-if="latestPosts.length" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-highlighted">{{ t('home.posts.title') }}</h2>
+          <p class="text-xs text-muted">{{ t('home.posts.subtitle') }}</p>
+        </div>
+        <NuxtLink to="/bai-viet" class="shrink-0 text-xs font-semibold text-primary hover:underline">
+          {{ t('home.posts.viewAll') }} →
+        </NuxtLink>
+      </div>
+
+      <WebContentList :items="latestPosts" />
     </section>
 
     <section v-if="topCategories.length" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

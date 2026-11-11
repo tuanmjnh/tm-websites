@@ -45,6 +45,11 @@
       "title": "Product categories",
       "subtitle": "Browse products by group",
       "viewAll": "View all categories"
+    },
+    "posts": {
+      "title": "Latest posts",
+      "subtitle": "Pulled from the store's published content",
+      "viewAll": "View all posts"
     }
   },
   "catalog": {

@@ -612,6 +612,14 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 - Evidence: `pnpm test:content` → 33 checks (generated row, hand-typed row kept, draft silence, per-locale rows, other-site isolation, reserved name skipped); HTTP `:4005` published probe rename → one redirect row, storefront `:4006` `/probe-slug-moi` → `301 /probe-slug-ba` with `/probe-slug-ba` `200` and `/pages/probe-slug-cu` still `200`; browser `:4005/redirects` rendered the row with its 301 badge and auto note. Probe record, revisions, audit rows and redirect deleted (`content` 3, `content_redirects` 0, `audit_logs` 1).
 - Limits: each further rename adds a row instead of re-pointing the old one (the chain still resolves); deleting or unpublishing a record leaves its rows; no automatic rows for legacy imports or catalog legacy paths, and no 410.
 
+### WEB-01 — latest content on the home page (landed 2026-11-11)
+
+- `web-base/app/pages/index.vue` renders the three newest published posts between the newest products and the category strip, using the shared `WebContentList` grid and one `useAsyncData` call to `/api/public/content?type=post&locale=<locale>&limit=3` (keyed and watched by locale). No new server code, contract or route.
+- The section renders only when posts came back, so an empty store shows no placeholder and a reader failure hides it instead of printing an error block on a marketing page; no counters or invented trending/sale labels.
+- i18n `home.posts.{title,subtitle,viewAll}` in both locales.
+- Evidence (`:4006`, `sen-tuan`): real content rendered `Giới thiệu Sen Tuấn` with its tags and date; four published probes produced exactly the three newest cards (4, 3, 2 — the oldest absent) with `hasMore true` from the API, and a draft probe appeared in neither the API nor the HTML. Probe rows and their revisions/audit entries deleted (`content` 3, `audit_logs` 1). `pnpm typecheck` and `pnpm lint` pass.
+- Limits: fixed newest-first order and fixed count of 3, no per-site section configuration, no featured/trending/sale flag on a record, not in the sitemap or JSON-LD.
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
