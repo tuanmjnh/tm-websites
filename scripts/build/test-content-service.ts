@@ -16,6 +16,7 @@ import {
   getContentRevision,
   listContentRevisions,
 } from '../../tm-cms/server/services/contentRevisions.js'
+import { AUTO_SLUG_REDIRECT_NOTE } from '../../tm-cms/server/services/contentSlugRedirects.js'
 import { IdempotencyError, normalizeIdempotencyKey, executeIdempotent } from '../../tm-cms/server/utils/idempotency.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
@@ -72,11 +73,13 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Content, Audit, Revision, IdempotencyKey, Menu } = await prepareDatabase(connection)
+    const { Content, Audit, Revision, IdempotencyKey, Menu, Redirect } = await prepareDatabase(connection)
     const meta = (actor = ACTOR) => ({
       audit: { model: Audit, actor },
       revision: { model: Revision, actor },
     })
+    // Every content write in the API context also carries the redirect map.
+    const metaR = (actor = ACTOR) => ({ ...meta(actor), redirects: Redirect })
 
     const created = await createContent(Content, SITE, pageDraft('pages/about', 'gioi-thieu', {
       tags: ['về chúng tôi', 'về chúng tôi'],
@@ -647,6 +650,81 @@ async function integration() {
       // An unknown name, a wrong value and the other site's record all stay out.
       assert.equal((await listContent(Content, SITE, { attributeKey: 'unknown', limit: 50 })).data.length, 0)
       assert.equal((await listContent(Content, SITE, { attributeKey: 'material', attributeValue: 'bronze', limit: 50 })).data.length, 0)
+    })
+
+    // Runs last: it creates records, and the filters above assert exact counts.
+    await check('a published slug change leaves a 301 behind, a draft rename leaves nothing', async () => {
+      const page = await createContent(Content, SITE, pageDraft('pages/doi-ten', 'ten-cu'), metaR())
+      await runContentEvent(Content, SITE, page.id, { event: 'publish', revision: 1 }, NOW, metaR())
+
+      const renamed = await updateContent(Content, SITE, page.id, {
+        revision: 2,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Tên mới', slug: 'ten-moi' }],
+      }, metaR())
+      assert.equal(renamed.locales[0]!.slug, 'ten-moi')
+
+      // The immutable key path (`/pages/ten-cu`) keeps working, so the row is the
+      // short URL that the rename actually broke.
+      const row = await Redirect.findOne({ siteId: SITE, from: '/ten-cu' }).lean()
+      assert.equal(row?.to, '/ten-moi')
+      assert.equal(row?.statusCode, 301)
+      assert.equal(row?.isActive, true)
+      assert.equal(row?.note, AUTO_SLUG_REDIRECT_NOTE)
+
+      // A human mapping already on the old path is more specific than ours, so
+      // the next rename leaves it (and its 302) alone.
+      await Redirect.create({
+        siteId: SITE,
+        from: '/ten-moi',
+        to: '/gioi-thieu',
+        statusCode: 302,
+        isActive: true,
+        note: 'typed by hand',
+        revision: 1,
+      })
+      await updateContent(Content, SITE, page.id, {
+        revision: 3,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Tên ba', slug: 'ten-ba' }],
+      }, metaR())
+      const kept = await Redirect.findOne({ siteId: SITE, from: '/ten-moi' }).lean()
+      assert.equal(kept?.to, '/gioi-thieu')
+      assert.equal(kept?.statusCode, 302)
+
+      // A draft was never reachable, so renaming it writes no row.
+      const draft = await createContent(Content, SITE, pageDraft('pages/nhap', 'nhap-cu'), metaR())
+      await updateContent(Content, SITE, draft.id, {
+        revision: 1,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Nháp', slug: 'nhap-moi' }],
+      }, metaR())
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/nhap-cu' }), 0)
+
+      // A slug edited in one locale only maps that locale's old path; a newly
+      // added locale has no URL to preserve, and another site sees no rows.
+      await updateContent(Content, SITE, page.id, {
+        revision: 4,
+        type: 'page',
+        locales: [
+          { locale: 'vi', title: 'Tên bốn', slug: 'ten-bon' },
+          { locale: 'en', title: 'Name four', slug: 'name-four' },
+        ],
+      }, metaR())
+      assert.equal((await Redirect.findOne({ siteId: SITE, from: '/ten-ba' }).lean())?.to, '/ten-bon')
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/name-four' }), 0)
+      assert.equal(await Redirect.countDocuments({ siteId: OTHER_SITE }), 0)
+
+      // A slug that names a real storefront route was never reachable there, so
+      // renaming it must not create a row that hijacks that route.
+      const reserved = await createContent(Content, SITE, pageDraft('pages/products', 'products'), metaR())
+      await runContentEvent(Content, SITE, reserved.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      await updateContent(Content, SITE, reserved.id, {
+        revision: 2,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Sản phẩm', slug: 'san-pham' }],
+      }, metaR())
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/products' }), 0)
     })
 
 

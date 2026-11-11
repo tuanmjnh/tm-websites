@@ -604,6 +604,14 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 - Evidence: `pnpm test:web-content` → 20 live reader checks (keyword-only hit, upper case, `en`-only keyword hidden from `vi`, draft keyword hidden); HTTP `:4006` probes for accented/upper/title/`.*`/unknown; browser `/tim-kiem?q=nhãn-hiệu-probe` rendered the card. Probe rows deleted (`content` 3, `audit_logs` 1).
 - Limits: no diacritic folding or synonyms; search page highlights only title/excerpt matches.
 
+### WEB-02 — a slug change leaves its own 301 (landed 2026-11-11)
+
+- `tm-cms/server/services/contentSlugRedirects.ts` compares stored and submitted `locales` and writes one `301` row per changed locale (`/<old slug>` → `/<new slug>`, note `auto: slug changed`) with `$setOnInsert` on `(siteId, from)`; called from `updateContent` and `restoreContentRevision` via the new `ContentWriteMeta.redirects`, wired in the content PATCH and revision-restore routes.
+- Nothing is written for a draft, an unchanged slug, or an old slug that names a real storefront route (`products`, `categories`, `danh-muc`, `bai-viet`, `tag`, `tim-kiem`, `gio-hang`); an existing row on the old path is kept, because a hand-typed target wins and `resolveRedirect` follows chains.
+- Only the short URL is written: a record's key path (`/pages/<key slug>`) is immutable and keeps answering, which the live check confirmed.
+- Evidence: `pnpm test:content` → 33 checks (generated row, hand-typed row kept, draft silence, per-locale rows, other-site isolation, reserved name skipped); HTTP `:4005` published probe rename → one redirect row, storefront `:4006` `/probe-slug-moi` → `301 /probe-slug-ba` with `/probe-slug-ba` `200` and `/pages/probe-slug-cu` still `200`; browser `:4005/redirects` rendered the row with its 301 badge and auto note. Probe record, revisions, audit rows and redirect deleted (`content` 3, `content_redirects` 0, `audit_logs` 1).
+- Limits: each further rename adds a row instead of re-pointing the old one (the chain still resolves); deleting or unpublishing a record leaves its rows; no automatic rows for legacy imports or catalog legacy paths, and no 410.
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

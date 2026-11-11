@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Content, Audit, Revision, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ Content, Audit, Revision, IdempotencyKey, Redirect }) =>
       executeIdempotent(
         {
           model: IdempotencyKey,
@@ -46,7 +46,10 @@ export default defineEventHandler(async (event) => {
             id,
             targetRevision,
             body.revision,
-            writeMetaOf(event, user, Audit, Revision),
+            {
+              ...writeMetaOf(event, user, Audit, Revision),
+              redirects: Redirect,
+            },
           )
           return {
             statusCode: 200,

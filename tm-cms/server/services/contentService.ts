@@ -26,6 +26,8 @@ import {
   type ContentAuditMeta,
 } from './contentAudit'
 import { findMenuReferences } from './menuReferences'
+import { syncContentSlugRedirects } from './contentSlugRedirects'
+import type { RedirectDocument } from '../models/redirect'
 import {
   captureContentRevision,
   getContentRevision,
@@ -104,6 +106,12 @@ export interface ContentWriteMeta {
    * item that points at nothing.
    */
   menus?: Model<MenuDocument>
+  /**
+   * Redirect map of this site. A published record whose slug changes leaves a
+   * 301 from its old path, so the rename does not break links that were shared
+   * before it.
+   */
+  redirects?: Model<RedirectDocument>
 }
 
 const CONTENT_STATUSES: ContentStatus[] = ['draft', 'scheduled', 'published', 'archived', 'deleted']
@@ -424,6 +432,15 @@ export async function updateContent(
 
   const changedFields = diffContentFields(record, draft)
 
+  if (meta?.redirects) {
+    await syncContentSlugRedirects(meta.redirects, {
+      siteId,
+      published: record.status === 'published',
+      before: record.locales,
+      after: updated.locales,
+    })
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceId: String(updated._id),
@@ -634,6 +651,16 @@ export async function restoreContentRevision(
   }
 
   const changedFields = diffContentFields(record, draft)
+
+  // A revert can move the slug back too, so the current URL keeps working.
+  if (meta?.redirects) {
+    await syncContentSlugRedirects(meta.redirects, {
+      siteId,
+      published: record.status === 'published',
+      before: record.locales,
+      after: updated.locales,
+    })
+  }
 
   await recordContentAudit(meta?.audit, {
     siteId,

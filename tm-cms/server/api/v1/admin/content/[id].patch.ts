@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Content, Audit, Revision, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ Content, Audit, Revision, IdempotencyKey, Redirect }) =>
       executeIdempotent(
         {
           model: IdempotencyKey,
@@ -27,7 +27,10 @@ export default defineEventHandler(async (event) => {
           payload: body,
         },
         async () => {
-          const updated = await updateContent(Content, siteId, id, body, writeMetaOf(event, user, Audit, Revision))
+          const updated = await updateContent(Content, siteId, id, body, {
+            ...writeMetaOf(event, user, Audit, Revision),
+            redirects: Redirect,
+          })
           return {
             statusCode: 200,
             value: successResponse({ data: updated, message: 'Đã cập nhật bản ghi nội dung' }),
