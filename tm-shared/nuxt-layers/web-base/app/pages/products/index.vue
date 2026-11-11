@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CatalogListQuery } from '../../composables/useCatalog'
 import { PUBLIC_CATALOG_SORTS } from '@tm/flow-contracts'
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildCanonicalUrl, buildItemListJsonLd } from '@tm/flow-utils/seo'
 
 const PAGE_SIZE = 12
 
@@ -136,8 +136,27 @@ useSeoMeta({
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
 
+/**
+ * Only the unfiltered first page is what the canonical `/products` URL describes,
+ * so a filtered or paged view publishes no list a crawler could cache as the catalog.
+ */
+const itemList = computed(() => {
+  if (hasFilters.value || readPage() > 1) return null
+  return buildItemListJsonLd(baseUrl, items.value.map(item => ({
+    name: readLocalized(item.name, locale.value),
+    path: item.path,
+  })), { name: t('catalog.title') })
+})
+
 useHead({
   link: [{ rel: 'canonical', href: () => canonical.value }],
+  script: () => (itemList.value
+    ? [{
+        type: 'application/ld+json' as const,
+        key: 'ld-items',
+        innerHTML: JSON.stringify(itemList.value).replace(/</g, '\\u003c'),
+      }]
+    : []),
 })
 </script>
 

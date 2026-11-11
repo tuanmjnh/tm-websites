@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PublicContentListItem } from '@tm/flow-contracts/content-public'
-import { buildBreadcrumbJsonLd, buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl, buildItemListJsonLd } from '@tm/flow-utils/seo'
 
 /**
  * Tag landing page. Tags are free-form strings on a content record, so the URL
@@ -80,15 +80,24 @@ const breadcrumbs = computed(() => buildBreadcrumbJsonLd(baseUrl, tag.value
     ]
   : []))
 
+/** The cards this tag lists, so a crawler sees the posts without following each link. */
+const itemList = computed(() => buildItemListJsonLd(baseUrl, items.value.map(item => ({
+  name: item.title,
+  path: item.path,
+})), { name: `#${tag.value}` }))
+
+/** Both JSON-LD blocks, keyed so one never replaces the other. */
+const jsonLd = computed(() => {
+  const blocks: { type: 'application/ld+json', key: string, innerHTML: string }[] = []
+  for (const [key, data] of [['ld-breadcrumb', breadcrumbs.value], ['ld-items', itemList.value]] as const) {
+    if (data) blocks.push({ type: 'application/ld+json', key, innerHTML: JSON.stringify(data).replace(/</g, '\\u003c') })
+  }
+  return blocks
+})
+
 useHead({
   link: [{ rel: 'canonical', href: () => canonical.value }],
-  script: () => (breadcrumbs.value
-    ? [{
-        type: 'application/ld+json' as const,
-        key: 'ld-breadcrumb',
-        innerHTML: JSON.stringify(breadcrumbs.value).replace(/</g, '\\u003c'),
-      }]
-    : []),
+  script: () => jsonLd.value,
 })
 </script>
 

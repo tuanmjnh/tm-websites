@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CatalogListQuery } from '../../composables/useCatalog'
 import { catalogSegmentFromParam } from '@tm/flow-contracts'
-import { buildBreadcrumbJsonLd, buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl, buildItemListJsonLd } from '@tm/flow-utils/seo'
 
 const PAGE_SIZE = 12
 
@@ -60,6 +60,14 @@ const breadcrumbs = computed(() => buildBreadcrumbJsonLd(baseUrl, category.value
     ]
   : []))
 
+/** Page one is the list the category's canonical URL describes; a later page is not. */
+const itemList = computed(() => (readPage() > 1
+  ? null
+  : buildItemListJsonLd(baseUrl, items.value.map(item => ({
+      name: readLocalized(item.name, locale.value),
+      path: item.path,
+    })), { name: title.value })))
+
 const activeStatus = computed(() => {
   if (categoryResult.value.status !== 'ok') return categoryResult.value.status
   return null
@@ -97,6 +105,13 @@ useHead(() => {
             type: 'application/ld+json' as const,
             key: 'ld-breadcrumb',
             innerHTML: JSON.stringify(breadcrumbs.value).replace(/</g, '\\u003c'),
+          }]
+        : []),
+      ...(itemList.value
+        ? [{
+            type: 'application/ld+json' as const,
+            key: 'ld-items',
+            innerHTML: JSON.stringify(itemList.value).replace(/</g, '\\u003c'),
           }]
         : []),
     ],

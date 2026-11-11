@@ -136,6 +136,58 @@ export function buildBreadcrumbJsonLd(
   }
 }
 
+export interface ItemListEntry {
+  /** The label the card already shows for this row. */
+  name: string
+  /** Rooted path or absolute URL for the row's own page. */
+  path: string
+}
+
+/** Cap so a "load more" listing cannot grow the payload without limit. */
+const ITEM_LIST_MAX = 50
+
+/**
+ * `ItemList` structured data for the rows a listing page already renders.
+ *
+ * A row without a label or without a link is dropped and a repeated URL is kept
+ * once, because the list must describe what the visitor can click. `null` means
+ * the page has nothing to list yet, so no empty `ItemList` is published.
+ */
+export function buildItemListJsonLd(
+  baseUrl: string,
+  entries: readonly ItemListEntry[],
+  options: { name?: string } = {},
+): Record<string, unknown> | null {
+  const rows: { name: string, item: string }[] = []
+
+  for (const entry of entries) {
+    if (rows.length >= ITEM_LIST_MAX) break
+    const name = String(entry?.name ?? '').replace(/\s+/g, ' ').trim()
+    const raw = String(entry?.path ?? '').trim()
+    if (!name || !raw) continue
+    const item = /^https?:\/\//i.test(raw) ? raw : buildCanonicalUrl(baseUrl, raw)
+    if (!item || rows.some(row => row.item === item)) continue
+    rows.push({ name, item })
+  }
+
+  if (!rows.length) return null
+
+  const listName = String(options.name ?? '').replace(/\s+/g, ' ').trim()
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    ...(listName ? { name: listName } : {}),
+    numberOfItems: rows.length,
+    itemListElement: rows.map((row, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: row.name,
+      url: row.item,
+    })),
+  }
+}
+
 /**
  * Applies the title template saved in site settings to one page title.
  *

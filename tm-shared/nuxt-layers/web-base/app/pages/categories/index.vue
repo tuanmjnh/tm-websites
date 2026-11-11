@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildCanonicalUrl, buildItemListJsonLd } from '@tm/flow-utils/seo'
 
 const { t, locale } = useI18n()
 const config = useRuntimeConfig()
@@ -28,8 +28,21 @@ useSeoMeta({
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
 
+/** The tree the page shows, flattened with each parent followed by its children. */
+const itemList = computed(() => buildItemListJsonLd(baseUrl, grouped.value.flatMap(group => [
+  { name: readLocalized(group.name, locale.value), path: group.path },
+  ...group.children.map(child => ({ name: readLocalized(child.name, locale.value), path: child.path })),
+]), { name: t('category.indexTitle') }))
+
 useHead({
   link: [{ rel: 'canonical', href: canonical }],
+  script: () => (itemList.value
+    ? [{
+        type: 'application/ld+json' as const,
+        key: 'ld-items',
+        innerHTML: JSON.stringify(itemList.value).replace(/</g, '\\u003c'),
+      }]
+    : []),
 })
 </script>
 

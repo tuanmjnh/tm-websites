@@ -10,7 +10,7 @@ import {
   publicMenuLabel,
   toPublicMenu,
 } from '../../tm-shared/packages/flow-contracts/src/site-public.js'
-import { applySeoTitleTemplate, buildBreadcrumbJsonLd } from '../../tm-shared/packages/flow-utils/src/seo.js'
+import { applySeoTitleTemplate, buildBreadcrumbJsonLd, buildItemListJsonLd } from '../../tm-shared/packages/flow-utils/src/seo.js'
 
 let checks = 0
 
@@ -201,6 +201,40 @@ check('a step that is already an absolute URL is not prefixed twice', () => {
     { name: 'Giới thiệu', path: 'https://shop.test/gioi-thieu' },
   ])
   assert.equal((data?.itemListElement as any[])[1].item, 'https://shop.test/gioi-thieu')
+})
+
+check('a listing becomes ItemList data with ordered absolute rows', () => {
+  const data = buildItemListJsonLd('https://shop.test/', [
+    { name: '  Bộ HN-BO  ', path: '/products/bo-hn-bo' },
+    { name: 'Chăn ga gối đệm', path: '/categories/chan-ga-goi-dem' },
+  ], { name: 'Sản phẩm' })
+  assert.equal(data?.['@type'], 'ItemList')
+  assert.equal(data?.name, 'Sản phẩm')
+  assert.equal(data?.numberOfItems, 2)
+  assert.deepEqual((data?.itemListElement as any[]).map(row => [row.position, row.name, row.url]), [
+    [1, 'Bộ HN-BO', 'https://shop.test/products/bo-hn-bo'],
+    [2, 'Chăn ga gối đệm', 'https://shop.test/categories/chan-ga-goi-dem'],
+  ])
+})
+
+check('a listing drops unusable rows, repeats, and an empty list publishes nothing', () => {
+  const data = buildItemListJsonLd('https://shop.test', [
+    { name: '', path: '/products/a' },
+    { name: 'Không có link', path: '' },
+    { name: 'Bộ HN-BO', path: '/products/bo-hn-bo' },
+    { name: 'Bộ HN-BO lần nữa', path: 'https://shop.test/products/bo-hn-bo' },
+  ])
+  assert.deepEqual((data?.itemListElement as any[]).map(row => row.name), ['Bộ HN-BO'])
+  assert.equal(data?.numberOfItems, 1)
+  assert.equal(data?.name, undefined)
+  assert.equal(buildItemListJsonLd('https://shop.test', []), null)
+})
+
+check('a listing stops at fifty rows so a load-more page cannot grow without bound', () => {
+  const rows = Array.from({ length: 60 }, (_, index) => ({ name: `Sản phẩm ${index + 1}`, path: `/products/p-${index + 1}` }))
+  const data = buildItemListJsonLd('https://shop.test', rows)
+  assert.equal(data?.numberOfItems, 50)
+  assert.equal((data?.itemListElement as any[])[49].position, 50)
 })
 
 check('category slug overrides are applied per menu item', () => {

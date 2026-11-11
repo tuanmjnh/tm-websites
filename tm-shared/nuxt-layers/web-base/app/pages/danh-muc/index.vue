@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { buildBreadcrumbJsonLd, buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl, buildItemListJsonLd } from '@tm/flow-utils/seo'
 
 /**
  * Content category index. It lists what the storefront may link to and groups the
@@ -54,15 +54,26 @@ const breadcrumbs = buildBreadcrumbJsonLd(baseUrl, [
   { name: t('categoryContent.indexTitle'), path: '/danh-muc' },
 ])
 
+/** The grouped tree as one list, each parent followed by its children. */
+const itemList = buildItemListJsonLd(baseUrl, grouped.value.flatMap(group => [
+  { name: group.name, path: categoryPath(group.slug) },
+  ...group.children.map(child => ({ name: child.name, path: categoryPath(child.slug) })),
+]), { name: t('categoryContent.indexTitle') })
+
+const jsonLd = [
+  { key: 'ld-breadcrumb', data: breadcrumbs },
+  { key: 'ld-items', data: itemList },
+].flatMap(({ key, data }) => (data
+  ? [{
+      type: 'application/ld+json' as const,
+      key,
+      innerHTML: JSON.stringify(data).replace(/</g, '\\u003c'),
+    }]
+  : []))
+
 useHead({
   link: [{ rel: 'canonical', href: canonical }],
-  script: breadcrumbs
-    ? [{
-        type: 'application/ld+json' as const,
-        key: 'ld-breadcrumb',
-        innerHTML: JSON.stringify(breadcrumbs).replace(/</g, '\\u003c'),
-      }]
-    : [],
+  script: jsonLd,
 })
 </script>
 

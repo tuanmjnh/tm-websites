@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicContentListItem } from '@tm/flow-contracts/content-public'
 import { PUBLIC_CONTENT_SEARCH_MAX } from '@tm/flow-contracts/content-public'
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildCanonicalUrl, buildItemListJsonLd } from '@tm/flow-utils/seo'
 
 /**
  * Public post listing. It reads the same public content API as a single page
@@ -112,8 +112,24 @@ useSeoMeta({
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
 
+/** The plain listing is the collection this URL describes; a search or tag view is not. */
+const itemList = computed(() => {
+  if (q.value || tag.value || category.value) return null
+  return buildItemListJsonLd(baseUrl, items.value.map(item => ({
+    name: item.title,
+    path: item.path,
+  })), { name: t('post.indexTitle') })
+})
+
 useHead({
   link: [{ rel: 'canonical', href: canonical }],
+  script: () => (itemList.value
+    ? [{
+        type: 'application/ld+json' as const,
+        key: 'ld-items',
+        innerHTML: JSON.stringify(itemList.value).replace(/</g, '\\u003c'),
+      }]
+    : []),
 })
 </script>
 
