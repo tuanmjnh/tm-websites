@@ -6,7 +6,7 @@ import type {
   PublicContentListItem,
   PublicContentType,
 } from '@tm/flow-contracts/content-public'
-import { contentKeyToPath } from '@tm/flow-contracts'
+import { DEFAULT_PUBLIC_CONTENT_LOCALE } from '@tm/flow-contracts/content-public'
 
 /**
  * Read-only view of the CMS-owned `content` collection.
@@ -280,6 +280,16 @@ export function buildPublishedListFilter(options: PublicContentListFilterOptions
   }
 }
 
+/**
+ * The short `/<slug>` URL a visitor and the canonical tag both use. The
+ * immutable key path (`/pages/<key>`) keeps resolving, but it is not the URL a
+ * card, a sitemap row or a canonical tag should publish.
+ */
+export function publicContentSlugPath(slug: string): string | null {
+  const value = slug.trim()
+  return value ? `/${encodeURIComponent(value)}` : null
+}
+
 /** One listing row in the requested locale, or null when it is not public. */
 export function toPublicContentListItem(
   doc: PublicContentDoc,
@@ -296,7 +306,7 @@ export function toPublicContentListItem(
   if (type !== 'page' && type !== 'post' && type !== 'fragment') return null
 
   const key = typeof doc.key === 'string' ? doc.key : ''
-  const path = key ? contentKeyToPath(key) : null
+  const path = publicContentSlugPath(entry.slug)
   if (!key || !path) return null
 
   const publishedAt = readDate(doc.publishedAt)
@@ -372,6 +382,28 @@ export function toPublicContentEntry(doc: PublicContentDoc, now: Date = new Date
 
   const updatedAt = readDate(doc.updatedAt)
   return { key, updatedAt: updatedAt ? updatedAt.toISOString() : null }
+}
+
+/**
+ * Sitemap row for one record: the short slug URL, so the sitemap and the
+ * canonical tag agree. The sitemap is locale-free, so the default-locale slug
+ * wins and another locale is only a fallback.
+ */
+export function toPublicContentSitemapEntry(
+  doc: PublicContentDoc,
+  now: Date = new Date(),
+): { path: string, lastmod: string | null } | null {
+  if (!isPublishedNow(doc, now)) return null
+
+  const slugged = readLocales(doc.locales).filter(item => item.slug.trim().length > 0)
+  if (!slugged.length) return null
+
+  const preferred = slugged.find(item => item.locale.toLowerCase() === DEFAULT_PUBLIC_CONTENT_LOCALE) ?? slugged[0]!
+  const path = publicContentSlugPath(preferred.slug)
+  if (!path) return null
+
+  const updatedAt = readDate(doc.updatedAt)
+  return { path, lastmod: updatedAt ? updatedAt.toISOString() : null }
 }
 
 export const PUBLIC_CONTENT_SITEMAP_FIELDS = PUBLIC_CONTENT_SITEMAP_PROJECTION

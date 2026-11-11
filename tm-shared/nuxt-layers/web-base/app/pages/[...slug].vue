@@ -55,7 +55,15 @@ watch(error, (value) => {
 })
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
-const canonical = computed(() => buildCanonicalUrl(baseUrl, route.path))
+/**
+ * The short `/<slug>` form is canonical. The immutable key path still resolves,
+ * so a visitor who lands on `/pages/<key>` is pointed at the URL the cards, the
+ * sitemap and a share all use.
+ */
+const canonical = computed(() => {
+  const slug = content.value?.slug
+  return buildCanonicalUrl(baseUrl, slug ? `/${encodeURIComponent(slug)}` : route.path)
+})
 
 const seoTitle = computed(() => content.value?.seo.title || content.value?.title || '')
 const seoDescription = computed(() => content.value?.seo.description || content.value?.excerpt || '')

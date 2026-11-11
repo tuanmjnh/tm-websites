@@ -17,6 +17,7 @@ import {
   toPublicContent,
   toPublicContentEntry,
   toPublicContentListItem,
+  toPublicContentSitemapEntry,
   type PublicContentDoc,
 } from '#server/models/contentPublic'
 import { withSiteDb } from './mongo'
@@ -88,6 +89,30 @@ export async function fetchPublicContent(
       if (content) return content
     }
     return null
+  })
+}
+
+/**
+ * Sitemap rows: one short URL per published record, so a crawler is never sent
+ * to the immutable key path that canonicalises elsewhere.
+ */
+export async function listContentSitemapEntries(
+  event: H3Event,
+): Promise<{ path: string, lastmod: string | null }[]> {
+  return withSiteDb(event, async () => {
+    const docs = await PublicContentModel.find(
+      buildPublishedContentFilter({}),
+      PUBLIC_CONTENT_SITEMAP_FIELDS,
+    )
+      .sort({ updatedAt: -1, _id: -1 })
+      .lean()
+
+    const rows: { path: string, lastmod: string | null }[] = []
+    for (const doc of docs as unknown as PublicContentDoc[]) {
+      const entry = toPublicContentSitemapEntry(doc)
+      if (entry) rows.push(entry)
+    }
+    return rows
   })
 }
 

@@ -1,11 +1,11 @@
-import { contentKeyToPath } from '@tm/flow-contracts'
 import { buildSitemapEntries, buildSitemapXml } from '@tm/flow-utils/seo'
 import { listCatalogCategorySitemapEntries, listCatalogSitemapEntries } from '#server/utils/catalogService'
+import { listContentSitemapEntries } from '#server/utils/publicContent'
 
 export default defineEventHandler(async (event) => {
   const baseUrl = getSiteBaseUrl(event)
-  const [contents, categories, tags, products, catalogCategories] = await Promise.all([
-    fetchAllPublishedContent(event),
+  const [pages, categories, tags, products, catalogCategories] = await Promise.all([
+    listContentSitemapEntries(event),
     fetchPublicContentCategories(event),
     fetchPublicContentTags(event),
     // A catalog that is not connected or not reachable must not take the whole
@@ -13,11 +13,6 @@ export default defineEventHandler(async (event) => {
     listCatalogSitemapEntries(event).catch(() => []),
     listCatalogCategorySitemapEntries(event).catch(() => []),
   ])
-
-  const pages = contents.flatMap((content) => {
-    const path = contentKeyToPath(content.key)
-    return path ? [{ path, lastmod: content.updatedAt ?? null }] : []
-  })
 
   // Landing pages are crawlable URLs too; an empty tag page is harmless to list,
   // a tag can gain published content at any time.

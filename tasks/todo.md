@@ -641,6 +641,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live `:4006` (`sen-tuan`): `/products` 12 rows, `/categories` 50 (capped from 67), `/bai-viet` 1, `/tag/about` 1, a catalog category 8; `/products?page=2`, `/products?q=bo` and an empty tag published none. `pnpm typecheck` and `pnpm lint` pass | — |
 | Limits: name + URL per row only; a category index over 50 is truncated, not paginated; content rows link the stored `/pages/<slug>` path like the cards do | — |
 
+### WEB-08.d — one public URL per content record (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| The listing row's `path` and a new sitemap row come from the localized slug, not the immutable key path | `tm-web/server/models/contentPublic.ts` |
+| `sitemap.xml` publishes slug URLs (locale-free: default locale first, any locale as fallback) | `tm-web/server/utils/publicContent.ts`, `tm-web/server/routes/sitemap.xml.ts` |
+| A detail page canonicalises on the resolved record's slug, so `/pages/<key>` still answers `200` but points canonical, OG, JSON-LD, breadcrumb and `ItemList` at `/<slug>` | `tm-shared/nuxt-layers/web-base/app/pages/[...slug].vue` |
+| Verified live `:4006` (`sen-tuan`): `/gioi-thieu` and `/pages/gioi-thieu` both `200` with canonical `/gioi-thieu`; `/bai-viet` card `href="/gioi-thieu"` and `ItemList` url `http://localhost:4006/gioi-thieu`; sitemap lists `/gioi-thieu` and no `/pages/` URL. `pnpm test:web-site` 18, `pnpm test:web-content` 20, `pnpm typecheck`, `pnpm lint` pass | — |
+| Limits: the key path stays served but unadvertised; a record without a slug in the requested locale is listed under its default-locale slug, so there is still no per-locale sitemap | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
