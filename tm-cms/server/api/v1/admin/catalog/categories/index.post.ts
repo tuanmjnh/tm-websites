@@ -9,6 +9,7 @@ import { executeIdempotent } from '#server/utils/idempotency'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
 import { parseInput } from '#server/utils/validation'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 
 export default defineEventHandler(async (event) => {
   assertSameOriginMutation(event)
@@ -47,6 +48,9 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'cache-control', 'no-store')
     if (executed.replayed) setHeader(event, 'idempotent-replay', 'true')
 
+    if (!executed.replayed) {
+      setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'catalog.category.create'))
+    }
     return executed.value
   } catch (error) {
     return translateContentError(error)

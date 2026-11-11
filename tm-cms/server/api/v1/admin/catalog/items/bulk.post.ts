@@ -4,6 +4,7 @@ import { translateContentError, writeMetaOf } from '#server/utils/contentApi'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
 import { parseInput } from '#server/utils/validation'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 
 /**
  * `POST /api/v1/admin/catalog/items/bulk` applies a partial price/stock patch to
@@ -31,6 +32,9 @@ export default defineEventHandler(async (event) => {
 
     setResponseStatus(event, 200)
     setHeader(event, 'cache-control', 'no-store')
+    if (result.succeeded) {
+      setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'catalog.item.bulk'))
+    }
 
     return successResponse({
       data: result,

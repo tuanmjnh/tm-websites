@@ -3,6 +3,7 @@ import { CatalogEventSchema, translateContentError, writeMetaOf } from '#server/
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
 import { parseInput } from '#server/utils/validation'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 
 export default defineEventHandler(async (event) => {
   assertSameOriginMutation(event)
@@ -25,6 +26,7 @@ export default defineEventHandler(async (event) => {
       ))
 
     setHeader(event, 'cache-control', 'no-store')
+    setRevalidateHeader(event, await revalidateStorefrontForEvent(event, `catalog.item.${body.event}`))
     return successResponse({ event, data: updated, message: 'Đã cập nhật trạng thái sản phẩm' })
   } catch (error) {
     return translateContentError(error)

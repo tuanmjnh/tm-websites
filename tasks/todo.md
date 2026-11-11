@@ -131,7 +131,7 @@ Still missing in P3: category tree, richer editorial formats, media attachments,
 
 Verified over HTTP/browser on `:4005` + `:4006` (`sentuan`): published record `200` by key and by slug, draft `404`, `?locale=en` fallback `200` with `Content-Language: vi`, sitemap listing only the published record, and the format select driving real HTML/Markdown rendering (record restored to `format: html` afterwards). Doc record: [05-feature-parity.md](../docs/v2/05-feature-parity.md).
 
-Still open in P3.b: `format: text` not exercised in the browser, no purge/revalidation hook (30s TTL only), no Hub content export (Q5).
+Still open in P3.b: `format: text` not exercised in the browser, no Hub content export (Q5); a content publish needs no purge (the public content handlers are not cached).
 
 ### P3.c — revision snapshots, diff and restore (landed 2026-11-07)
 
@@ -158,7 +158,7 @@ Still open in P3.c: no backfill of snapshots for records created before this sli
 
 Verified on `:4006`: only published records returned; `tag=about` → 1 row, `tag=missing` → empty; `type=bogus` and a malformed cursor → `422`; `limit=2` pages were `[tin-c, tin-b]` then `[tin-a, gioi-thieu]` with exact `nextCursor`; `/bai-viet` rendered 4 cards and `?tag=huong-dan` narrowed to one with the filter chip. Demo posts were removed afterwards.
 
-Still open in P3.d: no tag/category landing pages (only query filters), no search, no cache purge on publish (30s/300s TTL only), and the listing is not on the home page yet.
+Still open in P3.d: no tag/category landing pages (only query filters), no search, and the listing is not on the home page yet; a content publish needs no purge (the public content handlers are not cached).
 
 ### P3.e — category tree (landed 2026-11-07)
 
@@ -388,11 +388,21 @@ Live: shared `%s · Sen Tuấn` + `en: '%s | Sen Tuan'` gave `<title>Sản phẩ
 | `revalidateStorefront` pairs `TM_WEB_REVALIDATE_URL` with `TM_REVALIDATE_SECRET`, posts to the storefront's `POST /api/_internal/purge` and returns an outcome instead of throwing (the save is already committed; 5s timeout; skipped when either half is missing, never sent with an empty secret; not re-run on an idempotent replay) | `tm-cms/server/utils/storefrontRevalidate.ts`, `tm-cms/nuxt.config.ts` |
 | Settings and menu create/update/delete purge after the write and report it in `x-storefront-revalidate` | `tm-cms/server/api/v1/admin/settings/index.patch.ts`, `menus/index.post.ts`, `menus/[id].patch.ts`, `menus/[id].delete.ts` |
 | The settings page reads `x-storefront-revalidate` and says so when only the site refresh failed (`savedNotRevalidated`) instead of reporting a plain success | `cms-base/app/composables/useSettingsAdmin.ts`, `cms-base/app/pages/configs.vue`, `tm-cms/i18n/locales/{vi,en}.json` |
-| Suites: `pnpm test:revalidate` 8 checks | `scripts/build/test-storefront-revalidate.ts` |
+| Suites: `pnpm test:revalidate` 10 checks | `scripts/build/test-storefront-revalidate.ts` |
 
 Live: cache warm at `''` -> `PATCH settings` `200` + `x-storefront-revalidate: revalidated` (33 handlers dropped) -> the site read `Probe Purge Co` on the next request; menu create and delete appeared/disappeared immediately; with the storefront killed the same save stayed `200` with `request-failed` and a server warning. A direct purge with no or a wrong secret is `401`. Browser (`:4005/configs`): a wrong secret produced `Site settings saved. The website cache could not be cleared, so the change will appear in about a minute.` at revision 2, the matching secret produced `Site settings saved.` Probes removed (`settings 0 / site_menus 0 / audit 0 / idempotency_keys 0`). Still open: broad handler deletion rather than tenant/tag scoping, and unsigned.
 
-A content publish needs no purge here, and adding one would have been a no-op: the public content endpoints are plain handlers (no `cachedEventHandler`), the products/categories endpoints read the legacy catalog collections rather than CMS content, and `sitemap.xml` is built per request — the only copy of it that can lag is the CDN's `max-age=300, s-maxage=600` header, which a Nitro handler purge cannot reach either. A published page therefore appears on the next request; only a crawler holding the cached sitemap waits up to 10 minutes.
+A content publish needs no purge here, and adding one would have been a no-op: the public content endpoints are plain handlers (no `cachedEventHandler`) and `sitemap.xml` is built per request — the only copy of it that can lag is the CDN's `max-age=300, s-maxage=600` header, which a Nitro handler purge cannot reach either. A published page therefore appears on the next request; only a crawler holding the cached sitemap waits up to 10 minutes. The catalog is different (next slice).
+
+### P2.d — a catalog edit clears the storefront cache (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| Item create/update/publish-archive-restore-delete and both bulk patch routes, plus category create/update/delete, purge after the write and report it in `x-storefront-revalidate`; an idempotent replay does not purge again and a bulk patch that changed nothing does not purge at all | `tm-cms/server/api/v1/admin/catalog/items/{index.post.ts,[id].patch.ts,[id]/events.post.ts,bulk.post.ts,bulk-by-filter.post.ts}`, `catalog/categories/{index.post.ts,[id].patch.ts,[id].delete.ts}` |
+| The reason sent to the storefront names the write (`catalog.item.publish`, `catalog.item.bulk`, `catalog.category.delete`, …) | `tm-cms/server/utils/storefrontRevalidate.ts` (unchanged contract) |
+| Suites: `pnpm test:revalidate` 10 checks — the two new ones read the route sources and fail if a catalog write stops importing/calling the purge or starts purging on a replay | `scripts/build/test-storefront-revalidate.ts` |
+
+Live (`:4015` CMS -> `:4016` Web, `sen-tuan`, disposable probe `probe-e2e-item`): `GET /api/public/products/probe-e2e-item` was warmed to `404` by the 60s handler cache, `POST /api/v1/admin/catalog/items` answered `201` + `revalidated`, the draft still read `404`, `POST …/events {publish}` answered `200` + `revalidated`, and the very next `GET` returned `200` with `Probe E2E item` and `cache-control: public, max-age=60, s-maxage=300`. Deleting it purged again and the same URL went back to `404` immediately. The same run against a stub confirmed reasons `catalog.item.{create,publish,update,bulk}` and `catalog.category.{create,update,delete}`, a repeated `PATCH` with the same `Idempotency-Key` returning `idempotent-replay: true` with no purge, and a killed storefront leaving the save at `200` with `x-storefront-revalidate: request-failed`. Probes removed (`catalog_items 0 / catalog_categories 0 / audit 0` for both probe keys). Still open: broad handler deletion rather than per-product keys, and no CDN purge (Q12).
 
 ### P2.d — two-level menus with drag-and-drop (landed 2026-11-09)
 

@@ -3,6 +3,7 @@ import { CatalogDeleteQuerySchema, translateContentError, writeMetaOf } from '#s
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
 import { parseInput } from '#server/utils/validation'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 
 export default defineEventHandler(async (event) => {
   assertSameOriginMutation(event)
@@ -26,6 +27,7 @@ export default defineEventHandler(async (event) => {
       ))
 
     setHeader(event, 'cache-control', 'no-store')
+    setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'catalog.category.delete'))
     return successResponse({ event, data: result, message: 'Đã xoá danh mục sản phẩm' })
   } catch (error) {
     return translateContentError(error)

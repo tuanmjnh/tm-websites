@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   STOREFRONT_PURGE_PATH,
   parseRevalidateTarget,
@@ -111,6 +114,49 @@ await check('the caller can shorten the timeout without changing the contract', 
   const { calls, fetchImpl } = stubFetch(new Response('{}', { status: 200 }))
   await revalidateStorefront(target, { reason: 'menu.delete', fetchImpl, timeoutMs: 50 })
   assert.equal(calls.length, 1)
+})
+
+/**
+ * Catalog pages sit behind the storefront's 60s handler cache, so a publish or a
+ * price edit has to drop it too — otherwise the shop keeps the old record until
+ * the window expires. These assertions guard the wiring, not the helper.
+ */
+const cmsRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../tm-cms')
+const importLine = /import \{ revalidateStorefrontForEvent, setRevalidateHeader \} from '#server\/utils\/storefrontRevalidate'/
+
+const catalogWriteRoutes = [
+  'server/api/v1/admin/catalog/items/index.post.ts',
+  'server/api/v1/admin/catalog/items/[id].patch.ts',
+  'server/api/v1/admin/catalog/items/[id]/events.post.ts',
+  'server/api/v1/admin/catalog/items/bulk.post.ts',
+  'server/api/v1/admin/catalog/items/bulk-by-filter.post.ts',
+  'server/api/v1/admin/catalog/categories/index.post.ts',
+  'server/api/v1/admin/catalog/categories/[id].patch.ts',
+  'server/api/v1/admin/catalog/categories/[id].delete.ts',
+]
+
+await check('every catalog write route purges the storefront', async () => {
+  for (const route of catalogWriteRoutes) {
+    const source = readFileSync(resolve(cmsRoot, route), 'utf8')
+    assert.match(source, importLine, `${route} imports the purge helper`)
+    assert.match(
+      source,
+      /setRevalidateHeader\(event, await revalidateStorefrontForEvent\(event, /,
+      `${route} records the purge outcome`,
+    )
+  }
+})
+
+await check('an idempotent catalog replay does not purge twice', async () => {
+  for (const route of catalogWriteRoutes) {
+    const source = readFileSync(resolve(cmsRoot, route), 'utf8')
+    if (!source.includes('executed.replayed')) continue
+    assert.match(
+      source,
+      /if \(!executed\.replayed\) \{\s*setRevalidateHeader/,
+      `${route} skips the purge on a replay`,
+    )
+  }
 })
 
 console.log(`\n${checks} checks`)
