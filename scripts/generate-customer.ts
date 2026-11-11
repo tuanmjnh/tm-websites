@@ -68,7 +68,6 @@ function headConfig(kind: 'cms' | 'web') {
       `        { property: 'og:type', content: 'website' },`,
       `        { property: 'og:title', content: '${title}' },`,
       `        { property: 'og:description', content: '${description}' },`,
-      `        { property: 'og:image', content: '/branding/og-cover.png' },`,
       `        { name: 'twitter:card', content: 'summary_large_image' },`
     )
   }

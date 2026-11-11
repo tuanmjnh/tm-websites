@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { catalogSegmentFromParam } from '@tm/flow-contracts'
 import { sanitizePublicHtml } from '@tm/flow-utils/html'
-import { buildBreadcrumbJsonLd, buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl, resolveSiteUrl } from '@tm/flow-utils/seo'
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -111,7 +111,14 @@ const metaDescription = computed(() => {
   return summary.value || description.value.replace(/<[^>]+>/g, ' ').slice(0, 160).trim()
 })
 
-const ogImage = computed(() => item.value?.seo?.image || gallery.value[0] || `${baseUrl}/branding/og-cover.png`)
+/**
+ * A share image must be absolute: a record whose media sits under this site
+ * would otherwise publish a relative path a social crawler cannot fetch.
+ */
+const ogImage = computed(() => resolveSiteUrl(
+  baseUrl,
+  item.value?.seo?.image || gallery.value[0] || '/branding/og-cover.png',
+))
 
 /**
  * The breadcrumb the template renders, as structured data: the category step is
@@ -135,6 +142,9 @@ useSeoMeta({
   ogType: 'website',
   ogUrl: () => canonical.value,
   ogImage: () => ogImage.value,
+  ogImageAlt: () => name.value,
+  twitterImage: () => ogImage.value,
+  twitterImageAlt: () => name.value,
   twitterCard: 'summary_large_image',
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
@@ -148,7 +158,7 @@ useHead(() => {
     name: name.value,
     description: metaDescription.value || undefined,
     sku: item.value.sku || undefined,
-    image: gallery.value.length ? gallery.value : undefined,
+    image: gallery.value.length ? gallery.value.map(src => resolveSiteUrl(baseUrl, src)) : undefined,
     category: primaryCategory.value ? readLocalized(primaryCategory.value.name, locale.value) : undefined,
     brand: { '@type': 'Brand', name: brandName.value },
     offers: {

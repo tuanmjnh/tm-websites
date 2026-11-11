@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CatalogListQuery } from '../../composables/useCatalog'
 import { catalogSegmentFromParam } from '@tm/flow-contracts'
-import { buildBreadcrumbJsonLd, buildCanonicalUrl, buildItemListJsonLd } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl, buildItemListJsonLd, resolveSiteUrl } from '@tm/flow-utils/seo'
 
 const PAGE_SIZE = 12
 
@@ -80,7 +80,10 @@ useSeoMeta({
   ogDescription: () => description.value,
   ogType: 'website',
   ogUrl: () => canonical.value,
-  ogImage: () => category.value?.image || `${baseUrl}/branding/og-cover.png`,
+  ogImage: () => resolveSiteUrl(baseUrl, category.value?.image || '/branding/og-cover.png'),
+  ogImageAlt: () => title.value,
+  twitterImage: () => resolveSiteUrl(baseUrl, category.value?.image || '/branding/og-cover.png'),
+  twitterImageAlt: () => title.value,
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
 

@@ -15,7 +15,6 @@ export default defineNuxtConfig({
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: 'TM Enterprise Storefront' },
         { property: 'og:description', content: 'TM Enterprise public storefront' },
-        { property: 'og:image', content: '/branding/og-cover.png' },
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
     },

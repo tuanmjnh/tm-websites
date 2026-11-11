@@ -15,7 +15,6 @@ export default defineNuxtConfig({
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: 'Bag Post Logistics & Packaging' },
         { property: 'og:description', content: 'Giải pháp đóng gói & vận chuyển Bag Post' },
-        { property: 'og:image', content: '/branding/og-cover.png' },
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
     },

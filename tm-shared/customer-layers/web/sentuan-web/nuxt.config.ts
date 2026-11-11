@@ -15,7 +15,6 @@ export default defineNuxtConfig({
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: 'Sen Tuấn Jewelry & Gemstones' },
         { property: 'og:description', content: 'Trang sức & đá quý cao cấp Sen Tuấn' },
-        { property: 'og:image', content: '/branding/og-cover.png' },
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
     },

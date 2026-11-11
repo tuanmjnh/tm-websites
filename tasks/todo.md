@@ -662,6 +662,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live `:4006` (`sen-tuan`): `/` → `Organization + WebSite` with name, home URL, `vi-VN`, no `potentialAction`; the `en` cookie flips `inLanguage` to `en-US`; `/tim-kiem` stays `noindex, follow`. `pnpm typecheck` and `pnpm lint` pass | — |
 | Limits: one `WebSite` block per language, not per locale-preferred URL; no `sameAs` or contact point | — |
 
+### WEB-08.f — share cards are absolute and per record (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| The relative `og:image` default is removed from the three customer head configs and from the generator | `tm-shared/customer-layers/web/{sentuan,bag-post,default}-web/nuxt.config.ts`, `scripts/generate-customer.ts` |
+| One absolute site-wide default, resolved against the request origin, that record pages override | `tm-web/app/app.vue` |
+| Product detail resolves its share image absolute, with alt/twitter tags and absolute JSON-LD images; catalog categories resolve their image; content pages keep theirs | `tm-shared/nuxt-layers/web-base/app/pages/products/[slug].vue`, `categories/[slug].vue`, `[...slug].vue` |
+| Verified live `:4006` (`sen-tuan`): `/products`, `/bai-viet`, `/gio-hang`, `/` → absolute site card with brand alt; a product → its own image with `Bộ HN-BO` alt; a catalog category → its Cloudinary image with `Bộ thường` alt; a content page → site card with the page title as alt; all carry `twitter:image`. `pnpm typecheck` and `pnpm lint` pass | — |
+| Limits: no image dimensions, no generated per-record cards, content category landing shares the site card | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
