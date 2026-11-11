@@ -116,6 +116,33 @@ curl -s http://localhost:4006/sitemap.xml | grep -c '/products/'
 
 Expected: the dry run prints the legacy category/item counts and writes nothing; `--apply` writes the same number of `catalog_items`/`catalog_categories` rows (241/67 for `sen-tuan`, 229 published) with `legacyId` set; the API returns those rows with `meta.counts`; the sitemap product URL count equals the published count; a second `--apply` does not create duplicates. Publishing a draft through `POST /api/v1/admin/catalog/items/<id>/events` makes its `/products/<slug>` page return 200, and deleting it removes it from the sitemap and the public listing.
 
+### Content import smoke (P10)
+
+Run the same way as the catalog import: dry run first, and the legacy collections are
+read-only. `--tenant` selects the legacy tenant to copy (default `default`), and
+`--site` is the v2 site the records belong to.
+
+```sh
+TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=nuxt4-cms pnpm migrate:content --site sentuan
+TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=nuxt4-cms pnpm migrate:content --site sentuan --apply
+curl -s -b cookies.txt 'http://localhost:4005/api/v1/admin/content?limit=5'
+curl -s -b cookies.txt 'http://localhost:4005/api/v1/admin/content?attributeKey=legacy.format&attributeValue=gallery'
+curl -s 'http://localhost:4006/api/public/content/gioi-thieu'
+curl -s http://localhost:4006/sitemap.xml | grep -c '<loc>'
+```
+
+Expected: the dry run prints the legacy category/content/locale counts, the legacy
+formats, the status buckets, which lists it cannot carry, and writes nothing (no
+collections, no indexes, no `tm_migrations` rows). `--apply` writes one `categories`
+doc per legacy content category and one `content` doc per legacy record, with keys
+like `pages/gioi-thieu` and `posts/<slug>`, `format: html`, both locales, the legacy
+SEO title/description/image and keywords, the mapped category keys and tag names.
+The admin list reports the same published count, the attribute filter finds the
+records whose legacy template was kept, a second `--apply` changes no count and no
+revision, and the storefront serves the imported page and lists the imported posts.
+Restoring this database into an older CMS is not supported: `content` is the v2
+collection, and `contents` stays untouched for rollback.
+
 ### Revision diff and restore smoke (P3.c)
 
 ```sh

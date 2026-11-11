@@ -39,6 +39,7 @@
     "test:retention": "tsx scripts/build/test-retention-service.ts",
     "prune:retention": "tsx scripts/ops/prune-retention.ts",
     "migrate:catalog": "tsx scripts/ops/migrate-catalog.ts",
+    "migrate:content": "tsx scripts/ops/migrate-content.ts",
     "test:bulk": "tsx scripts/build/test-bulk-service.ts",
     "test:tags": "tsx scripts/build/test-tag-service.ts",
     "test:category-order": "tsx scripts/build/test-category-reorder.ts",

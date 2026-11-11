@@ -576,6 +576,17 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence: `pnpm test:content` → 31 live checks (exact hit, case mismatch empty, `en` locale matched, padded value, site isolation, `q` by keyword); HTTP `:4005` probes for exact/padded/uppercase/shared/`q`/blank; browser filtering narrowed to one row and clearing restored the list. Probe rows deleted (`content` 3, `audit_logs` 1).
 - Limits: exact match only, one keyword at a time, no facet with counts, storefront search unchanged.
 
+### P10.a — legacy content import (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm migrate:content --site <id> [--tenant default] [--apply]` reads legacy `contents`/`content_categories` raw, plans in memory, and only writes with `--apply` (a dry run creates nothing, not even indexes) | `scripts/ops/migrate-content.ts`, `package.json` |
+| `page`/`post`, key `pages/\<vi slug\>` / `posts/\<vi slug\>`, per-locale slug/title/excerpt/body HTML/keywords/SEO, category ids resolved to v2 keys, tag titles kept, `publishedAt`/`deletedAt`/timestamps carried | `normalizeContentInput` validates every planned record before writing |
+| Extras with no v2 column become `legacy.format`, `legacy.template`, `legacy.thumbnail`, `legacy.parent`, `legacy.sort`, `legacy.showOnHome`, `legacy.priority`, `legacy.views` attributes (filterable through CNT-02); legacy gallery lists (4) and media embeds (6) are reported as not carried | — |
+| Idempotent by `(siteId, key)` with `$setOnInsert` for `revision`/`schemaVersion`/`createdAt`; slug conflicts are suffixed and reported; no audit or revision rows are written | second `--apply` kept 123 rows at `revision 1` |
+
+Real snapshot: the user's local `nuxt4-cms` (123 contents, 6 content categories, tenant `default`, all published). Dry run: 7 pages / 116 posts, 246 locales, `standard 101 / quote 6 / link 6 / gallery 4 / audio 3 / video 3`, 116 tagged, 116 categorized, 0 invalid, 0 conflicts, 42 legacy collections unchanged. Apply into a disposable copy (`tm_import_probe`): 6 categories + 123 contents; storefront `:4016` served `/api/public/content/gioi-thieu`, `pages/gioi-thieu`, `?locale=en` → `About Us`, the post list, 6 categories, `/gioi-thieu` 200 and 160 sitemap URLs. CMS `:4015` (site `sentuan-legacy`): `counts { all: 123, published: 123 }`, `?attributeKey=legacy.format&attributeValue=gallery` → the 4 gallery posts, `?q=dot-pha-ai` → 10, 6 categories, browser list 123 rows and a detail drawer with both locales, HTML body, tags and category. Legacy copy, imported site and probe database were deleted afterwards; `sen-tuan` still has its own 3 content records and 8 legacy contents. Still open: media/gallery import, redirects from legacy `fullPath`, keyword/tag vocabulary, menus.
+
 ### CNT-02 — attribute filter on the content list (landed 2026-11-11)
 
 | Slice | Evidence |

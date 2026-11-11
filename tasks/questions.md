@@ -13,6 +13,7 @@
 | Q2 | `default`, `thanhtung`, `hoangvi` chưa có database trong registry. Đặt tên gì (`tm_default`, `tm_thanh_tung`, `tm_hoang_vi`)? | Để trống, các khách này chưa bật module nghiệp vụ | P3 |
 | Q3 | `sentuan` = `sen-tuan`, `bagpost` = `bag-post`. Giữ tên cũ (tương thích dữ liệu legacy) hay đổi sang `tm_<customer>`? | Giữ nguyên (an toàn cho migration) | P3/P10 |
 | Q4 | Có dữ liệu legacy MongoDB thật để chạy migration dry-run không (snapshot/fixture), và có được phép đọc không? | Không migrate; chỉ tạo dữ liệu mới | P10 |
+| Q4 | RESOLVED (2026-11-11) | Owner cho phép dùng MongoDB local `nuxt4-cms` (backup `D:\Backups\MongoDB\nuxt4-cms`, script `D:\Backups\db_project_nuxt4-cms.bat`) làm snapshot để kiểm thử migration: dry-run + apply vào DB tạm, không sửa dữ liệu legacy. Đã dùng cho `migrate:content` (123 contents / 6 content_categories) và dọn sạch sau verify. | P10 |
 | Q5 | Bản ghi content/config/media hiện đang nằm trong TM Hub. Có được phép export rồi import sang MongoDB không, hay phải giữ Hub là nguồn trong giai đoạn chuyển tiếp? | Giữ Hub (transitional), chỉ đọc; không ghi/xoá | P3 |
 
 ## B. IAM / bảo mật (đang chặn "Verified" của P1)
