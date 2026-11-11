@@ -191,18 +191,18 @@ export function buildItemListJsonLd(
 export interface WebSiteJsonLdOptions {
   /** The site name a search result shows, usually the brand name. */
   name: string
-  /** Rooted path of the site's own search page, e.g. `/tim-kiem`. */
-  searchPath?: string
-  /** Query parameter that page reads, `q` by default. */
-  searchParam?: string
   /** Content language code, e.g. `vi-VN`. */
   language?: string
 }
 
 /**
- * `WebSite` structured data, with a `SearchAction` when the storefront has a
- * search page of its own. The `{search_term_string}` placeholder is the literal
- * schema.org token, not an interpolated value.
+ * `WebSite` structured data for the site a page belongs to: its name, its home
+ * URL and its content language.
+ *
+ * It carries no `SearchAction` on purpose. The storefront's search page is
+ * deliberately `noindex`, and advertising a URL in one breath while telling a
+ * crawler to ignore it in the next is a contradiction; Google also retired the
+ * sitelinks search box that consumed this action.
  */
 export function buildWebSiteJsonLd(
   baseUrl: string,
@@ -211,29 +211,12 @@ export function buildWebSiteJsonLd(
   const name = String(options.name ?? '').replace(/\s+/g, ' ').trim()
   if (!name) return null
 
-  const home = buildCanonicalUrl(baseUrl, '/')
-  const searchPath = String(options.searchPath ?? '').trim()
-  const param = String(options.searchParam ?? 'q').trim() || 'q'
-
-  const target = searchPath
-    ? `${buildCanonicalUrl(baseUrl, searchPath)}?${param}={search_term_string}`
-    : ''
-
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name,
-    url: home,
+    url: buildCanonicalUrl(baseUrl, '/'),
     ...(options.language ? { inLanguage: options.language } : {}),
-    ...(target
-      ? {
-          potentialAction: {
-            '@type': 'SearchAction',
-            target,
-            'query-input': `required name=search_term_string`,
-          },
-        }
-      : {}),
   }
 }
 

@@ -237,29 +237,23 @@ check('a listing stops at fifty rows so a load-more page cannot grow without bou
   assert.equal((data?.itemListElement as any[])[49].position, 50)
 })
 
-check('the site describes itself, including how to search it', () => {
-  const data = buildWebSiteJsonLd('https://shop.test/', { name: '  Sen Tuấn ', searchPath: '/tim-kiem', language: 'vi-VN' })
+check('the site describes itself with a name, its home URL and its language', () => {
+  const data = buildWebSiteJsonLd('https://shop.test/', { name: '  Sen Tuấn ', language: 'vi-VN' })
   assert.equal(data?.['@type'], 'WebSite')
   assert.equal(data?.name, 'Sen Tuấn')
   assert.equal(data?.url, 'https://shop.test/')
   assert.equal(data?.inLanguage, 'vi-VN')
-  assert.deepEqual(data?.potentialAction, {
-    '@type': 'SearchAction',
-    target: 'https://shop.test/tim-kiem?q={search_term_string}',
-    'query-input': 'required name=search_term_string',
-  })
-})
-
-check('a site without a search page publishes no SearchAction', () => {
-  const data = buildWebSiteJsonLd('https://shop.test', { name: 'Sen Tuấn' })
-  assert.equal(data?.potentialAction, undefined)
-  assert.equal(data?.inLanguage, undefined)
-  const custom = buildWebSiteJsonLd('https://shop.test', { name: 'Sen Tuấn', searchPath: '/search', searchParam: 'term' })
-  assert.equal((custom?.potentialAction as any).target, 'https://shop.test/search?term={search_term_string}')
 })
 
 check('a site without a name publishes no WebSite block', () => {
   assert.equal(buildWebSiteJsonLd('https://shop.test', { name: '   ' }), null)
+  assert.equal(buildWebSiteJsonLd('https://shop.test', { name: '' }), null)
+})
+
+check('the site block advertises no search action, because the search page is noindex', () => {
+  const data = buildWebSiteJsonLd('https://shop.test', { name: 'Sen Tuấn' })
+  assert.equal('potentialAction' in (data ?? {}), false)
+  assert.equal(data?.inLanguage, undefined)
 })
 
 check('category slug overrides are applied per menu item', () => {

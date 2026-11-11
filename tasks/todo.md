@@ -655,11 +655,12 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 
 | Slice | Evidence |
 | --- | --- |
-| `buildWebSiteJsonLd(baseUrl, { name, searchPath, searchParam, language })`: `WebSite` + `SearchAction` on the storefront's own search page, nothing without a name or a search page | `tm-shared/packages/flow-utils/src/seo.ts` |
-| Home page emits it beside the `Organization` block (`key: 'ld-website'`), language follows the UI locale | `tm-shared/nuxt-layers/web-base/app/pages/index.vue` |
+| `buildWebSiteJsonLd(baseUrl, { name, language })`: `WebSite` with name, home URL and content language; no block without a name | `tm-shared/packages/flow-utils/src/seo.ts` |
+| No `SearchAction`: `/tim-kiem` is `noindex, follow` on purpose, so the markup does not advertise it | `tm-shared/packages/flow-utils/src/seo.ts`, `tm-shared/nuxt-layers/web-base/app/pages/tim-kiem.vue` |
+| Home page emits the block beside `Organization` (`key: 'ld-website'`), language follows the UI locale | `tm-shared/nuxt-layers/web-base/app/pages/index.vue` |
 | Suites: `pnpm test:web-site` 21 checks (3 new) | `scripts/build/test-web-site.ts` |
-| Verified live `:4006` (`sen-tuan`): `/` → `Organization + WebSite` with name, home URL, `vi-VN` and `target /tim-kiem?q={search_term_string}`; the `en` cookie flips `inLanguage` to `en-US`. `pnpm typecheck` and `pnpm lint` pass | — |
-| Limits: `/tim-kiem` stays `noindex`, so the action points at a URL crawlers will not index; no `sameAs`, contact point or per-locale `WebSite` | — |
+| Verified live `:4006` (`sen-tuan`): `/` → `Organization + WebSite` with name, home URL, `vi-VN`, no `potentialAction`; the `en` cookie flips `inLanguage` to `en-US`; `/tim-kiem` stays `noindex, follow`. `pnpm typecheck` and `pnpm lint` pass | — |
+| Limits: one `WebSite` block per language, not per locale-preferred URL; no `sameAs` or contact point | — |
 
 ## Next slices
 

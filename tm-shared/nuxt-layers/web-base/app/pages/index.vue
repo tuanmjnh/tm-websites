@@ -51,10 +51,9 @@ useSeoMeta({
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
 
-/** The site itself, so a search engine can offer this store's own search box. */
+/** The site itself: its name, its home URL and the language this page is in. */
 const websiteJsonLd = computed(() => buildWebSiteJsonLd(baseUrl, {
   name: brandName.value,
-  searchPath: '/tim-kiem',
   language: locale.value === 'en' ? 'en-US' : 'vi-VN',
 }))
 
