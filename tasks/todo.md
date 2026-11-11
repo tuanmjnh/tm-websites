@@ -620,6 +620,27 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 - Evidence (`:4006`, `sen-tuan`): real content rendered `Giới thiệu Sen Tuấn` with its tags and date; four published probes produced exactly the three newest cards (4, 3, 2 — the oldest absent) with `hasMore true` from the API, and a draft probe appeared in neither the API nor the HTML. Probe rows and their revisions/audit entries deleted (`content` 3, `audit_logs` 1). `pnpm typecheck` and `pnpm lint` pass.
 - Limits: fixed newest-first order and fixed count of 3, no per-site section configuration, no featured/trending/sale flag on a record, not in the sitemap or JSON-LD.
 
+### WEB-08.b — breadcrumbs reach crawlers (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `buildBreadcrumbJsonLd(baseUrl, entries)`: unlabelled and repeated steps dropped, positions 1..n, fewer than two steps → `null`, absolute step URLs not prefixed twice | `tm-shared/packages/flow-utils/src/seo.ts` |
+| Six pages emit it beside their own block (`key: 'ld-breadcrumb'`): product detail, catalog category landing, content page, tag landing, content category landing and index | `tm-shared/nuxt-layers/web-base/app/pages/products/[slug].vue`, `categories/[slug].vue`, `[...slug].vue`, `tag/[tag].vue`, `danh-muc/[slug].vue`, `danh-muc/index.vue` |
+| Suites: `pnpm test:web-site` 15 checks (3 new) | `scripts/build/test-web-site.ts` |
+| Verified live `:4006` (`sen-tuan`): the Product/CollectionPage/Article pages carry `BreadcrumbList` with the right names and absolute URLs; the content category landing was checked with a disposable category in both locales, then deleted (`categories` 0, `audit_logs` 1). `pnpm typecheck` and `pnpm lint` pass | — |
+| Limits: pages without a visible breadcrumb emit nothing; a step is text + URL only | — |
+
+### WEB-08.c — listings reach crawlers (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `buildItemListJsonLd(baseUrl, entries, { name })`: rows need a label and a link, repeated URLs kept once, positions 1..n, `numberOfItems`, 50-row cap, empty → `null` | `tm-shared/packages/flow-utils/src/seo.ts` |
+| Seven pages emit it beside their existing block (`key: 'ld-items'`): catalog listing, catalog category landing, category index, post listing, tag landing, content category index and landing | `tm-shared/nuxt-layers/web-base/app/pages/products/index.vue`, `categories/[slug].vue`, `categories/index.vue`, `bai-viet/index.vue`, `tag/[tag].vue`, `danh-muc/index.vue`, `danh-muc/[slug].vue` |
+| Filtered or paged views publish nothing, so a crawler cannot cache a filtered list as the catalog | same files |
+| Suites: `pnpm test:web-site` 18 checks (3 new) | `scripts/build/test-web-site.ts` |
+| Verified live `:4006` (`sen-tuan`): `/products` 12 rows, `/categories` 50 (capped from 67), `/bai-viet` 1, `/tag/about` 1, a catalog category 8; `/products?page=2`, `/products?q=bo` and an empty tag published none. `pnpm typecheck` and `pnpm lint` pass | — |
+| Limits: name + URL per row only; a category index over 50 is truncated, not paginated; content rows link the stored `/pages/<slug>` path like the cards do | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
