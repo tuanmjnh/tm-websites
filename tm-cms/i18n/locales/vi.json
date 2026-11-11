@@ -415,6 +415,8 @@
         "placeholder": "Lọc theo thẻ"
       },
       "keywordFilter": "Lọc theo từ khóa chính xác",
+      "attributeFilter": "Lọc theo tên thuộc tính",
+      "attributeValueFilter": "Giá trị thuộc tính",
       "listTitle": "Danh sách nội dung",
       "listDescription": "Chọn một bản ghi để xem, xuất bản, hẹn giờ hoặc lưu trữ",
       "noEntries": "Không có bản ghi nội dung khớp bộ lọc hiện tại",

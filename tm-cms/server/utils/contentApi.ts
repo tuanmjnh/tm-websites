@@ -13,6 +13,7 @@ import { CatalogServiceError } from '#server/services/catalogService'
 import { RedirectServiceError } from '#server/services/redirectService'
 import { MediaStorageError } from './mediaStorage'
 import { AdminTagRenameRequestSchema } from '@tm/flow-contracts/tag-admin'
+import { ATTRIBUTE_KEY_PATTERN, ATTRIBUTE_VALUE_MAX_LENGTH } from '#server/models/content'
 import { IdempotencyError, normalizeIdempotencyKey } from './idempotency'
 
 /** Query/body contracts for the admin content API. */
@@ -24,9 +25,16 @@ export const ContentListQuerySchema = z.object({
   tag: z.string().trim().min(1).max(60).optional(),
   /** Exact keyword inside any locale; free text, so the stored casing is what matches. */
   keyword: z.string().trim().min(1).max(60).optional(),
+  /** Attribute name; alone it means "has this attribute", with a value it means "equals". */
+  attributeKey: z.string().trim().regex(ATTRIBUTE_KEY_PATTERN).optional(),
+  /** Compared against the stored value as text, so `5` finds the number 5 and `true` the boolean. */
+  attributeValue: z.string().trim().max(ATTRIBUTE_VALUE_MAX_LENGTH).optional(),
   cursor: z.string().max(64).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
-})
+}).refine(
+  query => !query.attributeValue || Boolean(query.attributeKey),
+  { message: 'attributeValue needs an attributeKey', path: ['attributeValue'] },
+)
 
 export const ContentBodySchema = z.record(z.string(), z.unknown())
 

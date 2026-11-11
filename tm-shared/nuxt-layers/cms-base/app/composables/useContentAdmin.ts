@@ -39,6 +39,10 @@ export interface ContentListQuery {
   tag?: string
   /** Exact keyword inside any locale. */
   keyword?: string
+  /** Attribute name; alone it selects records that have the attribute at all. */
+  attributeKey?: string
+  /** Attribute value, compared against the stored string/number/boolean as text. */
+  attributeValue?: string
   cursor?: string
   limit?: number
 }

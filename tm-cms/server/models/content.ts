@@ -21,7 +21,9 @@ export type ContentStatus = (typeof CONTENT_STATUSES)[number]
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const LOCALE_PATTERN = /^[a-z]{2}(?:-[A-Za-z]{2})?$/
 const SITE_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/
-const ATTRIBUTE_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_.-]{0,59}$/
+/** Attribute keys may contain dots, which is why filters read them with `$getField`. */
+export const ATTRIBUTE_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_.-]{0,59}$/
+export const ATTRIBUTE_VALUE_MAX_LENGTH = 500
 const SLUG_MAX_LENGTH = 120
 const BODY_MAX_LENGTH = 200_000
 /** SEO keywords are a short list per locale, not a taxonomy: tags do that job. */

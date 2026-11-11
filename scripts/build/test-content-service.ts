@@ -605,6 +605,50 @@ async function integration() {
       assert.deepEqual(search.data.map(entry => entry.id), [keywordPost.id])
     })
 
+    await check('an attribute filter matches the exact name and a typed value', async () => {
+      const gold = await createContent(Content, SITE, {
+        type: 'page',
+        key: 'pages/thuoc-tinh-vang',
+        attributes: { material: 'gold', weight: 5, featured: true, 'meta.series': 'heritage' },
+        locales: [{ locale: 'vi', title: 'Vàng', slug: 'thuoc-tinh-vang' }],
+      })
+      await createContent(Content, SITE, {
+        type: 'page',
+        key: 'pages/thuoc-tinh-bac',
+        attributes: { material: 'silver', weight: 2 },
+        locales: [{ locale: 'vi', title: 'Bạc', slug: 'thuoc-tinh-bac' }],
+      })
+      await createContent(Content, OTHER_SITE, {
+        type: 'page',
+        key: 'pages/thuoc-tinh-vang',
+        attributes: { material: 'gold' },
+        locales: [{ locale: 'vi', title: 'Site khác', slug: 'thuoc-tinh-vang' }],
+      })
+
+      // Name only: "has this attribute", whatever its value.
+      const present = await listContent(Content, SITE, { attributeKey: 'material', limit: 50 })
+      assert.equal(present.data.length, 2)
+      assert.ok(present.data.some(entry => entry.id === gold.id))
+
+      const equals = await listContent(Content, SITE, { attributeKey: 'material', attributeValue: 'gold', limit: 50 })
+      assert.deepEqual(equals.data.map(entry => entry.id), [gold.id])
+
+      // Numbers and booleans are compared as text, so the editor can type 5 or true.
+      const numeric = await listContent(Content, SITE, { attributeKey: 'weight', attributeValue: '5', limit: 50 })
+      assert.deepEqual(numeric.data.map(entry => entry.id), [gold.id])
+
+      const boolean = await listContent(Content, SITE, { attributeKey: 'featured', attributeValue: 'true', limit: 50 })
+      assert.deepEqual(boolean.data.map(entry => entry.id), [gold.id])
+
+      // A key that contains a dot is addressed by name, not as a nested path.
+      const dotted = await listContent(Content, SITE, { attributeKey: 'meta.series', attributeValue: 'heritage', limit: 50 })
+      assert.deepEqual(dotted.data.map(entry => entry.id), [gold.id])
+
+      // An unknown name, a wrong value and the other site's record all stay out.
+      assert.equal((await listContent(Content, SITE, { attributeKey: 'unknown', limit: 50 })).data.length, 0)
+      assert.equal((await listContent(Content, SITE, { attributeKey: 'material', attributeValue: 'bronze', limit: 50 })).data.length, 0)
+    })
+
 
   } finally {
     await connection.db?.dropDatabase().catch(() => undefined)

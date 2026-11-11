@@ -58,6 +58,8 @@ const status = ref<AdminContentStatusFilter>('all')
 const typeFilter = ref<'all' | AdminContentType>('all')
 const tagFilter = ref('all')
 const keywordFilter = ref('')
+const attributeKeyFilter = ref('')
+const attributeValueFilter = ref('')
 const tagOptions = ref<{ label: string, value: string }[]>([])
 
 const detailOpen = ref(false)
@@ -270,6 +272,9 @@ async function load(reset = true) {
       q: search.value.trim() || undefined,
       tag: tagFilter.value === 'all' ? undefined : tagFilter.value,
       keyword: keywordFilter.value.trim() || undefined,
+      attributeKey: attributeKeyFilter.value.trim() || undefined,
+      // A value alone means nothing: the filter is "attribute equals", so it waits for a key.
+      attributeValue: attributeKeyFilter.value.trim() ? attributeValueFilter.value.trim() || undefined : undefined,
       cursor: reset ? undefined : nextCursor.value ?? undefined,
       limit: 20,
     })
@@ -771,6 +776,12 @@ watch(keywordFilter, () => {
   if (keywordDebounce) clearTimeout(keywordDebounce)
   keywordDebounce = setTimeout(() => load(), 400)
 })
+// The attribute pair is typed too, and either half can be cleared independently.
+let attributeDebounce: ReturnType<typeof setTimeout> | undefined
+watch([attributeKeyFilter, attributeValueFilter], () => {
+  if (attributeDebounce) clearTimeout(attributeDebounce)
+  attributeDebounce = setTimeout(() => load(), 400)
+})
 watch([status, typeFilter, tagFilter], () => load())
 onMounted(async () => {
   await Promise.all([load(), loadTagOptions()])
@@ -852,6 +863,18 @@ onMounted(async () => {
           icon="i-lucide-tag"
           :placeholder="t('admin.content.keywordFilter')"
           class="w-full sm:w-52"
+        />
+        <UInput
+          v-model="attributeKeyFilter"
+          icon="i-lucide-braces"
+          :placeholder="t('admin.content.attributeFilter')"
+          class="w-full sm:w-44"
+        />
+        <UInput
+          v-model="attributeValueFilter"
+          :disabled="!attributeKeyFilter.trim()"
+          :placeholder="t('admin.content.attributeValueFilter')"
+          class="w-full sm:w-40"
         />
       </div>
     </template>

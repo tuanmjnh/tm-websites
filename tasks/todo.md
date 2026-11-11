@@ -576,6 +576,17 @@ A category or media id alone is ambiguous across collections, so the resource ty
 - Evidence: `pnpm test:content` → 31 live checks (exact hit, case mismatch empty, `en` locale matched, padded value, site isolation, `q` by keyword); HTTP `:4005` probes for exact/padded/uppercase/shared/`q`/blank; browser filtering narrowed to one row and clearing restored the list. Probe rows deleted (`content` 3, `audit_logs` 1).
 - Limits: exact match only, one keyword at a time, no facet with counts, storefront search unchanged.
 
+### CNT-02 — attribute filter on the content list (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `listContent` accepts `attributeKey`/`attributeValue`: name alone means "has the attribute", name + value means "equals as text" (so `5` and `true` find the number and the boolean); `$getField` keeps keys that contain dots addressable | `tm-cms/server/services/contentService.ts`, `tm-cms/server/models/content.ts` |
+| The query contract reuses the model's key pattern, caps the value at 500, and refuses a value without a key (`422 CONTENT_QUERY_INVALID`) | `tm-cms/server/utils/contentApi.ts` |
+| Two debounced toolbar inputs; the value box stays disabled until a key is typed | `tm-shared/nuxt-layers/cms-base/app/pages/content.vue`, `.../composables/useContentAdmin.ts`, `tm-cms/i18n/locales/{vi,en}.json` |
+| Suites: `pnpm test:content` 25 model + 32 live checks | `scripts/build/test-content-service.ts` |
+
+Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', weight: 5, featured: true }`): `?attributeKey=material&attributeValue=gold` and `?attributeKey=weight&attributeValue=5` each returned only the probe, `?attributeKey=weight` found it by name alone, a wrong value returned none, and `?attributeValue=gold` / `?attributeKey=1bad` were both `422`. Browser (`:4005/content`): typing `material` left only the probe row, `silver` hid it, `gold` brought it back, counters unchanged. Probe and its audit row deleted (`content` 3, `audit_logs` 1). Still open: one attribute at a time, exact values only, and `$expr` cannot use an index.
+
 ### WEB-04 — keywords reach storefront search (landed 2026-11-10)
 
 - `buildPublishedListFilter` matches `q` against `locales.keywords` too, inside an `$elemMatch` limited to the requested locale + fallback so an `en`-only keyword cannot surface a `vi` listing; no route or contract change (`/api/public/content?q=`, `/tim-kiem`).

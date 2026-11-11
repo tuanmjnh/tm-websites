@@ -12,6 +12,7 @@ import type {
 import type { MenuDocument } from '../models/menu'
 import {
   ContentInvariantError,
+  ATTRIBUTE_VALUE_MAX_LENGTH,
   KEYWORD_MAX_LENGTH,
   applyContentTransition,
   contentModel,
@@ -68,6 +69,10 @@ export interface ContentListParams {
   tag?: string
   /** Exact keyword match inside any locale; keywords are free text, so no folding. */
   keyword?: string
+  /** Attribute name; without a value it selects records that have that attribute at all. */
+  attributeKey?: string
+  /** Attribute value as text, compared against the stored string/number/boolean. */
+  attributeValue?: string
   cursor?: string
   limit?: number
 }
@@ -215,6 +220,18 @@ export async function listContent(
   const keyword = (params.keyword ?? '').trim().slice(0, KEYWORD_MAX_LENGTH)
   if (keyword) {
     filter['locales.keywords'] = keyword
+  }
+
+  // Attribute keys may contain dots, so a dotted path cannot address them; `$getField`
+  // reads the exact name. Values are compared as text, so the numeric 5 and the
+  // string "5" both answer a filter typed as 5.
+  const attributeKey = (params.attributeKey ?? '').trim()
+  const attributeValue = (params.attributeValue ?? '').trim().slice(0, ATTRIBUTE_VALUE_MAX_LENGTH)
+  if (attributeKey) {
+    const field = { $getField: { field: attributeKey, input: '$attributes' } }
+    filter.$expr = attributeValue
+      ? { $eq: [{ $toString: field }, attributeValue] }
+      : { $ne: [{ $type: field }, 'missing'] }
   }
 
   const search = (params.q ?? '').trim().slice(0, SEARCH_MAX_LENGTH)
