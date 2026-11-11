@@ -10,7 +10,7 @@ import {
   publicMenuLabel,
   toPublicMenu,
 } from '../../tm-shared/packages/flow-contracts/src/site-public.js'
-import { applySeoTitleTemplate, buildBreadcrumbJsonLd, buildItemListJsonLd } from '../../tm-shared/packages/flow-utils/src/seo.js'
+import { applySeoTitleTemplate, buildBreadcrumbJsonLd, buildItemListJsonLd, buildWebSiteJsonLd } from '../../tm-shared/packages/flow-utils/src/seo.js'
 
 let checks = 0
 
@@ -235,6 +235,31 @@ check('a listing stops at fifty rows so a load-more page cannot grow without bou
   const data = buildItemListJsonLd('https://shop.test', rows)
   assert.equal(data?.numberOfItems, 50)
   assert.equal((data?.itemListElement as any[])[49].position, 50)
+})
+
+check('the site describes itself, including how to search it', () => {
+  const data = buildWebSiteJsonLd('https://shop.test/', { name: '  Sen Tuấn ', searchPath: '/tim-kiem', language: 'vi-VN' })
+  assert.equal(data?.['@type'], 'WebSite')
+  assert.equal(data?.name, 'Sen Tuấn')
+  assert.equal(data?.url, 'https://shop.test/')
+  assert.equal(data?.inLanguage, 'vi-VN')
+  assert.deepEqual(data?.potentialAction, {
+    '@type': 'SearchAction',
+    target: 'https://shop.test/tim-kiem?q={search_term_string}',
+    'query-input': 'required name=search_term_string',
+  })
+})
+
+check('a site without a search page publishes no SearchAction', () => {
+  const data = buildWebSiteJsonLd('https://shop.test', { name: 'Sen Tuấn' })
+  assert.equal(data?.potentialAction, undefined)
+  assert.equal(data?.inLanguage, undefined)
+  const custom = buildWebSiteJsonLd('https://shop.test', { name: 'Sen Tuấn', searchPath: '/search', searchParam: 'term' })
+  assert.equal((custom?.potentialAction as any).target, 'https://shop.test/search?term={search_term_string}')
+})
+
+check('a site without a name publishes no WebSite block', () => {
+  assert.equal(buildWebSiteJsonLd('https://shop.test', { name: '   ' }), null)
 })
 
 check('category slug overrides are applied per menu item', () => {

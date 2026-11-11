@@ -651,6 +651,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live `:4006` (`sen-tuan`): `/gioi-thieu` and `/pages/gioi-thieu` both `200` with canonical `/gioi-thieu`; `/bai-viet` card `href="/gioi-thieu"` and `ItemList` url `http://localhost:4006/gioi-thieu`; sitemap lists `/gioi-thieu` and no `/pages/` URL. `pnpm test:web-site` 18, `pnpm test:web-content` 20, `pnpm typecheck`, `pnpm lint` pass | — |
 | Limits: the key path stays served but unadvertised; a record without a slug in the requested locale is listed under its default-locale slug, so there is still no per-locale sitemap | — |
 
+### WEB-08.e — the site describes itself (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `buildWebSiteJsonLd(baseUrl, { name, searchPath, searchParam, language })`: `WebSite` + `SearchAction` on the storefront's own search page, nothing without a name or a search page | `tm-shared/packages/flow-utils/src/seo.ts` |
+| Home page emits it beside the `Organization` block (`key: 'ld-website'`), language follows the UI locale | `tm-shared/nuxt-layers/web-base/app/pages/index.vue` |
+| Suites: `pnpm test:web-site` 21 checks (3 new) | `scripts/build/test-web-site.ts` |
+| Verified live `:4006` (`sen-tuan`): `/` → `Organization + WebSite` with name, home URL, `vi-VN` and `target /tim-kiem?q={search_term_string}`; the `en` cookie flips `inLanguage` to `en-US`. `pnpm typecheck` and `pnpm lint` pass | — |
+| Limits: `/tim-kiem` stays `noindex`, so the action points at a URL crawlers will not index; no `sameAs`, contact point or per-locale `WebSite` | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

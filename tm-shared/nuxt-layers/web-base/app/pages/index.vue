@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicContentListItem } from '@tm/flow-contracts/content-public'
 import type { CatalogListQuery } from '../composables/useCatalog'
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildCanonicalUrl, buildWebSiteJsonLd } from '@tm/flow-utils/seo'
 
 const { t, locale } = useI18n()
 const config = useRuntimeConfig()
@@ -51,6 +51,13 @@ useSeoMeta({
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
 
+/** The site itself, so a search engine can offer this store's own search box. */
+const websiteJsonLd = computed(() => buildWebSiteJsonLd(baseUrl, {
+  name: brandName.value,
+  searchPath: '/tim-kiem',
+  language: locale.value === 'en' ? 'en-US' : 'vi-VN',
+}))
+
 useHead({
   link: [{ rel: 'canonical', href: canonical }],
   script: [
@@ -64,6 +71,13 @@ useHead({
         logo: `${baseUrl}/branding/logo.svg`,
       }).replace(/</g, '\\u003c'),
     },
+    ...(websiteJsonLd.value
+      ? [{
+          type: 'application/ld+json' as const,
+          key: 'ld-website',
+          innerHTML: JSON.stringify(websiteJsonLd.value).replace(/</g, '\\u003c'),
+        }]
+      : []),
   ],
 })
 </script>
