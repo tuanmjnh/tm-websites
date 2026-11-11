@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { contentKeyFromPath } from '@tm/flow-contracts'
 import type { PublicContent } from '@tm/flow-contracts/content-public'
-import { buildCanonicalUrl, resolveSiteUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl, resolveSiteUrl } from '@tm/flow-utils/seo'
 
 const route = useRoute()
 const config = useRuntimeConfig()
@@ -115,12 +115,25 @@ useHead(() => {
     },
   }
 
+  // The template's breadcrumb is home → this page, so that is the whole trail.
+  const breadcrumbs = buildBreadcrumbJsonLd(baseUrl, [
+    { name: t('common.home'), path: '/' },
+    { name: current.title, path: canonical.value },
+  ])
+
   return {
     script: [
       {
         type: 'application/ld+json',
         innerHTML: JSON.stringify(structuredData).replace(/</g, '\\u003c'),
       },
+      ...(breadcrumbs
+        ? [{
+            type: 'application/ld+json' as const,
+            key: 'ld-breadcrumb',
+            innerHTML: JSON.stringify(breadcrumbs).replace(/</g, '\\u003c'),
+          }]
+        : []),
     ],
   }
 })

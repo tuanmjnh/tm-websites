@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PublicContentListItem } from '@tm/flow-contracts/content-public'
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl } from '@tm/flow-utils/seo'
 
 /**
  * Tag landing page. Tags are free-form strings on a content record, so the URL
@@ -71,8 +71,24 @@ useSeoMeta({
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
 
+/** Home → posts → the tag, matching the trail the template renders. */
+const breadcrumbs = computed(() => buildBreadcrumbJsonLd(baseUrl, tag.value
+  ? [
+      { name: t('common.home'), path: '/' },
+      { name: t('post.indexTitle'), path: '/bai-viet' },
+      { name: `#${tag.value}`, path: canonical.value },
+    ]
+  : []))
+
 useHead({
   link: [{ rel: 'canonical', href: () => canonical.value }],
+  script: () => (breadcrumbs.value
+    ? [{
+        type: 'application/ld+json' as const,
+        key: 'ld-breadcrumb',
+        innerHTML: JSON.stringify(breadcrumbs.value).replace(/</g, '\\u003c'),
+      }]
+    : []),
 })
 </script>
 

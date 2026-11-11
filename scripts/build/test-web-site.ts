@@ -10,7 +10,7 @@ import {
   publicMenuLabel,
   toPublicMenu,
 } from '../../tm-shared/packages/flow-contracts/src/site-public.js'
-import { applySeoTitleTemplate } from '../../tm-shared/packages/flow-utils/src/seo.js'
+import { applySeoTitleTemplate, buildBreadcrumbJsonLd } from '../../tm-shared/packages/flow-utils/src/seo.js'
 
 let checks = 0
 
@@ -166,6 +166,41 @@ check('a page title is rendered through the template saved in settings', () => {
   assert.equal(applySeoTitleTemplate('Sen Tuấn', '%s · Sen Tuấn'), 'Sen Tuấn', 'the brand is not repeated on the home page')
   assert.equal(applySeoTitleTemplate('Giới thiệu Sen Tuấn', '%s | Sen Tuấn'), 'Giới thiệu Sen Tuấn', 'a title that already names the brand keeps its wording')
   assert.equal(applySeoTitleTemplate('Sen Tuấn', 'Sen Tuấn | %s'), 'Sen Tuấn')
+})
+
+check('a breadcrumb trail becomes BreadcrumbList data with absolute steps', () => {
+  const data = buildBreadcrumbJsonLd('https://shop.test/', [
+    { name: '  Trang chủ  ', path: '/' },
+    { name: 'Sản phẩm', path: '/products' },
+    { name: 'Nhẫn bạc', path: '/products/nhan-bac' },
+  ])
+  assert.equal(data?.['@type'], 'BreadcrumbList')
+  assert.deepEqual((data?.itemListElement as any[]).map(step => [step.position, step.name, step.item]), [
+    [1, 'Trang chủ', 'https://shop.test/'],
+    [2, 'Sản phẩm', 'https://shop.test/products'],
+    [3, 'Nhẫn bạc', 'https://shop.test/products/nhan-bac'],
+  ])
+  assert.deepEqual((data?.itemListElement as any[])[2]['@type'], 'ListItem')
+})
+
+check('a breadcrumb drops unlabelled and repeated steps, and needs two', () => {
+  const data = buildBreadcrumbJsonLd('https://shop.test', [
+    { name: 'Trang chủ', path: '/' },
+    { name: '   ', path: '/products' },
+    { name: 'Nhẫn bạc', path: '/products/nhan-bac' },
+    { name: 'Nhẫn bạc nữa', path: '/products/nhan-bac' },
+  ])
+  assert.deepEqual((data?.itemListElement as any[]).map(step => step.name), ['Trang chủ', 'Nhẫn bạc'])
+  assert.equal(buildBreadcrumbJsonLd('https://shop.test', [{ name: 'Trang chủ', path: '/' }]), null)
+  assert.equal(buildBreadcrumbJsonLd('https://shop.test', []), null)
+})
+
+check('a step that is already an absolute URL is not prefixed twice', () => {
+  const data = buildBreadcrumbJsonLd('https://shop.test', [
+    { name: 'Trang chủ', path: '/' },
+    { name: 'Giới thiệu', path: 'https://shop.test/gioi-thieu' },
+  ])
+  assert.equal((data?.itemListElement as any[])[1].item, 'https://shop.test/gioi-thieu')
 })
 
 check('category slug overrides are applied per menu item', () => {

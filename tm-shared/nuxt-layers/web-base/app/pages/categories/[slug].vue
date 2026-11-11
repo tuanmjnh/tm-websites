@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CatalogListQuery } from '../../composables/useCatalog'
 import { catalogSegmentFromParam } from '@tm/flow-contracts'
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl } from '@tm/flow-utils/seo'
 
 const PAGE_SIZE = 12
 
@@ -51,6 +51,15 @@ const canonical = computed(() => buildCanonicalUrl(baseUrl, `/categories/${slug.
 const title = computed(() => (category.value ? readLocalized(category.value.name, locale.value) : ''))
 const description = computed(() => (category.value?.description ? readLocalized(category.value.description, locale.value) : ''))
 
+/** The three steps the template shows, with the category as the current page. */
+const breadcrumbs = computed(() => buildBreadcrumbJsonLd(baseUrl, category.value
+  ? [
+      { name: t('common.home'), path: '/' },
+      { name: t('category.indexTitle'), path: '/categories' },
+      { name: title.value, path: canonical.value },
+    ]
+  : []))
+
 const activeStatus = computed(() => {
   if (categoryResult.value.status !== 'ok') return categoryResult.value.status
   return null
@@ -83,6 +92,13 @@ useHead(() => {
           url: canonical.value,
         }).replace(/</g, '\\u003c'),
       },
+      ...(breadcrumbs.value
+        ? [{
+            type: 'application/ld+json' as const,
+            key: 'ld-breadcrumb',
+            innerHTML: JSON.stringify(breadcrumbs.value).replace(/</g, '\\u003c'),
+          }]
+        : []),
     ],
   }
 })

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { catalogSegmentFromParam } from '@tm/flow-contracts'
 import { sanitizePublicHtml } from '@tm/flow-utils/html'
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl } from '@tm/flow-utils/seo'
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -113,6 +113,20 @@ const metaDescription = computed(() => {
 
 const ogImage = computed(() => item.value?.seo?.image || gallery.value[0] || `${baseUrl}/branding/og-cover.png`)
 
+/**
+ * The breadcrumb the template renders, as structured data: the category step is
+ * the product's primary one and only appears when the record has it.
+ */
+const breadcrumbs = computed(() => {
+  const trail = [
+    { name: t('common.home'), path: '/' },
+    { name: t('catalog.title'), path: '/products' },
+    { name: primaryCategory.value ? readLocalized(primaryCategory.value.name, locale.value) : '', path: primaryCategory.value?.path || '/products' },
+    { name: name.value, path: item.value?.path || route.path },
+  ]
+  return buildBreadcrumbJsonLd(baseUrl, item.value ? trail : [])
+})
+
 useSeoMeta({
   title: () => metaTitle.value,
   description: () => metaDescription.value,
@@ -153,6 +167,13 @@ useHead(() => {
         type: 'application/ld+json',
         innerHTML: JSON.stringify(structuredData).replace(/</g, '\\u003c'),
       },
+      ...(breadcrumbs.value
+        ? [{
+            type: 'application/ld+json' as const,
+            key: 'ld-breadcrumb',
+            innerHTML: JSON.stringify(breadcrumbs.value).replace(/</g, '\\u003c'),
+          }]
+        : []),
     ],
   }
 })

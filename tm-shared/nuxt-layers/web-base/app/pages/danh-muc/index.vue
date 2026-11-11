@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl } from '@tm/flow-utils/seo'
 
 /**
  * Content category index. It lists what the storefront may link to and groups the
@@ -47,8 +47,22 @@ useSeoMeta({
   robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
 })
 
+/** Home → posts → the category index, as the template draws it. */
+const breadcrumbs = buildBreadcrumbJsonLd(baseUrl, [
+  { name: t('common.home'), path: '/' },
+  { name: t('post.indexTitle'), path: '/bai-viet' },
+  { name: t('categoryContent.indexTitle'), path: '/danh-muc' },
+])
+
 useHead({
   link: [{ rel: 'canonical', href: canonical }],
+  script: breadcrumbs
+    ? [{
+        type: 'application/ld+json' as const,
+        key: 'ld-breadcrumb',
+        innerHTML: JSON.stringify(breadcrumbs).replace(/</g, '\\u003c'),
+      }]
+    : [],
 })
 </script>
 
