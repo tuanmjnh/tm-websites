@@ -83,6 +83,15 @@ const RECORD_SLUG = 'probe-listing-record'
 const RECORD_TAG = 'probe-listing'
 let removeRecord: (() => Promise<void>) | null = null
 
+/**
+ * The catalog probe copies one live item and one live category out of the reference
+ * database, so the shape is a real one instead of a guess, and removes both after.
+ */
+const SOURCE_DB = 'sen-tuan'
+const PROBE_ITEM_SLUG = 'probe-catalog-item'
+const PROBE_CATEGORY_SLUG = 'probe-catalog-category'
+let removeCatalog: (() => Promise<void>) | null = null
+
 /** Polls a page until it answers with the robots value a check expects, or the budget runs out. */
 async function waitForRobots(path: string, robots: string, budgetMs: number) {
   const deadline = Date.now() + budgetMs
@@ -192,6 +201,13 @@ async function main() {
   const db = mongoose.connection.db
   assert(db, 'failed to open the customer database')
 
+  // A run killed before its `finally` can leave a probe behind. Clear every probe this
+  // script knows how to write before counting, so a leftover never reads as real data.
+  await db.collection('content').deleteMany({ siteId: SITE_ID, key: RECORD_KEY })
+  await db.collection('catalog_items').deleteMany({ siteId: SITE_ID, 'slug.vi': PROBE_ITEM_SLUG })
+  await db.collection('catalog_categories').deleteMany({ siteId: SITE_ID, 'slug.vi': PROBE_CATEGORY_SLUG })
+  await db.collection('content_redirects').deleteMany({ siteId: SITE_ID, from: GONE_PATH })
+
   const counts = {
     content: await db.collection('content').countDocuments(),
     catalog_items: await db.collection('catalog_items').countDocuments(),
@@ -284,14 +300,15 @@ async function main() {
   }
 
   for (const page of EMPTY_LISTINGS) {
-    await check(`${page.path} (${page.title}) answers 200 + noindex, follow`, async () => {
-      const { status, html } = await get(page.path)
-      assert.equal(status, 200)
-      assert.equal(meta(html, 'robots'), 'noindex, follow')
+    // A dev server can still hold a cached answer from an earlier run, so the empty state is
+    // waited for instead of assumed; the cache expires long before the budget runs out.
+    let empty = await waitForRobots(page.path, 'noindex, follow', 90_000)
+    await check(`${page.path} (${page.title}) answers 200 + noindex, follow`, () => {
+      assert.equal(empty.status, 200)
+      assert.equal(meta(empty.html, 'robots'), 'noindex, follow')
     })
-    await check(`${page.path} canonical points at itself`, async () => {
-      const { html } = await get(page.path)
-      assert.equal(canonicalOf(html), ORIGIN + page.path)
+    await check(`${page.path} canonical points at itself`, () => {
+      assert.equal(canonicalOf(empty.html), ORIGIN + page.path)
     })
   }
 
@@ -421,6 +438,113 @@ async function main() {
     assert.ok(!xml.html.includes(`${ORIGIN}/bai-viet`), 'the listing row survived the cleanup')
     assert.ok(!xml.html.includes(`${ORIGIN}/${RECORD_SLUG}`), 'the record row survived the cleanup')
   })
+
+  // The catalog side needs two records: a category landing only stops being empty when a
+  // published item points at it. Both are copied from the reference database, retagged for
+  // this site and removed before the run ends.
+  const client = mongoose.connection.getClient()
+  const source = client.db(SOURCE_DB)
+  const sourceItem = await source.collection('catalog_items')
+    .findOne({ status: 'published', isActive: true, isDeleted: { $ne: true } }).catch(() => null)
+  const sourceCategory = await source.collection('catalog_categories')
+    .findOne({ isDeleted: { $ne: true } }).catch(() => null)
+
+  if (!sourceItem || !sourceCategory) {
+    skip('catalog listing checks', `no published item or live category in ${SOURCE_DB} to copy`)
+    return
+  }
+
+  const categories = db.collection('catalog_categories')
+  const items = db.collection('catalog_items')
+  const categoryId = new mongoose.Types.ObjectId()
+  const itemId = new mongoose.Types.ObjectId()
+  const stamp = new Date()
+
+  // Slugs are per locale in these collections (`slug.vi`), the parent is cleared so the
+  // copy is a top-level category, and only the fields the storefront reads are rewritten.
+  await categories.insertOne({
+    ...sourceCategory,
+    _id: categoryId,
+    siteId: SITE_ID,
+    slug: { vi: PROBE_CATEGORY_SLUG, en: PROBE_CATEGORY_SLUG },
+    fullPath: PROBE_CATEGORY_SLUG,
+    title: { vi: 'Probe catalog category', en: 'Probe catalog category' },
+    pid: null,
+    ancestors: [],
+    updatedAt: stamp,
+  })
+  await items.insertOne({
+    ...sourceItem,
+    _id: itemId,
+    siteId: SITE_ID,
+    slug: { vi: PROBE_ITEM_SLUG, en: PROBE_ITEM_SLUG },
+    fullPath: PROBE_ITEM_SLUG,
+    sku: 'PROBE-SKU',
+    title: { vi: 'Probe catalog item', en: 'Probe catalog item' },
+    categories: [categoryId],
+    updatedAt: stamp,
+  })
+  removeCatalog = async () => {
+    await items.deleteMany({ _id: itemId })
+    await categories.deleteMany({ _id: categoryId })
+  }
+
+  const [productsPage, categoryPage] = await Promise.all([
+    waitForRobots('/products', 'index, follow', 120_000),
+    waitForRobots(`/categories/${PROBE_CATEGORY_SLUG}`, 'index, follow', 120_000),
+  ])
+
+  await check('/products turns indexable once it lists an item', () => {
+    assert.equal(productsPage.status, 200)
+    assert.equal(meta(productsPage.html, 'robots'), 'index, follow')
+    assert.equal(canonicalOf(productsPage.html), `${ORIGIN}/products`)
+  })
+
+  // The category index reads an API cached for five minutes, and this run already cached its
+  // empty answer, so the page cannot flip inside a run. Its data is checked through the same
+  // API under a key nothing has cached; the rule the page applies is the one `/products` and
+  // `/bai-viet` prove above, and the next run sees the empty page again on a fresh server.
+  await check('the category index data lists the probe category', async () => {
+    const response = await (await fetch(`${ORIGIN}/api/public/categories?run=${Date.now()}`)).json()
+    const slugs = (response.data || []).map((category: { slug?: Record<string, string> }) => category.slug?.vi)
+    assert.ok(slugs.includes(PROBE_CATEGORY_SLUG), `the category API returned ${slugs.join(', ') || '(nothing)'}`)
+  })
+
+  await check(`/categories/${PROBE_CATEGORY_SLUG} is indexable with its own canonical`, () => {
+    assert.equal(categoryPage.status, 200)
+    assert.equal(meta(categoryPage.html, 'robots'), 'index, follow')
+    assert.equal(canonicalOf(categoryPage.html), `${ORIGIN}/categories/${PROBE_CATEGORY_SLUG}`)
+  })
+
+  await check('the sitemap gains the catalog listing, the category and the item', async () => {
+    const xml = await get('/sitemap.xml')
+    const rows = [...xml.html.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1])
+    for (const path of ['/products', '/categories', `/categories/${PROBE_CATEGORY_SLUG}`, `/products/${PROBE_ITEM_SLUG}`]) {
+      assert.ok(rows.includes(ORIGIN + path), `expected ${ORIGIN}${path} among ${rows.length} rows`)
+    }
+  })
+
+  await removeCatalog()
+  removeCatalog = null
+
+  // The catalog read is cached with a five-minute stale window, so re-reading the page to
+  // watch it go noindex would add minutes to every run. The revert is asserted where it is
+  // cheap and honest — the sitemap below, and the API under a query key nothing has cached —
+  // and the next run's first checks see the empty pages again on a fresh server.
+  await check('the catalog API reports no items or categories once the probe is removed', async () => {
+    const items = await (await fetch(`${ORIGIN}/api/public/products?minPrice=999999&limit=1`)).json()
+    const categories = await (await fetch(`${ORIGIN}/api/public/categories?probe=1`)).json()
+    assert.equal(items.total, 0)
+    const keys = (categories.data || []).map((category: { slug?: Record<string, string> }) => category.slug?.vi)
+    assert.ok(!keys.includes(PROBE_CATEGORY_SLUG), `the category API still lists ${PROBE_CATEGORY_SLUG}`)
+  })
+
+  await check('the sitemap drops the catalog rows again', async () => {
+    const xml = await get('/sitemap.xml')
+    for (const path of ['/products', '/categories', `/${PROBE_ITEM_SLUG}`, `/${PROBE_CATEGORY_SLUG}`]) {
+      assert.ok(!xml.html.includes(ORIGIN + path), `${ORIGIN}${path} survived the cleanup`)
+    }
+  })
 }
 
 try {
@@ -432,6 +556,7 @@ try {
   stopServer()
   if (removeGoneRow) await removeGoneRow().catch(() => undefined)
   if (removeRecord) await removeRecord().catch(() => undefined)
+  if (removeCatalog) await removeCatalog().catch(() => undefined)
   await new Promise(resolve => setTimeout(resolve, 500))
 }
 

@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.v — the catalog branch of the empty-site test (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| The run copies one real item and one real category from `sen-tuan`, retags them, and checks `/products`, `/categories/<slug>`, the category index data and four sitemap rows, then deletes both | `scripts/build/test-empty-listing.ts` (31 checks) |
+| Localized `slug.vi` matters: a string slug reaches the sitemap but not the page lookup; the probe now writes both locales and clears `pid`/`ancestors` | same file |
+| `categories` API caches for 5 min, so its page flip is asserted through the API on an unused query key; `/products` (60s) is watched on the page | same file |
+| The run clears Nitro's on-disk cache and any stray probe rows before it starts, and waits for empty states instead of assuming them | same file |
+| Limits: direct inserts prove storefront read/index rules, not the CMS write path | — |
+
 ### WEB-08.u — the populated branch is covered too (landed 2026-11-11)
 
 | Slice | Evidence |
