@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.r — two URLs that changed answer, on purpose (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `/products?sort=newest` is a duplicate of `/products` (default sort), so it is `noindex, follow`; the bare catalog stays indexable | live `:4006` |
+| `/bai-viet?page=1` and `?page=2` are ignored parameters on a cursor-paged listing, so they are query views and `noindex, follow` | live `:4006` |
+| Both keep their canonical and none is in the sitemap; nothing previously crawlable became unreachable | live `:4006` |
+| If the post listing gains numbered pages it needs `keepQuery: ['page']` and the paged canonical rule | — |
+| All 24 `scripts/build/test-*.ts` pass after the refactor | `for f in scripts/build/test-*.ts` |
+
 ### WEB-08.q — one robots rule, in one place (landed 2026-11-11)
 
 | Slice | Evidence |
