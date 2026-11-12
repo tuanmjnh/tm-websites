@@ -29,6 +29,15 @@ const description = computed(() => {
   return t('error.serverDescription')
 })
 
+/**
+ * An error page is never a destination: the status already says so, and the meta
+ * keeps a crawler from treating the rendered body as a page while a 5xx or a
+ * filtered response is being served. It carries no canonical for the same reason.
+ */
+useHead({
+  meta: [{ name: 'robots', content: 'noindex, follow' }],
+})
+
 const goHome = () => clearError({ redirect: '/' })
 </script>
 

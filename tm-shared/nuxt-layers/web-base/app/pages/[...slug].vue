@@ -94,7 +94,14 @@ useSeoMeta({
   articlePublishedTime: () => content.value?.publishedAt || undefined,
   articleModifiedTime: () => content.value?.updatedAt || undefined,
   twitterCard: 'summary_large_image',
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    // One record has one public URL. The `/pages/<key>` alias and any query view
+    // answer the same record under a second URL, so they are kept out of the index
+    // instead of competing with the canonical one.
+    if (Object.keys(route.query).length) return 'noindex, follow'
+    return canonical.value === buildCanonicalUrl(baseUrl, route.path) ? 'index, follow' : 'noindex, follow'
+  },
 })
 
 useHead({

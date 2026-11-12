@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.n — one record, one URL; error pages out of the index (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `/<slug>` audited: `200`, `index`, self canonical, sitemap row with `lastmod`, no `/pages/` rows — no change needed | live `:4006` |
+| The `/pages/<key>` alias and query views of a record are `noindex, follow` while keeping the canonical on `/<slug>` | `tm-shared/nuxt-layers/web-base/app/pages/[...slug].vue` |
+| The error page asks to be indexed by nobody: `noindex, follow` on 404, 410 and 5xx, no canonical | `tm-shared/nuxt-layers/web-base/app/error.vue` |
+| Verified: 26 live checks including a probe `410` row removed afterwards; sitemap unchanged at 303; DB back to pre-probe counts; typecheck, lint pass | — |
+| Limits: 5xx branch not driven live; error page keeps the site-default title | — |
+
 ### WEB-08.m — home and search under the same criteria (landed 2026-11-11)
 
 | Slice | Evidence |
