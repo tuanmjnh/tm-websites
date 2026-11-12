@@ -2,6 +2,17 @@ import { buildSitemapEntries, buildSitemapXml } from '@tm/flow-utils/seo'
 import { listCatalogCategorySitemapEntries, listCatalogSitemapEntries } from '#server/utils/catalogService'
 import { listContentSitemapEntries } from '#server/utils/publicContent'
 
+/**
+ * The newest record on a listing is the last time the page really changed.
+ * Entries without a timestamp are ignored rather than guessed at.
+ */
+function newestLastmod(entries: { lastmod?: string | null }[]): string | null {
+  return entries.reduce<string | null>((latest, entry) => {
+    const value = entry.lastmod ?? null
+    return value && (!latest || value > latest) ? value : latest
+  }, null)
+}
+
 export default defineEventHandler(async (event) => {
   const baseUrl = getSiteBaseUrl(event)
   const [pages, categories, tags, products, catalogCategories] = await Promise.all([
@@ -23,7 +34,17 @@ export default defineEventHandler(async (event) => {
     ...tags.map(tag => ({ path: `/tag/${encodeURIComponent(tag)}` })),
   ]
 
-  const xml = buildSitemapXml(buildSitemapEntries(baseUrl, [...pages, ...products, ...catalogCategories, ...taxonomy]))
+  // A listing page is a crawlable URL in its own right, and it is only worth a
+  // crawl entry while it has something to list; its `lastmod` is the newest
+  // record shown on it. Search and the cart stay out: one is `noindex`, the
+  // other holds no public content.
+  const listings = [
+    ...(pages.length ? [{ path: '/bai-viet', lastmod: newestLastmod(pages) }] : []),
+    ...(products.length ? [{ path: '/products', lastmod: newestLastmod(products) }] : []),
+    ...(catalogCategories.length ? [{ path: '/categories', lastmod: newestLastmod(catalogCategories) }] : []),
+  ]
+
+  const xml = buildSitemapXml(buildSitemapEntries(baseUrl, [...pages, ...products, ...catalogCategories, ...taxonomy, ...listings]))
 
   setHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
   setHeader(event, 'Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600')

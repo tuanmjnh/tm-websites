@@ -68,6 +68,17 @@ export function toCatalogSitemapEntry(record: CatalogRecord): { path: string, la
   return { path: catalogItemPath(slug), lastmod: toIsoDate(record.updatedAt) }
 }
 
+/**
+ * Sitemap row for a live category landing page. The page changes when the
+ * category record does, so it carries the same freshness stamp a product row
+ * does; a category without a path is skipped.
+ */
+export function toCatalogCategorySitemapEntry(record: CatalogRecord): { path: string, lastmod: string | null } | null {
+  const category = toCatalogCategory(record)
+  if (!category?.path) return null
+  return { path: category.path, lastmod: toIsoDate(record.updatedAt) }
+}
+
 function toImages(value: unknown): string[] {
   const list = Array.isArray(value) ? value : []
   const images: string[] = []

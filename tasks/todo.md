@@ -672,6 +672,15 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live `:4006` (`sen-tuan`): `/products`, `/bai-viet`, `/gio-hang`, `/` → absolute site card with brand alt; a product → its own image with `Bộ HN-BO` alt; a catalog category → its Cloudinary image with `Bộ thường` alt; a content page → site card with the page title as alt; all carry `twitter:image`. `pnpm typecheck` and `pnpm lint` pass | — |
 | Limits: no image dimensions, no generated per-record cards, content category landing shares the site card | — |
 
+### WEB-08.g — the sitemap lists the listing pages too (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `/bai-viet`, `/products`, `/categories` are sitemap entries now, each only while its listing has records, with `lastmod` from the newest record shown | `tm-web/server/routes/sitemap.xml.ts` |
+| Catalog category rows keep the record's own timestamp instead of `null` | `tm-web/server/utils/catalogService.ts`, `toCatalogCategorySitemapEntry` in `tm-web/server/utils/catalogMapper.ts` |
+| Verified live `:4006`: 303 `<loc>` (was 300) and 300 `<lastmod>`; `/bai-viet` `2026-11-07T04:33:14.378Z`, `/products` `2026-11-10T05:07:17.392Z` (equal to the newest item's `updatedAt`), `/categories` `2026-11-10T03:39:47.313Z`; `/gio-hang`, `/tim-kiem` and `/pages/*` absent. `pnpm typecheck` and `pnpm lint` pass | — |
+| Limit: home, `/danh-muc` and tag rows carry no `lastmod` (their payload has no timestamp) | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

@@ -19,6 +19,7 @@ import {
 import { getMongoTarget, withCatalogDb } from './mongo'
 import {
   toCatalogCategory,
+  toCatalogCategorySitemapEntry,
   toCatalogItemDetail,
   toCatalogItemSummary,
   toCatalogSitemapEntry,
@@ -278,11 +279,10 @@ export async function listCatalogCategorySitemapEntries(event: H3Event): Promise
     const entries: { path: string, lastmod: string | null }[] = []
     const seen = new Set<string>()
     for (const doc of docs as unknown as CatalogRecord[]) {
-      const category = toCatalogCategory(doc)
-      const path = category?.path ?? ''
-      if (!path || seen.has(path)) continue
-      seen.add(path)
-      entries.push({ path, lastmod: null })
+      const entry = toCatalogCategorySitemapEntry(doc)
+      if (!entry || seen.has(entry.path)) continue
+      seen.add(entry.path)
+      entries.push(entry)
     }
     return entries
   })
