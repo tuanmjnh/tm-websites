@@ -565,6 +565,15 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Evidence (HTTP `:4005` + storefront `:4006`, real `sen-tuan`, disposable probe page): create `201`, publish `200`, then `PATCH` with a new slug `200`; `GET /api/v1/admin/redirects?q=probe-slug` returned exactly one row `/probe-slug-moi → /probe-slug-ba` (`301`, active, `auto: slug changed`); `GET :4006/probe-slug-moi` → `301 Location: /probe-slug-ba`, `GET /probe-slug-ba` → `200`, and `/pages/probe-slug-cu` (the immutable key path) still `200`, which is why the key path is not redirected. Browser `:4005/redirects` showed the row with its `301` badge, `Đang bật` and the auto note. The probe record, its revisions, its audit rows and the generated row were deleted afterwards (`content` 3, `content_redirects` 0, `audit_logs` 1).
 - Limits: only the short `/<slug>` form is written (the key path does not change, and the reserved route names are skipped); a row generated for an old slug is not re-pointed when the same record is renamed again — the chain resolves, but the map grows one row per rename; disabling or deleting a record does not remove or deactivate its rows; there is still no automatic row for a legacy import or for a catalog item's own legacy path.
 
+### WEB-08.i — an empty tag page is noindex (landed 2026-11-11)
+
+- A tag landing is `/tag/<anything>`, and it answered `index, follow` with an empty list for a tag that no published record carries (`/tag/khong-ton-tai`), so the site offered crawlers an unlimited supply of indexable empty pages built from a URL anyone can type.
+- The page also listed a tag that only a draft carries (`/tag/huong-dan`), which is right for a visitor and wrong for an index. It now answers `noindex, follow` while it has nothing published, and `index, follow` as soon as one post carries the tag. The site-wide `indexable: false` switch still wins with `noindex, nofollow`.
+- A tag page still returns `200` with its empty state rather than a 404: the tag may exist on drafts only, and pointing a visitor at the posts is better than a dead end. No sitemap row changes: the tag entries come from published content only.
+- Evidence (HTTP `:4006`, real `sen-tuan` data): `/tag/about` → `200` `index, follow`; `/tag/huong-dan` (draft-only tag) → `200` `noindex, follow`; `/tag/khong-ton-tai` (invented tag) → `200` `noindex, follow` and still renders "Chưa có bài viết".
+- `pnpm typecheck` and `pnpm lint` pass.
+- Limits: a tag that exists only on drafts is still a 200 page (deliberate), and an empty tag has no `lastmod` in the sitemap because it is not listed there at all.
+
 ### WEB-03 — an unknown product or category answers 404, not an empty 200 (landed 2026-11-11)
 
 - An unknown product slug, and an unknown catalog category slug, both answered `200` with the header, the footer and nothing between them: a soft 404 that a crawler indexes and a visitor reads as a broken page. The API behind them already answered `404`, so the page was losing that answer in three places at once.

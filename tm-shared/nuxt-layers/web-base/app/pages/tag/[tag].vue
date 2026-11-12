@@ -6,7 +6,8 @@ import { buildBreadcrumbJsonLd, buildCanonicalUrl, buildItemListJsonLd } from '@
  * Tag landing page. Tags are free-form strings on a content record, so the URL
  * is the tag itself and the page reuses the public listing policy: a tag with no
  * published record renders the empty state, never a 404, because the tag may
- * exist on drafts only.
+ * exist on drafts only. It is `noindex` in that state, though: anyone can invent
+ * a `/tag/<anything>` URL, and an indexable empty page is a soft 404.
  */
 
 const PAGE_SIZE = 12
@@ -68,7 +69,10 @@ useSeoMeta({
   ogDescription: () => t('tag.subtitle', { tag: tag.value }),
   ogType: 'website',
   ogUrl: () => canonical.value,
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    return items.value.length ? 'index, follow' : 'noindex, follow'
+  },
 })
 
 /** Home → posts → the tag, matching the trail the template renders. */

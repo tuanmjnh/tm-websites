@@ -711,6 +711,14 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live `:4006`: unknown product and category slugs → `404` with their own copy (vi + en); `bo-hn-bo`, the real category landing, `/products`, `/categories`, `/gioi-thieu`, `/bai-viet`, `/tag/about`, `/gio-hang`, `/tim-kiem`, `/` → `200`. `pnpm typecheck`, `pnpm lint` pass | — |
 | Limit: the client-side navigation to a deleted slug was not driven in a browser | — |
 
+### WEB-08.i — an empty tag page is noindex (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| A tag landing with nothing published is `noindex, follow`; with a post it is indexable again; the site-wide switch still forces `noindex, nofollow` | `tm-shared/nuxt-layers/web-base/app/pages/tag/[tag].vue` |
+| Verified live `:4006`: `/tag/about` `index, follow`; `/tag/huong-dan` (draft-only) `noindex, follow`; `/tag/khong-ton-tai` (invented) `noindex, follow` with the empty state intact. `pnpm typecheck`, `pnpm lint` pass | — |
+| Limit: an empty or draft-only tag still answers `200` by design (the posts may return) | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
