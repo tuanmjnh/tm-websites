@@ -154,7 +154,11 @@ useSeoMeta({
   twitterImage: () => ogImage.value,
   twitterImageAlt: () => name.value,
   twitterCard: 'summary_large_image',
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    // A query string is a view of this product, not a second product page.
+    return Object.keys(route.query).length ? 'noindex, follow' : 'index, follow'
+  },
 })
 
 useHead(() => {

@@ -54,7 +54,15 @@ const pageModel = computed({
 })
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
-const canonical = computed(() => buildCanonicalUrl(baseUrl, `/categories/${slug.value}`))
+
+/** Page one is the list the category's bare URL describes; a later page is its own. */
+const hasOtherQuery = computed(() => Object.keys(route.query).some(key => key !== 'page'))
+
+const canonical = computed(() => {
+  const base = buildCanonicalUrl(baseUrl, `/categories/${slug.value}`)
+  const page = readPage()
+  return page > 1 && !hasOtherQuery.value ? `${base}?page=${page}` : base
+})
 
 const title = computed(() => (category.value ? readLocalized(category.value.name, locale.value) : ''))
 const description = computed(() => (category.value?.description ? readLocalized(category.value.description, locale.value) : ''))
@@ -92,7 +100,15 @@ useSeoMeta({
   ogImageAlt: () => title.value,
   twitterImage: () => resolveSiteUrl(baseUrl, category.value?.image || '/branding/og-cover.png'),
   twitterImageAlt: () => title.value,
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    // A filtered or otherwise parameterised view is the category under a query string,
+    // and a category with nothing to list is thin content. Neither earns an index entry;
+    // a plain paged list does, because the canonical points at that page.
+    if (hasOtherQuery.value) return 'noindex, follow'
+    if (readPage() === 1 && !items.value.length) return 'noindex, follow'
+    return 'index, follow'
+  },
 })
 
 useHead(() => {

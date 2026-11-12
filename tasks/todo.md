@@ -727,6 +727,15 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.o — catalog detail pages follow the same rules (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| Product query views are `noindex, follow`; the plain product URL and its canonical were already right | `tm-shared/nuxt-layers/web-base/app/pages/products/[slug].vue` |
+| A plain paged category list is its own canonical and stays indexable; page one keeps the bare URL; other parameters and an empty first page are `noindex` | `tm-shared/nuxt-layers/web-base/app/pages/categories/[slug].vue` |
+| Verified: 28 live checks over plain/query/paged/unknown URLs on both pages; sitemap unchanged at 303 with no `?page=` rows; typecheck, lint pass | — |
+| Limits: no empty catalog category exists in real data, so that branch is inspected, not driven | — |
+
 ### WEB-08.n — one record, one URL; error pages out of the index (landed 2026-11-11)
 
 | Slice | Evidence |
