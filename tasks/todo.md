@@ -735,7 +735,10 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | A paged catalog view is its own canonical and stays indexable; with a filter it is not | `products/index.vue` (`urlFilters`, `canonical`) |
 | An empty listing is `noindex, follow` until it has a record; the site-wide switch still wins | the three index pages |
 | Verified live `:4006`, 11 checks: plainer listings `index, follow`; `?tag`, `?q`, `?sort`, `?page&sort` `noindex, follow`; `?page=2` self-canonical; `/gio-hang` unchanged `noindex` without canonical. `pnpm typecheck`, `pnpm lint` pass | — |
-| Limits: empty base-listing branch not exercised live; `/bai-viet` has no page URLs (cursor pagination) | — |
+| Sitemap audited after the change: 303 URLs, all 200 + indexable + self-canonical, so no row had to be removed | `.tmp` audit, deleted |
+| Empty branch exercised live on the `bagpost` / `bag-post` database (0 content, 0 catalog): `/bai-viet`, `/products`, `/categories` and the newly fixed `/danh-muc` index all `noindex, follow`, sitemap down to `/`; nothing written; `sentuan` restored | — |
+| `/danh-muc` index leaves the index while it has no category | `tm-shared/nuxt-layers/web-base/app/pages/danh-muc/index.vue` |
+| Limits: `/bai-viet` has no page URLs (cursor pagination) | — |
 
 ## Next slices
 

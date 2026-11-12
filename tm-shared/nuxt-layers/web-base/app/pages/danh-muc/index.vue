@@ -44,7 +44,11 @@ useSeoMeta({
   ogDescription: () => t('categoryContent.indexSubtitle'),
   ogType: 'website',
   ogUrl: canonical,
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    // An index of nothing is thin content; it becomes indexable with its first category.
+    return categories.value.length ? 'index, follow' : 'noindex, follow'
+  },
 })
 
 /** Home → posts → the category index, as the template draws it. */
