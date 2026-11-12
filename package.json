@@ -43,7 +43,8 @@
     "test:bulk": "tsx scripts/build/test-bulk-service.ts",
     "test:tags": "tsx scripts/build/test-tag-service.ts",
     "test:category-order": "tsx scripts/build/test-category-reorder.ts",
-    "test:redirects": "tsx scripts/build/test-redirect-service.ts"
+    "test:redirects": "tsx scripts/build/test-redirect-service.ts",
+    "test:empty-listing": "tsx scripts/build/test-empty-listing.ts"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",

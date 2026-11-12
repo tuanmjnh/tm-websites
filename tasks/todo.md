@@ -727,6 +727,15 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.l — the empty-listing branch is a script, not an afternoon (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm test:empty-listing` borrows a registry customer with an empty database, starts the web app against it, checks robots/canonical/sitemap and stops it | `scripts/build/test-empty-listing.ts`, `package.json` |
+| It refuses a populated database or a customer without a binding instead of asserting the wrong thing | `--site=sentuan` and `--site=default` both exit 1 before starting a server |
+| Live run against `bagpost` / `bag-post`: 12 checks pass, port 4006 released, database untouched | `.devlogs/web-empty-bagpost.log` |
+| Limits: policy only, not empty-state copy; the empty customer must already exist in the registry | — |
+
 ### WEB-08.k — listing views answer search engines honestly (landed 2026-11-11)
 
 | Slice | Evidence |
