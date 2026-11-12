@@ -85,6 +85,16 @@ Ran on the working tree at `32fbea6` against local MongoDB (`sen-tuan`): `test:l
 
 The lesson to keep: when a gate's assertion is about *how* a requirement was met rather than *that* it is met, update the assertion in the same commit as the change. This one slipped through because the suite is not run on every slice.
 
+### All gates at once (2026-11-12)
+
+`pnpm verify:all` runs every gate the repository has, in order, from one command: the 18 domain scripts (`test:layers`, `test:hub`, `test:content`, `test:categories`, `test:catalog`, `test:media`, `test:audit`, `test:settings`, `test:menus`, `test:bulk`, `test:tags`, `test:redirects`, `test:category-order`, `test:retention`, `test:db`, `test:web-content`, `test:web-site`, `test:web-cart`) then `typecheck`, `lint`, `validate:registry` and `verify:scaffold`.
+
+Each step's complete output and exit code are appended to `.devlogs/gates.log` (override with `--log=<path>`), and the file ends with how many gates passed and which failed. The run continues past a failing gate so one invocation reports everything that is broken, then exits 1. The header records the database environment variables in use, which matters because the domain scripts talk to a real MongoDB.
+
+Measured on 2026-11-12 with `TM_MONGO_DB=sentuan`: 22/22 gates, 79.4s.
+
+This is a local runner, not CI: no scheduling, no parallelism, and it does not cover the browser checks or the real Hub contract.
+
 ## Database preparation and migrations
 
 - Business collections are created by migrations, not by a startup seed. The first migration (`content-indexes`, version 1) creates the `content` indexes; applied ids, versions, checksums and timestamps live in `tm_migrations`.

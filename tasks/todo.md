@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### One command for every gate (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm verify:all` runs the 18 domain scripts plus `typecheck`, `lint`, `validate:registry` and `verify:scaffold`, writing each step's full output and exit code to `.devlogs/gates.log` with a summary at the end | `scripts/build/run-gates.ts`, `package.json` |
+| A failing step does not stop the run, so one invocation shows every broken gate; the process still exits 1 and names the failures | same file |
+| Live run with `TM_MONGO_URI`/`TM_MONGO_DB=sentuan`/`TM_SITE_ID=sentuan`: 22/22 gates passed in 79.4s, exit 0, 22 step headers in the log | `.devlogs/verify-all.out`, `.devlogs/gates.log` |
+| The log header records the database environment variables in use, so a run against the wrong database is visible after the fact | `.devlogs/gates.log` |
+| Limits: it is a runner, not a scheduler — no CI wiring, no parallelism, and the browser and real-Hub checks are not part of it | — |
+
 ### Gates re-run across the whole tree (landed 2026-11-12)
 
 | Slice | Evidence |

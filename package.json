@@ -44,7 +44,8 @@
     "test:tags": "tsx scripts/build/test-tag-service.ts",
     "test:category-order": "tsx scripts/build/test-category-reorder.ts",
     "test:redirects": "tsx scripts/build/test-redirect-service.ts",
-    "test:empty-listing": "tsx scripts/build/test-empty-listing.ts"
+    "test:empty-listing": "tsx scripts/build/test-empty-listing.ts",
+    "verify:all": "tsx scripts/build/run-gates.ts"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
