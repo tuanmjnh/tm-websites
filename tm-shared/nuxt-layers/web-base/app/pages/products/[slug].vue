@@ -10,13 +10,21 @@ const requestUrl = useRequestURL()
 
 const { brandName } = usePublicSite()
 const slug = computed(() => catalogSegmentFromParam(route.params.slug) ?? '')
-const { result, pending } = useCatalogItem(slug)
+const catalog = useCatalogItem(slug)
+const { result, pending } = catalog
 
 const item = computed(() => (result.value.status === 'ok' ? result.value.value : null))
 const status = computed(() => result.value.status)
 
-if (status.value === 'notfound') {
-  throw createError({ statusCode: 404, statusMessage: 'error.productNotFound', fatal: true })
+if (import.meta.server) {
+  // The read settles after setup, and Nuxt stores its result one tick after the
+  // handler returns; the server waits for both so an unknown slug answers 404
+  // instead of rendering an empty page with 200.
+  await catalog.ready
+  await nextTick()
+  if (status.value === 'notfound') {
+    throw createError({ statusCode: 404, statusMessage: 'error.productNotFound', fatal: true })
+  }
 }
 
 watch(status, (value) => {

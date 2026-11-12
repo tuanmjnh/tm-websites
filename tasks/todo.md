@@ -701,6 +701,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live `:4006`: 303 `<loc>` and 303 `<lastmod>` (all rows dated); `/` `2026-11-10T05:07:17.392Z`; `/tag/about` and `/tag/silver` `2026-11-07T04:33:14.378Z`; a draft post's tags stay out. 24 web-site checks, `pnpm typecheck`, `pnpm lint` pass | — |
 | Limit: a `/danh-muc` index row stays undated (content categories carry no timestamp) | — |
 
+### WEB-03 — an unknown product or category answers 404 (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| The catalog read recognises a 404 whichever field `$fetch` put the status in, instead of calling it "unavailable" | `tm-shared/nuxt-layers/web-base/app/composables/useCatalog.ts` (`catalogErrorStatus`, `catalogErrorCode`) |
+| The server waits for the read to settle before answering, so the guard can actually run | `useCatalogItem`/`useCatalogCategory` (`ready`), `products/[slug].vue`, `categories/[slug].vue` |
+| A missing product/category/content says so on the error page, in both locales | `error.vue`, `tm-web/i18n/locales/*.json` (`contentNotFound`, `productNotFound`, `categoryNotFound`, `contentUnavailable`) |
+| Verified live `:4006`: unknown product and category slugs → `404` with their own copy (vi + en); `bo-hn-bo`, the real category landing, `/products`, `/categories`, `/gioi-thieu`, `/bai-viet`, `/tag/about`, `/gio-hang`, `/tim-kiem`, `/` → `200`. `pnpm typecheck`, `pnpm lint` pass | — |
+| Limit: the client-side navigation to a deleted slug was not driven in a browser | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

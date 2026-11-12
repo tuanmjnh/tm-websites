@@ -24,8 +24,22 @@ export interface CatalogListQuery {
 
 interface CatalogErrorLike {
   statusCode?: number
+  status?: number
+  response?: { status?: number, _data?: { code?: string } }
   data?: { code?: string }
 }
+
+/**
+ * `$fetch` carries the HTTP status in more than one place depending on where it
+ * failed: `statusCode` on a thrown H3 error, `status` on the fetch error itself,
+ * or only on the response. Reading one of them turns a real 404 into an empty
+ * page, which is why all three are checked.
+ */
+const catalogErrorStatus = (failure: CatalogErrorLike | undefined): number | undefined =>
+  failure?.statusCode ?? failure?.status ?? failure?.response?.status
+
+const catalogErrorCode = (failure: CatalogErrorLike | undefined): string | undefined =>
+  failure?.data?.code ?? failure?.response?._data?.code
 
 /**
  * The catalog is bound per deployment. When no tenant database is configured the
@@ -34,8 +48,8 @@ interface CatalogErrorLike {
  */
 const catalogFailure = (error: unknown): CatalogStatus => {
   const failure = error as CatalogErrorLike
-  if (failure?.data?.code === 'CATALOG_NOT_CONFIGURED') return 'disconnected'
-  if (failure?.statusCode === 404) return 'notfound'
+  if (catalogErrorCode(failure) === 'CATALOG_NOT_CONFIGURED') return 'disconnected'
+  if (catalogErrorStatus(failure) === 404) return 'notfound'
   return 'unavailable'
 }
 
@@ -95,21 +109,33 @@ export const useCatalogCategories = () => {
   return { result, categories, pending, refresh }
 }
 
+/**
+ * One read whose 404 the page has to answer itself.
+ *
+ * SSR never runs watchers and the read settles after setup, so `ready` is the
+ * signal a page can await before deciding the response status; on the client the
+ * same decision comes from watching the status instead.
+ */
 export const useCatalogCategory = (slug: Ref<string>) => {
   const enabled = useCatalogEnabled()
 
-  const { data, pending, refresh } = useAsyncData<CatalogResult<PublicCatalogCategory>>(
+  let settle: (() => void) | undefined
+  const ready = new Promise<void>((resolve) => { settle = resolve })
+
+  const { data, pending, refresh, error } = useAsyncData<CatalogResult<PublicCatalogCategory>>(
     () => `catalog:category:${slug.value}`,
     async () => {
-      if (!enabled.value) return { status: 'disconnected' }
-
       try {
+        if (!enabled.value) return { status: 'disconnected' }
+
         const response = await $fetch<{ success: boolean, data: PublicCatalogCategory }>(
           `/api/public/categories/${encodeURIComponent(slug.value)}`
         )
         return { status: 'ok', value: response.data }
       } catch (error) {
         return { status: catalogFailure(error) } as CatalogResult<PublicCatalogCategory>
+      } finally {
+        settle?.()
       }
     },
     { watch: [slug], default: (): CatalogResult<PublicCatalogCategory> => ({ status: 'disconnected' }) }
@@ -117,24 +143,29 @@ export const useCatalogCategory = (slug: Ref<string>) => {
 
   const result = computed<CatalogResult<PublicCatalogCategory>>(() => data.value ?? { status: 'unavailable' })
 
-  return { result, pending, refresh }
+  return { result, pending, refresh, error, ready }
 }
 
 export const useCatalogItem = (slug: Ref<string>) => {
   const enabled = useCatalogEnabled()
 
-  const { data, pending, refresh } = useAsyncData<CatalogResult<PublicCatalogItemDetail>>(
+  let settle: (() => void) | undefined
+  const ready = new Promise<void>((resolve) => { settle = resolve })
+
+  const { data, pending, refresh, error } = useAsyncData<CatalogResult<PublicCatalogItemDetail>>(
     () => `catalog:item:${slug.value}`,
     async () => {
-      if (!enabled.value) return { status: 'disconnected' }
-
       try {
+        if (!enabled.value) return { status: 'disconnected' }
+
         const response = await $fetch<{ success: boolean, data: PublicCatalogItemDetail }>(
           `/api/public/products/${encodeURIComponent(slug.value)}`
         )
         return { status: 'ok', value: response.data }
       } catch (error) {
         return { status: catalogFailure(error) } as CatalogResult<PublicCatalogItemDetail>
+      } finally {
+        settle?.()
       }
     },
     { watch: [slug], default: (): CatalogResult<PublicCatalogItemDetail> => ({ status: 'disconnected' }) }
@@ -142,5 +173,5 @@ export const useCatalogItem = (slug: Ref<string>) => {
 
   const result = computed<CatalogResult<PublicCatalogItemDetail>>(() => data.value ?? { status: 'unavailable' })
 
-  return { result, pending, refresh }
+  return { result, pending, refresh, error, ready }
 }

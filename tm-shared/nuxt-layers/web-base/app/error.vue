@@ -5,7 +5,7 @@ const props = defineProps<{
   error: NuxtError
 }>()
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { customer } = useCustomerConfig()
 
 const statusCode = computed(() => props.error?.statusCode ?? 500)
@@ -19,6 +19,11 @@ const title = computed(() => {
   return t('error.serverTitle')
 })
 const description = computed(() => {
+  // A page knows why it failed and passes a translation key as its status
+  // message; a known one is more useful than the generic copy for its status.
+  const reason = String(props.error?.statusMessage ?? '')
+  if (reason.startsWith('error.') && te(reason)) return t(reason)
+
   if (isNotFound.value) return t('error.notFoundDescription')
   if (isGone.value) return t('error.goneDescription')
   return t('error.serverDescription')

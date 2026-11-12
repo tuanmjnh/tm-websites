@@ -159,6 +159,10 @@
     "notFoundDescription": "Trang bạn tìm không tồn tại, đã được gỡ hoặc chưa được xuất bản.",
   "goneTitle": "Trang này đã được gỡ",
   "goneDescription": "Nội dung này đã được gỡ khỏi website và sẽ không quay lại nữa.",
+  "contentNotFound": "Bài viết hoặc trang này không tồn tại, đã được gỡ hoặc chưa được xuất bản.",
+  "productNotFound": "Sản phẩm này không tồn tại, đã ngừng bán hoặc chưa được xuất bản.",
+  "categoryNotFound": "Danh mục này không tồn tại hoặc đã được gỡ.",
+  "contentUnavailable": "Không tải được nội dung này ngay bây giờ. Vui lòng thử lại sau ít phút.",
     "serverTitle": "Không thể tải trang",
     "serverDescription": "Đã xảy ra lỗi khi tải nội dung. Vui lòng thử lại sau ít phút.",
     "backHome": "Về trang chủ"

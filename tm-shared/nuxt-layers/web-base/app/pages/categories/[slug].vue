@@ -12,15 +12,23 @@ const config = useRuntimeConfig()
 const requestUrl = useRequestURL()
 
 const slug = computed(() => catalogSegmentFromParam(route.params.slug) ?? '')
-const { result: categoryResult } = useCatalogCategory(slug)
+const catalog = useCatalogCategory(slug)
+const { result: categoryResult } = catalog
 
 const category = computed(() => (categoryResult.value.status === 'ok' ? categoryResult.value.value : null))
-if (categoryResult.value.status === 'notfound') {
-  throw createError({ statusCode: 404, statusMessage: 'error.categoryNotFound', fatal: true })
+
+if (import.meta.server) {
+  // Same as a product: wait for the read so an unknown slug is a 404, not an
+  // empty category page served with 200.
+  await catalog.ready
+  await nextTick()
+  if (categoryResult.value.status === 'notfound') {
+    throw createError({ statusCode: 404, statusMessage: 'error.categoryNotFound', fatal: true })
+  }
 }
 
-watch(categoryResult, (value) => {
-  if (value.status === 'notfound') {
+watch(() => categoryResult.value.status, (value) => {
+  if (value === 'notfound') {
     showError({ statusCode: 404, statusMessage: 'error.categoryNotFound' })
   }
 })
