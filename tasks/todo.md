@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.p — tag pages and their query views (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| Query views of a tag are `noindex, follow` with the canonical unchanged; the plain tag URL and its `og:url` were already right | `tm-shared/nuxt-layers/web-base/app/pages/tag/[tag].vue` |
+| The tag listing pages by cursor, so `?page=2` renders page one and no paged canonical is involved (same as `/bai-viet`) | live `:4006` |
+| An unknown tag stays `200` + `noindex` by decision, and is absent from the sitemap | live `:4006` |
+| Verified: 6 URLs (plain, `?page=1`, `?page=2`, `?utm_source`, draft-only tag, unknown tag); sitemap unchanged at 303 with no `?page=` rows; typecheck, lint pass | — |
+| Limits: numbered tag pagination does not exist yet; if added it needs the paged-canonical rule | — |
+
 ### WEB-08.o — catalog detail pages follow the same rules (landed 2026-11-11)
 
 | Slice | Evidence |

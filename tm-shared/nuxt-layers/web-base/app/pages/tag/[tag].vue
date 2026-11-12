@@ -71,6 +71,9 @@ useSeoMeta({
   ogUrl: () => canonical.value,
   robots: () => {
     if (config.public.indexable === false) return 'noindex, nofollow'
+    // The listing pages through a cursor, so no query string names a page: a query
+    // view is the same tag under another URL and does not earn an index entry.
+    if (Object.keys(route.query).length) return 'noindex, follow'
     return items.value.length ? 'index, follow' : 'noindex, follow'
   },
 })
