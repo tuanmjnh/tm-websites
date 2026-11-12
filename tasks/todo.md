@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### CI runs the same command (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| `.github/workflows/quality.yml` no longer lists gates one by one: it starts a `mongo:7` service and runs `pnpm verify:all`, so a gate added to `package.json` cannot be left out of CI | `.github/workflows/quality.yml` |
+| The job runs against an empty disposable database (`TM_MONGO_DB=tm-ci-gates`), not the developer's data | same file |
+| Proof the suite tolerates an empty database: `pnpm verify:all` with `TM_MONGO_DB=tm-ci-gates` gave 22/22 in 77.7s, then the database was dropped | `.devlogs/verify-all-ci-db.out` |
+| The gate log is uploaded as an artifact on every run, pass or fail | `.github/workflows/quality.yml` |
+| Limits: the workflow itself was only validated as YAML and reasoned about step by step (no GitHub runner here); the first real CI run is the proof, and the suite still does not cover browser or real-Hub checks | — |
+
 ### One command for every gate (landed 2026-11-12)
 
 | Slice | Evidence |

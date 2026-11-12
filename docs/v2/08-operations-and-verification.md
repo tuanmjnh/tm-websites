@@ -95,6 +95,12 @@ Measured on 2026-11-12 with `TM_MONGO_DB=sentuan`: 22/22 gates, 79.4s.
 
 This is a local runner, not CI: no scheduling, no parallelism, and it does not cover the browser checks or the real Hub contract.
 
+### CI (2026-11-12)
+
+`.github/workflows/quality.yml` starts a `mongo:7` service and runs the single `pnpm verify:all` step, then uploads `.devlogs/gates.log` as an artifact on every run. It used to list gates individually, which is how `verify:scaffold` stayed red in CI-adjacent local work while the workflow itself kept passing only the gates somebody remembered to add. The job runs against a disposable database (`TM_MONGO_DB=tm-ci-gates`) so no developer data is needed, and the storefront's `TM_SITE_ID` stays `sentuan`.
+
+The suite was verified locally against an empty database of that name: 22/22 gates, 77.7s, then the database was dropped. The workflow change itself is validated as YAML only — the first real run on GitHub is what certifies it.
+
 ## Database preparation and migrations
 
 - Business collections are created by migrations, not by a startup seed. The first migration (`content-indexes`, version 1) creates the `content` indexes; applied ids, versions, checksums and timestamps live in `tm_migrations`.

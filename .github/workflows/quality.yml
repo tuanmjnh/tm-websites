@@ -16,9 +16,25 @@ permissions:
 
 jobs:
   quality:
-    name: Static gates
+    name: All gates
     runs-on: ubuntu-latest
     timeout-minutes: 25
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TM_MONGO_URI: mongodb://127.0.0.1:27017
+      TM_MONGO_DB: tm-ci-gates
+      TM_SITE_ID: sentuan
 
     steps:
       - name: Checkout
@@ -36,26 +52,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate customer registry
-        run: pnpm validate:registry
+      # One step on purpose: the same command that runs locally, so a gate cannot be added in
+      # package.json and quietly left out of CI (which is how verify:scaffold stayed red).
+      - name: Run every gate
+        run: pnpm verify:all
 
-      - name: Verify scaffold integrity
-        run: pnpm verify:scaffold
-
-      - name: Test layer precedence
-        run: pnpm test:layers
-
-      - name: Test Hub contracts
-        run: pnpm test:hub
-
-      - name: Test public content contracts
-        run: pnpm test:web-content
-
-      - name: Typecheck shared packages
-        run: pnpm --dir tm-shared run typecheck
-
-      - name: Typecheck apps
-        run: pnpm typecheck
-
-      - name: Lint
-        run: pnpm lint
+      - name: Upload gate log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-log
+          path: .devlogs/gates.log
+          if-no-files-found: ignore
