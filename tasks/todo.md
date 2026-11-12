@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### Gates re-run across the whole tree (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| Eighteen domain scripts run back to back against the local `sen-tuan` database: layers, hub contracts, content, categories, catalog, media, audit, settings, menus, bulk, tags, redirects, category order, retention, DB binding, web content, web site, web cart | `.devlogs/gates.log`, all exit 0 |
+| `pnpm typecheck`, `pnpm lint` and `pnpm validate:registry` pass | `.devlogs/gate-*.log` |
+| `pnpm verify:scaffold` was red (142/145): the web branch still demanded a static `property: 'og:image'` in each customer head config, which was removed on purpose because a relative share image is unfetchable. The check now asserts the opposite — no relative `og:image` in the head config, the `og-cover.png` asset present, and the storefront pages publishing `ogImage` | `scripts/verify-scaffold.ts`, 157/157 |
+| The gate failure predates this slice (it has been red since `af722fb`); it was found by running the suite, not by a code change | `git log -- scripts/verify-scaffold.ts` |
+| Limits: the suite exercises the local databases and no browser; `test:hub`/`test:iam` still do not certify the real Hub contract | — |
+
 ### WEB-08.v — the catalog branch of the empty-site test (landed 2026-11-11)
 
 | Slice | Evidence |

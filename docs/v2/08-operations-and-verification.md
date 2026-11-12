@@ -77,6 +77,14 @@ Root build commands invoke host `build:vercel`, which validates and builds; they
 
 `pnpm test:db` needs a local MongoDB; with none reachable it prints `NOT RUN` instead of failing, so treat its absence as BLOCKED evidence, never as a pass. `pnpm test:content` has the same requirement and creates then drops a disposable `tm_test_content` database. `GET /api/health` on the CMS reports `status`, `hub` and `database` without exposing URIs, tenant ids or credentials, and is the readiness probe for the DB binding.
 
+### Full gate re-run (2026-11-12)
+
+Ran on the working tree at `32fbea6` against local MongoDB (`sen-tuan`): `test:layers`, `test:hub`, `test:content`, `test:categories`, `test:catalog`, `test:media`, `test:audit`, `test:settings`, `test:menus`, `test:bulk`, `test:tags`, `test:redirects`, `test:category-order`, `test:retention`, `test:db`, `test:web-content`, `test:web-site`, `test:web-cart` — all exit 0. Then `typecheck`, `lint`, `validate:registry` exit 0.
+
+`verify:scaffold` was the one red gate, at 142/145: for every web customer it required `property: 'og:image'` inside the customer `nuxt.config.ts` head. That tag was deliberately deleted in `af722fb`, because a relative share image cannot be fetched by social crawlers and every page shared one generic card; the storefront now publishes an absolute `ogImage` per page (`index.vue`, `products/[slug].vue`, `[...slug].vue`, `categories/[slug].vue`, `danh-muc/[slug].vue`). The gate now checks the replacement instead of the removed tag: no relative `og:image` pinned in a customer head config, the customer's `public/branding/og-cover.png` present and non-empty, and the three listing/detail pages still publishing a share image. 157/157 pass.
+
+The lesson to keep: when a gate's assertion is about *how* a requirement was met rather than *that* it is met, update the assertion in the same commit as the change. This one slipped through because the suite is not run on every slice.
+
 ## Database preparation and migrations
 
 - Business collections are created by migrations, not by a startup seed. The first migration (`content-indexes`, version 1) creates the `content` indexes; applied ids, versions, checksums and timestamps live in `tm_migrations`.

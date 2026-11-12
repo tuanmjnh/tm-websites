@@ -80,7 +80,15 @@ for (const entry of Object.values(customers)) {
 
       if (appKind === 'web') {
         check(configText.includes("name: 'description'"), `${label}: head description meta`)
-        check(configText.includes("property: 'og:image'"), `${label}: head og:image meta`)
+        // A relative og:image in the customer head config is unfetchable by social crawlers, so the
+        // share image is published per page from the storefront with an absolute URL instead.
+        check(!configText.includes("property: 'og:image'"), `${label}: head does not pin a relative og:image`)
+        const cover = path.join(layerDir, 'public/branding/og-cover.png')
+        check(fs.existsSync(cover) && fs.statSync(cover).size > 0, `${label}: asset public/branding/og-cover.png`)
+        for (const page of ['index.vue', 'products/[slug].vue', '[...slug].vue']) {
+          const pageText = read(path.join(rootDir, 'tm-shared/nuxt-layers/web-base/app/pages', page))
+          check(pageText.includes('ogImage'), `${label}: storefront ${page} publishes a share image`)
+        }
         check(appConfigText.includes('domains:'), `${label}: app.config declares domains`)
       }
     } catch (error) {
