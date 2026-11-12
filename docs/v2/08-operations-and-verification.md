@@ -101,6 +101,41 @@ This is a local runner, not CI: no scheduling, no parallelism, and it does not c
 
 The suite was verified locally against an empty database of that name: 22/22 gates, 77.7s, then the database was dropped. The workflow change itself is validated as YAML only — the first real run on GitHub is what certifies it.
 
+## WEB-10: the offline shell on a production build (2026-11-12)
+
+`pnpm build:web` was broken before this slice: `validate-build.ts` still demanded a static `property: 'og:image'` in the customer head config, which `af722fb` had deliberately removed in favour of an absolute per-page share image. It now checks what the decision actually requires — the customer line must *not* pin `og:image`, must ship `public/branding/og-cover.png`, and the three storefront pages must publish `ogImage` — so the build validator agrees with `verify:scaffold`.
+
+Built with `TM_CUSTOMER_ID=sentuan TM_MONGO_DB=sen-tuan TM_SITE_ID=sentuan` (52.7s), then served on a separate port with the SSR server, not `nuxt dev`:
+
+```
+PORT=4016 NODE_ENV=production TM_MONGO_URI=mongodb://127.0.0.1:27017   TM_MONGO_DB=sen-tuan TM_SITE_ID=sentuan TM_SITE_URL=http://localhost:4016   node tm-web/.output/server/index.mjs
+```
+
+Served headers: `/sw.js` → `200`, `Content-Type: text/javascript`, `Cache-Control: public, max-age=0, must-revalidate` (a new deployment is picked up on the next visit); `/offline.html` → `200 text/html`.
+
+Browser observations (real Chromium, production server on `:4016`):
+
+| Scenario | Result |
+| --- | --- |
+| Registration | `navigator.serviceWorker.ready` resolved, scope `http://localhost:4016/`, active state `activated` |
+| Control | `navigator.serviceWorker.controller.scriptURL` = `/sw.js` on the first load and after every navigation |
+| Cache contents | 2 caches: `workbox-precache-v2-…` with 86 entries (JS/CSS/woff2/png/svg/webmanifest and `/_nuxt/builds/*.json`) and `tm-offline` with exactly `/offline.html` |
+| No API cache | `/api/public/site` fetched 200 (252 bytes) while online; `caches.match('/api/public/site')` → false, and no `/api/*` entry in any cache |
+| No document cache | `/` and `/products` fetched online; `caches.match('/')` and `caches.match('/products')` → false (the worker only writes documents to the network) |
+| Offline navigation | With the server process killed (`curl` → connection refused), `/products` and `/products/sen-tuan-probe-offline` both rendered the offline shell: title `Đang ngoại tuyến`, retry control present, URL preserved, page still controlled |
+| Offline API | `fetch('/api/public/site', { cache: 'reload' })` and `/api/public/catalog?limit=1` rejected with `TypeError: Failed to fetch` — the worker answers no API request, offline or online |
+| Recovery | After restarting the server, `/` rendered the real home page (`h1` "Chào mừng đến với Sen Tuấn Jewelry & Gemstones") while still controlled, i.e. the shell is only the failure path |
+
+Afterwards the worker was unregistered and both caches deleted in that browser profile, the preview server stopped, and `:4016` left free — a localhost worker outliving a preview build would shadow the next one.
+
+Not covered: the update path (installing a second build over the first and seeing the new one take over), install-to-home-screen UI, and any check that a build cannot ship another customer's assets beyond what the manifest/registry validators already assert.
+
+## Gate coverage is itself a gate (2026-11-12)
+
+`verify:scaffold` gained section 5: every `test:`/`verify:` script in the root `package.json` must appear in `scripts/build/run-gates.ts`, either in `GATES` or in the declared `OPT_IN_GATES` (the three gates that need a built app or a preview server, each with the reason it cannot run from a clean checkout). The runner also grew the three gate scripts it was missing: `test:iam`, `test:revalidate`, `test:web-site-db`.
+
+Verified both ways: 182/182 checks pass, and with a fake `test:zzz-probe` script added to `package.json` the check fails (`182/183`, exit 1) and the scaffold script exits non-zero.
+
 ## Database preparation and migrations
 
 - Business collections are created by migrations, not by a startup seed. The first migration (`content-indexes`, version 1) creates the `content` indexes; applied ids, versions, checksums and timestamps live in `tm_migrations`.

@@ -105,6 +105,22 @@ check(read(path.join(rootDir, 'tm-web/nuxt.config.ts')).includes('resolveCustome
 check(!fs.existsSync(path.join(rootDir, 'tm-cms/app/pages')), 'tm-cms host does not shadow layer pages')
 check(!fs.existsSync(path.join(rootDir, 'tm-web/app/pages')), 'tm-web host does not shadow layer pages')
 
+console.log('\n5. Gate coverage')
+// A gate that lives in package.json but not in the single runner is how verify:scaffold itself
+// stayed red for a while: the suite ran, and this file was not part of it.
+const gateSource = read(path.join(rootDir, 'scripts/build/run-gates.ts'))
+check(!!gateSource, 'scripts/build/run-gates.ts exists')
+// Every quoted `name:word` token in the runner: its GATES list and its OPT_IN_GATES declarations.
+const runnerListed = new Set(
+  Array.from(gateSource.matchAll(/'([a-z][a-z-]*:[a-z0-9][a-z0-9-]*)'/g), match => match[1]),
+)
+const rootScripts = (JSON.parse(read(path.join(rootDir, 'package.json'))) as { scripts?: Record<string, string> }).scripts ?? {}
+const gateNames = Object.keys(rootScripts).filter(name => /^(test|verify):/.test(name) && name !== 'verify:all')
+check(gateNames.length > 0, `package.json declares ${gateNames.length} test:/verify: scripts`)
+for (const name of gateNames) {
+  check(runnerListed.has(name), `gate ${name} is declared in run-gates.ts (GATES or OPT_IN_GATES)`)
+}
+
 console.log(`\n${errors.length === 0 ? '🎉' : '⚠️'} ${checkCount - errors.length}/${checkCount} checks passed.`)
 
 if (errors.length > 0) {

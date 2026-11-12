@@ -152,8 +152,22 @@ if (appKind === 'cms') {
 }
 
 if (appKind === 'web') {
-  for (const required of ["name: 'description'", "property: 'og:title'", "property: 'og:image'", "rel: 'manifest'"]) {
+  for (const required of ["name: 'description'", "property: 'og:title'", "rel: 'manifest'"]) {
     if (!layerConfig.includes(required)) fail(`[SEO] nuxt.config.ts must define ${required}`)
+  }
+
+  // A relative og:image in the customer head config is unfetchable by social crawlers, so the
+  // storefront publishes an absolute one per page (resolveSiteUrl) and ships a share cover instead.
+  if (layerConfig.includes("property: 'og:image'")) {
+    fail('[SEO] nuxt.config.ts must not pin og:image; the storefront publishes it per page')
+  }
+  const coverAsset = path.join(selected.customerLayer, 'public/branding/og-cover.png')
+  if (!fs.existsSync(coverAsset) || fs.statSync(coverAsset).size === 0) {
+    fail('[SEO] customer layer must ship public/branding/og-cover.png')
+  }
+  for (const page of ['index.vue', 'products/[slug].vue', '[...slug].vue']) {
+    const pageText = readText(path.join(repoRoot, 'tm-shared/nuxt-layers/web-base/app/pages', page))
+    if (!pageText.includes('ogImage')) fail(`[SEO] storefront ${page} must publish a share image`)
   }
 
   validateManifest()

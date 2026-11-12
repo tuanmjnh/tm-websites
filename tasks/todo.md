@@ -727,6 +727,27 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-10 PWA on a production build (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm build:web` works again: `validate-build.ts` no longer demands the static `og:image` that `af722fb` removed; it requires no pinned relative `og:image`, the `og-cover.png` asset and `ogImage` on the three storefront pages | `scripts/build/validate-build.ts`, build 52.7s |
+| Production SSR build served on its own port (`:4016`, `node .output/server/index.mjs`), not `nuxt dev` | `.devlogs/build-web-pwa.log`, `.devlogs/preview-pwa.log` |
+| Worker installs, activates and controls the page (`controller.scriptURL` = `/sw.js`, scope `/`) | browser run, table in `docs/v2/08` |
+| Offline navigation to `/products` and a deep product URL renders `offline.html` with the URL preserved and a retry control, with the server killed | browser run |
+| No API or SSR-document caching: `/api/public/site` 200 online but absent from every cache, `/` and `/products` absent; `tm-offline` holds exactly `/offline.html`, precache holds 86 static entries | browser run |
+| Offline API fetches reject instead of being answered by the shell; after a restart the real page renders again while still controlled | browser run |
+| Cleanup: worker unregistered, caches deleted, preview server stopped, `:4016` free | browser + `netstat` |
+| Limits: the update path (second build over the first) and install UI were not exercised | — |
+
+### Gate coverage check (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| `verify:scaffold` §5 fails when a `test:`/`verify:` script in `package.json` is in neither `GATES` nor `OPT_IN_GATES` of `run-gates.ts` | `scripts/verify-scaffold.ts`, `scripts/build/run-gates.ts` |
+| `test:iam`, `test:revalidate`, `test:web-site-db` joined the runner; `test:empty-listing` and both `validate:build:*` are declared opt-in with their precondition | `scripts/build/run-gates.ts` |
+| Positive 182/182 exit 0; negative (fake `test:zzz-probe`) 182/183 exit 1 | `.devlogs/` runs |
+
 ### CI runs the same command (landed 2026-11-12)
 
 | Slice | Evidence |

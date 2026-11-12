@@ -33,11 +33,26 @@ const DOMAIN_GATES = [
   'test:web-content',
   'test:web-site',
   'test:web-cart',
+  'test:iam',
+  'test:revalidate',
+  'test:web-site-db',
 ]
 
 const STATIC_GATES = ['typecheck', 'lint', 'validate:registry', 'verify:scaffold']
 
 const GATES: Gate[] = [...DOMAIN_GATES, ...STATIC_GATES].map(script => ({ name: script, script }))
+
+/**
+ * Gates that cannot run from a clean checkout: they need a production build or a running preview
+ * server. They are declared here rather than left out, and `verify:scaffold` fails if a
+ * `test:`/`verify:` script appears in neither this list nor GATES, so a new gate can never be
+ * forgotten silently.
+ */
+export const OPT_IN_GATES: Array<{ script: string; needs: string }> = [
+  { script: 'test:empty-listing', needs: 'production web build and a preview server on :4006' },
+  { script: 'validate:build:cms', needs: 'a built CMS (.output)' },
+  { script: 'validate:build:web', needs: 'a built storefront (.output)' },
+]
 
 const logArg = process.argv.find(arg => arg.startsWith('--log='))?.slice('--log='.length)
 const logPath = path.resolve(process.cwd(), logArg || '.devlogs/gates.log')
