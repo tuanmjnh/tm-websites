@@ -33,6 +33,9 @@ const tag = computed(() => readQuery('tag'))
 const category = computed(() => readQuery('category'))
 const q = computed(() => readQuery('q'))
 
+/** A query string is a view of this listing, not a page of its own. */
+const filtered = computed(() => Boolean(q.value || tag.value || category.value))
+
 /**
  * The listing filters on the stored category `key`, but a visitor must read the
  * display name. The category row also supplies the landing slug, so the badge can
@@ -109,7 +112,13 @@ useSeoMeta({
   ogDescription: () => t('post.indexSubtitle'),
   ogType: 'website',
   ogUrl: canonical,
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    // A search or facet view is the same listing under a query string and already
+    // canonicalises here; an empty listing is thin content. Neither belongs in an index.
+    if (filtered.value) return 'noindex, follow'
+    return items.value.length ? 'index, follow' : 'noindex, follow'
+  },
 })
 
 /** The plain listing is the collection this URL describes; a search or tag view is not. */

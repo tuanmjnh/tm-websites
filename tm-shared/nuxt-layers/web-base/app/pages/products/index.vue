@@ -12,7 +12,18 @@ const config = useRuntimeConfig()
 const requestUrl = useRequestURL()
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
-const canonical = computed(() => buildCanonicalUrl(baseUrl, '/products'))
+/** The URL carries filters, so a paged view is only canonical when nothing is filtered. */
+const urlFilters = computed(() => Boolean(
+  queryValue(route.query.q) || queryValue(route.query.category)
+  || queryValue(route.query.min) || queryValue(route.query.max)
+  || queryValue(route.query.sort) && queryValue(route.query.sort) !== 'newest',
+))
+
+const canonical = computed(() => {
+  const base = buildCanonicalUrl(baseUrl, '/products')
+  const page = readPage()
+  return page > 1 && !urlFilters.value ? `${base}?page=${page}` : base
+})
 
 const queryValue = (value: unknown): string => {
   const raw = Array.isArray(value) ? value[0] : value
@@ -133,7 +144,13 @@ useSeoMeta({
   ogDescription: () => t('catalog.subtitle'),
   ogType: 'website',
   ogUrl: () => canonical.value,
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    // A filtered view is the catalog under a query string, and an empty catalog is
+    // thin content; only the plain listing earns an index entry.
+    if (urlFilters.value) return 'noindex, follow'
+    return items.value.length ? 'index, follow' : 'noindex, follow'
+  },
 })
 
 /**

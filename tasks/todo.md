@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.k — listing views answer search engines honestly (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| A filtered or searched listing view is `noindex, follow` instead of asking to be indexed while canonicalising away | `tm-shared/nuxt-layers/web-base/app/pages/bai-viet/index.vue`, `products/index.vue` |
+| A paged catalog view is its own canonical and stays indexable; with a filter it is not | `products/index.vue` (`urlFilters`, `canonical`) |
+| An empty listing is `noindex, follow` until it has a record; the site-wide switch still wins | the three index pages |
+| Verified live `:4006`, 11 checks: plainer listings `index, follow`; `?tag`, `?q`, `?sort`, `?page&sort` `noindex, follow`; `?page=2` self-canonical; `/gio-hang` unchanged `noindex` without canonical. `pnpm typecheck`, `pnpm lint` pass | — |
+| Limits: empty base-listing branch not exercised live; `/bai-viet` has no page URLs (cursor pagination) | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

@@ -25,7 +25,11 @@ useSeoMeta({
   ogDescription: () => t('category.indexSubtitle'),
   ogType: 'website',
   ogUrl: canonical,
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    // An index of nothing is thin content; it becomes indexable with its first category.
+    return grouped.value.length ? 'index, follow' : 'noindex, follow'
+  },
 })
 
 /** The tree the page shows, flattened with each parent followed by its children. */
