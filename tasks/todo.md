@@ -727,6 +727,15 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.m — home and search under the same criteria (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `/tim-kiem` audited: `noindex, follow`, self canonical with the query stripped, absent from the sitemap, no `SearchAction` — no change needed | live `:4006` |
+| Only the bare `/` is indexable; a query string (`?utm_source=`, `?page=2`) is `noindex, follow` with the canonical on `/` | `tm-shared/nuxt-layers/web-base/app/pages/index.vue` |
+| Home stays indexable with nothing to list; `/tim-kiem` stays noindex; the empty sitemap carries neither listing row | `scripts/build/test-empty-listing.ts` (14 checks) |
+| Verified live: `/` index, `?utm_source`/`?page=2` noindex, `/tim-kiem` + `?q=` noindex, sitemap 303 rows all 200 + indexable; typecheck, lint pass | — |
+
 ### WEB-08.l — the empty-listing branch is a script, not an afternoon (landed 2026-11-11)
 
 | Slice | Evidence |

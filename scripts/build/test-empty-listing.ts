@@ -44,6 +44,12 @@ const PORT = Number(args.get('port') || 4006)
 const ORIGIN = `http://${HOST}:${PORT}`
 const URI = args.get('uri') || process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:27017'
 
+/** The home page carries the brand, so it stays in the index even when everything else is empty. */
+const ALWAYS_INDEXED = [{ path: '/', title: 'home' }]
+
+/** The search page is never indexable; it answers the visitor who typed, not a crawler. */
+const NOINDEX_PAGES = [{ path: '/tim-kiem', title: 'search page' }]
+
 /** The pages a site without any content still has to serve, and how they must answer. */
 const EMPTY_LISTINGS = [
   { path: '/bai-viet', title: 'post listing' },
@@ -52,7 +58,7 @@ const EMPTY_LISTINGS = [
   { path: '/danh-muc', title: 'content category index' },
 ]
 const NO_CANONICAL = [{ path: '/gio-hang', title: 'cart', robots: 'noindex, follow' }]
-const LISTING_ROWS = ['/bai-viet', '/products', '/categories', '/danh-muc']
+const LISTING_ROWS = ['/bai-viet', '/products', '/categories', '/danh-muc', '/tim-kiem']
 
 let checks = 0
 let notRun = 0
@@ -197,6 +203,24 @@ async function main() {
   server.stdout?.pipe(log)
   server.stderr?.pipe(log)
   await waitForReady(server)
+
+  for (const page of ALWAYS_INDEXED) {
+    await check(`${page.path} (${page.title}) stays indexable and keeps itself canonical`, async () => {
+      const { status, html } = await get(page.path)
+      assert.equal(status, 200)
+      assert.equal(meta(html, 'robots'), 'index, follow')
+      assert.equal(canonicalOf(html), ORIGIN + page.path)
+    })
+  }
+
+  for (const page of NOINDEX_PAGES) {
+    await check(`${page.path} (${page.title}) answers 200 + noindex, follow`, async () => {
+      const { status, html } = await get(page.path)
+      assert.equal(status, 200)
+      assert.equal(meta(html, 'robots'), 'noindex, follow')
+      assert.equal(canonicalOf(html), ORIGIN + page.path)
+    })
+  }
 
   for (const page of EMPTY_LISTINGS) {
     await check(`${page.path} (${page.title}) answers 200 + noindex, follow`, async () => {

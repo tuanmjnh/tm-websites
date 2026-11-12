@@ -9,7 +9,12 @@ const requestUrl = useRequestURL()
 const { brandName, seo } = usePublicSite()
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
+const route = useRoute()
+
 const canonical = buildCanonicalUrl(baseUrl, '/')
+
+/** Only the bare URL is the home page; a query string is a view of it. */
+const bareHome = computed(() => Object.keys(route.query).length === 0)
 
 const featuredQuery = ref<CatalogListQuery>({ limit: 8, sort: 'newest' })
 const { result: featured, items: featuredItems } = useCatalogList(featuredQuery)
@@ -48,7 +53,12 @@ useSeoMeta({
   ogUrl: canonical,
   ogImage: `${baseUrl}/branding/og-cover.png`,
   twitterCard: 'summary_large_image',
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    // Campaign tags and ignored parameters make the same page under another URL, so
+    // they are kept out of the index instead of competing with the home page.
+    return bareHome.value ? 'index, follow' : 'noindex, follow'
+  },
 })
 
 /** The site itself: its name, its home URL and the language this page is in. */
