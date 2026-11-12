@@ -727,6 +727,15 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.u — the populated branch is covered too (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm test:empty-listing` writes one published post, verifies `/bai-viet` and its tag turn indexable and the sitemap gains the listing and record rows, then deletes it and verifies both revert | `scripts/build/test-empty-listing.ts` (25 checks) |
+| Cleanup is idempotent in `finally`; after a run the borrowed database has 0 content, 0 redirects, 0 audit and 0 idempotency rows | `bag-post` counts |
+| The sitemap sweep no longer returns from `main`, so later checks still run when a sitemap has rows | same file |
+| Limits: the record is inserted directly, so this covers the storefront read/index rules, not the CMS publish flow | — |
+
 ### WEB-08.t — 410 coverage, and why `/danh-muc` looked empty (landed 2026-11-11)
 
 | Slice | Evidence |

@@ -74,6 +74,27 @@ const LISTING_ROWS = ['/bai-viet', '/products', '/categories', '/danh-muc', '/ta
 const GONE_PATH = '/probe-410-test-empty-listing'
 let removeGoneRow: (() => Promise<void>) | null = null
 
+/**
+ * The record this run writes to prove a listing leaves the empty state, and the tag it
+ * carries. Both are removed in `finally`, so a run never changes the site it borrowed.
+ */
+const RECORD_KEY = 'probe-listing-record'
+const RECORD_SLUG = 'probe-listing-record'
+const RECORD_TAG = 'probe-listing'
+let removeRecord: (() => Promise<void>) | null = null
+
+/** Polls a page until it answers with the robots value a check expects, or the budget runs out. */
+async function waitForRobots(path: string, robots: string, budgetMs: number) {
+  const deadline = Date.now() + budgetMs
+  let last = { status: 0, html: '' }
+  while (Date.now() < deadline) {
+    last = await get(path)
+    if (meta(last.html, 'robots') === robots) return last
+    await new Promise(resolve => setTimeout(resolve, 2000))
+  }
+  return last
+}
+
 let checks = 0
 let notRun = 0
 let server: ChildProcess | null = null
@@ -316,20 +337,89 @@ async function main() {
 
   if (!locs.length) {
     skip('every sitemap URL is 200 + indexable', 'the sitemap has no rows')
-    return
   }
 
-  await check(`all ${locs.length} sitemap URLs are 200, indexable and self-canonical`, async () => {
-    const problems: string[] = []
-    for (const loc of locs) {
-      const response = await fetch(loc, { headers: { accept: 'text/html' } })
-      const html = await response.text()
-      if (response.status !== 200) problems.push(`${loc} -> ${response.status}`)
-      const robots = meta(html, 'robots')
-      if (robots.includes('noindex')) problems.push(`${loc} -> ${robots}`)
-      if (canonicalOf(html) !== loc) problems.push(`${loc} -> canonical ${canonicalOf(html) || '(none)'}`)
-    }
-    assert.deepEqual(problems, [])
+  if (locs.length) {
+    await check(`all ${locs.length} sitemap URLs are 200, indexable and self-canonical`, async () => {
+      const problems: string[] = []
+      for (const loc of locs) {
+        const response = await fetch(loc, { headers: { accept: 'text/html' } })
+        const html = await response.text()
+        if (response.status !== 200) problems.push(`${loc} -> ${response.status}`)
+        const robots = meta(html, 'robots')
+        if (robots.includes('noindex')) problems.push(`${loc} -> ${robots}`)
+        if (canonicalOf(html) !== loc) problems.push(`${loc} -> canonical ${canonicalOf(html) || '(none)'}`)
+      }
+      assert.deepEqual(problems, [])
+    })
+  }
+
+  // A listing only earns an index entry once it has something to list, so the run writes
+  // one published record, watches the flip and then takes the record away again.
+  const now = new Date()
+  const content = db.collection('content')
+  await content.deleteMany({ siteId: SITE_ID, key: RECORD_KEY })
+  await content.insertOne({
+    siteId: SITE_ID,
+    key: RECORD_KEY,
+    type: 'post',
+    status: 'published',
+    revision: 1,
+    locales: [{
+      locale: 'vi',
+      slug: RECORD_SLUG,
+      title: 'Probe record from test-empty-listing',
+      excerpt: 'Written and removed by the same run.',
+      body: 'Probe body.',
+      format: 'text',
+      keywords: [],
+      seo: { title: '', description: '', image: '' },
+    }],
+    categories: [],
+    tags: [RECORD_TAG],
+    media: [],
+    attributes: {},
+    publishAt: null,
+    unpublishAt: null,
+    publishedAt: now,
+    deletedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  })
+  removeRecord = async () => { await content.deleteMany({ siteId: SITE_ID, key: RECORD_KEY }) }
+
+  await check('/bai-viet turns indexable once it lists a record', async () => {
+    const page = await waitForRobots('/bai-viet', 'index, follow', 90_000)
+    assert.equal(page.status, 200)
+    assert.equal(meta(page.html, 'robots'), 'index, follow')
+    assert.equal(canonicalOf(page.html), `${ORIGIN}/bai-viet`)
+  })
+
+  await check(`/tag/${RECORD_TAG} turns indexable once a published post carries it`, async () => {
+    const page = await waitForRobots(`/tag/${RECORD_TAG}`, 'index, follow', 60_000)
+    assert.equal(page.status, 200)
+    assert.equal(meta(page.html, 'robots'), 'index, follow')
+  })
+
+  await check('the sitemap gains the listing and the record', async () => {
+    const xml = await get('/sitemap.xml')
+    const rows = [...xml.html.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1])
+    assert.ok(rows.includes(`${ORIGIN}/bai-viet`), `expected ${ORIGIN}/bai-viet among ${rows.length} rows`)
+    assert.ok(rows.includes(`${ORIGIN}/${RECORD_SLUG}`), `expected ${ORIGIN}/${RECORD_SLUG}`)
+  })
+
+  await removeRecord()
+  removeRecord = null
+
+  await check('/bai-viet leaves the index again after the record is removed', async () => {
+    const page = await waitForRobots('/bai-viet', 'noindex, follow', 90_000)
+    assert.equal(meta(page.html, 'robots'), 'noindex, follow')
+  })
+
+  await check('the sitemap drops the listing and the record again', async () => {
+    const xml = await get('/sitemap.xml')
+    assert.ok(!xml.html.includes(`${ORIGIN}/bai-viet`), 'the listing row survived the cleanup')
+    assert.ok(!xml.html.includes(`${ORIGIN}/${RECORD_SLUG}`), 'the record row survived the cleanup')
   })
 }
 
@@ -341,6 +431,7 @@ try {
 } finally {
   stopServer()
   if (removeGoneRow) await removeGoneRow().catch(() => undefined)
+  if (removeRecord) await removeRecord().catch(() => undefined)
   await new Promise(resolve => setTimeout(resolve, 500))
 }
 
