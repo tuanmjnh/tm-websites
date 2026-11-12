@@ -2,7 +2,8 @@
  * Legacy URL redirects.
  *
  * Runs before the router for document requests: a path present in the CMS
- * redirect map answers a 301/302 to its target instead of a 404. API routes,
+ * redirect map answers a 301/302 to its target, or is flagged as gone so the
+ * site's own error page can answer 410. API routes,
  * Nuxt build assets and anything with a file extension (sitemap, robots, images)
  * are never redirected, and a map row is skipped when the site has no Mongo
  * binding, so a CMS-only or unconfigured deployment keeps rendering normally.
@@ -26,6 +27,12 @@ export default defineEventHandler(async (event) => {
     if (!redirect) return
 
     setHeader(event, 'Cache-Control', 'no-store')
+    if (redirect.statusCode === 410) {
+      // A Nitro-level error here would replace the site's error page with a bare
+      // HTML response, so the page layer renders the 410 from this flag.
+      event.context.publicGone = true
+      return
+    }
     return sendRedirect(event, redirect.to, redirect.statusCode)
   } catch {
     // A redirect lookup must never turn a renderable page into a 500.

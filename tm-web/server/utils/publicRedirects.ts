@@ -16,10 +16,10 @@ import { withSiteDb } from './mongo'
 const TTL_MS = 30_000
 const MAX_ENTRIES = 500
 
-export interface ResolvedRedirect {
-  to: string
-  statusCode: 301 | 302
-}
+export type ResolvedRedirect =
+  | { to: string, statusCode: 301 | 302 }
+  /** A row the CMS marked gone: the path 410s instead of rendering a page. */
+  | { to: '', statusCode: 410 }
 
 interface CacheEntry {
   value: ResolvedRedirect | null
@@ -63,7 +63,18 @@ export async function findRedirect(event: H3Event, path: string): Promise<Resolv
     .select(PUBLIC_REDIRECT_PROJECTION)
     .lean<PublicRedirectDoc | null>())
 
-  if (!row || typeof row.to !== 'string' || !row.to) {
+  if (!row) {
+    remember(key, null)
+    return null
+  }
+
+  if (row.statusCode === 410) {
+    const gone: ResolvedRedirect = { to: '', statusCode: 410 }
+    remember(key, gone)
+    return gone
+  }
+
+  if (typeof row.to !== 'string' || !row.to) {
     remember(key, null)
     return null
   }

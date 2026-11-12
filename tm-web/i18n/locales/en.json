@@ -157,6 +157,8 @@
   "error": {
     "notFoundTitle": "Page not found",
     "notFoundDescription": "The page you are looking for does not exist, was removed, or is not published yet.",
+  "goneTitle": "This page has been removed",
+  "goneDescription": "This content was removed from the site and will not be back.",
     "serverTitle": "Unable to load this page",
     "serverDescription": "Something went wrong while loading the content. Please try again shortly.",
     "backHome": "Back to home"

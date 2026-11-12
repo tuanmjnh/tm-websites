@@ -681,6 +681,17 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live `:4006`: 303 `<loc>` (was 300) and 300 `<lastmod>`; `/bai-viet` `2026-11-07T04:33:14.378Z`, `/products` `2026-11-10T05:07:17.392Z` (equal to the newest item's `updatedAt`), `/categories` `2026-11-10T03:39:47.313Z`; `/gio-hang`, `/tim-kiem` and `/pages/*` absent. `pnpm typecheck` and `pnpm lint` pass | — |
 | Limit: home, `/danh-muc` and tag rows carry no `lastmod` (their payload has no timestamp) | — |
 
+### WEB-02 — a removed path can answer 410 (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `410` is a legal map row that stores no target; a gone row with a target is refused | `tm-shared/packages/flow-contracts/src/redirect-admin.ts`, `tm-cms/server/models/redirect.ts`, `tm-cms/server/services/redirectService.ts` |
+| A gone path never joins the loop graph, and a chain that reaches one stops there | `redirectService.ts` (`loadChain`, `assertNoConflict`, `resolveRedirect`) |
+| The storefront flags the request and renders the site's own error page with gone copy in both locales | `tm-web/server/middleware/redirects.ts`, `tm-web/server/utils/publicRedirects.ts`, `tm-web/app/middleware/public-gone.global.ts`, `error.vue`, `tm-web/i18n/locales/*.json` |
+| The CMS editor offers 410 and hides the target field | `tm-shared/nuxt-layers/cms-base/app/pages/redirects.vue` |
+| Verified live: a 410 row answers `410` with the app error page (vi/en), `422` with a target, 301 unchanged (`Location: /gioi-thieu`), unknown path still `404`, probes removed and both paths `404` again after deleting the rows; 15 redirect-service checks, `pnpm typecheck`, `pnpm lint` pass | — |
+| Limits: exact path only (no prefix/wildcard), CMS label is an English literal, editor not viewed in a browser | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

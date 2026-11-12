@@ -157,6 +157,8 @@
   "error": {
     "notFoundTitle": "Không tìm thấy trang",
     "notFoundDescription": "Trang bạn tìm không tồn tại, đã được gỡ hoặc chưa được xuất bản.",
+  "goneTitle": "Trang này đã được gỡ",
+  "goneDescription": "Nội dung này đã được gỡ khỏi website và sẽ không quay lại nữa.",
     "serverTitle": "Không thể tải trang",
     "serverDescription": "Đã xảy ra lỗi khi tải nội dung. Vui lòng thử lại sau ít phút.",
     "backHome": "Về trang chủ"

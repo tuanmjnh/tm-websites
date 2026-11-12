@@ -62,12 +62,15 @@ watch(query, () => {
 const statusItems = computed(() => [
   { label: t('admin.redirects.status.permanent'), value: 301 },
   { label: t('admin.redirects.status.temporary'), value: 302 },
+  // "410 Gone" reads the same in both CMS locales, so it stays a literal until
+  // the locale files carry a key of its own.
+  { label: '410 Gone', value: 410 },
 ])
 
 const emptyForm = () => ({
   from: '',
   to: '',
-  statusCode: 301 as 301 | 302,
+  statusCode: 301 as 301 | 302 | 410,
   isActive: true,
   note: '',
 })
@@ -108,7 +111,7 @@ async function submit() {
   try {
     const draft: AdminRedirectDraft = {
       from: form.from.trim(),
-      to: form.to.trim(),
+      to: form.statusCode === 410 ? '' : form.to.trim(),
       statusCode: form.statusCode,
       isActive: form.isActive,
       note: form.note.trim(),
@@ -238,7 +241,7 @@ if (canRead.value) await load()
               <div class="flex flex-wrap items-center gap-2 font-mono text-xs">
                 <span class="truncate text-highlighted">{{ row.from }}</span>
                 <UIcon name="i-lucide-arrow-right" class="size-3.5 text-muted" />
-                <span class="truncate text-default">{{ row.to }}</span>
+                <span class="truncate text-default">{{ row.to || '—' }}</span>
               </div>
               <div class="mt-1 flex flex-wrap items-center gap-2">
                 <UBadge color="neutral" variant="subtle" size="sm">{{ row.statusCode }}</UBadge>
@@ -292,7 +295,7 @@ if (canRead.value) await load()
           <UFormField :label="t('admin.redirects.fields.from')" name="redirect-from">
             <UInput v-model="form.from" class="w-full font-mono" placeholder="/bai-viet/cu" autofocus />
           </UFormField>
-          <UFormField :label="t('admin.redirects.fields.to')" name="redirect-to">
+          <UFormField v-if="form.statusCode !== 410" :label="t('admin.redirects.fields.to')" name="redirect-to">
             <UInput v-model="form.to" class="w-full font-mono" placeholder="/bai-viet/moi" />
           </UFormField>
           <div class="grid gap-3 sm:grid-cols-2">

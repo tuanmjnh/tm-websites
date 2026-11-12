@@ -7,10 +7,11 @@ import { z } from 'zod'
  * never read it, so old URLs kept 404ing. Here the map is an explicit editor
  * surface: one row per old path, resolved by the storefront before it renders a
  * page. Paths are site-relative and internal (`/bai-viet/cu`), never a full URL,
- * so an entry cannot turn the site into an open redirect.
+ * so an entry cannot turn the site into an open redirect. A row can also answer
+ * `410 Gone` for a path that was removed for good: it then carries no target.
  */
 
-export const ADMIN_REDIRECT_STATUS_CODES = [301, 302] as const
+export const ADMIN_REDIRECT_STATUS_CODES = [301, 302, 410] as const
 export type AdminRedirectStatusCode = (typeof ADMIN_REDIRECT_STATUS_CODES)[number]
 
 export const ADMIN_REDIRECT_PATH_MAX = 2048
@@ -22,7 +23,7 @@ export const AdminRedirectSchema = z.object({
   from: z.string(),
   /** Normalized internal target path. */
   to: z.string(),
-  statusCode: z.union([z.literal(301), z.literal(302)]),
+  statusCode: z.union([z.literal(301), z.literal(302), z.literal(410)]),
   /** An inactive row stays in the map but is ignored by the storefront. */
   isActive: z.boolean(),
   note: z.string(),
@@ -35,8 +36,9 @@ export type AdminRedirect = z.infer<typeof AdminRedirectSchema>
 
 export const AdminRedirectDraftSchema = z.object({
   from: z.string().trim().min(1).max(ADMIN_REDIRECT_PATH_MAX),
-  to: z.string().trim().min(1).max(ADMIN_REDIRECT_PATH_MAX),
-  statusCode: z.union([z.literal(301), z.literal(302)]).default(301),
+  /** Empty for a `410`: the path is gone, not moved, so it has no target. */
+  to: z.string().trim().max(ADMIN_REDIRECT_PATH_MAX).default(''),
+  statusCode: z.union([z.literal(301), z.literal(302), z.literal(410)]).default(301),
   isActive: z.boolean().default(true),
   note: z.string().trim().max(ADMIN_REDIRECT_NOTE_MAX).default(''),
 })

@@ -10,9 +10,19 @@ const { customer } = useCustomerConfig()
 
 const statusCode = computed(() => props.error?.statusCode ?? 500)
 const isNotFound = computed(() => statusCode.value === 404)
+/** The record existed once and was removed for good; a retry will not help. */
+const isGone = computed(() => statusCode.value === 410)
 
-const title = computed(() => (isNotFound.value ? t('error.notFoundTitle') : t('error.serverTitle')))
-const description = computed(() => (isNotFound.value ? t('error.notFoundDescription') : t('error.serverDescription')))
+const title = computed(() => {
+  if (isNotFound.value) return t('error.notFoundTitle')
+  if (isGone.value) return t('error.goneTitle')
+  return t('error.serverTitle')
+})
+const description = computed(() => {
+  if (isNotFound.value) return t('error.notFoundDescription')
+  if (isGone.value) return t('error.goneDescription')
+  return t('error.serverDescription')
+})
 
 const goHome = () => clearError({ redirect: '/' })
 </script>
@@ -23,7 +33,7 @@ const goHome = () => clearError({ redirect: '/' })
 
     <main class="relative z-10 w-full max-w-lg text-center">
       <div class="mb-6 inline-flex items-center gap-2 rounded-[4px] border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-        <UIcon :name="isNotFound ? 'i-lucide-compass' : 'i-lucide-triangle-alert'" class="size-3.5" />
+        <UIcon :name="isNotFound || isGone ? 'i-lucide-compass' : 'i-lucide-triangle-alert'" class="size-3.5" />
         <span>{{ customer?.companyName || 'TM Web' }}</span>
       </div>
 

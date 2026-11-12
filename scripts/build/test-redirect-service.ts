@@ -200,6 +200,27 @@ try {
     assert.deepEqual(rows.map(row => row.action), ['create', 'delete', 'update'])
     assert.ok(rows.every(row => row.actor?.id === 'tester'))
   })
+  await check('a gone path answers 410 and stores no target', async () => {
+    const gone = await createRedirect(Redirect, SITE, draft('/da-xoa', '', { statusCode: 410 }))
+    assert.equal(gone.statusCode, 410)
+    assert.equal(gone.to, '')
+    assert.deepEqual(await resolveRedirect(Redirect, SITE, '/da-xoa'), { to: '', statusCode: 410 })
+  })
+
+  await check('a gone path cannot carry a target', async () => {
+    await assert.rejects(
+      createRedirect(Redirect, SITE, draft('/da-xoa-co-dich', '/bai-viet/moi', { statusCode: 410 })),
+      isServiceError(422, 'REDIRECT_TARGET_NOT_ALLOWED'),
+    )
+  })
+
+  await check('a redirect to a gone path stops at the gone row', async () => {
+    await createRedirect(Redirect, SITE, draft('/cu-vao-da-xoa', '/da-xoa'))
+    assert.deepEqual(
+      await resolveRedirect(Redirect, SITE, '/cu-vao-da-xoa'),
+      { to: '/da-xoa', statusCode: 301 },
+    )
+  })
 } finally {
   await connection.dropDatabase()
   await closeDatabaseConnections()

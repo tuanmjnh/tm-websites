@@ -17,7 +17,7 @@ export interface RedirectDocument {
   siteId: string
   from: string
   to: string
-  statusCode: 301 | 302
+  statusCode: 301 | 302 | 410
   isActive: boolean
   note: string
   revision: number
@@ -29,8 +29,9 @@ export const redirectSchema = new Schema<RedirectDocument>(
   {
     siteId: { type: String, required: true },
     from: { type: String, required: true },
-    to: { type: String, required: true },
-    statusCode: { type: Number, enum: [301, 302], default: 301 },
+    // A `410` row stores no target: that path is gone rather than moved.
+    to: { type: String, default: '' },
+    statusCode: { type: Number, enum: [301, 302, 410], default: 301 },
     isActive: { type: Boolean, default: true },
     note: { type: String, default: '' },
     revision: { type: Number, required: true, default: 1 },

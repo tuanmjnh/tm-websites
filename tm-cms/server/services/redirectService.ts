@@ -16,10 +16,11 @@ import type { RedirectDocument } from '../models/redirect'
 /**
  * Redirect map commands and queries.
  *
- * A row answers "this old path now lives there" with a 301/302, and the
- * storefront reads it before rendering a page. Paths are internal and
- * site-relative: an entry can never point a visitor at another host, so the map
- * is not an open-redirect surface. Every write records one audit entry.
+ * A row answers "this old path now lives there" with a 301/302, or "this path is
+ * gone for good" with a 410 and no target, and the storefront reads it before
+ * rendering a page. Paths are internal and site-relative: an entry can never
+ * point a visitor at another host, so the map is not an open-redirect surface.
+ * Every write records one audit entry.
  */
 
 export class RedirectServiceError extends Error {
@@ -84,12 +85,37 @@ export function normalizeRedirectPath(value: unknown, field: string): string {
   return path
 }
 
+/** The stored code decides the answer; anything else is read as a 301. */
+function toAdminStatusCode(value: unknown): 301 | 302 | 410 {
+  if (value === 302) return 302
+  if (value === 410) return 410
+  return 301
+}
+
+/**
+ * A redirect needs an internal target; a gone row must not carry one, because
+ * there is nowhere to send the visitor and a stray target would read as advice.
+ */
+function normalizeRedirectTarget(statusCode: number, value: unknown): string {
+  if (statusCode === 410) {
+    if (typeof value === 'string' && value.trim()) {
+      throw new RedirectServiceError(
+        422,
+        'REDIRECT_TARGET_NOT_ALLOWED',
+        'A gone path cannot have a target',
+      )
+    }
+    return ''
+  }
+  return normalizeRedirectPath(value, 'to')
+}
+
 function toAdminRedirect(record: RedirectRecord): AdminRedirect {
   return {
     id: String(record._id),
     from: record.from,
     to: record.to,
-    statusCode: record.statusCode === 302 ? 302 : 301,
+    statusCode: toAdminStatusCode(record.statusCode),
     isActive: record.isActive !== false,
     note: record.note ?? '',
     revision: Number(record.revision) || 1,
@@ -133,7 +159,8 @@ async function loadChain(
   siteId: string,
   ignoreId?: Types.ObjectId,
 ): Promise<Map<string, string>> {
-  const filter: Record<string, unknown> = { siteId, isActive: true }
+  // A gone row ends a chain instead of continuing one, so it is not an edge.
+  const filter: Record<string, unknown> = { siteId, isActive: true, statusCode: { $ne: 410 } }
   if (ignoreId) filter._id = { $ne: ignoreId }
   const rows = await model.find(filter).select('from to').lean<{ from: string, to: string }[]>()
   return new Map(rows.map(row => [row.from, row.to]))
@@ -142,9 +169,11 @@ async function loadChain(
 async function assertNoConflict(
   model: Model<RedirectDocument>,
   siteId: string,
-  candidate: { from: string, to: string },
+  candidate: { from: string, to: string, statusCode: 301 | 302 | 410 },
   ignoreId?: Types.ObjectId,
 ): Promise<void> {
+  // A gone path has no target, so it cannot loop and cannot be reached by one.
+  if (candidate.statusCode === 410) return
   if (candidate.from === candidate.to) {
     throw new RedirectServiceError(422, 'REDIRECT_PATH_SAME', 'A path cannot redirect to itself')
   }
@@ -192,8 +221,8 @@ export async function createRedirect(
   meta?: RedirectWriteMeta,
 ): Promise<AdminRedirect> {
   const from = normalizeRedirectPath(input.from, 'from')
-  const to = normalizeRedirectPath(input.to, 'to')
-  await assertNoConflict(model, siteId, { from, to })
+  const to = normalizeRedirectTarget(input.statusCode, input.to)
+  await assertNoConflict(model, siteId, { from, to, statusCode: input.statusCode })
 
   let created: RedirectRecord
   try {
@@ -247,8 +276,8 @@ export async function updateRedirect(
   }
 
   const from = normalizeRedirectPath(input.from, 'from')
-  const to = normalizeRedirectPath(input.to, 'to')
-  await assertNoConflict(model, siteId, { from, to }, redirectId)
+  const to = normalizeRedirectTarget(input.statusCode, input.to)
+  await assertNoConflict(model, siteId, { from, to, statusCode: input.statusCode }, redirectId)
 
   let updated: RedirectRecord | null
   try {
@@ -356,7 +385,7 @@ export async function resolveRedirect(
   model: Model<RedirectDocument>,
   siteId: string,
   path: string,
-): Promise<{ to: string, statusCode: 301 | 302 } | null> {
+): Promise<{ to: string, statusCode: 301 | 302 | 410 } | null> {
   let normalized: string
   try {
     normalized = normalizeRedirectPath(path, 'path')
@@ -366,15 +395,17 @@ export async function resolveRedirect(
 
   const first = await model.findOne({ siteId, from: normalized, isActive: true }).lean<RedirectRecord>()
   if (!first) return null
+  if (toAdminStatusCode(first.statusCode) === 410) return { to: '', statusCode: 410 }
 
   let target = first.to
   for (let hop = 0; hop < MAX_CHAIN; hop += 1) {
     if (target === normalized) return null
     const next = await model.findOne({ siteId, from: target, isActive: true }).lean<RedirectRecord>()
-    if (!next) break
+    // A gone target is the end of the chain: the visitor must not follow on.
+    if (!next || toAdminStatusCode(next.statusCode) === 410) break
     target = next.to
   }
 
   if (target === normalized) return null
-  return { to: target, statusCode: first.statusCode === 302 ? 302 : 301 }
+  return { to: target, statusCode: toAdminStatusCode(first.statusCode) }
 }
