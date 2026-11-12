@@ -692,6 +692,15 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live: a 410 row answers `410` with the app error page (vi/en), `422` with a target, 301 unchanged (`Location: /gioi-thieu`), unknown path still `404`, probes removed and both paths `404` again after deleting the rows; 15 redirect-service checks, `pnpm typecheck`, `pnpm lint` pass | — |
 | Limits: exact path only (no prefix/wildcard), CMS label is an English literal, editor not viewed in a browser | — |
 
+### WEB-08.h — every sitemap row carries its own freshness (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| The builder accepts the home freshness instead of always seeding an undated home row | `tm-shared/packages/flow-utils/src/seo.ts` (`buildSitemapEntries`) |
+| Home is dated by the newest content/catalog record; tag pages by one aggregation over published content | `tm-web/server/routes/sitemap.xml.ts`, `tm-web/server/utils/publicCategories.ts` (`listContentTagSitemapEntries`) |
+| Verified live `:4006`: 303 `<loc>` and 303 `<lastmod>` (all rows dated); `/` `2026-11-10T05:07:17.392Z`; `/tag/about` and `/tag/silver` `2026-11-07T04:33:14.378Z`; a draft post's tags stay out. 24 web-site checks, `pnpm typecheck`, `pnpm lint` pass | — |
+| Limit: a `/danh-muc` index row stays undated (content categories carry no timestamp) | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)

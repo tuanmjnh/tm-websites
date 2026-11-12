@@ -43,8 +43,15 @@ export function escapeXml(value: string): string {
     .replace(/'/g, '&apos;')
 }
 
-export function buildSitemapEntries(baseUrl: string, pages: SitemapPage[]): SitemapEntry[] {
-  const entries: SitemapEntry[] = [{ loc: buildCanonicalUrl(baseUrl, '/') }]
+export function buildSitemapEntries(
+  baseUrl: string,
+  pages: SitemapPage[],
+  options: { homeLastmod?: string | null } = {},
+): SitemapEntry[] {
+  // The home page is always listed; the caller can date it when it knows which
+  // record the page currently renders.
+  const home = buildCanonicalUrl(baseUrl, '/')
+  const entries: SitemapEntry[] = [options.homeLastmod ? { loc: home, lastmod: options.homeLastmod } : { loc: home }]
   const seen = new Set(entries.map(entry => entry.loc))
 
   for (const page of pages) {

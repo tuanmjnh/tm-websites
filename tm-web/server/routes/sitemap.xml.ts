@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const [pages, categories, tags, products, catalogCategories] = await Promise.all([
     listContentSitemapEntries(event),
     fetchPublicContentCategories(event),
-    fetchPublicContentTags(event),
+    listContentTagSitemapEntries(event),
     // A catalog that is not connected or not reachable must not take the whole
     // sitemap (and with it the content pages) down.
     listCatalogSitemapEntries(event).catch(() => []),
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     // The index is only worth a crawl entry when it lists something.
     ...(categories.length ? [{ path: '/danh-muc' }] : []),
     ...categories.map(category => ({ path: `/danh-muc/${category.slug}` })),
-    ...tags.map(tag => ({ path: `/tag/${encodeURIComponent(tag)}` })),
+    ...tags.map(tag => ({ path: `/tag/${encodeURIComponent(tag.tag)}`, lastmod: tag.lastmod })),
   ]
 
   // A listing page is a crawlable URL in its own right, and it is only worth a
@@ -44,7 +44,14 @@ export default defineEventHandler(async (event) => {
     ...(catalogCategories.length ? [{ path: '/categories', lastmod: newestLastmod(catalogCategories) }] : []),
   ]
 
-  const xml = buildSitemapXml(buildSitemapEntries(baseUrl, [...pages, ...products, ...catalogCategories, ...taxonomy, ...listings]))
+  // The home page shows the newest of both feeds, so it is as fresh as the
+  // freshest record either of them carries.
+  const homeLastmod = newestLastmod([...pages, ...products])
+  const xml = buildSitemapXml(buildSitemapEntries(
+    baseUrl,
+    [...pages, ...products, ...catalogCategories, ...taxonomy, ...listings],
+    { homeLastmod },
+  ))
 
   setHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
   setHeader(event, 'Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600')

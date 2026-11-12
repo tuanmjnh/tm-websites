@@ -85,3 +85,37 @@ export async function fetchPublicContentTags(event: H3Event): Promise<string[]> 
       .sort((a, b) => a.localeCompare(b))
   })
 }
+
+/** Mongo dates come back as `Date`; a sitemap row needs the W3C string or nothing. */
+function sitemapLastmod(value: unknown): string | null {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString()
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
+  }
+  return null
+}
+
+/**
+ * Sitemap rows for the tag landings.
+ *
+ * A tag page changes when its newest published post does, so one aggregation
+ * dates every tag at once instead of one query per tag. A fresh tag with no
+ * published content is left undated rather than dropped: the page exists.
+ */
+export async function listContentTagSitemapEntries(
+  event: H3Event,
+): Promise<{ tag: string, lastmod: string | null }[]> {
+  return withSiteDb(event, async () => {
+    const rows = await PublicContentModel.aggregate([
+      { $match: buildPublishedListFilter({}) },
+      { $unwind: '$tags' },
+      { $group: { _id: '$tags', updatedAt: { $max: '$updatedAt' } } },
+      { $sort: { _id: 1 } },
+    ])
+
+    return (rows as { _id: unknown, updatedAt?: unknown }[])
+      .filter((row): row is { _id: string, updatedAt?: unknown } => typeof row._id === 'string' && row._id.trim().length > 0)
+      .map(row => ({ tag: row._id, lastmod: sitemapLastmod(row.updatedAt) }))
+  })
+}

@@ -10,7 +10,14 @@ import {
   publicMenuLabel,
   toPublicMenu,
 } from '../../tm-shared/packages/flow-contracts/src/site-public.js'
-import { applySeoTitleTemplate, buildBreadcrumbJsonLd, buildItemListJsonLd, buildWebSiteJsonLd } from '../../tm-shared/packages/flow-utils/src/seo.js'
+import {
+  applySeoTitleTemplate,
+  buildBreadcrumbJsonLd,
+  buildItemListJsonLd,
+  buildSitemapEntries,
+  buildSitemapXml,
+  buildWebSiteJsonLd,
+} from '../../tm-shared/packages/flow-utils/src/seo.js'
 
 let checks = 0
 
@@ -254,6 +261,23 @@ check('the site block advertises no search action, because the search page is no
   const data = buildWebSiteJsonLd('https://shop.test', { name: 'Sen Tuấn' })
   assert.equal('potentialAction' in (data ?? {}), false)
   assert.equal(data?.inLanguage, undefined)
+})
+
+check('the sitemap always lists the home page, undated when its freshness is unknown', () => {
+  const entries = buildSitemapEntries('https://shop.test/', [{ path: '/gioi-thieu', lastmod: '2026-01-02T03:04:05.000Z' }])
+  assert.deepEqual(entries[0], { loc: 'https://shop.test/' })
+  assert.deepEqual(entries[1], { loc: 'https://shop.test/gioi-thieu', lastmod: '2026-01-02T03:04:05.000Z' })
+})
+
+check('a known home freshness is published instead of guessed at', () => {
+  const xml = buildSitemapXml(buildSitemapEntries('https://shop.test', [], { homeLastmod: '2026-02-03T04:05:06.000Z' }))
+  assert.ok(xml.includes('<loc>https://shop.test/</loc>'))
+  assert.ok(xml.includes('<lastmod>2026-02-03T04:05:06.000Z</lastmod>'))
+})
+
+check('a page listed twice is published once', () => {
+  const entries = buildSitemapEntries('https://shop.test', [{ path: '/' }, { path: '/bai-viet' }, { path: 'bai-viet' }])
+  assert.deepEqual(entries.map(entry => entry.loc), ['https://shop.test/', 'https://shop.test/bai-viet'])
 })
 
 check('category slug overrides are applied per menu item', () => {
