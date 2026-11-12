@@ -37,6 +37,8 @@ const orphans = computed(() => {
   return categories.value.filter(category => category.parent && !keys.has(category.parent))
 })
 
+const robots = usePageRobots({ empty: () => !categories.value.length })
+
 useSeoMeta({
   title: () => t('categoryContent.indexTitle'),
   description: () => t('categoryContent.indexSubtitle'),
@@ -44,11 +46,7 @@ useSeoMeta({
   ogDescription: () => t('categoryContent.indexSubtitle'),
   ogType: 'website',
   ogUrl: canonical,
-  robots: () => {
-    if (config.public.indexable === false) return 'noindex, nofollow'
-    // An index of nothing is thin content; it becomes indexable with its first category.
-    return categories.value.length ? 'index, follow' : 'noindex, follow'
-  },
+  robots,
 })
 
 /** Home → posts → the category index, as the template draws it. */

@@ -89,6 +89,11 @@ const activeStatus = computed(() => {
   return null
 })
 
+const robots = usePageRobots({
+  keepQuery: ['page'],
+  empty: () => readPage() === 1 && !items.value.length,
+})
+
 useSeoMeta({
   title: () => title.value,
   description: () => description.value || t('category.indexSubtitle'),
@@ -100,15 +105,7 @@ useSeoMeta({
   ogImageAlt: () => title.value,
   twitterImage: () => resolveSiteUrl(baseUrl, category.value?.image || '/branding/og-cover.png'),
   twitterImageAlt: () => title.value,
-  robots: () => {
-    if (config.public.indexable === false) return 'noindex, nofollow'
-    // A filtered or otherwise parameterised view is the category under a query string,
-    // and a category with nothing to list is thin content. Neither earns an index entry;
-    // a plain paged list does, because the canonical points at that page.
-    if (hasOtherQuery.value) return 'noindex, follow'
-    if (readPage() === 1 && !items.value.length) return 'noindex, follow'
-    return 'index, follow'
-  },
+  robots,
 })
 
 useHead(() => {

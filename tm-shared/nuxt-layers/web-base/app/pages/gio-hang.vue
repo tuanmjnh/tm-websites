@@ -21,7 +21,7 @@ const {
 useSeoMeta({
   title: () => t('cart.title'),
   // A cart is per visitor and has no canonical content.
-  robots: 'noindex, follow',
+  robots: usePageRobots({ never: true }),
 })
 
 onMounted(async () => {

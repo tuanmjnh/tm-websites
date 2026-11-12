@@ -9,12 +9,7 @@ const requestUrl = useRequestURL()
 const { brandName, seo } = usePublicSite()
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
-const route = useRoute()
-
 const canonical = buildCanonicalUrl(baseUrl, '/')
-
-/** Only the bare URL is the home page; a query string is a view of it. */
-const bareHome = computed(() => Object.keys(route.query).length === 0)
 
 const featuredQuery = ref<CatalogListQuery>({ limit: 8, sort: 'newest' })
 const { result: featured, items: featuredItems } = useCatalogList(featuredQuery)
@@ -44,6 +39,9 @@ const { data: latestPosts } = await useAsyncData<PublicContentListItem[]>(
 // The settings document owns the site description; the translated copy is the fallback.
 const siteDescription = computed(() => seo.value?.defaultDescription || t('home.seo.description', { company: brandName.value }))
 
+/** Only the bare home URL is the page; campaign tags and ignored parameters are views. */
+const robots = usePageRobots()
+
 useSeoMeta({
   title: () => brandName.value,
   description: () => siteDescription.value,
@@ -53,12 +51,7 @@ useSeoMeta({
   ogUrl: canonical,
   ogImage: `${baseUrl}/branding/og-cover.png`,
   twitterCard: 'summary_large_image',
-  robots: () => {
-    if (config.public.indexable === false) return 'noindex, nofollow'
-    // Campaign tags and ignored parameters make the same page under another URL, so
-    // they are kept out of the index instead of competing with the home page.
-    return bareHome.value ? 'index, follow' : 'noindex, follow'
-  },
+  robots,
 })
 
 /** The site itself: its name, its home URL and the language this page is in. */

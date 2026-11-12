@@ -70,7 +70,7 @@ useSeoMeta({
   ogDescription: () => t('search.subtitle'),
   ogType: 'website',
   ogUrl: canonical,
-  robots: 'noindex, follow',
+  robots: usePageRobots({ never: true }),
 })
 
 useHead({

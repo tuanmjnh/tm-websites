@@ -47,8 +47,12 @@ const URI = args.get('uri') || process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:
 /** The home page carries the brand, so it stays in the index even when everything else is empty. */
 const ALWAYS_INDEXED = [{ path: '/', title: 'home' }]
 
-/** The search page is never indexable; it answers the visitor who typed, not a crawler. */
-const NOINDEX_PAGES = [{ path: '/tim-kiem', title: 'search page' }]
+/** Pages that never ask to be indexed, and the canonical each one must keep. */
+const NOINDEX_PAGES = [
+  { path: '/tim-kiem', title: 'search page' },
+  { path: '/tag/about', title: 'tag landing with no published post' },
+  { path: '/tag/about?page=2', title: 'tag query view', canonical: '/tag/about' },
+]
 
 /** The pages a site without any content still has to serve, and how they must answer. */
 const EMPTY_LISTINGS = [
@@ -58,7 +62,7 @@ const EMPTY_LISTINGS = [
   { path: '/danh-muc', title: 'content category index' },
 ]
 const NO_CANONICAL = [{ path: '/gio-hang', title: 'cart', robots: 'noindex, follow' }]
-const LISTING_ROWS = ['/bai-viet', '/products', '/categories', '/danh-muc', '/tim-kiem']
+const LISTING_ROWS = ['/bai-viet', '/products', '/categories', '/danh-muc', '/tag/about', '/tim-kiem']
 
 let checks = 0
 let notRun = 0
@@ -218,7 +222,7 @@ async function main() {
       const { status, html } = await get(page.path)
       assert.equal(status, 200)
       assert.equal(meta(html, 'robots'), 'noindex, follow')
-      assert.equal(canonicalOf(html), ORIGIN + page.path)
+      assert.equal(canonicalOf(html), ORIGIN + (page.canonical ?? page.path))
     })
   }
 

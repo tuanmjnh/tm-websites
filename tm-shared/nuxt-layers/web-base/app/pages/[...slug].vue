@@ -80,6 +80,11 @@ const formattedDate = computed(() => {
   return new Intl.DateTimeFormat(locale.value === 'en' ? 'en-US' : 'vi-VN', { dateStyle: 'medium' }).format(date)
 })
 
+/** One record has one public URL: `/pages/<key>` and any query view are aliases. */
+const robots = usePageRobots({
+  alias: () => canonical.value !== buildCanonicalUrl(baseUrl, route.path),
+})
+
 useSeoMeta({
   title: () => seoTitle.value,
   description: () => seoDescription.value,
@@ -94,14 +99,7 @@ useSeoMeta({
   articlePublishedTime: () => content.value?.publishedAt || undefined,
   articleModifiedTime: () => content.value?.updatedAt || undefined,
   twitterCard: 'summary_large_image',
-  robots: () => {
-    if (config.public.indexable === false) return 'noindex, nofollow'
-    // One record has one public URL. The `/pages/<key>` alias and any query view
-    // answer the same record under a second URL, so they are kept out of the index
-    // instead of competing with the canonical one.
-    if (Object.keys(route.query).length) return 'noindex, follow'
-    return canonical.value === buildCanonicalUrl(baseUrl, route.path) ? 'index, follow' : 'noindex, follow'
-  },
+  robots,
 })
 
 useHead({

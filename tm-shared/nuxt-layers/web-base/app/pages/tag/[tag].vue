@@ -62,6 +62,8 @@ async function load(reset = true) {
 await load()
 watch([tag, locale], () => load())
 
+const robots = usePageRobots({ empty: () => !items.value.length })
+
 useSeoMeta({
   title: () => `#${tag.value}`,
   description: () => t('tag.subtitle', { tag: tag.value }),
@@ -69,13 +71,7 @@ useSeoMeta({
   ogDescription: () => t('tag.subtitle', { tag: tag.value }),
   ogType: 'website',
   ogUrl: () => canonical.value,
-  robots: () => {
-    if (config.public.indexable === false) return 'noindex, nofollow'
-    // The listing pages through a cursor, so no query string names a page: a query
-    // view is the same tag under another URL and does not earn an index entry.
-    if (Object.keys(route.query).length) return 'noindex, follow'
-    return items.value.length ? 'index, follow' : 'noindex, follow'
-  },
+  robots,
 })
 
 /** Home → posts → the tag, matching the trail the template renders. */

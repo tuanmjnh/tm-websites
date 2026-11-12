@@ -137,6 +137,8 @@ const pageModel = computed({
 
 const activeStatus = computed(() => (result.value.status === 'ok' ? null : result.value.status))
 
+const robots = usePageRobots({ keepQuery: ['page'], empty: () => !items.value.length })
+
 useSeoMeta({
   title: () => t('catalog.title'),
   description: () => t('catalog.subtitle'),
@@ -144,13 +146,7 @@ useSeoMeta({
   ogDescription: () => t('catalog.subtitle'),
   ogType: 'website',
   ogUrl: () => canonical.value,
-  robots: () => {
-    if (config.public.indexable === false) return 'noindex, nofollow'
-    // A filtered view is the catalog under a query string, and an empty catalog is
-    // thin content; only the plain listing earns an index entry.
-    if (urlFilters.value) return 'noindex, follow'
-    return items.value.length ? 'index, follow' : 'noindex, follow'
-  },
+  robots,
 })
 
 /**

@@ -18,6 +18,8 @@ const grouped = computed(() => {
   }))
 })
 
+const robots = usePageRobots({ empty: () => !grouped.value.length })
+
 useSeoMeta({
   title: () => t('category.indexTitle'),
   description: () => t('category.indexSubtitle'),
@@ -25,11 +27,7 @@ useSeoMeta({
   ogDescription: () => t('category.indexSubtitle'),
   ogType: 'website',
   ogUrl: canonical,
-  robots: () => {
-    if (config.public.indexable === false) return 'noindex, nofollow'
-    // An index of nothing is thin content; it becomes indexable with its first category.
-    return grouped.value.length ? 'index, follow' : 'noindex, follow'
-  },
+  robots,
 })
 
 /** The tree the page shows, flattened with each parent followed by its children. */

@@ -727,6 +727,16 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.q — one robots rule, in one place (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `usePageRobots({ keepQuery, empty, alias, never })` holds the site switch, the query-view rule, the alias rule and the empty rule | `tm-shared/nuxt-layers/web-base/app/composables/usePageRobots.ts` |
+| Eleven pages now pass facts instead of repeating the rule; the paged catalog and category pages keep their `page` exception | pages under `tm-shared/nuxt-layers/web-base/app/pages/` |
+| `pnpm test:empty-listing` gained the tag landing and its query view (16 checks) | `scripts/build/test-empty-listing.ts` |
+| After the refactor, 22 live URLs answer exactly as before; sitemap 303; typecheck, lint pass | live `:4006` |
+| Limits: `danh-muc/[slug].vue` keeps its inline rule until the editor's in-flight work on that file lands | — |
+
 ### WEB-08.p — tag pages and their query views (landed 2026-11-11)
 
 | Slice | Evidence |
