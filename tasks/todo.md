@@ -727,6 +727,15 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.t — 410 coverage, and why `/danh-muc` looked empty (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm test:empty-listing` writes one 410 redirect row, checks the gone page (`410` + `noindex` + no canonical) and the sitemap, then removes the row in `finally` | `scripts/build/test-empty-listing.ts` (20 checks), `bag-post.content_redirects` 0 after |
+| The six `content_categories` rows in `sen-tuan` are legacy documents in a collection nothing reads; the storefront reads `categories`, which has 0 rows — that is why `/danh-muc` is empty | database inspection, `tm-web/server/models/contentCategoryPublic.ts` |
+| The empty branch of `/danh-muc/<slug>` was verified live with a temporary category: `200` + `noindex` + self canonical, `/danh-muc` indexable only while it listed one, `404` after deletion | probe run, cleaned up |
+| Limits: the probe writes to `sen-tuan` briefly; a crash would leave `probe-danh-muc-rong` behind for manual removal; legacy `content_categories` cleanup belongs to the Hub import slice | — |
+
 ### WEB-08.s — the last inline rule, and 404 coverage (landed 2026-11-11)
 
 | Slice | Evidence |

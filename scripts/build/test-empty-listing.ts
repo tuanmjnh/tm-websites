@@ -70,6 +70,10 @@ const EMPTY_LISTINGS = [
 const NO_CANONICAL = [{ path: '/gio-hang', title: 'cart', robots: 'noindex, follow' }]
 const LISTING_ROWS = ['/bai-viet', '/products', '/categories', '/danh-muc', '/tag/about', '/tim-kiem']
 
+/** A redirect row this run owns, so the 410 page can be checked and then removed. */
+const GONE_PATH = '/probe-410-test-empty-listing'
+let removeGoneRow: (() => Promise<void>) | null = null
+
 let checks = 0
 let notRun = 0
 let server: ChildProcess | null = null
@@ -214,6 +218,23 @@ async function main() {
   server.stderr?.pipe(log)
   await waitForReady(server)
 
+  // The 410 branch needs a row to answer with, so this run writes exactly one and removes
+  // it in `finally`. It is the test's row, not the site's data, and it never survives a run.
+  const redirects = db.collection('content_redirects')
+  await redirects.deleteMany({ siteId: SITE_ID, from: GONE_PATH })
+  await redirects.insertOne({
+    siteId: SITE_ID,
+    from: GONE_PATH,
+    to: '',
+    statusCode: 410,
+    isActive: true,
+    note: 'probe row from test-empty-listing, removed by the same run',
+    revision: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+  removeGoneRow = async () => { await redirects.deleteMany({ siteId: SITE_ID, from: GONE_PATH }) }
+
   for (const page of ALWAYS_INDEXED) {
     await check(`${page.path} (${page.title}) stays indexable and keeps itself canonical`, async () => {
       const { status, html } = await get(page.path)
@@ -262,6 +283,20 @@ async function main() {
     })
   }
 
+  await check(`${GONE_PATH} (gone redirect) answers 410 + noindex, follow with no canonical`, async () => {
+    const deadline = Date.now() + 45_000
+    let last = { status: 0, html: '' }
+    while (Date.now() < deadline) {
+      last = await get(GONE_PATH)
+      if (last.status === 410) break
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+    // The redirect map is cached for 30s, so a slow first read is expected to settle.
+    assert.equal(last.status, 410, `the redirect map still answered ${last.status}`)
+    assert.equal(meta(last.html, 'robots'), 'noindex, follow')
+    assert.equal(canonicalOf(last.html), '')
+  })
+
   const sitemap = await get('/sitemap.xml')
   const locs = [...sitemap.html.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1])
 
@@ -273,6 +308,10 @@ async function main() {
   await check('the sitemap lists no listing that is currently noindex', () => {
     const listed = locs.filter(loc => LISTING_ROWS.some(row => loc === ORIGIN + row))
     assert.deepEqual(listed, [])
+  })
+
+  await check('the sitemap never lists the gone path', () => {
+    assert.ok(!locs.some(loc => loc.includes(GONE_PATH)), `found ${ORIGIN}${GONE_PATH}`)
   })
 
   if (!locs.length) {
@@ -301,6 +340,7 @@ try {
   process.exitCode = 1
 } finally {
   stopServer()
+  if (removeGoneRow) await removeGoneRow().catch(() => undefined)
   await new Promise(resolve => setTimeout(resolve, 500))
 }
 
