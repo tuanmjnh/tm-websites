@@ -727,6 +727,15 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
 | Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
 
+### WEB-08.s — the last inline rule, and 404 coverage (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| `/danh-muc/<slug>` now uses `usePageRobots({ empty })`; only that hunk was committed, the editor's other changes in the file stay uncommitted | `tm-shared/nuxt-layers/web-base/app/pages/danh-muc/[slug].vue` |
+| `pnpm test:empty-listing` asserts unknown product and category detail URLs are `404` + `noindex` + no canonical | `scripts/build/test-empty-listing.ts` (18 checks) |
+| Verified live: three unknown detail URLs `404` + `noindex`; `/danh-muc`, `/products`, `/` unchanged; sitemap 303; typecheck, lint pass | — |
+| Limits: `/danh-muc/<slug>`'s empty branch not driven live (no served content category) | — |
+
 ### WEB-08.r — two URLs that changed answer, on purpose (landed 2026-11-11)
 
 | Slice | Evidence |

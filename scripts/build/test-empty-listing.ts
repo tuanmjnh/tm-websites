@@ -54,6 +54,12 @@ const NOINDEX_PAGES = [
   { path: '/tag/about?page=2', title: 'tag query view', canonical: '/tag/about' },
 ]
 
+/** A detail URL for a record this site does not have is a real 404, not an empty page. */
+const NOT_FOUND_PAGES = [
+  { path: '/products/khong-ton-tai', title: 'unknown product' },
+  { path: '/categories/khong-ton-tai', title: 'unknown category' },
+]
+
 /** The pages a site without any content still has to serve, and how they must answer. */
 const EMPTY_LISTINGS = [
   { path: '/bai-viet', title: 'post listing' },
@@ -223,6 +229,15 @@ async function main() {
       assert.equal(status, 200)
       assert.equal(meta(html, 'robots'), 'noindex, follow')
       assert.equal(canonicalOf(html), ORIGIN + (page.canonical ?? page.path))
+    })
+  }
+
+  for (const page of NOT_FOUND_PAGES) {
+    await check(`${page.path} (${page.title}) is 404 + noindex, follow with no canonical`, async () => {
+      const { status, html } = await get(page.path)
+      assert.equal(status, 404)
+      assert.equal(meta(html, 'robots'), 'noindex, follow')
+      assert.equal(canonicalOf(html), '')
     })
   }
 

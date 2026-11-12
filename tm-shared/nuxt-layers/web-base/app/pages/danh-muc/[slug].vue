@@ -95,6 +95,13 @@ watch(locale, async () => {
   await load()
 })
 
+/**
+ * An empty category landing still exists for its editor and its parent navigation,
+ * but it is thin content: it stays 200 and leaves the index until a published post
+ * carries it, the same rule the tag landings follow.
+ */
+const robots = usePageRobots({ empty: () => !items.value.length })
+
 useSeoMeta({
   title: () => category.value?.name || '',
   description: () => t('categoryContent.subtitle', { name: category.value?.name || '' }),
@@ -102,13 +109,7 @@ useSeoMeta({
   ogDescription: () => t('categoryContent.subtitle', { name: category.value?.name || '' }),
   ogType: 'website',
   ogUrl: () => canonical.value,
-  // An empty category landing still exists for its editor and its parent
-  // navigation, but it is thin content: it stays 200 and leaves the index until
-  // a published post carries it, the same rule the tag landings follow.
-  robots: () => {
-    if (config.public.indexable === false) return 'noindex, nofollow'
-    return items.value.length ? 'index, follow' : 'noindex, follow'
-  },
+  robots,
 })
 
 useHead({
