@@ -102,7 +102,13 @@ useSeoMeta({
   ogDescription: () => t('categoryContent.subtitle', { name: category.value?.name || '' }),
   ogType: 'website',
   ogUrl: () => canonical.value,
-  robots: () => (config.public.indexable === false ? 'noindex, nofollow' : 'index, follow'),
+  // An empty category landing still exists for its editor and its parent
+  // navigation, but it is thin content: it stays 200 and leaves the index until
+  // a published post carries it, the same rule the tag landings follow.
+  robots: () => {
+    if (config.public.indexable === false) return 'noindex, nofollow'
+    return items.value.length ? 'index, follow' : 'noindex, follow'
+  },
 })
 
 useHead({

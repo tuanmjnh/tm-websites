@@ -719,6 +719,14 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Verified live `:4006`: `/tag/about` `index, follow`; `/tag/huong-dan` (draft-only) `noindex, follow`; `/tag/khong-ton-tai` (invented) `noindex, follow` with the empty state intact. `pnpm typecheck`, `pnpm lint` pass | — |
 | Limit: an empty or draft-only tag still answers `200` by design (the posts may return) | — |
 
+### WEB-08.j — an empty content category landing is noindex (landed 2026-11-11)
+
+| Slice | Evidence |
+| --- | --- |
+| An existing category with no published post is `noindex, follow`; a known `indexable: false` site still forces `noindex, nofollow` | `tm-shared/nuxt-layers/web-base/app/pages/danh-muc/[slug].vue` |
+| Verified live with a temporary category, removed afterwards: `200` + `noindex, follow` (vi/en), absolute canonical and `og:url`, empty copy rendered; unknown slug `404`; `/danh-muc` `200` indexable | — |
+| Limits: the populated branch was not driven live; only the robots change is staged, the page's other SEO additions wait with the in-progress editor field in the worktree | — |
+
 ## Next slices
 
 ### Ready now (no decision or credential needed)
