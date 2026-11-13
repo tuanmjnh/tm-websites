@@ -1,5 +1,5 @@
 import type { EventHandler, H3Event } from 'h3'
-import { publicCacheDatabase, publicCacheKey } from './publicCache'
+import { eventCacheKey } from './publicCache'
 
 export const CATALOG_CACHE_CONTROL = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600'
 export const NO_STORE = 'no-store'
@@ -13,12 +13,7 @@ export const NO_STORE = 'no-store'
  */
 export function catalogCacheKey(event: H3Event, namespace: string): string {
   const url = getRequestURL(event)
-  return publicCacheKey(publicCacheDatabase(event), 'catalog', `${namespace}:${url.pathname}${url.search}`)
-}
-
-/** Cache key for a projection of the site itself (`/api/public/site`, `site-config`). */
-export function siteCacheKey(event: H3Event, key: string): string {
-  return publicCacheKey(publicCacheDatabase(event), 'site', key)
+  return eventCacheKey(event, 'catalog', `${namespace}:${url.pathname}${url.search}`)
 }
 
 /**

@@ -18,8 +18,7 @@ import type { H3Event } from 'h3'
 export const PUBLIC_CACHE_SCOPES = ['site', 'catalog'] as const
 export type PublicCacheScope = (typeof PUBLIC_CACHE_SCOPES)[number]
 
-/** Nitro prefixes every cached handler entry with this. */
-export const NITRO_HANDLER_MARKER = 'nitro:handlers:'
+const NITRO_HANDLER_MARKER = 'nitro:handlers:'
 
 /**
  * Nitro stores a handler entry under `nitro:handlers:...` and sanitises the key
@@ -28,7 +27,7 @@ export const NITRO_HANDLER_MARKER = 'nitro:handlers:'
  * alike. Separators are therefore `__`, which survives that pass, and each part
  * is slugged here so a purge matches the key Nitro actually wrote.
  */
-export function cacheKeySlug(value: string): string {
+function cacheKeySlug(value: string): string {
   return String(value || 'none').replace(/[^A-Za-z0-9_]/g, '_')
 }
 
@@ -69,8 +68,6 @@ export interface PurgePublicCacheResult {
   scopes: PublicCacheScope[] | 'all'
   removedCount: number
   removedKeys: string[]
-  /** Handler entries left in the cache, so a caller can prove the rest survived. */
-  remainingHandlerKeys: number
 }
 
 /**
@@ -93,16 +90,15 @@ export async function purgePublicCache(
     await storage.removeItem(key)
   }
 
-  return {
-    scopes,
-    removedCount: doomed.length,
-    removedKeys: doomed,
-    remainingHandlerKeys: handlerKeys.length - doomed.length,
-  }
+  return { scopes, removedCount: doomed.length, removedKeys: doomed }
 }
 
-/** Database half of the key, from the deployment's runtime config. */
-export function publicCacheDatabase(event: H3Event): string {
+/** Cache key for a read of the current deployment's site. */
+export function eventCacheKey(event: H3Event, scope: PublicCacheScope, key: string): string {
   const config = useRuntimeConfig(event)
-  return String(config.catalogDbName || 'none')
+  return publicCacheKey(String(config.catalogDbName || 'none'), scope, key)
+}
+
+export function isPublicCacheScope(value: string): value is PublicCacheScope {
+  return (PUBLIC_CACHE_SCOPES as readonly string[]).includes(value)
 }

@@ -1,5 +1,5 @@
 import { PublicSiteSchema } from '@tm/flow-contracts/site-public'
-import { siteCacheKey } from '#server/utils/catalogCache'
+import { eventCacheKey } from '#server/utils/publicCache'
 import { getSiteLocale, readPublicSite } from '#server/utils/publicSite'
 
 /**
@@ -24,5 +24,5 @@ export default defineCachedEventHandler(async (event) => {
   swr: true,
   // Tenant first: two customers can share one Nitro cache in preview or local
   // multi-customer development, and this key used to carry the locale only.
-  getKey: (event) => siteCacheKey(event, `public-site:${getSiteLocale(event)}`),
+  getKey: event => eventCacheKey(event, 'site', `public-site:${getSiteLocale(event)}`),
 })

@@ -1,5 +1,6 @@
 import { buildSiteConfig, SiteConfigSchema } from '@tm/flow-contracts'
-import { siteCacheKey, withCatalogCacheHeaders } from '#server/utils/catalogCache'
+import { withCatalogCacheHeaders } from '#server/utils/catalogCache'
+import { eventCacheKey } from '#server/utils/publicCache'
 import { fetchHubPublicConfig } from '#server/utils/hubPublicConfig'
 
 const cachedSiteConfig = cachedEventHandler(async (event) => {
@@ -19,7 +20,7 @@ const cachedSiteConfig = cachedEventHandler(async (event) => {
   maxAge: 120,
   staleMaxAge: 600,
   swr: true,
-  getKey: event => siteCacheKey(event, 'site-config'),
+  getKey: event => eventCacheKey(event, 'site', 'site-config'),
 })
 
 export default withCatalogCacheHeaders(defineEventHandler(async (event) => {

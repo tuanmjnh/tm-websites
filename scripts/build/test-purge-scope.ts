@@ -102,7 +102,7 @@ await check('a catalog write drops that tenant\'s catalog keys and nothing else'
   assert.ok(storage.keys().includes(handler(publicCacheKey(BAG, 'catalog', 'products:/api/public/products'))), 'another tenant survives')
   assert.ok(storage.keys().includes(handler('public-site:vi')), 'an entry with no tenant is not this tenant\'s to drop')
   assert.ok(storage.keys().includes('assets:logo.png'), 'non-handler storage is never touched')
-  assert.equal(result.remainingHandlerKeys, 4)
+  assert.equal(storage.keys().filter(key => key.includes('nitro:handlers:')).length, 4, 'the other four entries are still cached')
 })
 
 await check('a settings or menu save drops only the site projection', async () => {
@@ -150,24 +150,17 @@ await check('the operator escape hatch still stops at handler entries', async ()
 
   assert.equal(result.removedCount, 6)
   assert.deepEqual(storage.keys(), ['assets:logo.png'], 'other storage keeps its keys')
-  assert.equal(result.remainingHandlerKeys, 0)
 })
 
-await check('an empty cache is a no-op', async () => {
-  const storage = memoryStorage([])
-  const result = await purgePublicCache(storage, SEN, ['site', 'catalog'])
+await check('nothing to remove is a no-op, whether the cache or the tenant is empty', async () => {
+  const empty = await purgePublicCache(memoryStorage([]), SEN, ['site', 'catalog'])
+  assert.equal(empty.removedCount, 0)
+  assert.deepEqual(empty.removedKeys, [])
 
-  assert.equal(result.removedCount, 0)
-  assert.deepEqual(result.removedKeys, [])
-  assert.equal(result.remainingHandlerKeys, 0)
-})
-
-await check('a tenant with no entries leaves the others intact', async () => {
   const storage = seeded()
-  const result = await purgePublicCache(storage, 'hoangvi', ['site', 'catalog'])
-
-  assert.equal(result.removedCount, 0)
-  assert.equal(storage.keys().length, 7)
+  const other = await purgePublicCache(storage, 'hoangvi', ['site', 'catalog'])
+  assert.equal(other.removedCount, 0)
+  assert.equal(storage.keys().length, 7, 'a tenant with no entries leaves every other tenant intact')
 })
 
 console.log(`\n${checks} checks passed`)

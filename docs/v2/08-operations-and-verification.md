@@ -568,7 +568,15 @@ Live check (two dev servers, `:4018` sentuan and `:4019` bag-post sharing one ca
 | `{"scope":"everything"}` | `422 INVALID_CACHE_SCOPE` |
 | `{"reason":"import.finished"}` | `["site","catalog"]` |
 
-Gate: `pnpm test:purge-scope` — 9 checks, no Mongo and no server (map-backed storage), part of `verify:all` (STATIC_GATES).
+CMS → storefront, end to end (CMS `:4005` with `TM_AUTH_MODE=mock`, `TM_WEB_REVALIDATE_URL=http://localhost:4018`, `TM_REVALIDATE_SECRET` matching the storefront's `REVALIDATE_SECRET`; storefront `:4018`, `sen-tuan`; both stopped afterwards):
+
+1. Warm the storefront: `GET /api/public/products?limit=1`, `/api/public/products/bo-hn-bo`, `/api/public/site`, `/api/public/site-config` → four handler entries.
+2. `POST /api/v1/admin/catalog/items` (mock session cookie, `Origin: http://localhost:4005`, body `{"key":"probe-purge-flow","title":{"vi":"Probe purge flow","en":"Probe purge flow"},"slug":{...},"basePrice":1000}`) → `201`, response header `x-storefront-revalidate: revalidated`.
+3. Purge the storefront with the same reason the save used (`catalog.item.create`) → `removedCount: 0`: the CMS had already dropped those keys, so the header was not wishful thinking.
+4. Purge with `settings.update` → `removedCount: 2` (`public__sen_tuan__site__public_site_vi`, `public__sen_tuan__site__site_config`): the catalog save left the site projection alone.
+5. Cleanup: the catalog delete is a soft delete (`POST /api/v1/admin/catalog/items/<id>/events` with `{"event":"delete","revision":1}`, which also returns `revalidated`), so the probe was removed outright with MongoDB: `catalog_items` 1 → 0, `audit_logs` 2 → 0 for `resourceKey: probe-purge-flow`, and no idempotency or revision rows existed. A re-check of the same counts returned `{"items":0,"audits":0,"idem":0,"revisions":0}`.
+
+Gate: `pnpm test:purge-scope` — 8 checks, no Mongo and no server (map-backed storage), part of `verify:all` (STATIC_GATES).
 
 Not done: the purge request is still authenticated by a shared secret only, not a signed or replay-limited event (WEB-09's event half), and a CDN in front of the storefront would still need its own purge call (Q12).
 

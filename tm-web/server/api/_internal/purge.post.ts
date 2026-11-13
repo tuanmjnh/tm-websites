@@ -1,11 +1,20 @@
 import { timingSafeEqual } from 'node:crypto'
-import { publicCacheDatabase, purgePublicCache, PUBLIC_CACHE_SCOPES, scopesForReason, type PublicCacheScope } from '#server/utils/publicCache'
+import { isPublicCacheScope, purgePublicCache, PUBLIC_CACHE_SCOPES, scopesForReason, type PublicCacheScope } from '#server/utils/publicCache'
 
 function secretsMatch(provided: string, expected: string): boolean {
   const a = Buffer.from(provided)
   const b = Buffer.from(expected)
   if (a.length !== b.length) return false
   return timingSafeEqual(a, b)
+}
+
+function resolveScope(requested: string): PublicCacheScope {
+  if (isPublicCacheScope(requested)) return requested
+  throw createError({
+    statusCode: 422,
+    statusMessage: 'error.invalidCacheScope',
+    data: { code: 'INVALID_CACHE_SCOPE', scopes: PUBLIC_CACHE_SCOPES },
+  })
 }
 
 interface PurgeBody {
@@ -52,22 +61,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const requestedScope = typeof body?.scope === 'string' ? body.scope.trim() : ''
-  if (requestedScope && requestedScope !== 'all' && !PUBLIC_CACHE_SCOPES.includes(requestedScope as PublicCacheScope)) {
-    throw createError({
-      statusCode: 422,
-      statusMessage: 'error.invalidCacheScope',
-      data: { code: 'INVALID_CACHE_SCOPE', scopes: PUBLIC_CACHE_SCOPES },
-    })
-  }
-
-  const scopes: PublicCacheScope[] | 'all' = requestedScope === 'all'
+  const requested = typeof body?.scope === 'string' ? body.scope.trim() : ''
+  const scopes: PublicCacheScope[] | 'all' = requested === 'all'
     ? 'all'
-    : requestedScope
-      ? [requestedScope as PublicCacheScope]
+    : requested
+      ? [resolveScope(requested)]
       : scopesForReason(body?.reason)
 
-  const database = publicCacheDatabase(event)
+  const database = String(useRuntimeConfig(event).catalogDbName || 'none')
   const result = await purgePublicCache(useStorage('cache'), database, scopes)
 
   // The redirect map keeps its own short cache, outside Nitro's handler cache.
@@ -75,12 +76,5 @@ export default defineEventHandler(async (event) => {
   clearRedirectCache(scopes === 'all' ? undefined : database)
 
   setHeader(event, 'Cache-Control', 'no-store')
-  return {
-    success: true,
-    database,
-    scopes: result.scopes,
-    removedCount: result.removedCount,
-    removedKeys: result.removedKeys,
-    remainingHandlerKeys: result.remainingHandlerKeys,
-  }
+  return { success: true, database, ...result }
 })
