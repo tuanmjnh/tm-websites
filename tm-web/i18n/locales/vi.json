@@ -206,5 +206,26 @@
     "mobileNav": "Điều hướng chính (thu gọn)",
     "breadcrumb": "Đường dẫn",
     "pagination": "Phân trang"
+  },
+  "about": {
+    "title": "Giới thiệu {company}",
+    "metaFallback": "Thông tin về {company}.",
+    "details": "Thông tin liên hệ",
+    "email": "Email",
+    "phone": "Điện thoại",
+    "address": "Địa chỉ",
+    "emptyTitle": "Trang này chưa có nội dung",
+    "emptyHint": "Quản trị viên có thể bổ sung mô tả và thông tin công ty trong phần cài đặt của website."
+  },
+  "contact": {
+    "title": "Liên hệ {company}",
+    "subtitle": "Thông tin liên hệ chính thức của {company}.",
+    "channels": "Kênh liên hệ",
+    "email": "Email",
+    "phone": "Điện thoại",
+    "address": "Địa chỉ",
+    "social": "Mạng xã hội",
+    "emptyTitle": "Chưa có thông tin liên hệ",
+    "emptyHint": "Quản trị viên có thể thêm email, số điện thoại và địa chỉ trong phần cài đặt của website."
   }
 }

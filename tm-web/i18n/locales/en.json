@@ -206,5 +206,26 @@
     "mobileNav": "Main navigation (compact)",
     "breadcrumb": "Breadcrumb",
     "pagination": "Pagination"
+  },
+  "about": {
+    "title": "About {company}",
+    "metaFallback": "Information about {company}.",
+    "details": "Contact details",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "emptyTitle": "This page has no content yet",
+    "emptyHint": "An administrator can add a description and company details in the website settings."
+  },
+  "contact": {
+    "title": "Contact {company}",
+    "subtitle": "The official contact details of {company}.",
+    "channels": "Contact channels",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "social": "Social",
+    "emptyTitle": "No contact details yet",
+    "emptyHint": "An administrator can add an email, phone number and address in the website settings."
   }
 }

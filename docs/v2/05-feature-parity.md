@@ -527,6 +527,14 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Evidence (browser `:4006/tim-kiem`): `?q=nh%C3%A3n-hi%E1%BB%87u-probe` rendered the heading for that term with the `Probe public kw` card, proving the page finds a record by keyword alone. The probe record, its 3 audit rows and 3 revisions were deleted afterwards (`content` 3, `audit_logs` 1).
 - Limits: matching is a raw regex on the stored keyword, so accents and case-insensitivity behave as Mongo's `i` flag does but there is no diacritic folding (`nhan-hieu-probe` does not find `nhãn-hiệu-probe`), no phrase/synonym handling, and keyword matches are not highlighted differently from title matches on the search page.
 
+### WEB-16 — the header's `/about` and `/contact` links pointed at nothing (landed 2026-11-13)
+
+- Found in the per-customer browser pass, not by a gate: on the production build of `sentuan`, `/products`, `/bai-viet`, `/danh-muc` and a product detail answered `200`, while `/about` and `/contact` answered `404` — although both the header fallback menu (`usePublicSite`) and the footer (`layouts/default.vue`) link to them, and the web layer has no such pages.
+- Fix: two pages in `web-base`, both reading the site's own settings through `usePublicSite()`/`useSiteConfig()` — a phone number or an address is never invented, so a site that has saved none gets an explicit empty state instead of a form that goes nowhere. `usePageRobots({ empty })` keeps a contentless page out of the index.
+- State of this site (as the DB actually is): settings company fields are all empty, so `/about` renders "This page has no content yet" and `/contact` "No contact details yet", both `noindex, follow`. The moment an operator fills the company block in the CMS, the same pages render the real details with no code change.
+- Evidence: after `TM_CUSTOMER_ID=sentuan pnpm build:web` and a preview on `:4018`, `/about` and `/contact` answer `200` (`<title>Giới thiệu Sen Tuấn Jewelry & Gemstones</title>`, `<h1>` matching), the main area shows the empty state with its panel, and `robots` is `noindex, follow`. `pnpm typecheck` and `pnpm lint` clean, `pnpm verify:all` 27/27.
+- Not covered: the same check was not repeated for every customer, and no test asserts the two routes exist — a scaffold check would be the next step if these pages are expected to stay.
+
 ### WEB-15 — `@tuanmjnh/tm-ui` adopted through the link (landed 2026-11-13)
 
 - What landed: the CMS module badges (`ModuleStatusBadges.vue`, `/inventory`, `/orders`, `/catalog`, `/reports`, `/ai`) draw the package's `StatusBadge` instead of two hand-written `UBadge`s, with `@tuanmjnh/tm-ui` linked into the `cms-base` layer.

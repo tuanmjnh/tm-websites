@@ -789,6 +789,21 @@ One behaviour worth knowing when checking this with `curl`: without an HTML `Acc
 
 Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
 
+## Previewing a matrix build, and one browser pass (2026-11-13)
+
+`pnpm test:build-matrix` built all eight targets in 319s — web and CMS for `default` and `sentuan`, web for `bagpost`, CMS for `bagpost`/`thanhtung`/`hoangvi` — with the storefront isolation suite at its usual 24/24 per build. That run is also the regression check for the `vue` alias added in WEB-15: every CMS customer build executes `tm-cms/nuxt.config.ts`, so a broken alias would fail the matrix, not just `sentuan`.
+
+The preview that follows a matrix build needs the environment a second time, and this is not obvious: the matrix builds with `NODE_ENV=production` and `TM_CUSTOMER_ID` only, so `runtimeConfig` is baked with an empty `mongoUri`. Starting the output directly answers `503 error.catalogNotConnected` on `/api/public/products` and `error.contentUnavailable` on `/api/public/content` while `/api/public/site-config` falls back silently — which reads like a broken build, not missing configuration. Start it with Nitro's runtime overrides instead:
+
+```bash
+PORT=4018 NUXT_MONGO_URI=mongodb://127.0.0.1:27017 NUXT_CATALOG_DB_NAME=sen-tuan \
+  NUXT_PUBLIC_SITE_ID=sentuan node .devlogs/build-matrix/sentuan/web/.output/server/index.mjs
+```
+
+With those, `/`, `/products`, a product detail, `/bai-viet` and `/danh-muc` answer `200`, the home page lists eight real products, and the title/theme colour are `sentuan`'s with no other customer's name anywhere in the document.
+
+The pass also turned up dead links the gates cannot see: `/about` and `/contact` returned `404` while the header and footer link to both. They now exist as settings-driven pages (see `05`, WEB-16). Two limits worth stating: this was one customer's storefront, and the CMS browser pass is still blocked on a Hub session.
+
 ## The Vue alias that unblocked the `link:` adoption (WEB-15, 2026-11-13)
 
 WEB-13 stopped at "two Vue instances": with `link:`, Vite resolved `vue` from `tm-platform`'s tree (3.5.45) instead of the app's (3.5.44), the package's precompiled `resolveComponent('UBadge')` then ran without a `currentInstance`, and the pills rendered as empty `<ubadge>` elements while every gate stayed green. `vite.resolve.dedupe: ['vue']` did not help — there is no `vue` reachable from this app's `node_modules`, so dedupe had nothing to point at — and adding `vue` to `tm-cms/package.json` to give it one broke `vue-tsc` with 122 errors, including `Cannot find module 'vue'` in a layer file with no dependency of its own.

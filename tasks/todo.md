@@ -1022,6 +1022,12 @@ Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are no
 - **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
 - **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
+### WEB-16 — `/about` and `/contact` exist now (landed 2026-11-13)
+
+- The per-customer browser pass on the `sentuan` production build found both routes answering `404` while the header and footer link to them. Added two settings-driven pages in `web-base` (company name, description, email, phone, address, social links) with honest empty states and `noindex` while empty.
+- Also from this pass: `test:build-matrix` is 8/8 in 319s (and is the regression check for WEB-15's `vue` alias); previewing a matrix build requires `NUXT_*` runtimeConfig overrides or the public APIs answer `503`, which is configuration and not a build failure — both recorded in `08`.
+- Open: no test asserts the two routes exist, and the CMS browser pass still needs a Hub session.
+
 ### WEB-15 — `@tuanmjnh/tm-ui` adopted through the link (landed 2026-11-13)
 
 - CMS module badges use the package's `StatusBadge`; the four wiring steps (dependency in `cms-base`, `fs.allow`, `@source`, plugin registering the six primitives the dist resolves) are documented in `tm-platform/docs/upgrade.md` §0.
