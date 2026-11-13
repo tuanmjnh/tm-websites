@@ -9,6 +9,7 @@
     "@tm/nuxt-layer-core": "workspace:*",
     "@tm/nuxt-layer-api-base": "workspace:*",
     "@tm/nuxt-layer-config-base": "workspace:*",
+    "@tuanmjnh/tm-ui": "link:../../../../tm-platform/packages/tm-ui",
     "zod": "^4.6.7"
   }
 }

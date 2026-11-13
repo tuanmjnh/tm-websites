@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* Tailwind does not scan node_modules, and `@tuanmjnh/tm-ui` is linked there
+   (pnpm places the link in the layer that depends on it). */
+@source "../../../nuxt-layers/cms-base/node_modules/@tuanmjnh/tm-ui/dist";
 @import "./tokens.css";
 @import "./glass.css";
 @import "./bento.css";

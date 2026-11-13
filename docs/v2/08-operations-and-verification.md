@@ -789,6 +789,30 @@ One behaviour worth knowing when checking this with `curl`: without an HTML `Acc
 
 Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
 
+## The Vue alias that unblocked the `link:` adoption (WEB-15, 2026-11-13)
+
+WEB-13 stopped at "two Vue instances": with `link:`, Vite resolved `vue` from `tm-platform`'s tree (3.5.45) instead of the app's (3.5.44), the package's precompiled `resolveComponent('UBadge')` then ran without a `currentInstance`, and the pills rendered as empty `<ubadge>` elements while every gate stayed green. `vite.resolve.dedupe: ['vue']` did not help — there is no `vue` reachable from this app's `node_modules`, so dedupe had nothing to point at — and adding `vue` to `tm-cms/package.json` to give it one broke `vue-tsc` with 122 errors, including `Cannot find module 'vue'` in a layer file with no dependency of its own.
+
+What works is an exact-match alias to the build the app already loads, located in the pnpm store:
+
+```ts
+// tm-cms/nuxt.config.ts
+function appVueEntry(): string {
+  const store = resolve(repoRoot, 'node_modules/.pnpm')
+  const entry = readdirSync(store).find(name => name.startsWith('vue@'))
+  return entry
+    ? resolve(store, entry, 'node_modules/vue/dist/vue.runtime.esm-bundler.js')
+    : 'vue'
+}
+
+vite: {
+  server: { fs: { allow: [/* the linked package */] } },
+  resolve: { alias: [{ find: /^vue$/, replacement: appVueEntry() }] },
+}
+```
+
+The exact-match regex matters: an object-shaped alias would also rewrite `vue-router`, `vue-i18n` and `@vue/*`. With it, the package's module imports the app's own Vue file, `resolveComponent` finds the registered primitives, and the pills draw (`span[data-slot="base"]`, `unbadge` count 0). Two caveats are recorded in `05`: the store path is a layout detail rather than a contract, and pinning `vue` this way means a Vue bump in the other repo no longer reaches this app — the registry install (peer `vue`) remains the end state.
+
 ## Shared packages: the registry route (WEB-14, 2026-11-13)
 
 `tm-utils`, `tm-validators` and `tm-types` are published at 0.1.0 and install from the registry with no Vite or Tailwind config, unlike the `link:` dependency that WEB-13 had to revert. Two mechanics are worth keeping from this attempt even though the type itself was reverted on review: `minimumReleaseAge` rejects a release this fresh until the exact version is listed in `minimumReleaseAgeExclude` (and then the lockfile must be pruned again before that line is removed, or every later install fails the supply-chain check), and a shared envelope is only worth importing where its shape matches the endpoint — `ApiResponse<T>` has an optional `data`, so an endpoint that always answers with a payload needs a local type that says so.

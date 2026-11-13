@@ -1022,6 +1022,12 @@ Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are no
 - **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
 - **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
+### WEB-15 — `@tuanmjnh/tm-ui` adopted through the link (landed 2026-11-13)
+
+- CMS module badges use the package's `StatusBadge`; the four wiring steps (dependency in `cms-base`, `fs.allow`, `@source`, plugin registering the six primitives the dist resolves) are documented in `tm-platform/docs/upgrade.md` §0.
+- WEB-13's blocker was solved without a `vue` dependency: `tm-cms/nuxt.config.ts` aliases exact `vue` to the build the app already loads, found in the pnpm store. Pills verified in the DOM (`span[data-slot="base"]`, `ubadge` count 0), `scale-95` from the package's dist in the built CSS, typecheck 0, `build:cms` exit 0, `verify:all` 27/27.
+- Open: `ModelSelect` has no call site here so its primitives are unexercised; the alias pins Vue, so publishing `tm-ui` (peer `vue`) is still the preferred end state.
+
 ### WEB-14 — shared envelope from `tm-platform`, attempted and reverted (2026-11-13)
 
 - Tried `@tuanmjnh/tm-types@0.1.0` from the registry for `useCategoryAdmin`'s list response; reverted on review because `ApiResponse` contributed nothing this client reads and its optional `data` fought an always-present payload. No dependency, no lockfile entry; `verify:all` 27/27 after the revert.

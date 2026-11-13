@@ -1,9 +1,23 @@
+import { readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { resolveCustomerLayers } from '../tm-shared/customer-layers/registry/resolver.js'
 
 const appDir = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(appDir, '..')
+
+/**
+ * The Vue build this app already loads, so a `link:`ed package shares it rather
+ * than pulling its own copy from the other repo's tree. Resolved through the
+ * pnpm store because no `vue` is reachable from this package's `node_modules`.
+ */
+function appVueEntry(): string {
+  const store = resolve(repoRoot, 'node_modules/.pnpm')
+  const entry = readdirSync(store).find(name => name.startsWith('vue@'))
+  return entry
+    ? resolve(store, entry, 'node_modules/vue/dist/vue.runtime.esm-bundler.js')
+    : 'vue'
+}
 
 const customerId = process.env.TM_CUSTOMER_ID || (process.env.VERCEL ? '' : 'default')
 
@@ -79,6 +93,22 @@ export default defineNuxtConfig({
   // Pin it to a string; the port still comes from `nuxt dev --port 4005`.
   devServer: {
     host: 'localhost',
+  },
+
+  // `@tuanmjnh/tm-ui` is consumed with `link:`, so its files live outside this
+  // project: Vite must be allowed to serve them, and it must not resolve `vue`
+  // from the package's own tree (3.5.45 next to our 3.5.44). Two Vue instances
+  // make the package's `resolveComponent()` return a tag name, and its pills
+  // then render as empty `<ubadge>` elements with no warning.
+  vite: {
+    server: {
+      fs: {
+        allow: [fileURLToPath(new URL('../tm-platform/packages/tm-ui', import.meta.url))],
+      },
+    },
+    resolve: {
+      alias: [{ find: /^vue$/, replacement: appVueEntry() }],
+    },
   },
 
   devtools: { enabled: false },

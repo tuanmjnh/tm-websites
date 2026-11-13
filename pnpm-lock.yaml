@@ -303,6 +303,9 @@ importers:
       '@tm/nuxt-layer-core':
         specifier: workspace:*
         version: link:../core-base
+      '@tuanmjnh/tm-ui':
+        specifier: link:../../../../tm-platform/packages/tm-ui
+        version: link:../../../../tm-platform/packages/tm-ui
       zod:
         specifier: ^4.6.7
         version: 4.6.7
