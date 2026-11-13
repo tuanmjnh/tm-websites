@@ -21,4 +21,3 @@ minimumReleaseAgeExclude:
   - nitropack@2.13.6
   - nuxt@4.6.4
   - unrouting@0.3.2
-  - '@tuanmjnh/tm-types@0.1.0'

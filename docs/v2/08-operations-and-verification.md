@@ -789,11 +789,9 @@ One behaviour worth knowing when checking this with `curl`: without an HTML `Acc
 
 Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
 
-## Shared packages: the registry works, `link:` does not (WEB-14, 2026-11-13)
+## Shared packages: the registry route (WEB-14, 2026-11-13)
 
-`@tuanmjnh/tm-types@0.1.0` was installed from npm (`pnpm add` through the workspace), not linked, and it needed no Vite or Tailwind config: `.pnpm` places it in the app's dependency graph and a types-only package never reaches the bundle. Two things cost time and belong in any repeat: `minimumReleaseAge` blocks a release this new until the exact version is added to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`, and the shared `ApiResponse<T>` has an optional `data`, so every consumer that assumes a payload fails the typecheck until the endpoint's type narrows it (`vue-tsc` found two such pages, which is the useful part).
-
-Verification for a types-only adoption is typecheck plus the live contract, not a browser: `POST /api/auth/login` then `GET /api/v1/admin/categories` on the dev CMS — `{ success: true, data: [], tree: [] }` — is enough to prove the shape the type claims.
+`tm-utils`, `tm-validators` and `tm-types` are published at 0.1.0 and install from the registry with no Vite or Tailwind config, unlike the `link:` dependency that WEB-13 had to revert. Two mechanics are worth keeping from this attempt even though the type itself was reverted on review: `minimumReleaseAge` rejects a release this fresh until the exact version is listed in `minimumReleaseAgeExclude` (and then the lockfile must be pruned again before that line is removed, or every later install fails the supply-chain check), and a shared envelope is only worth importing where its shape matches the endpoint — `ApiResponse<T>` has an optional `data`, so an endpoint that always answers with a payload needs a local type that says so.
 
 ## `tm-hub` has the `StatusBadge` bug too (2026-11-13)
 
