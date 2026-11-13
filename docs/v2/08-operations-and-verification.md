@@ -190,6 +190,35 @@ Cleanup: probe reverted, clean rebuild (`.output` matches the source again), wor
 
 What this does and does not cover: "closed the browser" means every tab of the profile was closed and the server stopped; the Chromium process itself may still be running in the background, so this is a session restart rather than a cold OS-level process restart. Install-to-home-screen UI remains untested.
 
+## Storefront build isolation (2026-11-12)
+
+The last WEB-10 criterion without evidence was "no cross-customer assets". `pnpm test:pwa-isolation` checks a finished build directly, so the answer comes from the bytes that would ship rather than from the registry's intent. It is an opt-in gate (`OPT_IN_GATES` in the runner) because it needs `pnpm build:web` and `TM_CUSTOMER_ID` first:
+
+```
+TM_CUSTOMER_ID=sentuan pnpm build:web
+TM_CUSTOMER_ID=sentuan pnpm test:pwa-isolation
+```
+
+Five groups of checks:
+
+1. Build output present: non-empty `public/sw.js`, `public/offline.html`, `public/manifest.webmanifest`.
+2. The precache is honest — every manifest URL resolves to a file that build emits; no `/api/*` path; no `.html` document (an SSR page can carry per-visitor state); every entry has a static-asset extension.
+3. The offline fallback stays outside the precache: the worker keeps `tm-offline`, references `/offline.html`, and `offline.html` is absent from the precache manifest.
+4. The served manifest and branding are this customer's: `manifest.webmanifest` deep-equals the customer layer's file, every icon it names exists in the build, and each `requiredAssets` file is byte-identical (sha256) to the layer's copy.
+5. Isolation — for every other enabled web customer, neither its app/tenant identifiers nor the hash of any of its branding binaries appears anywhere in `public/` (59 text files scanned on the sentuan build).
+
+Results on the real sentuan build: 24/24 checks passed. Negative probes, all reverted afterwards:
+
+| Probe | Result |
+| --- | --- |
+| Copied `bag-post-web/public/branding/favicon.svg` into `public/branding/` under a new name | ❌ `no bagpost branding binary in the build`, 22/23, exit 1 |
+| Wrote `app_bag_post_web` into a text file under `public/` | ❌ `no bagpost app/tenant identifier in the build`, 22/23, exit 1 |
+| Replaced the build's `branding/logo.svg` with bag-post's file | ❌ `ships its own branding/logo.svg` **and** ❌ the branding-binary check, 20/22, exit 1 |
+
+One probe was wrong before it was right, which is worth keeping: the first identifier probe wrote `app_bagpost_web`, an ID that does not exist in the registry (`app_bag_post_web` does), so the check passed — correctly, since it only knows real registry identifiers. A negative test that passes is usually the test's fault; check the string against the registry before blaming the assertion.
+
+What it cannot see: a deliberate exfiltration of data rather than assets (no request-time behaviour), install-to-home-screen UI, and the CMS worker, which does not exist yet. CI does not run this gate, because CI does not build the storefront; it stays a local post-build step.
+
 ## Database preparation and migrations
 
 - Business collections are created by migrations, not by a startup seed. The first migration (`content-indexes`, version 1) creates the `content` indexes; applied ids, versions, checksums and timestamps live in `tm_migrations`.

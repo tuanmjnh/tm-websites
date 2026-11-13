@@ -45,6 +45,7 @@
     "test:category-order": "tsx scripts/build/test-category-reorder.ts",
     "test:redirects": "tsx scripts/build/test-redirect-service.ts",
     "test:empty-listing": "tsx scripts/build/test-empty-listing.ts",
+    "test:pwa-isolation": "tsx scripts/build/test-pwa-isolation.ts",
     "verify:all": "tsx scripts/build/run-gates.ts"
   },
   "devDependencies": {

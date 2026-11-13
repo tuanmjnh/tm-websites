@@ -52,6 +52,7 @@ export const OPT_IN_GATES: Array<{ script: string; needs: string }> = [
   { script: 'test:empty-listing', needs: 'production web build and a preview server on :4006' },
   { script: 'validate:build:cms', needs: 'a built CMS (.output)' },
   { script: 'validate:build:web', needs: 'a built storefront (.output)' },
+  { script: 'test:pwa-isolation', needs: 'a built storefront (tm-web/.output) and TM_CUSTOMER_ID' },
 ]
 
 const logArg = process.argv.find(arg => arg.startsWith('--log='))?.slice('--log='.length)

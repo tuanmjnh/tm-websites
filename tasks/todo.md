@@ -786,6 +786,17 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Limits at the time: install-to-home-screen UI and two consecutive updates still untested | — |
 | Superseded 2026-11-12: the second consecutive update is covered by "PWA second update replacing a shared chunk" above. Install UI is still untested | — |
 
+### Storefront build isolation check (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm test:pwa-isolation` reads a finished `tm-web/.output` and checks the five groups described in `docs/v2/08`: output present, precache only lists emitted static files (no API, no document, allowed extensions), offline fallback outside the precache, manifest/branding byte-identical to the customer layer, and no other customer's identifiers or branding hashes | `scripts/build/test-pwa-isolation.ts` |
+| Registered as an opt-in gate (needs `pnpm build:web` + `TM_CUSTOMER_ID`), so the runner stays honest about why it is not in `verify:all` | `scripts/build/run-gates.ts`, `package.json`; `verify:scaffold` 191/191 |
+| Sentuan build: 24/24 checks pass, 59 text files scanned | `.devlogs/` run |
+| Negative probes, each reverted: foreign favicon copied in (22/23, exit 1), `app_bag_post_web` written into a build file (22/23, exit 1), build logo replaced by bag-post's (20/22, exit 1) | same |
+| Probe lesson: the first identifier probe used a non-existent id (`app_bagpost_web`) and passed for the right reason — verify the string against the registry before doubting the assertion | `docs/v2/08` |
+| Limits: no request-time behaviour, CI does not build the storefront so it does not run this gate, install UI and the CMS worker remain open | — |
+
 ### Docs audit after the PWA slices (landed 2026-11-12)
 
 What was stale once the PWA work landed, and where it was fixed:
