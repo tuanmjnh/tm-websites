@@ -1022,6 +1022,11 @@ Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are no
 - **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
 - **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
+### WEB-20 — a gate for query-param mismatches (landed 2026-11-13)
+
+- `test:web-routes` now fails when a navigation link's `query` keys are not read by the target page. Proven by reverting the `search`/`q` fix and watching it name the key.
+- `verify:all` 28/28. Limits: literal `{ path, query }` objects only.
+
 ### WEB-19 — the dead-link gate now covers the CMS too (landed 2026-11-13)
 
 - `test:web-routes` reads both `web-base` and `cms-base` page trees and scans both navigation surfaces; a renamed or deleted CMS page now fails the gate with file:line instead of producing a 404. Proven by moving `audit.vue` out and back.

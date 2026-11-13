@@ -527,6 +527,13 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Evidence (browser `:4006/tim-kiem`): `?q=nh%C3%A3n-hi%E1%BB%87u-probe` rendered the heading for that term with the `Probe public kw` card, proving the page finds a record by keyword alone. The probe record, its 3 audit rows and 3 revisions were deleted afterwards (`content` 3, `audit_logs` 1).
 - Limits: matching is a raw regex on the stored keyword, so accents and case-insensitivity behave as Mongo's `i` flag does but there is no diacritic folding (`nhan-hieu-probe` does not find `nhãn-hiệu-probe`), no phrase/synonym handling, and keyword matches are not highlighted differently from title matches on the search page.
 
+### WEB-20 — a gate for query-param mismatches between links and their pages (landed 2026-11-13)
+
+- `test:web-routes` now also scans navigation links that carry a `query: { ... }` object and checks that every key in it is a key the target page reads from `route.query`. A page that reads `route.query[key]` dynamically is treated as accepting any key, so `/bai-viet` and `/tim-kiem` stay out of the check.
+- This is the class of bug that made `tim-kiem.vue`'s "view all products" link pass `search=` while `products/index.vue` read `q` — the filter was silently dropped and the link landed on the unfiltered list. The gate now fails with `/products: query key "search" is never read by the target page`.
+- Proven both ways: reverting the link to `query: { search: q }` made the gate exit `1` naming the key and the target; restoring `query: { q }` put it back to green. `verify:all` is 28/28.
+- Limits: only links written as `{ path, query: { ... } }` (or the reverse order) are seen; a query built at runtime or passed through a variable is out of scope, same as the path gate.
+
 ### WEB-19 — the dead-link gate now covers the CMS too (landed 2026-11-13)
 
 - The same gate that caught `/about` and `/contact` now reads both app roots: the storefront and the CMS. `scripts/build/test-web-routes.ts` takes an `APPS` list (root, page directory, minimum link count) and runs the same manifest + link scan + resolution per app, so a new sidebar entry in `cms-base/layouts/default.vue` that points at a page which was renamed or removed fails `verify:all` instead of waiting for a click.

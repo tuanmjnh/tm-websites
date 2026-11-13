@@ -142,6 +142,74 @@ for (const app of APPS) {
   })
 }
 
+// Query-param consistency: a link's query keys must be keys the target page
+// actually reads from route.query. This is the class of bug that made
+// tim-kiem.vue's "view all products" link pass search= while products/index.vue
+// read q — the filter was silently dropped.
+const QUERY_LINK_PATTERN = /(?:path:\s*['"]([^'"]+)['"][^}]*?query:\s*\{([^}]*)\}|query:\s*\{([^}]*)\}[^}]*?path:\s*['"]([^'"]+)['"])/g
+
+interface QueryLink {
+  path: string
+  keys: string[]
+}
+
+function readQueryLinks(root: string): QueryLink[] {
+  return walk(root)
+    .filter(file => file.endsWith('.vue') || file.endsWith('.ts'))
+    .flatMap((file) => {
+      const source = fs.readFileSync(file, 'utf8')
+      const relative = path.relative(path.resolve('.'), file).replace(/\\/g, '/')
+      const out: QueryLink[] = []
+      for (const match of source.matchAll(QUERY_LINK_PATTERN)) {
+        const target = (match[1] ?? match[4] ?? '').split(/[?#]/)[0]
+        const body = (match[2] ?? match[3] ?? '')
+        if (!target.startsWith('/') || target.includes(':')) continue
+        const keys = body.split(',').map(part => part.trim().split(':')[0].trim())
+          .filter(key => /^[A-Za-z_][A-Za-z0-9_]*$/.test(key))
+        if (keys.length === 0) continue
+        out.push({ path: target, keys })
+        void relative
+      }
+      return out
+    })
+}
+
+function acceptedQueryKeys(root: string, route: string): Set<string> | 'any' | null {
+  // null = target page not found (the path gate will catch it)
+  const page = readPages(root).find(p => p.route === (route.replace(/\/$/, '') || '/'))
+  if (!page) return null
+  const source = fs.readFileSync(path.resolve(page.file), 'utf8')
+  // Dynamic access (route.query[key]) means the page reads whatever it is given.
+  if (/route\.query\[[A-Za-z_$]/.test(source)) return 'any'
+  const keys = new Set<string>()
+  for (const match of source.matchAll(/route\.query\[['"]([^'"]+)['"]\]/g)) keys.add(match[1])
+  for (const match of source.matchAll(/route\.query\.([A-Za-z_][A-Za-z0-9_]*)/g)) keys.add(match[1])
+  return keys
+}
+
+const queryLinksByApp = APPS.map(app => ({ app, links: readQueryLinks(app.root) }))
+const totalQueryLinks = queryLinksByApp.reduce((sum, entry) => sum + entry.links.length, 0)
+
+check('the query-link scan finds at least one navigation link with a query object', () => {
+  assert.ok(totalQueryLinks >= 1, `found ${totalQueryLinks} query links; a refactor that removed them all would silently neuter this check`)
+})
+
+check('every query key in a navigation link is read by the target page', () => {
+  const mismatches: string[] = []
+  for (const { app, links } of queryLinksByApp) {
+    for (const link of links) {
+      const accepted = acceptedQueryKeys(app.root, link.path)
+      if (accepted === null || accepted === 'any') continue
+      for (const key of link.keys) {
+        if (!accepted.has(key)) {
+          mismatches.push(`${link.path}: query key "${key}" is never read by the target page`)
+        }
+      }
+    }
+  }
+  assert.deepEqual(mismatches, [], `query-param mismatches:\n${mismatches.join('\n')}`)
+})
+
 // The two pages this gate was written after, so removing one fails loudly.
 check('the storefront pages the header and footer link to exist', () => {
   const routes = readPages(APPS[0].root)
