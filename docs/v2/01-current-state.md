@@ -53,7 +53,7 @@ Open decisions blocking scope are recorded in [tasks/questions.md](../../tasks/q
 | Web content/config | [publicContent](../../tm-web/server/utils/publicContent.ts), [hubPublicConfig](../../tm-web/server/utils/hubPublicConfig.ts) | Still read Hub public resources; replace with MongoDB-backed services |
 | Web routes | [base pages](../../tm-shared/nuxt-layers/web-base/app/pages) | Home, products, categories and catch-all exist; full search/cart/checkout/portal parity remains open |
 | Cache | [catalogCache](../../tm-web/server/utils/catalogCache.ts), [purge](../../tm-web/server/api/_internal/purge.post.ts) | Database/path cache key and shared-secret purge exist; purge scans handler cache, not durable tenant/site-tag delivery |
-| PWA | [worker](../../tm-web/service-worker/sw.ts), [Web config](../../tm-web/nuxt.config.ts) | Custom injectManifest worker exists; fresh offline/update/security checks are still required |
+| PWA | [worker](../../tm-web/service-worker/sw.ts), [Web config](../../tm-web/nuxt.config.ts) | Verified on a production build in a real browser (2026-11-12): installs and controls the page, serves `offline.html` for offline navigations, caches no API response and no SSR document, and swaps its precache on a second build — including across a closed browser session — without a manual unregister. Untested: install-to-home-screen UI, a check that a build cannot ship another customer's assets, and any CMS-side offline worker |
 
 ## Customer matrix observed in registry
 

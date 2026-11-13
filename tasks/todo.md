@@ -738,7 +738,8 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | No API or SSR-document caching: `/api/public/site` 200 online but absent from every cache, `/` and `/products` absent; `tm-offline` holds exactly `/offline.html`, precache holds 86 static entries | browser run |
 | Offline API fetches reject instead of being answered by the shell; after a restart the real page renders again while still controlled | browser run |
 | Cleanup: worker unregistered, caches deleted, preview server stopped, `:4016` free | browser + `netstat` |
-| Limits: the update path (second build over the first) and install UI were not exercised | — |
+| Limits at the time: the update path (second build over the first) and install UI were not exercised | — |
+| Superseded 2026-11-12: the update path was exercised three times afterwards — see "PWA update path", "PWA second update replacing a shared chunk" and "PWA update across a browser session" below. Install UI is still untested | — |
 
 ### §5 reads the real gate arrays (landed 2026-11-12)
 
@@ -770,7 +771,8 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | One reload, no unregister → cache fingerprint equals the new manifest, old chunk gone, new chunk present, marker rendered, still controlled, `tm-offline` intact | browser run |
 | Offline after the second update: server killed → offline shell; then layout reverted, clean rebuild, worker unregistered, caches cleared, `:4016` free | browser + `netstat` |
 | Harness artifact recorded: my own `caches.open(undefined)` created a cache named `undefined`, and an auto-reload destroyed an evaluation context mid-install — neither was a product bug | `docs/v2/08` |
-| Limits: install-to-home-screen UI, and updates with the browser closed between builds, still untested | — |
+| Limits at the time: install-to-home-screen UI, and updates with the browser closed between builds, still untested | — |
+| Superseded 2026-11-12: the closed-browser update is covered by "PWA update across a browser session" below. Install UI is still untested | — |
 
 ### PWA update path (landed 2026-11-12)
 
@@ -781,7 +783,26 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | B served over A on the same port; one page reload, no unregister → page shows B marker, worker `activated`, no waiting/installing, still controlling | browser run |
 | Precache compared to B's own manifest: 0 mismatches, 0 missing, 0 extra, B-only chunk present | browser run |
 | Offline after the swap: server killed → offline shell, `tm-offline` still `/offline.html`; then `index.vue` reverted, clean rebuild, worker unregistered, caches cleared, port free | browser + `netstat` |
-| Limits: install-to-home-screen UI and two consecutive updates still untested | — |
+| Limits at the time: install-to-home-screen UI and two consecutive updates still untested | — |
+| Superseded 2026-11-12: the second consecutive update is covered by "PWA second update replacing a shared chunk" above. Install UI is still untested | — |
+
+### Docs audit after the PWA slices (landed 2026-11-12)
+
+What was stale once the PWA work landed, and where it was fixed:
+
+| Stale claim | Reality | Fixed in |
+| --- | --- | --- |
+| `verify:all` "runs the 18 domain scripts … 22/22 gates, 79.4s" | 21 domain scripts, 25 steps, 84–106s | `docs/v2/08`, this file |
+| "This is a local runner, not CI" | CI runs the same command (`quality.yml`) | `docs/v2/08` |
+| PWA: "fresh offline/update/security checks are still required" | install, control, offline, no API/document caching and three update paths verified in a real browser | `docs/v2/01` PWA row |
+| `06` PWA section described only the requirements | Web side verified, CMS side still open, with the evidence pointer | `docs/v2/06` |
+| WEB-10 row ended on the update evidence without naming what remains | now names install UI, cross-customer asset check and the CMS worker | `docs/v2/05` |
+| Three older slice records said the update path was untested | marked superseded, pointing at the later records (history kept, not rewritten) | this file |
+| CI section's "22/22 in 77.7s" read as current | annotated as the runner of that day | `docs/v2/08`, this file |
+
+Left alone on purpose: `format: text` not exercised in a browser (P3.b), the "has posts" branch of the category page, and the client-side zero-result path — unrelated to PWA and still true.
+
+Next smallest slice this audit points at: a cross-customer asset isolation check for the storefront build (`docs/v2/05` WEB-10) — the one WEB-10 criterion that is still neither verified nor explicitly deferred.
 
 ### Gate coverage check (landed 2026-11-12)
 
@@ -797,7 +818,7 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | --- | --- |
 | `.github/workflows/quality.yml` no longer lists gates one by one: it starts a `mongo:7` service and runs `pnpm verify:all`, so a gate added to `package.json` cannot be left out of CI | `.github/workflows/quality.yml` |
 | The job runs against an empty disposable database (`TM_MONGO_DB=tm-ci-gates`), not the developer's data | same file |
-| Proof the suite tolerates an empty database: `pnpm verify:all` with `TM_MONGO_DB=tm-ci-gates` gave 22/22 in 77.7s, then the database was dropped | `.devlogs/verify-all-ci-db.out` |
+| Proof the suite tolerates an empty database: `pnpm verify:all` with `TM_MONGO_DB=tm-ci-gates` gave 22/22 in 77.7s (the runner had 22 steps then; 25 today), then the database was dropped | `.devlogs/verify-all-ci-db.out` |
 | The gate log is uploaded as an artifact on every run, pass or fail | `.github/workflows/quality.yml` |
 | Limits: the workflow itself was only validated as YAML and reasoned about step by step (no GitHub runner here); the first real CI run is the proof, and the suite still does not cover browser or real-Hub checks | — |
 
@@ -805,9 +826,9 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 
 | Slice | Evidence |
 | --- | --- |
-| `pnpm verify:all` runs the 18 domain scripts plus `typecheck`, `lint`, `validate:registry` and `verify:scaffold`, writing each step's full output and exit code to `.devlogs/gates.log` with a summary at the end | `scripts/build/run-gates.ts`, `package.json` |
+| `pnpm verify:all` runs the domain scripts plus `typecheck`, `lint`, `validate:registry` and `verify:scaffold` (18 domain scripts when this landed, 21 — 25 steps in total — today), writing each step's full output and exit code to `.devlogs/gates.log` with a summary at the end | `scripts/build/run-gates.ts`, `package.json` |
 | A failing step does not stop the run, so one invocation shows every broken gate; the process still exits 1 and names the failures | same file |
-| Live run with `TM_MONGO_URI`/`TM_MONGO_DB=sentuan`/`TM_SITE_ID=sentuan`: 22/22 gates passed in 79.4s, exit 0, 22 step headers in the log | `.devlogs/verify-all.out`, `.devlogs/gates.log` |
+| Live run with `TM_MONGO_URI`/`TM_MONGO_DB=sentuan`/`TM_SITE_ID=sentuan`: 22/22 gates passed in 79.4s, exit 0, 22 step headers in the log (that was the runner's whole set on that day; three gates joined later) | `.devlogs/verify-all.out`, `.devlogs/gates.log` |
 | The log header records the database environment variables in use, so a run against the wrong database is visible after the fact | `.devlogs/gates.log` |
 | Limits: it is a runner, not a scheduler — no CI wiring, no parallelism, and the browser and real-Hub checks are not part of it | — |
 

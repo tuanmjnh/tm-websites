@@ -87,19 +87,19 @@ The lesson to keep: when a gate's assertion is about *how* a requirement was met
 
 ### All gates at once (2026-11-12)
 
-`pnpm verify:all` runs every gate the repository has, in order, from one command: the 18 domain scripts (`test:layers`, `test:hub`, `test:content`, `test:categories`, `test:catalog`, `test:media`, `test:audit`, `test:settings`, `test:menus`, `test:bulk`, `test:tags`, `test:redirects`, `test:category-order`, `test:retention`, `test:db`, `test:web-content`, `test:web-site`, `test:web-cart`) then `typecheck`, `lint`, `validate:registry` and `verify:scaffold`.
+`pnpm verify:all` runs every gate the repository has, in order, from one command: 21 domain scripts (`test:layers`, `test:hub`, `test:content`, `test:categories`, `test:catalog`, `test:media`, `test:audit`, `test:settings`, `test:menus`, `test:bulk`, `test:tags`, `test:redirects`, `test:category-order`, `test:retention`, `test:db`, `test:web-content`, `test:web-site`, `test:web-cart`, `test:iam`, `test:revalidate`, `test:web-site-db`) then `typecheck`, `lint`, `validate:registry` and `verify:scaffold` — 25 steps. Three gates still cannot run from a clean checkout (`test:empty-listing`, `validate:build:cms`, `validate:build:web`) and are declared in the runner's `OPT_IN_GATES` with their precondition instead of being left out.
 
 Each step's complete output and exit code are appended to `.devlogs/gates.log` (override with `--log=<path>`), and the file ends with how many gates passed and which failed. The run continues past a failing gate so one invocation reports everything that is broken, then exits 1. The header records the database environment variables in use, which matters because the domain scripts talk to a real MongoDB.
 
-Measured on 2026-11-12 with `TM_MONGO_DB=sentuan`: 22/22 gates, 79.4s.
+Measured on 2026-11-12 with `TM_MONGO_DB=sentuan`: 25/25 gates in 84–88s (the first run, before the three extra gates above joined, was 22/22 in 79.4s).
 
-This is a local runner, not CI: no scheduling, no parallelism, and it does not cover the browser checks or the real Hub contract.
+`verify:all` is the same command CI runs (see the CI section below), so the workflow cannot drift from the scripts. The runner itself adds no scheduling and no parallelism, and neither the local run nor CI covers the browser checks or the real Hub contract.
 
 ### CI (2026-11-12)
 
 `.github/workflows/quality.yml` starts a `mongo:7` service and runs the single `pnpm verify:all` step, then uploads `.devlogs/gates.log` as an artifact on every run. It used to list gates individually, which is how `verify:scaffold` stayed red in CI-adjacent local work while the workflow itself kept passing only the gates somebody remembered to add. The job runs against a disposable database (`TM_MONGO_DB=tm-ci-gates`) so no developer data is needed, and the storefront's `TM_SITE_ID` stays `sentuan`.
 
-The suite was verified locally against an empty database of that name: 22/22 gates, 77.7s, then the database was dropped. The workflow change itself is validated as YAML only — the first real run on GitHub is what certifies it.
+The suite was verified locally against an empty database of that name: 22/22 gates in 77.7s with the runner of that day (25 steps now), then the database was dropped. The workflow change itself is validated as YAML only — the first real run on GitHub is what certifies it.
 
 ## WEB-10: the offline shell on a production build (2026-11-12)
 
