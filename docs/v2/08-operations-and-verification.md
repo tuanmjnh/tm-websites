@@ -576,6 +576,16 @@ CMS → storefront, end to end (CMS `:4005` with `TM_AUTH_MODE=mock`, `TM_WEB_RE
 4. Purge with `settings.update` → `removedCount: 2` (`public__sen_tuan__site__public_site_vi`, `public__sen_tuan__site__site_config`): the catalog save left the site projection alone.
 5. Cleanup: the catalog delete is a soft delete (`POST /api/v1/admin/catalog/items/<id>/events` with `{"event":"delete","revision":1}`, which also returns `revalidated`), so the probe was removed outright with MongoDB: `catalog_items` 1 → 0, `audit_logs` 2 → 0 for `resourceKey: probe-purge-flow`, and no idempotency or revision rows existed. A re-check of the same counts returned `{"items":0,"audits":0,"idem":0,"revisions":0}`.
 
+The other direction — a settings save must clear only the site projection (same two servers, same mock session):
+
+1. `GET /api/v1/admin/settings` → `revision: 0`, `company.name: ''`: this tenant had no settings document yet, so the save is a first write (an upsert), and cleanup can restore the exact empty state.
+2. Warm the storefront: `products?limit=1`, `/api/public/site`, `/api/public/site-config`.
+3. `PATCH /api/v1/admin/settings` with `{"revision":0,"company":{"name":"Sen Tuấn (verify)"}}` → `200`, `x-storefront-revalidate: revalidated`, saved `revision: 1`.
+4. Purge with `settings.update` → `removedCount: 0` (the CMS had already dropped the two site keys).
+5. Purge with `catalog.item.update` → `removedCount: 1` (`public__sen_tuan__catalog__products__api_public_products_limit_1`): the catalog key was still there, so the settings save cleared its own scope and left the catalog alone. This is the check that a "both scopes purged" bug cannot fake — the purge endpoint itself reports whether the key still existed.
+6. `GET /api/public/site` then served the new name, i.e. the purged key really was re-rendered from the save.
+7. Cleanup: `settings` 1 → 0, `audit_logs` (`settings` / `site-settings`) 1 → 0, `idempotency_keys` 0 → 0 for that action; the admin endpoint returned `revision: 0` / `''` again, and one last `settings.update` purge removed the two keys re-cached by the read in step 6, after which the storefront served `''` again.
+
 Gate: `pnpm test:purge-scope` — 8 checks, no Mongo and no server (map-backed storage), part of `verify:all` (STATIC_GATES).
 
 Not done: the purge request is still authenticated by a shared secret only, not a signed or replay-limited event (WEB-09's event half), and a CDN in front of the storefront would still need its own purge call (Q12).
