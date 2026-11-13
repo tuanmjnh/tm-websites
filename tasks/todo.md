@@ -740,6 +740,26 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Cleanup: worker unregistered, caches deleted, preview server stopped, `:4016` free | browser + `netstat` |
 | Limits: the update path (second build over the first) and install UI were not exercised | — |
 
+### §5 reads the real gate arrays (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| `verify:scaffold` §5 now takes gates only from the `DOMAIN_GATES`, `STATIC_GATES` and `OPT_IN_GATES` array literals, with `//` comments stripped and a guard that every name is a bare script name | `scripts/verify-scaffold.ts` |
+| Structural checks added: `GATES` must stay `[...DOMAIN_GATES, ...STATIC_GATES]`, no gate twice, no runner name missing from `package.json` | same file |
+| Two bugs found by testing, not reading: a one-line `STATIC_GATES` made the slice swallow `OPT_IN_GATES` (reason strings became "gates"), and a commented-out gate inside the array still counted | fixed, described in `docs/v2/08` |
+| Negative: `test:iam` commented out → 189/190 exit 1; fake package.json script → exit 1; restored → 190/190 exit 0 | `.devlogs/gates.log` |
+
+### PWA update path (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| Build A served on `:4016`: 86 precache entries, `sw.js` sha1 `efda9e53ae54` | `docs/v2/08` update-path section |
+| Visible change → build B (1m00s), `sw.js` sha1 `7d7c62278c8c`, B-only chunk `_nuxt/6J_pivEL.js` | `.devlogs/build-web-pwa-b.log` |
+| B served over A on the same port; one page reload, no unregister → page shows B marker, worker `activated`, no waiting/installing, still controlling | browser run |
+| Precache compared to B's own manifest: 0 mismatches, 0 missing, 0 extra, B-only chunk present | browser run |
+| Offline after the swap: server killed → offline shell, `tm-offline` still `/offline.html`; then `index.vue` reverted, clean rebuild, worker unregistered, caches cleared, port free | browser + `netstat` |
+| Limits: install-to-home-screen UI and two consecutive updates still untested | — |
+
 ### Gate coverage check (landed 2026-11-12)
 
 | Slice | Evidence |

@@ -105,21 +105,70 @@ check(read(path.join(rootDir, 'tm-web/nuxt.config.ts')).includes('resolveCustome
 check(!fs.existsSync(path.join(rootDir, 'tm-cms/app/pages')), 'tm-cms host does not shadow layer pages')
 check(!fs.existsSync(path.join(rootDir, 'tm-web/app/pages')), 'tm-web host does not shadow layer pages')
 
-console.log('\n5. Gate coverage')
+console.log('')
+console.log('5. Gate coverage')
 // A gate that lives in package.json but not in the single runner is how verify:scaffold itself
-// stayed red for a while: the suite ran, and this file was not part of it.
+// stayed red for a while: the suite ran, and this file was not part of it. The runner is read as
+// source (importing it would start a gate run), but only its array literals count: a name quoted
+// in a comment or an unrelated constant must not satisfy this check.
 const gateSource = read(path.join(rootDir, 'scripts/build/run-gates.ts'))
 check(!!gateSource, 'scripts/build/run-gates.ts exists')
-// Every quoted `name:word` token in the runner: its GATES list and its OPT_IN_GATES declarations.
-const runnerListed = new Set(
-  Array.from(gateSource.matchAll(/'([a-z][a-z-]*:[a-z0-9][a-z0-9-]*)'/g), match => match[1]),
+
+function arrayBody(name: string): string {
+  const start = gateSource.indexOf('const ' + name)
+  const open = start < 0 ? -1 : gateSource.indexOf('[', start)
+  const close = open < 0 ? -1 : gateSource.indexOf(']', open)
+  return open < 0 || close < 0 ? '' : gateSource.slice(open + 1, close)
+}
+
+const gateLists = {
+  DOMAIN_GATES: arrayBody('DOMAIN_GATES'),
+  STATIC_GATES: arrayBody('STATIC_GATES'),
+  OPT_IN_GATES: arrayBody('OPT_IN_GATES'),
+}
+for (const [name, body] of Object.entries(gateLists)) {
+  check(body.trim().length > 0, 'run-gates.ts declares a ' + name + ' array literal')
+}
+// Comments are stripped before the tokens are read: a gate name quoted in a comment inside the
+// array is documentation, not coverage.
+function codeLines(body: string): string {
+  return body
+    .split(String.fromCharCode(10))
+    .map(line => {
+      const at = line.indexOf('//')
+      return at < 0 ? line : line.slice(0, at)
+    })
+    .join(String.fromCharCode(10))
+}
+const scriptsIn = (body: string) => Array.from(codeLines(body).matchAll(/'([^']+)'/g), match => match[1])
+const domainScripts = scriptsIn(gateLists.DOMAIN_GATES)
+const staticScripts = scriptsIn(gateLists.STATIC_GATES)
+// An OPT_IN_GATES entry is { script: '…', needs: '…' }, so only every other quoted token is a gate.
+const optInTokens = scriptsIn(gateLists.OPT_IN_GATES)
+const optInGateScripts = optInTokens.filter((_, index) => index % 2 === 0)
+check(optInTokens.length % 2 === 0, 'every OPT_IN_GATES entry carries both a script and a needs reason')
+check(gateSource.includes('[...DOMAIN_GATES, ...STATIC_GATES]'), 'GATES is composed from DOMAIN_GATES and STATIC_GATES')
+
+const runnerGateNames = new Set([...domainScripts, ...staticScripts, ...optInGateScripts])
+const listedTwice = [...domainScripts, ...staticScripts, ...optInGateScripts]
+  .filter((name, index, all) => all.indexOf(name) !== index)
+check(listedTwice.length === 0, 'no gate is listed twice' + (listedTwice.length ? ' (' + [...new Set(listedTwice)].join(', ') + ')' : ''))
+
+// The lists are arrays of bare script names; a leaked reason string or a sentence here means the
+// slice above reached into the wrong list.
+check(
+  [...runnerGateNames].every(name => !/\s/.test(name)),
+  'every gate name read from run-gates.ts is a bare script name',
 )
+
 const rootScripts = (JSON.parse(read(path.join(rootDir, 'package.json'))) as { scripts?: Record<string, string> }).scripts ?? {}
 const gateNames = Object.keys(rootScripts).filter(name => /^(test|verify):/.test(name) && name !== 'verify:all')
 check(gateNames.length > 0, `package.json declares ${gateNames.length} test:/verify: scripts`)
 for (const name of gateNames) {
-  check(runnerListed.has(name), `gate ${name} is declared in run-gates.ts (GATES or OPT_IN_GATES)`)
+  check(runnerGateNames.has(name), `gate ${name} is in run-gates.ts GATES or OPT_IN_GATES`)
 }
+const unknown = [...runnerGateNames].filter(name => !(name in rootScripts))
+check(unknown.length === 0, `every gate the runner lists exists in package.json${unknown.length ? ` (missing: ${unknown.join(', ')})` : ''}`)
 
 console.log(`\n${errors.length === 0 ? '🎉' : '⚠️'} ${checkCount - errors.length}/${checkCount} checks passed.`)
 

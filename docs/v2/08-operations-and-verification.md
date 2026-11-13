@@ -132,9 +132,34 @@ Not covered: the update path (installing a second build over the first and seein
 
 ## Gate coverage is itself a gate (2026-11-12)
 
-`verify:scaffold` gained section 5: every `test:`/`verify:` script in the root `package.json` must appear in `scripts/build/run-gates.ts`, either in `GATES` or in the declared `OPT_IN_GATES` (the three gates that need a built app or a preview server, each with the reason it cannot run from a clean checkout). The runner also grew the three gate scripts it was missing: `test:iam`, `test:revalidate`, `test:web-site-db`.
+`verify:scaffold` §5 reads `scripts/build/run-gates.ts` as source (importing it would start a run) and takes gate names only from the three array literals that define them: `DOMAIN_GATES`, `STATIC_GATES` and `OPT_IN_GATES`. Line comments are stripped first, so a name quoted in a comment inside the array is documentation, not coverage, and every name must be a bare script name — a leaked reason string means the slice reached into the wrong list. The section also fails when `GATES` stops being `[...DOMAIN_GATES, ...STATIC_GATES]`, when a gate is listed twice, or when the runner names a script `package.json` does not define.
 
-Verified both ways: 182/182 checks pass, and with a fake `test:zzz-probe` script added to `package.json` the check fails (`182/183`, exit 1) and the scaffold script exits non-zero.
+Two real bugs in the first version were caught while testing it, not by reading it:
+
+| Case | Result |
+| --- | --- |
+| `const STATIC_GATES = [...]` is a one-line array, so a terminator search anchored on a newline ran past it and swallowed the whole `OPT_IN_GATES` block, turning `needs` reasons into gate names | fixed by using the first `]` after the opening bracket; the "bare script name" check now fails if that ever regresses |
+| A gate commented out inside the array (`// 'test:iam'`) still counted, so §5 passed while the gate was not in `GATES` | fixed by stripping `//` comments before reading tokens |
+
+Negative runs after the fixes: commenting `test:iam` out of `DOMAIN_GATES` gives `189/190` and exit 1; adding a `test:zzz-probe` script to `package.json` alone gives exit 1; both reverted runs are `190/190`, exit 0.
+
+## WEB-10 update path: a second build over the first (2026-11-12)
+
+The offline-shell record above left the update path unexercised. It was tested on the same port with two real builds:
+
+1. Build A: `pnpm build:web` of the committed source, served on `:4016`. A fresh page recorded 86 precache entries, `controller.scriptURL` = `/sw.js`, no probe text, and `sw.js` sha1 `efda9e53ae54` (23,303 bytes).
+2. Visible change: `<p data-pwa-probe>PWA-UPDATE-PROBE-B</p>` added to `web-base/app/pages/index.vue`, build B in 1m00s, producing `sw.js` sha1 `7d7c62278c8c` (same size, different content) and a chunk that exists only in B: `_nuxt/6J_pivEL.js`.
+3. Build B replaced build A behind the same port. The page was reloaded once — no unregister, no cache clearing, no devtools toggle.
+
+Result after that single reload: the page rendered the B marker, the registration was `activated` with no `waiting` or `installing` worker, the page stayed controlled by `/sw.js`, and the precache matched build B exactly — 86 entries parsed from B's own `/sw.js` manifest (JSON `[{revision,url}]`, URLs stored without a leading slash, hence the pathname normalisation when comparing), with **0 revision mismatches, 0 missing and 0 extra** entries, including the B-only `_nuxt/6J_pivEL.js`. So the worker replaced its precache by itself.
+
+Most chunk hashes are stable across these two builds, so "the old hashed file is gone" is not evidence here; the discriminating facts are the B-only chunk inside the cache and the entry-by-entry manifest comparison.
+
+Offline still worked after the swap: with the server killed, a reload rendered the offline shell, still controlled, and `tm-offline` still held exactly `/offline.html` — the update did not disturb the separately cached fallback.
+
+Cleanup: `index.vue` reverted, a clean build rebuilt so `.output` matches the source again, the worker unregistered, both caches deleted, the server stopped and `:4016` left free.
+
+Still not covered: install-to-home-screen UI, and two consecutive updates where the second changes a chunk that the first build kept.
 
 ## Database preparation and migrations
 
