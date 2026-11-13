@@ -219,6 +219,35 @@ One probe was wrong before it was right, which is worth keeping: the first ident
 
 What it cannot see: a deliberate exfiltration of data rather than assets (no request-time behaviour), install-to-home-screen UI, and the CMS worker, which does not exist yet. CI does not run this gate, because CI does not build the storefront; it stays a local post-build step.
 
+## Customer build matrix (2026-11-12)
+
+Until this slice only `sentuan` had ever been built end to end in these records; `thanhtung` and `hoangvi` are CMS-only installations and `default`/`bagpost` had never produced a storefront build. `pnpm test:build-matrix` builds every enabled app in the registry and checks each finished build with the validators it has.
+
+For each target: `validate-build.ts` (app kind), then `nuxt build`, then — for a storefront — `test:pwa-isolation.ts` over that build's own output; a CMS build must contain `public/manifest.webmanifest`. Each customer writes to its own output and log, so one failing layer cannot hide behind a later customer:
+
+```
+.devlogs/build-matrix/<customer>/<app>/.output
+.devlogs/build-matrix/<customer>/<app>/build.log
+```
+
+`--customer=<id>` restricts a run to one customer. The script moves each `tm-web/.output` / `tm-cms/.output` into the matrix (rename, falling back to copy when Windows holds a handle) and restores `tm-web/.output` from the sentuan build at the end, so the rest of the tooling still finds a storefront build.
+
+Full run, 2026-11-12:
+
+| Customer | web | cms |
+| --- | --- | --- |
+| default | 55.7s, isolation 24/24 | 34.1s, manifest ok |
+| sentuan | 49.2s, isolation 24/24 | 33.3s, manifest ok |
+| bagpost | 49.0s, isolation 24/24 | 33.9s, manifest ok |
+| thanhtung | — (CMS-only) | 34.0s, manifest ok |
+| hoangvi | — (CMS-only) | 33.7s, manifest ok |
+
+**8/8 targets, 324s** (validate 4s, builds 317s, isolation 2s over three storefronts, manifest checks 5). The bagpost run also answered the isolation question for real data: its precache contained no sentuan branding binary, which the probe-only test could not show.
+
+Negative probe: writing invalid JSON into `sentuan-web/public/manifest.webmanifest` made `sentuan/web` fail at `validate-build` while `sentuan/cms` still built (summary `validate:build: 1 ok, 1 failed`), and the script exited 1. The manifest was restored immediately and a follow-up run was green.
+
+What it does not cover: deployments or provider configuration (each customer is built locally with local runtime config), a real browser pass per customer, and the CDN/provider cache. CI does not run it — 5.5 minutes of builds belongs in a release check, not on every push.
+
 ## Database preparation and migrations
 
 - Business collections are created by migrations, not by a startup seed. The first migration (`content-indexes`, version 1) creates the `content` indexes; applied ids, versions, checksums and timestamps live in `tm_migrations`.

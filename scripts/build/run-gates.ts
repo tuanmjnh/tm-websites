@@ -53,6 +53,7 @@ export const OPT_IN_GATES: Array<{ script: string; needs: string }> = [
   { script: 'validate:build:cms', needs: 'a built CMS (.output)' },
   { script: 'validate:build:web', needs: 'a built storefront (.output)' },
   { script: 'test:pwa-isolation', needs: 'a built storefront (tm-web/.output) and TM_CUSTOMER_ID' },
+  { script: 'test:build-matrix', needs: 'builds all 8 customer apps (about 5.5 minutes), so it stays out of the default run' },
 ]
 
 const logArg = process.argv.find(arg => arg.startsWith('--log='))?.slice('--log='.length)

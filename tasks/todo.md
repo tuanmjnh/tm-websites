@@ -786,6 +786,18 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Limits at the time: install-to-home-screen UI and two consecutive updates still untested | — |
 | Superseded 2026-11-12: the second consecutive update is covered by "PWA second update replacing a shared chunk" above. Install UI is still untested | — |
 
+### Customer build matrix (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| `pnpm test:build-matrix` builds every enabled app in the registry (3 web + 5 cms = 8 targets): `validate-build`, `nuxt build`, then `test:pwa-isolation` per storefront and a manifest check per CMS | `scripts/build/test-build-matrix.ts` |
+| Each customer gets its own `.output` and `build.log` under `.devlogs/build-matrix/<customer>/<app>/`; `--customer=<id>` narrows a run; `tm-web/.output` is restored from the sentuan build afterwards | same |
+| Full run: 8/8 targets in 324s — default 55.7s / sentuan 49.2s / bagpost 49.0s storefronts, each isolation 24/24; default, sentuan, bagpost, thanhtung, hoangvi CMS 33–34s with manifest present | `.devlogs/matrix-full.log` |
+| First evidence that the two CMS-only customers (thanhtung, hoangvi) build at all, and that bagpost's storefront precaches no sentuan branding binary | same |
+| Negative probe: invalid JSON in `sentuan-web/public/manifest.webmanifest` → `sentuan/web` failed at validate while `sentuan/cms` still built, exit 1; restored and re-ran green | `.devlogs/matrix-probe.log` |
+| Opt-in gate (5.5 minutes of builds); `verify:scaffold` 192/192 and CI keep running the 25-step default set | `scripts/build/run-gates.ts`, `package.json` |
+| Limits: local builds only, no per-customer browser pass, no provider/CDN configuration | — |
+
 ### Storefront build isolation check (landed 2026-11-12)
 
 | Slice | Evidence |
