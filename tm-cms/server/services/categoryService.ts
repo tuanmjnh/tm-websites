@@ -60,6 +60,7 @@ export function toAdminCategory(record: CategoryRecord): AdminCategory {
       locale: entry.locale,
       name: entry.name,
       slug: entry.slug,
+      description: entry.description ?? '',
     })),
     createdAt: iso(record.createdAt),
     updatedAt: iso(record.updatedAt),

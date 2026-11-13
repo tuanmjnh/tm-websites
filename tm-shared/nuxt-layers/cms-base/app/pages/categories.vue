@@ -24,8 +24,8 @@ const form = reactive({
   key: '',
   parent: null as string | null,
   order: 0,
-  vi: { name: '', slug: '' },
-  en: { name: '', slug: '' },
+  vi: { name: '', slug: '', description: '' },
+  en: { name: '', slug: '', description: '' },
 })
 
 const deleteOpen = ref(false)
@@ -147,8 +147,8 @@ function resetForm() {
   form.key = ''
   form.parent = null
   form.order = 0
-  form.vi = { name: '', slug: '' }
-  form.en = { name: '', slug: '' }
+  form.vi = { name: '', slug: '', description: '' }
+  form.en = { name: '', slug: '', description: '' }
 }
 
 function openCreate(parent: string | null = null) {
@@ -169,7 +169,7 @@ function openEdit(node: AdminCategory) {
   form.order = node.order
   for (const entry of node.locales) {
     if (entry.locale !== 'vi' && entry.locale !== 'en') continue
-    form[entry.locale] = { name: entry.name, slug: entry.slug }
+    form[entry.locale] = { name: entry.name, slug: entry.slug, description: entry.description }
   }
   formOpen.value = true
   void loadEditingMenuRefs(node.id)
@@ -177,7 +177,12 @@ function openEdit(node: AdminCategory) {
 
 function buildDraft(): AdminCategoryDraft {
   const locales = (['vi', 'en'] as const)
-    .map(code => ({ locale: code, name: form[code].name.trim(), slug: form[code].slug.trim() }))
+    .map(code => ({
+      locale: code,
+      name: form[code].name.trim(),
+      slug: form[code].slug.trim(),
+      description: form[code].description.trim(),
+    }))
     .filter(entry => entry.name || entry.slug)
     .map(entry => ({ ...entry, slug: entry.slug || entry.name }))
 
@@ -486,6 +491,9 @@ if (canRead.value) await load()
                 <UInput v-model="form[code].slug" class="w-full font-mono" :placeholder="code === 'vi' ? 'trang-suc' : 'jewelry'" />
               </UFormField>
             </div>
+            <UFormField class="mt-3" :label="t('admin.categories.fields.description')" :hint="t('admin.categories.fields.descriptionHint')">
+              <UTextarea v-model="form[code].description" :rows="2" :maxlength="500" class="w-full" />
+            </UFormField>
           </div>
 
           <div v-if="editingMenuRefs.length" class="rounded-sm border border-warning/40 bg-warning/10 p-3">

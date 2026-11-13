@@ -78,6 +78,30 @@ async function integration() {
       await deleteCategory(Category, Content, SITE, accented.id, accented.revision, meta)
     })
 
+    await check('a locale description is trimmed, defaults to empty and is capped', async () => {
+      const described = await createCategory(Category, SITE, {
+        key: 'mo-ta',
+        locales: [{ locale: 'vi', name: 'Mô tả', slug: 'mo-ta', description: '  Trang sức bạc thủ công  ' }],
+      }, meta)
+      assert.equal(described.locales[0]!.description, 'Trang sức bạc thủ công')
+
+      const bare = await createCategory(Category, SITE, category('khong-mo-ta', 'Không mô tả'), meta)
+      assert.equal(bare.locales[0]!.description, '')
+
+      await assert.rejects(
+        () =>
+          createCategory(Category, SITE, {
+            key: 'qua-dai',
+            locales: [{ locale: 'vi', name: 'Quá dài', slug: 'qua-dai', description: 'x'.repeat(501) }],
+          }),
+        isCategoryError(422, 'CATEGORY_PAYLOAD_INVALID'),
+      )
+
+      for (const record of [described, bare]) {
+        await deleteCategory(Category, Content, SITE, record.id, record.revision, meta)
+      }
+    })
+
     await check('the tree is ordered by order and reports depth', async () => {
       const { tree, data } = await listCategories(Category, SITE)
       assert.equal(data.length, 3)

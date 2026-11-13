@@ -12,6 +12,8 @@ export const AdminCategoryLocaleSchema = z.object({
   locale: z.string(),
   name: z.string(),
   slug: z.string(),
+  /** Landing-page intro paragraph; empty when the editor left it blank. */
+  description: z.string(),
 })
 
 export type AdminCategoryLocale = z.infer<typeof AdminCategoryLocaleSchema>

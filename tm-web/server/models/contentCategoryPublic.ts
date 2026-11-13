@@ -33,6 +33,7 @@ interface CategoryLocaleEntry {
   locale: string
   name: string
   slug: string
+  description: string
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
@@ -52,6 +53,7 @@ function readLocales(value: unknown): CategoryLocaleEntry[] {
       locale: entry.locale,
       name: entry.name,
       slug: typeof entry.slug === 'string' ? entry.slug : '',
+      description: typeof entry.description === 'string' ? entry.description : '',
     })
   }
   return entries
@@ -88,6 +90,7 @@ export function toPublicContentCategory(
     key,
     slug: entry.slug,
     name: entry.name,
+    description: entry.description,
     parent: typeof doc.parent === 'string' && doc.parent ? doc.parent : null,
     locale: entry.locale,
   }

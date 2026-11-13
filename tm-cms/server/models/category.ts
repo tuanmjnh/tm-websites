@@ -24,10 +24,15 @@ export class CategoryInvariantError extends Error {
   }
 }
 
+/** Longest intro paragraph a category may carry; it is also its meta description fallback. */
+export const CATEGORY_DESCRIPTION_MAX = 500
+
 export const CategoryLocaleSchema = z.object({
   locale: z.string().regex(LOCALE_PATTERN),
   name: z.string().trim().min(1).max(120),
   slug: z.string().regex(SLUG_PATTERN).max(120),
+  /** Optional landing-page intro; empty means "no paragraph", not a generated one. */
+  description: z.string().trim().max(CATEGORY_DESCRIPTION_MAX).default(''),
 })
 
 export const CategoryDraftSchema = z.object({
@@ -103,6 +108,7 @@ const CategoryLocaleMongooseSchema = new Schema(
     locale: { type: String, required: true },
     name: { type: String, required: true },
     slug: { type: String, required: true },
+    description: { type: String, default: '' },
   },
   { _id: false },
 )

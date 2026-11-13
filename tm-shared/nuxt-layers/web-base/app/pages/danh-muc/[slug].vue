@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PublicContentCategory, PublicContentListItem } from '@tm/flow-contracts/content-public'
-import { buildCanonicalUrl } from '@tm/flow-utils/seo'
+import { buildBreadcrumbJsonLd, buildCanonicalUrl, buildItemListJsonLd, resolveSiteUrl } from '@tm/flow-utils/seo'
 
 /**
  * Content category landing page. The URL carries the locale slug, the category
@@ -95,6 +95,11 @@ watch(locale, async () => {
   await load()
 })
 
+/** The editor's own intro wins over the generated subtitle in both places below. */
+const categoryDescription = computed(
+  () => category.value?.description || t('categoryContent.subtitle', { name: category.value?.name || '' }),
+)
+
 /**
  * An empty category landing still exists for its editor and its parent navigation,
  * but it is thin content: it stays 200 and leaves the index until a published post
@@ -104,22 +109,52 @@ const robots = usePageRobots({ empty: () => !items.value.length })
 
 useSeoMeta({
   title: () => category.value?.name || '',
-  description: () => t('categoryContent.subtitle', { name: category.value?.name || '' }),
+  description: () => categoryDescription.value,
   ogTitle: () => category.value?.name || '',
-  ogDescription: () => t('categoryContent.subtitle', { name: category.value?.name || '' }),
+  ogDescription: () => categoryDescription.value,
   ogType: 'website',
   ogUrl: () => canonical.value,
+  // A content category carries no image of its own, so it shares the site card
+  // rather than publishing an og:image a crawler cannot fetch.
+  ogImage: () => resolveSiteUrl(baseUrl, '/branding/og-cover.png'),
+  ogImageAlt: () => category.value?.name || '',
+  twitterImage: () => resolveSiteUrl(baseUrl, '/branding/og-cover.png'),
+  twitterImageAlt: () => category.value?.name || '',
   robots,
+})
+
+/** Home and the category, matching the two-step breadcrumb in the template. */
+const breadcrumbs = computed(() => buildBreadcrumbJsonLd(baseUrl, category.value
+  ? [
+      { name: t('common.home'), path: '/' },
+      { name: category.value.name, path: canonical.value },
+    ]
+  : []))
+
+/** The posts this category lists, so a crawler sees them without following each card. */
+const itemList = computed(() => buildItemListJsonLd(baseUrl, items.value.map(item => ({
+  name: item.title,
+  path: item.path,
+})), { name: category.value?.name || '' }))
+
+/** Both JSON-LD blocks, keyed so one never replaces the other. */
+const jsonLd = computed(() => {
+  const blocks: { type: 'application/ld+json', key: string, innerHTML: string }[] = []
+  for (const [key, data] of [['ld-breadcrumb', breadcrumbs.value], ['ld-items', itemList.value]] as const) {
+    if (data) blocks.push({ type: 'application/ld+json', key, innerHTML: JSON.stringify(data).replace(/</g, '\\u003c') })
+  }
+  return blocks
 })
 
 useHead({
   link: [{ rel: 'canonical', href: () => canonical.value }],
+  script: () => jsonLd.value,
 })
 </script>
 
 <template>
   <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-    <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+    <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted" :aria-label="t('a11y.breadcrumb')">
       <NuxtLink to="/" class="transition-colors hover:text-primary">{{ t('common.home') }}</NuxtLink>
       <span aria-hidden="true">/</span>
       <span class="truncate text-default">{{ category?.name }}</span>
@@ -128,7 +163,7 @@ useHead({
     <header class="mb-8">
       <h1 class="text-2xl font-extrabold tracking-tight text-highlighted sm:text-3xl">{{ category?.name }}</h1>
       <p class="mt-1 text-sm text-muted" :title="category?.key">
-        {{ t('categoryContent.subtitle', { name: category?.name }) }}
+        {{ categoryDescription }}
       </p>
     </header>
 

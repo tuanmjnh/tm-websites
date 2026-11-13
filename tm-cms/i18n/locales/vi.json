@@ -308,7 +308,9 @@
         "parent": "Danh mục cha",
         "order": "Thứ tự hiển thị",
         "name": "Tên hiển thị",
-        "slug": "Slug"
+        "slug": "Slug",
+        "description": "Mô tả danh mục",
+        "descriptionHint": "Đoạn giới thiệu ngắn hiển thị trên trang danh mục; để trống nếu không cần."
       },
       "errors": {
         "keyExists": "Khóa danh mục này đã được dùng",

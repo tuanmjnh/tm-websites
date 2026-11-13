@@ -308,7 +308,9 @@
         "parent": "Parent category",
         "order": "Display order",
         "name": "Display name",
-        "slug": "Slug"
+        "slug": "Slug",
+        "description": "Category description",
+        "descriptionHint": "Short intro shown on the category page; leave empty for none."
       },
       "errors": {
         "keyExists": "This category key is already used",

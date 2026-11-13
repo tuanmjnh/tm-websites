@@ -105,6 +105,8 @@ export const PublicContentCategorySchema = z.object({
   key: z.string().min(1).max(200),
   slug: z.string().min(1).max(200),
   name: z.string(),
+  /** The editor's intro paragraph for this locale, or an empty string. */
+  description: z.string(),
   parent: z.string().nullable(),
   locale: z.string(),
 })

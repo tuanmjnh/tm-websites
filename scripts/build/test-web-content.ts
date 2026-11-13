@@ -126,11 +126,13 @@ check('public category DTO keeps the key, locale slug and parent', () => {
     key: 'trang-suc',
     slug: 'trang-suc',
     name: 'Trang sức',
+    description: '',
     parent: null,
     locale: 'vi',
   })
   assert.equal(category.key, 'trang-suc')
   assert.equal(category.parent, null)
+  assert.equal(category.description, '')
   assert.equal(PublicContentCategorySchema.safeParse({ key: 'a', slug: 'a' }).success, false)
   assert.equal(PUBLIC_CONTENT_SEARCH_MAX, 80)
 })
