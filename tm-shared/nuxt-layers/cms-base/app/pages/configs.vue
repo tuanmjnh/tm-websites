@@ -39,6 +39,7 @@ const form = reactive({
 const settingsLoaded = ref(false)
 const saving = ref(false)
 const settingsMessage = ref<string | null>(null)
+const auditReason = ref('')
 
 const localeItems = computed(() => SETTINGS_LOCALES.map(value => ({ label: value.toUpperCase(), value })))
 
@@ -147,7 +148,8 @@ async function saveSite() {
     modules: { ...form.modules },
   }
   try {
-    const saved = await saveSettings(patch)
+    const saved = await saveSettings(patch, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     applySettings(saved.settings)
     // The save is committed either way; only the storefront refresh can fail, and
     // then the site picks the change up on its own cache window.
@@ -375,6 +377,14 @@ onMounted(load)
           </div>
 
           <div class="flex flex-wrap items-center gap-3 border-t border-default/40 pt-3">
+            <UInput
+              v-model="auditReason"
+              size="sm"
+              class="w-full sm:w-64"
+              :disabled="!canWrite"
+              :placeholder="t('common.auditReasonPlaceholder')"
+              :aria-label="t('common.auditReason')"
+            />
             <UButton
               size="sm"
               :loading="saving"

@@ -15,6 +15,7 @@ const rows = ref<AdminRedirect[]>([])
 const total = ref(0)
 const query = ref('')
 const busyId = ref<string | null>(null)
+const auditReason = ref('')
 
 const errorMessages: Record<string, string> = {
   REDIRECT_PATH_INVALID: 'admin.redirects.errors.pathInvalid',
@@ -83,6 +84,7 @@ const editingRevision = ref(0)
 const form = reactive(emptyForm())
 
 function openCreate() {
+  auditReason.value = ''
   Object.assign(form, emptyForm())
   editingId.value = null
   editingRevision.value = 0
@@ -91,6 +93,7 @@ function openCreate() {
 }
 
 function openEdit(row: AdminRedirect) {
+  auditReason.value = ''
   Object.assign(form, {
     from: row.from,
     to: row.to,
@@ -117,12 +120,13 @@ async function submit() {
       note: form.note.trim(),
     }
     if (editingId.value) {
-      await update(editingId.value, { ...draft, revision: editingRevision.value })
+      await update(editingId.value, { ...draft, revision: editingRevision.value }, auditReason.value.trim() || undefined)
       toast.add({ title: t('admin.redirects.saved'), color: 'success' })
     } else {
-      await create(draft)
+      await create(draft, auditReason.value.trim() || undefined)
       toast.add({ title: t('admin.redirects.created'), color: 'success' })
     }
+    auditReason.value = ''
     formOpen.value = false
     await load()
   } catch (e) {
@@ -162,6 +166,7 @@ const deleteTarget = ref<AdminRedirect | null>(null)
 function askDelete(row: AdminRedirect) {
   deleteTarget.value = row
   deleteError.value = null
+  auditReason.value = ''
   deleteOpen.value = true
 }
 
@@ -170,7 +175,8 @@ async function confirmDelete() {
   deleting.value = true
   deleteError.value = null
   try {
-    await remove(deleteTarget.value.id, deleteTarget.value.revision)
+    await remove(deleteTarget.value.id, deleteTarget.value.revision, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     deleteOpen.value = false
     toast.add({ title: t('admin.redirects.deleted'), color: 'success' })
     await load()
@@ -312,6 +318,12 @@ if (canRead.value) await load()
           <UFormField :label="t('admin.redirects.fields.note')" name="redirect-note">
             <UInput v-model="form.note" class="w-full" :maxlength="200" :placeholder="t('admin.redirects.fields.noteHint')" />
           </UFormField>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <p v-if="formError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ formError }}</p>
         </div>
       </template>
@@ -332,6 +344,12 @@ if (canRead.value) await load()
         <p class="text-sm text-default">
           {{ t('admin.redirects.deleteHint', { from: deleteTarget?.from ?? '' }) }}
         </p>
+        <UInput
+          v-model="auditReason"
+          class="mt-3 w-full"
+          :placeholder="t('common.auditReasonPlaceholder')"
+          :aria-label="t('common.auditReason')"
+        />
         <p v-if="deleteError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">
           {{ deleteError }}
         </p>

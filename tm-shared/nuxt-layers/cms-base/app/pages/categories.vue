@@ -32,6 +32,7 @@ const deleteOpen = ref(false)
 const deleting = ref<AdminCategory | null>(null)
 const deleteBusy = ref(false)
 const deleteError = ref<string | null>(null)
+const auditReason = ref('')
 
 const rows = computed(() => {
   const out: { node: AdminCategoryNode, depth: number }[] = []
@@ -152,6 +153,7 @@ function resetForm() {
 
 function openCreate(parent: string | null = null) {
   resetForm()
+  auditReason.value = ''
   form.parent = parent
   const siblings = flat.value.filter(entry => (entry.parent ?? null) === parent)
   form.order = siblings.length
@@ -160,6 +162,7 @@ function openCreate(parent: string | null = null) {
 
 function openEdit(node: AdminCategory) {
   resetForm()
+  auditReason.value = ''
   editing.value = node
   form.key = node.key
   form.parent = node.parent
@@ -203,12 +206,13 @@ async function submitForm() {
   saving.value = true
   try {
     if (editing.value) {
-      await update(editing.value.id, { ...draft, revision: editing.value.revision })
+      await update(editing.value.id, { ...draft, revision: editing.value.revision }, auditReason.value.trim() || undefined)
       toast.add({ title: t('admin.categories.updated'), color: 'success' })
     } else {
-      await create(draft)
+      await create(draft, auditReason.value.trim() || undefined)
       toast.add({ title: t('admin.categories.created'), color: 'success' })
     }
+    auditReason.value = ''
     formOpen.value = false
     await load()
   } catch (e) {
@@ -222,6 +226,7 @@ async function submitForm() {
 function askDelete(node: AdminCategory) {
   deleting.value = node
   deleteError.value = null
+  auditReason.value = ''
   deleteOpen.value = true
 }
 
@@ -229,8 +234,9 @@ async function confirmDelete() {
   if (!deleting.value || deleteBusy.value) return
   deleteBusy.value = true
   try {
-    await remove(deleting.value.id, deleting.value.revision)
+    await remove(deleting.value.id, deleting.value.revision, auditReason.value.trim() || undefined)
     toast.add({ title: t('admin.categories.deleted'), color: 'success' })
+    auditReason.value = ''
     deleteOpen.value = false
     await load()
   } catch (e) {
@@ -328,7 +334,7 @@ async function moveTo(key: string, parent: string | null, index: number) {
   if (moving.value) return
   moving.value = true
   try {
-    const payload = await reorder({ key, parent, index })
+    const payload = await reorder({ key, parent, index }, auditReason.value.trim() || undefined)
     flat.value = payload.data
     tree.value = payload.tree
     toast.add({ title: t('admin.categories.moved'), color: 'success' })
@@ -497,6 +503,13 @@ if (canRead.value) await load()
 
           <RecordHistory v-if="editing" resource-type="category" :resource-id="editing.id" />
 
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
+
           <p v-if="formError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ formError }}</p>
         </div>
       </template>
@@ -517,6 +530,12 @@ if (canRead.value) await load()
         <p v-if="deleteError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">
           {{ deleteError }}
         </p>
+        <UInput
+          v-model="auditReason"
+          class="mt-3 w-full"
+          :placeholder="t('common.auditReasonPlaceholder')"
+          :aria-label="t('common.auditReason')"
+        />
       </template>
       <template #footer>
         <div class="flex w-full justify-end gap-2">

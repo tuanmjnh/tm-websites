@@ -65,15 +65,20 @@ export const useContentAdmin = () => {
     return payload.data
   }
 
-  const create = async (draft: AdminContentDraft): Promise<AdminContent> => {
-    const payload = await plainFetch('/api/v1/admin/content', { method: 'POST', body: draft }) as AdminDetailResponse
+  const create = async (draft: AdminContentDraft, reason?: string): Promise<AdminContent> => {
+    const payload = await plainFetch('/api/v1/admin/content', {
+      method: 'POST',
+      body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
+    }) as AdminDetailResponse
     return payload.data
   }
 
-  const update = async (id: string, draft: AdminContentDraft & { revision: number }): Promise<AdminContent> => {
+  const update = async (id: string, draft: AdminContentDraft & { revision: number }, reason?: string): Promise<AdminContent> => {
     const payload = await plainFetch(`/api/v1/admin/content/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as AdminDetailResponse
     return payload.data
   }
@@ -83,10 +88,12 @@ export const useContentAdmin = () => {
     event: AdminContentEvent,
     revision: number,
     publishAt?: string | null,
+    reason?: string,
   ): Promise<AdminContent> => {
     const payload = await plainFetch(`/api/v1/admin/content/${encodeURIComponent(id)}/events`, {
       method: 'POST',
       body: { event, revision, publishAt: publishAt ?? null },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as AdminDetailResponse
     return payload.data
   }
@@ -96,10 +103,11 @@ export const useContentAdmin = () => {
    * with its own outcome, so callers show per-record results instead of a
    * single success/failure.
    */
-  const bulk = async (action: AdminContentBulkAction, items: AdminContentBulkItem[]): Promise<AdminContentBulkResult> => {
+  const bulk = async (action: AdminContentBulkAction, items: AdminContentBulkItem[], reason?: string): Promise<AdminContentBulkResult> => {
     const payload = await plainFetch('/api/v1/admin/content/bulk', {
       method: 'POST',
       body: { action, items },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { success: boolean, data: AdminContentBulkResult }
     return payload.data
   }
@@ -135,10 +143,10 @@ export const useContentAdmin = () => {
   }
 
   /** Restores a snapshot as a new revision; `current` guards a stale editor tab. */
-  const restoreRevision = async (id: string, revisionNumber: number, current: number): Promise<AdminContent> => {
+  const restoreRevision = async (id: string, revisionNumber: number, current: number, reason?: string): Promise<AdminContent> => {
     const payload = await plainFetch(
       `/api/v1/admin/content/${encodeURIComponent(id)}/revisions/${revisionNumber}/restore`,
-      { method: 'POST', body: { revision: current } },
+      { method: 'POST', body: { revision: current }, headers: reason ? { 'x-audit-reason': reason } : undefined },
     ) as AdminDetailResponse
     return payload.data
   }

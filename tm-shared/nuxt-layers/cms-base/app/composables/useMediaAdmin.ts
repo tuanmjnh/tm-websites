@@ -57,41 +57,49 @@ export const useMediaAdmin = () => {
     return await plainFetch('/api/v1/admin/media', { query }) as MediaListResponse
   }
 
-  const upload = async (input: MediaUploadInput): Promise<AdminMedia> => {
+  const upload = async (input: MediaUploadInput, reason?: string): Promise<AdminMedia> => {
     const body = new FormData()
     body.append('file', input.file, input.file.name)
     if (input.title) body.append('title', input.title)
     if (input.alt) body.append('alt', input.alt)
     if (input.folder) body.append('folder', input.folder)
 
-    const payload = await plainFetch('/api/v1/admin/media', { method: 'POST', body }) as MediaDetailResponse
+    const payload = await plainFetch('/api/v1/admin/media', {
+      method: 'POST',
+      body,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
+    }) as MediaDetailResponse
     return payload.data
   }
 
   const update = async (
     id: string,
     patch: { title?: string, alt?: string, folder?: string, revision: number },
+    reason?: string,
   ): Promise<AdminMedia> => {
     const payload = await plainFetch(`/api/v1/admin/media/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: patch,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as MediaDetailResponse
     return payload.data
   }
 
-  const remove = async (id: string, revision: number): Promise<{ id: string, originalName: string }> => {
+  const remove = async (id: string, revision: number, reason?: string): Promise<{ id: string, originalName: string }> => {
     const payload = await plainFetch(`/api/v1/admin/media/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       query: { revision },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { success: boolean, data: { id: string, originalName: string } }
     return payload.data
   }
 
   /** Move or delete a bounded batch; the response reports one row per file. */
-  const bulk = async (input: AdminMediaBulkRequest): Promise<AdminMediaBulkResult> => {
+  const bulk = async (input: AdminMediaBulkRequest, reason?: string): Promise<AdminMediaBulkResult> => {
     const payload = await plainFetch('/api/v1/admin/media/bulk', {
       method: 'POST',
       body: input,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { success: boolean, data: AdminMediaBulkResult }
     return payload.data
   }

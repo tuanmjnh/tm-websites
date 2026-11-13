@@ -61,6 +61,7 @@ const choicesError = ref<string | null>(null)
 const deleteOpen = ref(false)
 const deleteBusy = ref(false)
 const deleteError = ref<string | null>(null)
+const auditReason = ref('')
 
 const dirty = computed(() => {
   if (!detail.value) return false
@@ -197,7 +198,8 @@ async function saveMenu() {
       revision: detail.value.revision,
       name: draftName.value.trim(),
       items: draftItems.value,
-    })
+    }, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     detail.value = updated
     draftName.value = updated.name
     draftItems.value = updated.items.map(cloneItem)
@@ -217,6 +219,7 @@ async function saveMenu() {
 }
 
 function openCreate() {
+  auditReason.value = ''
   createForm.key = ''
   createForm.name = ''
   createError.value = null
@@ -228,7 +231,8 @@ async function submitCreate() {
   createError.value = null
   creating.value = true
   try {
-    const created = await create({ key: createForm.key.trim(), name: createForm.name.trim() })
+    const created = await create({ key: createForm.key.trim(), name: createForm.name.trim() }, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     toast.add({ title: t('admin.menus.created'), color: 'success' })
     createOpen.value = false
     selectedId.value = created.id
@@ -519,6 +523,7 @@ const isDragging = (list: 'root' | number, index: number) =>
 
 function askDelete() {
   deleteError.value = null
+  auditReason.value = ''
   deleteOpen.value = true
 }
 
@@ -527,7 +532,8 @@ async function confirmDelete() {
   deleteBusy.value = true
   deleteError.value = null
   try {
-    await remove(detail.value.id, detail.value.revision)
+    await remove(detail.value.id, detail.value.revision, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     toast.add({ title: t('admin.menus.deleted'), color: 'success' })
     deleteOpen.value = false
     selectedId.value = null
@@ -794,6 +800,12 @@ if (canRead.value) await loadMenus()
           <UFormField :label="t('admin.menus.fields.name')">
             <UInput v-model="createForm.name" class="w-full" placeholder="Menu chính" />
           </UFormField>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <p v-if="createError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ createError }}</p>
         </div>
       </template>
@@ -873,6 +885,12 @@ if (canRead.value) await loadMenus()
     <UModal v-model:open="deleteOpen" :title="t('admin.menus.deleteTitle')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
       <template #body>
         <p class="text-sm text-default">{{ t('admin.menus.deleteHint', { name: detail?.name || '' }) }}</p>
+        <UInput
+          v-model="auditReason"
+          class="mt-3 w-full"
+          :placeholder="t('common.auditReasonPlaceholder')"
+          :aria-label="t('common.auditReason')"
+        />
         <p v-if="deleteError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ deleteError }}</p>
       </template>
       <template #footer>

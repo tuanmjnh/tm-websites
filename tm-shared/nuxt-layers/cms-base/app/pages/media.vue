@@ -44,6 +44,7 @@ const deleteOpen = ref(false)
 const deleting = ref<AdminMedia | null>(null)
 const deleteBusy = ref(false)
 const deleteError = ref<string | null>(null)
+const auditReason = ref('')
 
 // Bulk selection is kept by id so a reload can prune files that no longer
 // exist, while the rows that failed stay selected for another attempt.
@@ -176,6 +177,7 @@ async function onFiles(event: Event) {
 
 function openEdit(entry: AdminMedia) {
   editing.value = entry
+  auditReason.value = ''
   editError.value = null
   editForm.title = entry.title
   editForm.alt = entry.alt
@@ -193,7 +195,8 @@ async function submitEdit() {
       alt: editForm.alt,
       folder: editForm.folder,
       revision: editing.value.revision,
-    })
+    }, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     toast.add({ title: t('admin.media.updated'), color: 'success' })
     editOpen.value = false
     await load()
@@ -208,6 +211,7 @@ async function submitEdit() {
 function askDelete(entry: AdminMedia) {
   deleting.value = entry
   deleteError.value = null
+  auditReason.value = ''
   deleteOpen.value = true
 }
 
@@ -216,7 +220,8 @@ async function confirmDelete() {
   deleteBusy.value = true
   deleteError.value = null
   try {
-    await remove(deleting.value.id, deleting.value.revision)
+    await remove(deleting.value.id, deleting.value.revision, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     toast.add({ title: t('admin.media.deleted'), color: 'success' })
     deleteOpen.value = false
     await load()
@@ -242,6 +247,7 @@ const clearSelection = () => {
 }
 
 function openBulkMove() {
+  auditReason.value = ''
   bulkError.value = null
   bulkFailures.value = []
   const folders = [...new Set(selectedItems.value.map(entry => entry.folder).filter(Boolean))]
@@ -250,6 +256,7 @@ function openBulkMove() {
 }
 
 function openBulkDelete() {
+  auditReason.value = ''
   bulkError.value = null
   bulkFailures.value = []
   bulkDeleteOpen.value = true
@@ -270,7 +277,7 @@ async function runBulk(action: 'move' | 'delete') {
       action,
       ...(action === 'move' ? { folder: bulkFolder.value } : {}),
       items: selectedItems.value.map(entry => ({ id: entry.id, revision: entry.revision })),
-    })
+    }, auditReason.value.trim() || undefined)
 
     if (result.succeeded) {
       toast.add({ title: t('admin.media.bulk.done', { count: result.succeeded }), color: 'success' })
@@ -279,6 +286,7 @@ async function runBulk(action: 'move' | 'delete') {
     bulkFailures.value = result.results.filter(row => !row.ok)
 
     if (!result.failed) {
+      auditReason.value = ''
       bulkMoveOpen.value = false
       bulkDeleteOpen.value = false
     }
@@ -544,6 +552,13 @@ if (canRead.value) await load()
           </UFormField>
           <RecordHistory v-if="editing" resource-type="media" :resource-id="editing.id" />
 
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
+
           <p v-if="editError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ editError }}</p>
         </div>
       </template>
@@ -560,6 +575,12 @@ if (canRead.value) await load()
         <div class="flex flex-col gap-3 text-sm">
           <p class="text-muted">{{ t('admin.media.deleteDescription') }}</p>
           <p class="font-mono text-xs text-highlighted">{{ deleting?.originalName }}</p>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <p v-if="deleteError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ deleteError }}</p>
         </div>
       </template>
@@ -579,6 +600,12 @@ if (canRead.value) await load()
             <UInput v-model="bulkFolder" class="w-full font-mono" placeholder="landing/hero" />
           </UFormField>
           <p class="text-[11px] text-muted">{{ t('admin.media.bulk.moveHint') }}</p>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <p v-if="bulkError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ bulkError }}</p>
           <div v-if="bulkFailures.length" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs">
             <p class="font-medium text-highlighted">{{ t('admin.media.bulk.failedRows', { count: bulkFailures.length }) }}</p>
@@ -609,6 +636,12 @@ if (canRead.value) await load()
       <template #body>
         <div class="flex flex-col gap-3 text-sm">
           <p class="text-muted">{{ t('admin.media.bulk.deleteDescription', { count: selectedIds.length }) }}</p>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <p v-if="bulkError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ bulkError }}</p>
           <div v-if="bulkFailures.length" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs">
             <p class="font-medium text-highlighted">{{ t('admin.media.bulk.failedRows', { count: bulkFailures.length }) }}</p>

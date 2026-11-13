@@ -16,7 +16,9 @@
     "loading_text": "Loading...",
     "no_more_data": "No more data",
     "actions": "Actions",
-    "edit": "Edit"
+    "edit": "Edit",
+    "auditReason": "Reason / note",
+    "auditReasonPlaceholder": "Short note about this change (optional)"
   },
   "auth": {
     "loginDescription": "Sign in with the account provisioned by TM Hub to access the admin suite.",

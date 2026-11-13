@@ -19,10 +19,11 @@ export const useTagAdmin = () => {
   }
 
   /** Renames a tag everywhere; `to: null` detaches it instead. */
-  const rename = async (input: AdminTagRenameRequest): Promise<AdminTagRenameResult> => {
+  const rename = async (input: AdminTagRenameRequest, reason?: string): Promise<AdminTagRenameResult> => {
     const payload = await plainFetch('/api/v1/admin/tags/rename', {
       method: 'POST',
       body: input,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { success: boolean, data: AdminTagRenameResult }
     return payload.data
   }

@@ -35,8 +35,12 @@ export const useCategoryAdmin = () => {
     return await plainFetch('/api/v1/admin/categories') as CategoryListResponse
   }
 
-  const create = async (draft: AdminCategoryDraft): Promise<AdminCategory> => {
-    const payload = await plainFetch('/api/v1/admin/categories', { method: 'POST', body: draft }) as CategoryDetailResponse
+  const create = async (draft: AdminCategoryDraft, reason?: string): Promise<AdminCategory> => {
+    const payload = await plainFetch('/api/v1/admin/categories', {
+      method: 'POST',
+      body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
+    }) as CategoryDetailResponse
     return payload.data
   }
 
@@ -46,26 +50,29 @@ export const useCategoryAdmin = () => {
     return payload.data.menus
   }
 
-  const update = async (id: string, draft: AdminCategoryDraft & { revision: number }): Promise<AdminCategory> => {
+  const update = async (id: string, draft: AdminCategoryDraft & { revision: number }, reason?: string): Promise<AdminCategory> => {
     const payload = await plainFetch(`/api/v1/admin/categories/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as CategoryDetailResponse
     return payload.data
   }
 
   /** One drag-and-drop move; the server owns the resulting order values. */
-  const reorder = async (input: AdminCategoryReorderRequest): Promise<CategoryListResponse> => {
+  const reorder = async (input: AdminCategoryReorderRequest, reason?: string): Promise<CategoryListResponse> => {
     return await plainFetch('/api/v1/admin/categories/reorder', {
       method: 'POST',
       body: input,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as CategoryListResponse
   }
 
-  const remove = async (id: string, revision: number): Promise<{ id: string, key: string }> => {
+  const remove = async (id: string, revision: number, reason?: string): Promise<{ id: string, key: string }> => {
     const payload = await plainFetch(`/api/v1/admin/categories/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       query: { revision },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { success: boolean, data: { id: string, key: string } }
     return payload.data
   }

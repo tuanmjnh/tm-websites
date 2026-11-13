@@ -22,23 +22,29 @@ export const useMenuAdmin = () => {
     return payload.data
   }
 
-  const create = async (draft: { key: string, name: string }): Promise<AdminMenu> => {
-    const payload = await plainFetch('/api/v1/admin/menus', { method: 'POST', body: draft }) as { data: AdminMenu }
-    return payload.data
-  }
-
-  const save = async (id: string, patch: AdminMenuPatch): Promise<AdminMenu> => {
-    const payload = await plainFetch(`/api/v1/admin/menus/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      body: patch,
+  const create = async (draft: { key: string, name: string }, reason?: string): Promise<AdminMenu> => {
+    const payload = await plainFetch('/api/v1/admin/menus', {
+      method: 'POST',
+      body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: AdminMenu }
     return payload.data
   }
 
-  const remove = async (id: string, revision: number): Promise<{ id: string, key: string }> => {
+  const save = async (id: string, patch: AdminMenuPatch, reason?: string): Promise<AdminMenu> => {
+    const payload = await plainFetch(`/api/v1/admin/menus/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: patch,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
+    }) as { data: AdminMenu }
+    return payload.data
+  }
+
+  const remove = async (id: string, revision: number, reason?: string): Promise<{ id: string, key: string }> => {
     const payload = await plainFetch(`/api/v1/admin/menus/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       query: { revision },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: { id: string, key: string } }
     return payload.data
   }

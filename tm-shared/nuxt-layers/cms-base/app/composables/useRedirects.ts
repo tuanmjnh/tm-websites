@@ -20,23 +20,29 @@ export const useRedirects = () => {
     return { data: payload.data, total: payload.total }
   }
 
-  const create = async (draft: AdminRedirectDraft): Promise<AdminRedirect> => {
-    const payload = await plainFetch('/api/v1/admin/redirects', { method: 'POST', body: draft }) as { data: AdminRedirect }
-    return payload.data
-  }
-
-  const update = async (id: string, draft: AdminRedirectDraft & { revision: number }): Promise<AdminRedirect> => {
-    const payload = await plainFetch(`/api/v1/admin/redirects/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
+  const create = async (draft: AdminRedirectDraft, reason?: string): Promise<AdminRedirect> => {
+    const payload = await plainFetch('/api/v1/admin/redirects', {
+      method: 'POST',
       body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: AdminRedirect }
     return payload.data
   }
 
-  const remove = async (id: string, revision: number): Promise<void> => {
+  const update = async (id: string, draft: AdminRedirectDraft & { revision: number }, reason?: string): Promise<AdminRedirect> => {
+    const payload = await plainFetch(`/api/v1/admin/redirects/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
+    }) as { data: AdminRedirect }
+    return payload.data
+  }
+
+  const remove = async (id: string, revision: number, reason?: string): Promise<void> => {
     await plainFetch(`/api/v1/admin/redirects/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       query: { revision },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     })
   }
 

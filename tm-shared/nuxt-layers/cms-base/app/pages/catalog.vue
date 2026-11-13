@@ -67,6 +67,7 @@ function toggleOne(id: string) {
 }
 
 function openBulk() {
+  auditReason.value = ''
   bulkError.value = null
   bulkForm.value = { basePrice: null, salePrice: null, stock: null }
   bulkScope.value = selection.value.length ? 'selected' : 'filter'
@@ -106,9 +107,10 @@ async function applyBulk() {
   bulkBusy.value = true
   bulkError.value = null
   try {
+    const reason = auditReason.value.trim() || undefined
     const result = byFilter
-      ? await bulkUpdateByFilter({ filter: bulkFilter.value, ...patch })
-      : await bulkUpdate({ items: rows })
+      ? await bulkUpdateByFilter({ filter: bulkFilter.value, ...patch }, reason)
+      : await bulkUpdate({ items: rows }, reason)
     toast.add({
       title: t('admin.catalog.messages.bulkResult', { ok: result.succeeded, total: result.results.length }),
       color: result.failed ? 'warning' : 'success',
@@ -117,6 +119,7 @@ async function applyBulk() {
       const first = result.results.find(row => !row.ok && row.error)
       bulkError.value = first?.error ? messageFor(first.error.code) : null
     } else {
+      auditReason.value = ''
       bulkOpen.value = false
       selection.value = []
     }
@@ -234,6 +237,7 @@ const formOpen = ref(false)
 const editingId = ref<string | null>(null)
 const editingRevision = ref(0)
 const formError = ref<string | null>(null)
+const auditReason = ref('')
 
 const form = reactive({
   key: '',
@@ -325,11 +329,13 @@ function resetForm() {
 
 function openCreate() {
   resetForm()
+  auditReason.value = ''
   formOpen.value = true
 }
 
 function openEdit(item: AdminCatalogItem) {
   resetForm()
+  auditReason.value = ''
   editingId.value = item.id
   editingRevision.value = item.revision
   const categoryKeys = new Set(item.categories)
@@ -419,11 +425,13 @@ async function save() {
   saving.value = true
   formError.value = null
   try {
+    const reason = auditReason.value.trim() || undefined
     if (editingId.value) {
-      await update(editingId.value, { ...payload(), revision: editingRevision.value })
+      await update(editingId.value, { ...payload(), revision: editingRevision.value }, reason)
     } else {
-      await create(payload())
+      await create(payload(), reason)
     }
+    auditReason.value = ''
     toast.add({ title: t('admin.catalog.messages.saved'), color: 'success' })
     formOpen.value = false
     await Promise.all([load(), loadReferenceData()])
@@ -471,6 +479,7 @@ const parentItems = computed(() => [
 function resetCategoryForm() {
   categoryEditing.value = null
   categoryError.value = null
+  auditReason.value = ''
   Object.assign(categoryDraft.value, { key: '', title: '', parent: null, order: 0 })
 }
 
@@ -499,11 +508,12 @@ async function saveCategory() {
       description: {},
       thumbnail: null,
     }
+    const reason = auditReason.value.trim() || undefined
     if (categoryEditing.value) {
       const current = categories.value.find(category => category.id === categoryEditing.value)
-      await updateCategory(categoryEditing.value, { ...draft, revision: current?.revision ?? 1 })
+      await updateCategory(categoryEditing.value, { ...draft, revision: current?.revision ?? 1 }, reason)
     } else {
-      await createCategory(draft)
+      await createCategory(draft, reason)
     }
     resetCategoryForm()
     await Promise.all([loadReferenceData(), load()])
@@ -519,7 +529,7 @@ async function removeCategory(category: AdminCatalogCategory) {
   categoryBusy.value = true
   categoryError.value = null
   try {
-    await deleteCategory(category.id, category.revision)
+    await deleteCategory(category.id, category.revision, auditReason.value.trim() || undefined)
     if (categoryEditing.value === category.id) resetCategoryForm()
     await Promise.all([loadReferenceData(), load()])
   } catch (caught) {
@@ -824,7 +834,13 @@ async function removeCategory(category: AdminCatalogCategory) {
       </template>
 
       <template #footer>
-        <div class="flex w-full justify-end gap-2">
+        <div class="flex w-full flex-wrap items-center justify-end gap-2">
+          <UInput
+            v-model="auditReason"
+            class="w-full sm:mr-auto sm:w-64"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <UButton
             color="neutral"
             variant="ghost"
@@ -855,6 +871,12 @@ async function removeCategory(category: AdminCatalogCategory) {
           <UFormField :label="t('admin.catalog.fields.stock')">
             <UInput v-model.number="bulkForm.stock" type="number" class="w-full" :placeholder="t('admin.catalog.bulk.keep')" />
           </UFormField>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
         </div>
       </template>
       <template #footer>
@@ -916,6 +938,13 @@ async function removeCategory(category: AdminCatalogCategory) {
               <UInput v-model.number="categoryDraft.order" type="number" class="w-full" />
             </UFormField>
           </div>
+
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
         </div>
       </template>
 

@@ -28,6 +28,7 @@ const saving = ref(false)
 const formError = ref<string | null>(null)
 const source = ref<AdminTag | null>(null)
 const target = ref('')
+const auditReason = ref('')
 
 const detachOpen = ref(false)
 const detaching = ref(false)
@@ -77,6 +78,7 @@ async function load() {
 function openRename(tag: AdminTag) {
   source.value = tag
   target.value = tag.name
+  auditReason.value = ''
   formError.value = null
   formOpen.value = true
 }
@@ -92,7 +94,8 @@ async function submitRename() {
   saving.value = true
   formError.value = null
   try {
-    const result = await rename({ from: source.value.name, to: name })
+    const result = await rename({ from: source.value.name, to: name }, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     formOpen.value = false
     toast.add({
       title: mergeTarget.value === null && result.updated > 1
@@ -116,6 +119,7 @@ async function submitRename() {
 
 function askDetach(tag: AdminTag) {
   detachTarget.value = tag
+  auditReason.value = ''
   detachError.value = null
   detachOpen.value = true
 }
@@ -125,7 +129,8 @@ async function confirmDetach() {
   detaching.value = true
   detachError.value = null
   try {
-    const result = await rename({ from: detachTarget.value.name, to: null })
+    const result = await rename({ from: detachTarget.value.name, to: null }, auditReason.value.trim() || undefined)
+    auditReason.value = ''
     detachOpen.value = false
     toast.add({ title: t('admin.tags.detached', { count: result.updated }), color: 'success' })
     if (result.skipped > 0) {
@@ -229,6 +234,12 @@ if (canRead.value) await load()
           <UFormField :label="t('admin.tags.fields.name')" name="tag-name">
             <UInput v-model="target" class="w-full" :maxlength="ADMIN_TAG_MAX_LENGTH" autofocus @keyup.enter="submitRename" />
           </UFormField>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <p v-if="mergeTarget" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs text-default">
             {{ t('admin.tags.mergeHint', { name: mergeTarget.name, count: mergeTarget.count }) }}
           </p>
@@ -253,6 +264,12 @@ if (canRead.value) await load()
           {{ t('admin.tags.detachHint', { name: detachTarget?.name ?? '', count: detachTarget?.count ?? 0 }) }}
         </p>
         <p class="mt-2 text-xs text-muted">{{ t('admin.tags.detachGuard') }}</p>
+        <UInput
+          v-model="auditReason"
+          class="mt-3 w-full"
+          :placeholder="t('common.auditReasonPlaceholder')"
+          :aria-label="t('common.auditReason')"
+        />
         <p v-if="detachError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">
           {{ detachError }}
         </p>

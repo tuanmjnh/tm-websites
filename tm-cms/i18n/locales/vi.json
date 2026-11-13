@@ -16,7 +16,9 @@
     "loading_text": "Đang tải...",
     "no_more_data": "Đã tải hết dữ liệu",
     "actions": "Thao tác",
-    "edit": "Sửa"
+    "edit": "Sửa",
+    "auditReason": "Lý do / ghi chú",
+    "auditReasonPlaceholder": "Ghi chú ngắn về thay đổi này (không bắt buộc)"
   },
   "auth": {
     "loginDescription": "Dùng tài khoản được cấp bởi TM Hub để truy cập bảng quản trị.",

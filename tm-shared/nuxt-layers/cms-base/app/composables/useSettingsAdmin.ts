@@ -32,11 +32,12 @@ export const useSettingsAdmin = () => {
     return payload.data
   }
 
-  const saveSettings = async (patch: AdminSiteSettingsPatch): Promise<SettingsSaveResult> => {
+  const saveSettings = async (patch: AdminSiteSettingsPatch, reason?: string): Promise<SettingsSaveResult> => {
     let header: string | null = null
     const payload = await plainFetch('/api/v1/admin/settings', {
       method: 'PATCH',
       body: patch,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
       onResponse: ({ response }: { response: { headers: Headers } }) => {
         header = response.headers.get('x-storefront-revalidate')
       },

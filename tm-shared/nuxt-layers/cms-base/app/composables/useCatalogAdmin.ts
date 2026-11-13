@@ -48,41 +48,49 @@ export const useCatalogAdmin = () => {
     return payload.data
   }
 
-  const create = async (draft: AdminCatalogItemDraft): Promise<AdminCatalogItem> => {
-    const payload = await plainFetch('/api/v1/admin/catalog/items', { method: 'POST', body: draft }) as { data: AdminCatalogItem }
-    return payload.data
-  }
-
-  const update = async (id: string, draft: AdminCatalogItemDraft & { revision: number }): Promise<AdminCatalogItem> => {
-    const payload = await plainFetch(`/api/v1/admin/catalog/items/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
+  const create = async (draft: AdminCatalogItemDraft, reason?: string): Promise<AdminCatalogItem> => {
+    const payload = await plainFetch('/api/v1/admin/catalog/items', {
+      method: 'POST',
       body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: AdminCatalogItem }
     return payload.data
   }
 
-  const runEvent = async (id: string, event: AdminCatalogEvent, revision: number): Promise<AdminCatalogItem> => {
+  const update = async (id: string, draft: AdminCatalogItemDraft & { revision: number }, reason?: string): Promise<AdminCatalogItem> => {
+    const payload = await plainFetch(`/api/v1/admin/catalog/items/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
+    }) as { data: AdminCatalogItem }
+    return payload.data
+  }
+
+  const runEvent = async (id: string, event: AdminCatalogEvent, revision: number, reason?: string): Promise<AdminCatalogItem> => {
     const payload = await plainFetch(`/api/v1/admin/catalog/items/${encodeURIComponent(id)}/events`, {
       method: 'POST',
       body: { event, revision },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: AdminCatalogItem }
     return payload.data
   }
 
   /** Applies a partial price/stock patch to many records; each row answers separately. */
-  const bulkUpdate = async (patch: AdminCatalogBulkPatch): Promise<AdminCatalogBulkResult> => {
+  const bulkUpdate = async (patch: AdminCatalogBulkPatch, reason?: string): Promise<AdminCatalogBulkResult> => {
     const payload = await plainFetch('/api/v1/admin/catalog/items/bulk', {
       method: 'POST',
       body: patch,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: AdminCatalogBulkResult }
     return payload.data
   }
 
   /** Same patch, but the server selects every record matching the list filter. */
-  const bulkUpdateByFilter = async (patch: AdminCatalogBulkByFilterPatch): Promise<AdminCatalogBulkResult> => {
+  const bulkUpdateByFilter = async (patch: AdminCatalogBulkByFilterPatch, reason?: string): Promise<AdminCatalogBulkResult> => {
     const payload = await plainFetch('/api/v1/admin/catalog/items/bulk-by-filter', {
       method: 'POST',
       body: patch,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: AdminCatalogBulkResult }
     return payload.data
   }
@@ -92,10 +100,11 @@ export const useCatalogAdmin = () => {
     return payload.data
   }
 
-  const createCategory = async (draft: AdminCatalogCategoryDraft): Promise<AdminCatalogCategory> => {
+  const createCategory = async (draft: AdminCatalogCategoryDraft, reason?: string): Promise<AdminCatalogCategory> => {
     const payload = await plainFetch('/api/v1/admin/catalog/categories', {
       method: 'POST',
       body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: AdminCatalogCategory }
     return payload.data
   }
@@ -103,18 +112,21 @@ export const useCatalogAdmin = () => {
   const updateCategory = async (
     id: string,
     draft: AdminCatalogCategoryDraft & { revision: number },
+    reason?: string,
   ): Promise<AdminCatalogCategory> => {
     const payload = await plainFetch(`/api/v1/admin/catalog/categories/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: draft,
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     }) as { data: AdminCatalogCategory }
     return payload.data
   }
 
-  const deleteCategory = async (id: string, revision: number): Promise<void> => {
+  const deleteCategory = async (id: string, revision: number, reason?: string): Promise<void> => {
     await plainFetch(`/api/v1/admin/catalog/categories/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       query: { revision },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
     })
   }
 

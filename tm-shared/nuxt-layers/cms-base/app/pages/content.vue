@@ -85,6 +85,7 @@ const deleteOpen = ref(false)
 const scheduleOpen = ref(false)
 const scheduleAt = ref('')
 const scheduleBusy = ref(false)
+const auditReason = ref('')
 
 // Bulk selection lives in the page (not the row) so one confirm dialog can cover
 // every checked record and one request can report per-row outcomes.
@@ -351,9 +352,10 @@ async function restoreVersion(revisionNumber: number) {
   if (!canWrite.value || !selected.value || restoringRevision.value !== null) return
   restoringRevision.value = revisionNumber
   try {
-    const updated = await restoreRevisionApi(selected.value.id, revisionNumber, selected.value.revision)
+    const updated = await restoreRevisionApi(selected.value.id, revisionNumber, selected.value.revision, auditReason.value.trim() || undefined)
     selected.value = updated
     entries.value = entries.value.map(item => (item.id === updated.id ? updated : item))
+    auditReason.value = ''
     revisionOpen.value = false
     toast.add({ title: t('admin.content.versions.restored'), color: 'success' })
     await Promise.all([load(), loadHistory(updated.id), loadRevisions(updated.id)])
@@ -506,6 +508,7 @@ function buildAttributes(): Record<string, string | number | boolean> | null {
 
 function openCreate() {
   resetForm()
+  auditReason.value = ''
   void loadCategoryOptions()
   void loadMediaOptions()
   formOpen.value = true
@@ -513,6 +516,7 @@ function openCreate() {
 
 function openEdit(entry: AdminContent) {
   resetForm()
+  auditReason.value = ''
   editingId.value = entry.id
   editingRevision.value = entry.revision
   form.type = entry.type
@@ -602,12 +606,13 @@ async function submitForm() {
   saving.value = true
   try {
     if (editingId.value) {
-      await update(editingId.value, { ...draft, revision: editingRevision.value })
+      await update(editingId.value, { ...draft, revision: editingRevision.value }, auditReason.value.trim() || undefined)
       toast.add({ title: t('admin.content.updated'), color: 'success' })
     } else {
-      await create(draft)
+      await create(draft, auditReason.value.trim() || undefined)
       toast.add({ title: t('admin.content.created'), color: 'success' })
     }
+    auditReason.value = ''
     formOpen.value = false
     await load()
   } catch (e) {
@@ -618,11 +623,11 @@ async function submitForm() {
   }
 }
 
-async function act(entry: AdminContent, event: AdminContentEvent, publishAt?: string | null) {
+async function act(entry: AdminContent, event: AdminContentEvent, publishAt?: string | null, reason?: string) {
   if (!canWrite.value) return
   busyId.value = entry.id
   try {
-    const updated = await runEvent(entry.id, event, entry.revision, publishAt)
+    const updated = await runEvent(entry.id, event, entry.revision, publishAt, reason ?? (auditReason.value.trim() || undefined))
     const messages: Record<AdminContentEvent, string> = {
       publish: 'admin.content.published',
       schedule: 'admin.content.scheduled',
@@ -632,6 +637,7 @@ async function act(entry: AdminContent, event: AdminContentEvent, publishAt?: st
       delete: 'admin.content.deleted',
     }
     toast.add({ title: t(messages[event]), color: 'success' })
+    auditReason.value = ''
     detailOpen.value = false
     scheduleOpen.value = false
     deleteOpen.value = false
@@ -646,11 +652,23 @@ async function act(entry: AdminContent, event: AdminContentEvent, publishAt?: st
 
 function askDelete(entry: AdminContent) {
   selected.value = entry
+  auditReason.value = ''
   deleteOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!selected.value || busyId.value) return
+  busyId.value = selected.value.id
+  try {
+    await act(selected.value, 'delete', null, auditReason.value.trim() || undefined)
+  } finally {
+    busyId.value = null
+  }
 }
 
 function askSchedule(entry: AdminContent) {
   selected.value = entry
+  auditReason.value = ''
   const inAnHour = new Date(Date.now() + 60 * 60 * 1000)
   scheduleAt.value = toLocalInput(inAnHour.toISOString())
   scheduleOpen.value = true
@@ -665,7 +683,7 @@ async function confirmSchedule() {
   }
   scheduleBusy.value = true
   try {
-    await act(selected.value, 'schedule', iso)
+    await act(selected.value, 'schedule', iso, auditReason.value.trim() || undefined)
   } finally {
     scheduleBusy.value = false
   }
@@ -685,6 +703,7 @@ function toggleOne(id: string) {
 
 function askBulk(action: AdminContentBulkAction) {
   if (!canWrite.value || !selection.value.length) return
+  auditReason.value = ''
   bulkAction.value = action
   bulkResult.value = null
   bulkOpen.value = true
@@ -706,12 +725,13 @@ async function confirmBulk() {
 
   bulkBusy.value = true
   try {
-    bulkResult.value = await runBulk(bulkAction.value, items)
+    bulkResult.value = await runBulk(bulkAction.value, items, auditReason.value.trim() || undefined)
     const result = bulkResult.value
     toast.add({
       title: t('admin.content.bulk.done', { ok: result.succeeded, total: result.results.length }),
       color: result.failed ? 'warning' : 'success',
     })
+    auditReason.value = ''
     selection.value = []
     await load()
   } catch (e) {
@@ -1457,6 +1477,12 @@ onMounted(async () => {
             </UFormField>
           </div>
 
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <p v-if="formError" class="text-sm text-error">{{ formError }}</p>
         </div>
       </template>
@@ -1484,6 +1510,12 @@ onMounted(async () => {
           <UFormField :label="t('admin.content.fields.publishAt')" name="scheduleAt">
             <UInput v-model="scheduleAt" type="datetime-local" class="w-full" />
           </UFormField>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
         </div>
       </template>
       <template #footer="{ close }">
@@ -1507,6 +1539,12 @@ onMounted(async () => {
           {{ t('admin.content.deleteConfirmText', { title: selected?.locales[0]?.title ?? selected?.key ?? '' }) }}
         </p>
         <p class="mt-2 text-xs text-muted">{{ t('admin.content.softDeleteNote') }}</p>
+        <UInput
+          v-model="auditReason"
+          class="mt-3 w-full"
+          :placeholder="t('common.auditReasonPlaceholder')"
+          :aria-label="t('common.auditReason')"
+        />
       </template>
       <template #footer="{ close }">
         <div class="flex w-full items-center justify-end gap-2">
@@ -1517,7 +1555,7 @@ onMounted(async () => {
             size="sm"
             :label="t('common.delete')"
             :loading="busyId === selected?.id"
-            @click="selected && act(selected, 'delete')"
+            @click="confirmDelete"
           />
         </div>
       </template>
@@ -1531,6 +1569,12 @@ onMounted(async () => {
       <template #body>
         <div class="flex flex-col gap-3">
           <p class="text-sm text-muted">{{ t(`admin.content.bulk.confirm.${bulkAction}`) }}</p>
+          <UInput
+            v-model="auditReason"
+            class="w-full"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
 
           <div v-if="bulkResult" class="flex flex-col gap-2">
             <p class="text-sm font-medium text-highlighted">
