@@ -16,7 +16,7 @@
 | P3 | Content/media/site vertical slice on MongoDB | **In progress** — content module with audit/revisions/bulk, media library with local storage and attachments, tag management, category tree and ordering, site settings/menus with a storefront projection, redirect map (301/302/410), and the storefront readers (pages, `/bai-viet`, search, tags, categories, cart) landed; public media origin and Hub content export are blocked |
 | P4 | Catalog/search | **In progress** — CAT-01 landed (catalog CRUD, variants/attributes editor, bulk price/stock, barcode) and the storefront reads published items; CAT-02's serial/IMEI part waits for inventory (P6) |
 | P5–P8 | Commerce/CRM, inventory/purchasing, finance, HR/comms | Planned — no slice starts before P4's remaining gap and the P5 domain decisions |
-| P9 | Hardening and parity closure | **In progress** — `verify:all` (25 steps) runs in CI against a disposable Mongo, the PWA is verified end to end (install, offline, three update paths, cross-customer isolation) and every customer app builds in `test:build-matrix`; open: accessibility, per-customer browser pass, CDN/provider cache |
+| P9 | Hardening and parity closure | **In progress** — `verify:all` (25 steps) runs in CI against a disposable Mongo, the PWA is verified end to end (install, offline, three update paths, cross-customer isolation) and every customer app builds in `test:build-matrix`; open: per-customer browser pass and a CDN/provider purge (Q12) |
 | P10 | Migration and launch | Planned — needs the legacy snapshot and production authorization |
 
 ## P1 — IAM contract and BFF
@@ -995,7 +995,7 @@ Each item is sized for one session, needs no new decision or credential, and car
 | 3 ✅ 2026-11-13 | **WEB-12 fixes** | Whatever 1–2 turn up; accessibility findings are only worth something once they are repaired or explicitly deferred | Each defect is fixed with the check re-run, or written into `05` as a deliberate deferral |
 | 4 ✅ 2026-11-13 | **CNT retention policy** | P3.c's open gap: revision retention is a placeholder and nothing schedules `prune:retention` | Documented defaults, a documented manual schedule, dry-run still the default, and a test that prunes only what it should |
 | 5 ✅ 2026-11-13 | **OPS-01 audit for category and media** | P2.c's open gap: the audit read surface covers content only, so category/media writes are invisible | Category and media writes appear in the audit list with actor/reason, covered by a domain test |
-| 6 | **WEB-09 scoped purge** | The documented gap: every save deletes the whole handler cache instead of the keys it touched (CDN purge stays deferred by Q12) | A catalog or settings write drops only the site/tenant keys it should, and a test proves an unrelated site's cache survives |
+| 6 ✅ 2026-11-13 | **WEB-09 scoped purge** | The documented gap: every save deletes the whole handler cache instead of the keys it touched (CDN purge stays deferred by Q12) | A catalog or settings write drops only the site/tenant keys it should, and a test proves an unrelated site's cache survives |
 
 **Slice 1 landed 2026-11-13.** Browser sweep on six storefront pages plus the 404: fixed the missing `html[lang]` (layout and error page), added a skip link and the `#main` target, named the two header navs, the filter input, pagination and the breadcrumbs (new `a11y.*` keys), removed an unnamed duplicate image link and lifted the card title from `h3` to `h2`. Evidence and the list of what was **not** verified are in `08`. `pnpm verify:all` 25/25 afterwards.
 
@@ -1005,7 +1005,7 @@ Each item is sized for one session, needs no new decision or credential, and car
 
 **Slice 5 landed 2026-11-13.** The services already wrote category/media rows, so the slice became: prove it, and give the rows the operator's intent. `reason` is now a field on `audit_logs` (capped at 500, normalised once), carried from `x-audit-reason` by `writeMetaOf`, returned by both read models and rendered above the actor on the Audit Log page. New gate `test:audit-write` (11 checks: the three actions per domain, a refused command writing nothing, `null` without a note, list + search + site isolation, normaliser edge cases) runs inside `verify:all`. Honest gap, recorded in `08`: no CMS screen asks for a reason yet.
 
-**Next: item 6** — scope the cache purge instead of dropping the whole handler cache.
+**Slice 6 landed 2026-11-13.** The queue is now empty: every item that did not need a decision or a credential has landed. `POST /api/_internal/purge` drops only the tenant and scope its reason names (`site`, `catalog`, or both for a category rename), the site projection's cache key finally names its tenant, and the redirect map is cleared per database. Gate `test:purge-scope` (9 checks, no Mongo) runs in `verify:all`; the live proof on two dev servers sharing one store is in `08`. Still open by decision: the purge is secret-authenticated but not signed or replay-limited, and a CDN needs its own purge (Q12).
 
 ### Not queued (decided out of scope, do not re-open)
 

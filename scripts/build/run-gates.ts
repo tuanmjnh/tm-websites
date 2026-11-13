@@ -39,7 +39,13 @@ const DOMAIN_GATES = [
   'test:web-site-db',
 ]
 
-const STATIC_GATES = ['typecheck', 'lint', 'validate:registry', 'verify:scaffold']
+const STATIC_GATES = [
+  'typecheck',
+  'lint',
+  'validate:registry',
+  'verify:scaffold',
+  'test:purge-scope',
+]
 
 const GATES: Gate[] = [...DOMAIN_GATES, ...STATIC_GATES].map(script => ({ name: script, script }))
 

@@ -32,6 +32,7 @@
     "test:media": "tsx scripts/build/test-media-service.ts",
     "test:audit": "tsx scripts/build/test-audit-service.ts",
     "test:audit-write": "tsx scripts/build/test-audit-write.ts",
+    "test:purge-scope": "tsx scripts/build/test-purge-scope.ts",
     "test:settings": "tsx scripts/build/test-settings-service.ts",
     "test:menus": "tsx scripts/build/test-menu-service.ts",
     "test:web-site": "tsx scripts/build/test-web-site.ts",

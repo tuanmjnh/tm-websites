@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'node:crypto'
+import { publicCacheDatabase, purgePublicCache, PUBLIC_CACHE_SCOPES, scopesForReason, type PublicCacheScope } from '#server/utils/publicCache'
 
 function secretsMatch(provided: string, expected: string): boolean {
   const a = Buffer.from(provided)
@@ -7,10 +8,24 @@ function secretsMatch(provided: string, expected: string): boolean {
   return timingSafeEqual(a, b)
 }
 
+interface PurgeBody {
+  secret?: unknown
+  /** CMS reason, e.g. `catalog.item.update`; decides which scopes are dropped. */
+  reason?: unknown
+  /** Operator override: a single scope, or `all` to drop every handler entry. */
+  scope?: unknown
+}
+
 /**
- * Drops every cached Nitro handler response so freshly published content and
- * catalog changes appear immediately instead of waiting for the SWR window.
- * Requires REVALIDATE_SECRET; the route is inert until that variable is set.
+ * Drops the cached Nitro handler responses a CMS save invalidated.
+ *
+ * Scoped on purpose: a catalog edit removes the catalog keys of one tenant, a
+ * menu or settings save removes its site projection, and a category rename
+ * removes both because menus and URLs carry the category name. A reason this
+ * module does not recognise removes both scopes rather than guessing wrong, and
+ * an unrelated customer's keys are never touched. `{ scope: 'all' }` remains the
+ * operator escape hatch. Requires REVALIDATE_SECRET; the route is inert without
+ * it.
  */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
@@ -25,7 +40,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const headerSecret = String(getHeader(event, 'x-revalidate-secret') || '')
-  const body = await readBody<{ secret?: unknown }>(event).catch(() => ({} as { secret?: unknown }))
+  const body = await readBody<PurgeBody>(event).catch(() => ({} as PurgeBody))
   const bodySecret = typeof body?.secret === 'string' ? body.secret : ''
   const provided = headerSecret || bodySecret
 
@@ -37,15 +52,35 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const storage = useStorage('cache')
-  const keys = (await storage.getKeys()).filter(key => key.includes('nitro:handlers:'))
-  for (const key of keys) {
-    await storage.removeItem(key)
+  const requestedScope = typeof body?.scope === 'string' ? body.scope.trim() : ''
+  if (requestedScope && requestedScope !== 'all' && !PUBLIC_CACHE_SCOPES.includes(requestedScope as PublicCacheScope)) {
+    throw createError({
+      statusCode: 422,
+      statusMessage: 'error.invalidCacheScope',
+      data: { code: 'INVALID_CACHE_SCOPE', scopes: PUBLIC_CACHE_SCOPES },
+    })
   }
 
+  const scopes: PublicCacheScope[] | 'all' = requestedScope === 'all'
+    ? 'all'
+    : requestedScope
+      ? [requestedScope as PublicCacheScope]
+      : scopesForReason(body?.reason)
+
+  const database = publicCacheDatabase(event)
+  const result = await purgePublicCache(useStorage('cache'), database, scopes)
+
   // The redirect map keeps its own short cache, outside Nitro's handler cache.
-  clearRedirectCache()
+  // It is per database, so one tenant's purge cannot empty another's map.
+  clearRedirectCache(scopes === 'all' ? undefined : database)
 
   setHeader(event, 'Cache-Control', 'no-store')
-  return { success: true, removedCount: keys.length }
+  return {
+    success: true,
+    database,
+    scopes: result.scopes,
+    removedCount: result.removedCount,
+    removedKeys: result.removedKeys,
+    remainingHandlerKeys: result.remainingHandlerKeys,
+  }
 })

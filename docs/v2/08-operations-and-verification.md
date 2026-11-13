@@ -533,6 +533,45 @@ Bulk runs with the local Hub on `:4000` (or `TM_AUTH_MODE=mock` for local-only U
 
 Probe content, its audit entries and revisions must be deleted afterwards; the sequence above is also covered by `pnpm test:audit` (7 checks), which needs no CMS server.
 
+### Storefront cache purge: scopes and tenants (WEB-09, 2026-11-13)
+
+`POST /api/_internal/purge` (secret in `x-revalidate-secret`, reason in the JSON body) no longer drops the whole Nitro handler cache. It removes the entries whose key carries the deployment's database and the scope the reason names:
+
+| Key part | Example | Meaning |
+| --- | --- | --- |
+| database | `sen_tuan`, `bag_post` | `TM_MONGO_DB` slugged; two customers can share one Nitro cache |
+| scope | `site`, `catalog` | `site` = `/api/public/site` + `/api/public/site-config`; `catalog` = product/category reads |
+| rest | `products__api_public_products_limit_1` | namespace + path + query, all slugged |
+
+Separators are `__` on purpose: Nitro stores a handler entry as `nitro:handlers:...` and sanitises the key with `String(key).replace(/\W/g, "")`, so punctuation does not survive and `_` does. Entries written before this change (`catalogbagpostproducts...`, `publicsitevi`) are no longer matched by a scoped purge; they expire on their own TTL (300 s stale window) and `{ "scope": "all" }` removes them immediately.
+
+| Reason | Scopes dropped |
+| --- | --- |
+| `catalog.item.*` | `catalog` |
+| `catalog.category.*` | `site` + `catalog` (a renamed category appears in menus and URLs) |
+| `menu.*`, `settings.*`, `redirect.*` | `site` |
+| anything else / missing | `site` + `catalog` (never under-invalidate silently) |
+
+The redirect map outside Nitro's cache is now cleared per database and only with a `site`/`all` purge, instead of process-wide on every call.
+
+Live check (two dev servers, `:4018` sentuan and `:4019` bag-post sharing one cache store, both stopped afterwards):
+
+| Step | Result |
+| --- | --- |
+| Warm products, product detail, site, site-config on sentuan; products on bag-post | 5 handler entries |
+| `{"reason":"catalog.item.update"}` | removed 2 (both sentuan catalog keys), 2 remaining (sentuan site key + bag-post key) |
+| `{"reason":"settings.update"}` | removed 2 (both sentuan site keys), 0 remaining for sentuan |
+| `{"reason":"settings.update"}` again | 0 removed |
+| Warm again, then `{"reason":"catalog.category.update"}` | removed 2 (one per scope), 1 remaining — the bag-post key |
+| `{"scope":"all"}` | removed 1 — that same bag-post key, proving it had survived the scoped purges |
+| No secret / wrong secret | `401` |
+| `{"scope":"everything"}` | `422 INVALID_CACHE_SCOPE` |
+| `{"reason":"import.finished"}` | `["site","catalog"]` |
+
+Gate: `pnpm test:purge-scope` — 9 checks, no Mongo and no server (map-backed storage), part of `verify:all` (STATIC_GATES).
+
+Not done: the purge request is still authenticated by a shared secret only, not a signed or replay-limited event (WEB-09's event half), and a CDN in front of the storefront would still need its own purge call (Q12).
+
 ### Audit write path: category and media (P2.c rest, 2026-11-13)
 
 The category and media services already recorded `audit_logs` rows, but nothing proved it and the entries carried no human intent. Both are now covered.

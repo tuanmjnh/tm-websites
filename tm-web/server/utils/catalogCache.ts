@@ -1,18 +1,24 @@
 import type { EventHandler, H3Event } from 'h3'
+import { publicCacheDatabase, publicCacheKey } from './publicCache'
 
 export const CATALOG_CACHE_CONTROL = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600'
 export const NO_STORE = 'no-store'
 
 /**
- * Cache key for a public storefront read.
- * Scoped by database name so two customers sharing one cache (preview
- * deployments, local multi-customer dev) can never read each other's data.
+ * Cache key for a public storefront catalog read.
+ *
+ * Scoped by database name and by the `catalog` cache scope, so a quota or
+ * catalog write can purge these keys without touching the site projection, and
+ * two customers sharing one cache can never read each other's data.
  */
 export function catalogCacheKey(event: H3Event, namespace: string): string {
-  const config = useRuntimeConfig(event)
-  const database = String(config.catalogDbName || 'none')
   const url = getRequestURL(event)
-  return `catalog:${database}:${namespace}:${url.pathname}${url.search}`
+  return publicCacheKey(publicCacheDatabase(event), 'catalog', `${namespace}:${url.pathname}${url.search}`)
+}
+
+/** Cache key for a projection of the site itself (`/api/public/site`, `site-config`). */
+export function siteCacheKey(event: H3Event, key: string): string {
+  return publicCacheKey(publicCacheDatabase(event), 'site', key)
 }
 
 /**

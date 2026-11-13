@@ -5,7 +5,9 @@ import type { H3Event } from 'h3'
  *
  * `GET /api/public/site` is a cached Nitro handler (60s), so a saved menu or
  * setting only reached the site on the next expiry. The storefront exposes
- * `POST /api/_internal/purge` for exactly this, guarded by a shared secret.
+ * `POST /api/_internal/purge` for exactly this, guarded by a shared secret. The
+ * reason travels with the call and the storefront turns it into the cache
+ * scopes it drops, so one repository's save no longer empties the whole cache.
  *
  * Revalidation is best-effort on purpose: the CMS write already succeeded, so a
  * storefront that is down, slow or missing the secret must never fail the save.
