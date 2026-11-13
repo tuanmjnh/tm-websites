@@ -551,7 +551,17 @@ TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=sen-tuan \
 | `--keep-revisions 0`, `--audit-days 0`, non-integer values | Exit `1` with `RETENTION_OPTIONS_INVALID`; nothing is deleted |
 | Missing `TM_MONGO_DB` or `--site` | Exit `1` with a message naming the missing input |
 
-Defaults are conservative placeholders (50 snapshots per record, 365 days of audit) and stay dry-run unless `--apply` is passed. The real periods are still an owner decision (Q16). Coverage: `pnpm test:retention` (5 checks, disposable database).
+Policy (Q16, closed 2026-11-09): the newest **50 revision snapshots per content record** and **365 days of `audit_logs`** are kept; `--keep-revisions` may range 1–500 and `--audit-days` 1–3650, and those bounds are guard rails rather than defaults. Any other value needs the owner, not an operator preference. The command stays dry-run unless `--apply` is passed.
+
+Schedule — manual by decision, because Q12/Q21 ruled out a cron, queue or worker:
+
+- **Monthly, per live site.** Dry run first, read the counts, then `--apply`. A monthly run should report a small steady number; a jump means either a bulk edit or a missed month, so check which before applying.
+- **After a bulk import, restore or migration, before the backup** is taken, so the snapshot is not dominated by superseded revisions.
+- **Before a site is archived or its database exported.**
+
+Record the `dryRun` report and the deleted counts in the site's operations log. Nothing in the app enforces the schedule, so a missed month is only visible as a larger next report.
+
+Coverage: `pnpm test:retention` (5 checks, disposable database) — the cap, the audit cutoff, site isolation, dry run and the idempotent re-run.
 
 ### Site menus smoke (P2.d)
 

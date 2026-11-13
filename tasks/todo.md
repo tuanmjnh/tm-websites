@@ -305,7 +305,7 @@ Verified over HTTP on `:4005` (2 entries, filters, paging, `422` cases, `401` an
 | Suites: `pnpm test:retention` 5 live checks (cap, cutoff, site isolation, dry run, re-run no-op, option bounds) | `scripts/build/test-retention-service.ts` |
 | Operator runbook + dry-run/apply evidence on `sen-tuan` | `docs/v2/08-operations-and-verification.md`, `docs/v2/05-feature-parity.md` |
 
-Still open in P2.c: audit covers content only, the retention periods are placeholder defaults pending Q16 and nothing schedules the command, no concurrent-key race test, no idempotency for public writes, no per-record history for category/media.
+Still open in P2.c: audit covers content only (queue item 5), no concurrent-key race test, no idempotency for public writes, no per-record history for category/media. Retention is settled: the periods are Q16's 50/365 and the manual schedule is written down in `08`.
 
 ### P2.d — site settings (landed 2026-11-08)
 
@@ -993,7 +993,7 @@ Each item is sized for one session, needs no new decision or credential, and car
 | 1 ✅ 2026-11-13 | **WEB-12 accessibility baseline** | The only `Partial: foundation` row in `05-feature-parity.md` with no evidence at all: pages were read, never driven with a keyboard or a screen-reader structure | Every storefront page checked in a real browser for landmarks, heading order, `lang`, image `alt`, named controls, and a keyboard path through header/footer/cart; results recorded in `08` |
 | 2 ✅ 2026-11-13 | **WEB-12 states and responsive layout** | Same row, second half — no page has been checked in its loading/empty/error/404/410 forms or at two viewports | Those states verified on listing, detail and cart pages at desktop and mobile widths, with the result recorded in `08` |
 | 3 ✅ 2026-11-13 | **WEB-12 fixes** | Whatever 1–2 turn up; accessibility findings are only worth something once they are repaired or explicitly deferred | Each defect is fixed with the check re-run, or written into `05` as a deliberate deferral |
-| 4 | **CNT retention policy** | P3.c's open gap: revision retention is a placeholder and nothing schedules `prune:retention` | Documented defaults, a documented manual schedule, dry-run still the default, and a test that prunes only what it should |
+| 4 ✅ 2026-11-13 | **CNT retention policy** | P3.c's open gap: revision retention is a placeholder and nothing schedules `prune:retention` | Documented defaults, a documented manual schedule, dry-run still the default, and a test that prunes only what it should |
 | 5 | **OPS-01 audit for category and media** | P2.c's open gap: the audit read surface covers content only, so category/media writes are invisible | Category and media writes appear in the audit list with actor/reason, covered by a domain test |
 | 6 | **WEB-09 scoped purge** | The documented gap: every save deletes the whole handler cache instead of the keys it touched (CDN purge stays deferred by Q12) | A catalog or settings write drops only the site/tenant keys it should, and a test proves an unrelated site's cache survives |
 
@@ -1001,7 +1001,9 @@ Each item is sized for one session, needs no new decision or credential, and car
 
 **Slices 2 and 3 landed 2026-11-13 (same day).** Empty search, catalog-unavailable (a second dev server pointed at a dead Mongo, stopped afterwards), 404 and the 390/1280 px layouts were checked on five pages; the one defect found — a 10 px page overflow caused by a 392 px `UPagination` row — is fixed by letting the pagination list wrap, and 410 plus the pending affordance stay listed as unverified in `08`. Mapping the three findings back to the phase rows is done, so the queue continues at item 4.
 
-**Next: item 4** — revision retention policy and its schedule.
+**Slice 4 landed 2026-11-13.** The queue item was really a documentation defect: Q16 had already decided 50 snapshots and 365 audit days and the code matched, but `08` still called them placeholders awaiting an owner decision, and no schedule had ever been written. `08` now states the policy, its guard-rail bounds and the three triggers for a manual run (monthly, after a bulk import/restore, before archiving a site); `todo`'s P2.c paragraph no longer lists retention as open. Dry run stays the default and `test:retention` keeps covering scope.
+
+**Next: item 5** — audit trail for category and media writes.
 
 ### Not queued (decided out of scope, do not re-open)
 
