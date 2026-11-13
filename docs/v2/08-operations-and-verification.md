@@ -819,7 +819,29 @@ How the measurement had to be set up, because two things in this UI quietly corr
 - **The decorative backdrop.** `.udmt-backdrop` paints a radial amber gradient behind everything, and axe reports every element over a gradient as *incomplete* ("background colour could not be determined") rather than checking it. With it visible, `/bai-viet` resolved only 12 nodes and "0 violations" meant little. The table's runs hide that element (it is `aria-hidden` decoration, a ≤14% tint over the base surface) so the base surface can be read; 2 nodes per page stay unresolved (image overlays).
 - **Frozen transitions.** `.bento-card` carries `transition: all .2s`; in a background tab Chrome pauses transitions, so a card measured mid-switch kept the *previous* theme's surface. That produced a run where every product card read as dark-on-dark (24–56 false violations) while the screenshot showed a white card. Every run above injects `transition: none; animation: none` before measuring; the card then reports its real `oklab(0.97 / 0.82)` surface.
 
-Not covered: the CMS inherits the same tokens (it shares the design system) but its light theme was not re-measured; colour contrast is the only rule run, so focus rings, screen-reader output and the pending affordance stay as they were; and `text-primary` on photographic media is not measured by anything here.
+### The CMS, same tokens (`:4005`, mock session, `sen-tuan`)
+
+The CMS shares the design system, so the same three fixes apply, and it turned up three more once measured. Both themes, 0 violations in every row:
+
+| Page | Light | Dark | Note |
+| --- | --- | --- | --- |
+| `/login` | 8 pass | 8 pass | dark had 1 violation before the fix |
+| `/` (Control Center) | 11 pass | 11 pass | the dashboard's own "An error occurred" card was the violation (red-500 as text, 3.55:1) |
+| `/catalog` | 318 pass | 318 pass | list + filters, the densest page |
+| `/content` | 39 pass | 39 pass | two status badges were the violations |
+| `/configs` | 61 pass | 61 pass | 13 inputs, labels and hints |
+| `/audit` | 30 pass | 30 pass | empty table (`audit_logs` is 0 after the earlier probe cleanup), so the empty state is what was measured |
+| `/settings` | 41 pass | 41 pass | read-only system info, no form controls |
+
+What the CMS added to the token file:
+
+- Dark `text-dimmed` at `neutral-500` was 3.25:1 on a stone-800 surface (the login footer) — now `neutral-400`, same as muted.
+- `--ui-error` at red-500 was 3.55:1 as text on a light surface — light now uses `error-800`; so do `--ui-warning`, `--ui-success` and `--ui-info`, which start at 1.9–2.6:1.
+- 700 was not enough for those four either: a warning badge (`bg-warning/10`) measured 4.06:1 and a success badge 4.38:1, because the badge's own 10% tint lifts the background. 800 clears both, and dark keeps its 400 steps.
+
+Measurement change for the CMS: hiding only `.udmt-backdrop` was not enough. The login and dashboard paint their gradients on other elements, so axe still skipped every node. The runs above remove `background-image` from every element (a tint, not structure) together with transitions; the CMS pages then resolve 8–318 nodes each.
+
+Not covered: colour contrast is the only rule run, so focus rings, screen-reader output and the pending affordance stay as they were; `text-primary` on photographic media is not measured by anything here; the storefront's own numbers were re-taken after the semantic-token change on `/products` (105 pass, 0 violations) but not on every page again.
 
 ## Customer build matrix
 
