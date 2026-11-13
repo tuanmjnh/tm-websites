@@ -527,6 +527,12 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Evidence (browser `:4006/tim-kiem`): `?q=nh%C3%A3n-hi%E1%BB%87u-probe` rendered the heading for that term with the `Probe public kw` card, proving the page finds a record by keyword alone. The probe record, its 3 audit rows and 3 revisions were deleted afterwards (`content` 3, `audit_logs` 1).
 - Limits: matching is a raw regex on the stored keyword, so accents and case-insensitivity behave as Mongo's `i` flag does but there is no diacritic folding (`nhan-hieu-probe` does not find `nhãn-hiệu-probe`), no phrase/synonym handling, and keyword matches are not highlighted differently from title matches on the search page.
 
+### WEB-19 — the dead-link gate now covers the CMS too (landed 2026-11-13)
+
+- The same gate that caught `/about` and `/contact` now reads both app roots: the storefront and the CMS. `scripts/build/test-web-routes.ts` takes an `APPS` list (root, page directory, minimum link count) and runs the same manifest + link scan + resolution per app, so a new sidebar entry in `cms-base/layouts/default.vue` that points at a page which was renamed or removed fails `verify:all` instead of waiting for a click.
+- Proven both ways: moving `cms-base/app/pages/audit.vue` out made the gate exit `1` naming `/audit (…/pages/index.vue:176)`, and restoring it put it back to green. `verify:all` is 28/28.
+- Limits unchanged: literal targets only, and the catch-all page still does not count as a route for either app.
+
 ### WEB-18 — product names are highlighted, and a query-param bug in the search page (landed 2026-11-13)
 
 - `CatalogProductCard` gains an optional `term` prop; when it is set the name and the summary render through the existing `WebSearchHighlight` instead of plain text, so the visitor's term is wrapped in `<mark>`. `tim-kiem.vue` passes `q` and `products/index.vue` passes `listQuery.search`, so the highlight only ever reflects a query that was actually searched.

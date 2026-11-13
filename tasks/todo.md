@@ -1022,6 +1022,11 @@ Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are no
 - **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
 - **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
+### WEB-19 — the dead-link gate now covers the CMS too (landed 2026-11-13)
+
+- `test:web-routes` reads both `web-base` and `cms-base` page trees and scans both navigation surfaces; a renamed or deleted CMS page now fails the gate with file:line instead of producing a 404. Proven by moving `audit.vue` out and back.
+- `verify:all` 28/28. Limits unchanged: literal targets only.
+
 ### WEB-18 — product-name highlighting, and a query-param fix (landed 2026-11-13)
 
 - `CatalogProductCard` now takes an optional `term` and renders name + summary through `WebSearchHighlight`; `tim-kiem.vue` passes `q` and `products/index.vue` passes `listQuery.search`.

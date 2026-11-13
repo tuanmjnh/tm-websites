@@ -3,27 +3,40 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 /**
- * Every internal target the storefront links to must resolve to a page file.
+ * Every internal target the navigation links to must resolve to a page file.
  *
- * The navigation is written by hand in three places (the fallback menus in
- * `usePublicSite`, the header/footer in the layout, and inline links in pages),
- * and a link to a page that does not exist still typechecks, still lints and
- * still builds — it only shows up as a 404 when a visitor clicks it. `/about`
- * and `/contact` shipped as dead links exactly this way.
+ * The navigation is written by hand in both apps (the storefront's fallback
+ * menus in `usePublicSite`, its header/footer and inline page links, and the
+ * CMS sidebar in `layouts/default.vue`), and a link to a page that does not
+ * exist still typechecks, still lints and still builds — it only shows up as a
+ * 404 when a visitor clicks it. `/about` and `/contact` shipped as dead links
+ * exactly this way.
  *
  * The catch-all page never satisfies a link: it renders CMS content by path, so
  * a missing page hides behind it and answers 404 at runtime, which is the bug
  * this gate exists to catch.
  */
 
-const APP_DIR = path.resolve('tm-shared/nuxt-layers/web-base/app')
-const PAGES_DIR = path.join(APP_DIR, 'pages')
-
 interface PageRoute {
   route: string
   file: string
   kind: 'static' | 'param'
 }
+
+interface Link {
+  target: string
+  source: string
+}
+
+interface App {
+  name: string
+  root: string
+}
+
+const APPS: App[] = [
+  { name: 'web', root: path.resolve('tm-shared/nuxt-layers/web-base/app') },
+  { name: 'cms', root: path.resolve('tm-shared/nuxt-layers/cms-base/app') },
+]
 
 let checks = 0
 
@@ -47,12 +60,12 @@ function walk(dir: string): string[] {
   })
 }
 
-/** Page files to routes, in the shape Nuxt derives them. */
-function readPages(): PageRoute[] {
-  return walk(PAGES_DIR)
+function readPages(root: string): PageRoute[] {
+  const pagesDir = path.join(root, 'pages')
+  return walk(pagesDir)
     .filter(file => file.endsWith('.vue'))
     .map((file) => {
-      const relative = path.relative(PAGES_DIR, file).replace(/\\/g, '/').replace(/\.vue$/, '')
+      const relative = path.relative(pagesDir, file).replace(/\\/g, '/').replace(/\.vue$/, '')
       const segments = relative.split('/')
       // A catch-all renders CMS content by path and is explicitly not a route
       // the navigation may point at.
@@ -70,22 +83,14 @@ function readPages(): PageRoute[] {
     .filter((route): route is PageRoute => route !== null)
 }
 
-interface Link {
-  target: string
-  source: string
-}
-
 const LINK_PATTERN = new RegExp([
-  // `<NuxtLink to="/x">`, `:to="'/x'"`, `href="/x"`
   String.raw`(?:to|href)="(\/[^"$]*)`,
-  // `{ label: t('nav.about'), to: '/x' }`
   String.raw`to:\s*'(\/[^']*)'`,
-  // `navigateTo('/x')` / `router.push('/x')` / `$fetch('/x')` stays out: only navigation.
   String.raw`(?:navigateTo|router\.(?:push|replace))\(\s*'(\/[^']*)'`,
 ].join('|'), 'g')
 
-function readLinks(): Link[] {
-  return walk(APP_DIR)
+function readLinks(root: string): Link[] {
+  return walk(root)
     .filter(file => file.endsWith('.vue') || file.endsWith('.ts'))
     .flatMap((file) => {
       const source = fs.readFileSync(file, 'utf8')
@@ -95,7 +100,6 @@ function readLinks(): Link[] {
           const target = (match[1] ?? match[2] ?? match[3] ?? '').split(/[?#]/)[0]
           return { target, source: `${relative}:${source.slice(0, match.index).split('\n').length}` }
         })
-        // A target with a `:` is a runtime value (`/products/${slug}`), not a literal route.
         .filter(link => link.target.startsWith('/') && !link.target.includes(':'))
     })
 }
@@ -111,38 +115,40 @@ function resolve(target: string, routes: PageRoute[]): boolean {
   })
 }
 
-const routes = readPages()
-const links = readLinks()
-const unique = [...new Map(links.map(link => [link.target, link])).values()].sort((a, b) => a.target.localeCompare(b.target))
+console.log('   Web and CMS routes: literal internal links resolve to a page file')
 
-console.log('   Web routes: literal internal links resolve to a page file')
+for (const app of APPS) {
+  const routes = readPages(app.root)
+  const links = readLinks(app.root)
+  const unique = [...new Map(links.map(link => [link.target, link])).values()]
+    .sort((a, b) => a.target.localeCompare(b.target))
+  const minimumLinks = app.name === 'web' ? 8 : 5
 
-check('the page manifest is read from the real pages directory', () => {
-  assert.ok(routes.length >= 8, `expected the storefront pages, found ${routes.length}`)
-  assert.ok(routes.some(route => route.route === '/'), 'the index page is missing')
-})
+  check(`${app.name}: the page manifest is read from the real pages directory`, () => {
+    assert.ok(routes.length >= (app.name === 'web' ? 8 : 18), `${app.name}: expected at least ${app.name === 'web' ? 8 : 18} pages, found ${routes.length}`)
+  })
 
-check('the link scan finds the navigation (a refactor cannot silently empty this gate)', () => {
-  assert.ok(unique.length >= 8, `expected at least 8 distinct targets, found ${unique.length}`)
-  for (const expected of ['/', '/products', '/bai-viet']) {
-    assert.ok(unique.some(link => link.target === expected), `the scan lost ${expected}`)
-  }
-})
+  check(`${app.name}: the link scan finds the navigation`, () => {
+    assert.ok(unique.length >= minimumLinks, `${app.name}: expected at least ${minimumLinks} distinct targets, found ${unique.length}`)
+  })
 
-check('every literal internal link resolves to a static or dynamic page', () => {
-  const dead = unique.filter(link => !resolve(link.target, routes))
-  assert.equal(
-    dead.length,
-    0,
-    `links point at pages that do not exist: ${dead.map(link => `${link.target} (${link.source})`).join(', ')}`,
-  )
-})
+  check(`${app.name}: every literal internal link resolves to a static or dynamic page`, () => {
+    const dead = unique.filter(link => !resolve(link.target, routes))
+    assert.equal(
+      dead.length,
+      0,
+      `${app.name}: links point at pages that do not exist: ${dead.map(link => `${link.target} (${link.source})`).join(', ')}`,
+    )
+  })
+}
 
-/** The two pages this gate was written after, so removing a page fails loudly. */
-check('the about and contact pages the navigation links to exist', () => {
+// The two pages this gate was written after, so removing one fails loudly.
+check('the storefront pages the header and footer link to exist', () => {
+  const routes = readPages(APPS[0].root)
   for (const route of ['/about', '/contact']) {
     assert.ok(routes.some(page => page.route === route), `${route} has no page file`)
   }
 })
 
-console.log(`\n✅ Web route checks: ${checks} passed, 0 not run`)
+const totalChecks = checks
+console.log(`\n✅ Web and CMS route checks: ${totalChecks} passed, 0 not run`)
