@@ -527,6 +527,14 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Evidence (browser `:4006/tim-kiem`): `?q=nh%C3%A3n-hi%E1%BB%87u-probe` rendered the heading for that term with the `Probe public kw` card, proving the page finds a record by keyword alone. The probe record, its 3 audit rows and 3 revisions were deleted afterwards (`content` 3, `audit_logs` 1).
 - Limits: matching is a raw regex on the stored keyword, so accents and case-insensitivity behave as Mongo's `i` flag does but there is no diacritic folding (`nhan-hieu-probe` does not find `nhãn-hiệu-probe`), no phrase/synonym handling, and keyword matches are not highlighted differently from title matches on the search page.
 
+### WEB-14 — first shared package from `tm-platform` (landed 2026-11-13)
+
+- What landed: `@tuanmjnh/tm-types` installed from the npm registry into the CMS layer (`cms-base`), and `useCategoryAdmin.ts` typed with the shared `ApiResponse<T>` instead of its hand-written `{ success: boolean, data: AdminCategory[] }`. The response narrows it back to a required `data` (`Omit<ApiResponse<AdminCategory[]>, 'data'> & { data, tree }`) because this endpoint always answers with both the flat list and the tree.
+- Why this package and not `tm-ui`: `tm-utils`, `tm-validators` and `tm-types` are published (0.1.0), only `tm-ui` is not — and `link:` on a Vue package is what broke WEB-13. A published package installs under `.pnpm` with the app's own dependency graph, so the `fs.allow` / `@source` / second-Vue wiring does not apply, and `tm-types` has no runtime at all.
+- Install friction worth knowing: this repo pins `minimumReleaseAge`, so pnpm refused the brand-new 0.1.0 until it was listed in `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` (one line, committed with the change).
+- Evidence: `pnpm typecheck` 0 errors — it first reported four real "`data` is possibly undefined" sites in `categories.vue`/`content.vue`, which is why the type narrows `data` instead of leaving it optional — `pnpm verify:all` 27/27, and the live contract on the dev CMS: `POST /api/auth/login` → `200`, then `GET /api/v1/admin/categories` → `200` with `{ success: true, data: [], tree: [] }`. The database holds no categories; nothing was created to make the shape look better.
+- Not adopted: `tm-utils` is Hub-shaped (`deviceCredentialScope`, `parseUpstreamAiError`) and `tm-validators`' `PaginationParamsSchema` assumes page/limit offsets while every list endpoint here is cursor-based; using either would replace working code with a worse contract.
+
 ### WEB-13 — shared packages from `tm-platform` (probe, blocked 2026-11-13)
 
 - Direction: a component that both this repo and `tm-hub` need belongs in `D:\Applications\tm-platform\packages` (`@tuanmjnh/*`), not in `tm-shared`. This slice tried the first adoption: `@tuanmjnh/tm-ui`'s `StatusBadge` for the CMS module badges (`ModuleStatusBadges.vue`, one call site, replacing two hand-written `UBadge`s).

@@ -5,14 +5,18 @@ import type {
   AdminCategoryReorderRequest,
 } from '@tm/flow-contracts/category-admin'
 import type { MenuReference } from '@tm/flow-contracts/menu-admin'
+import type { ApiResponse } from '@tuanmjnh/tm-types'
 
 /**
  * CMS category tree client. Categories belong to the deployment's site, so the
  * request never carries a tenant id.
  */
 
-interface CategoryListResponse {
-  success: boolean
+/**
+ * The shared envelope, narrowed: this endpoint always answers with the flat
+ * list and the tree the picker draws, so `data` is not optional here.
+ */
+type CategoryListResponse = Omit<ApiResponse<AdminCategory[]>, 'data'> & {
   data: AdminCategory[]
   tree: AdminCategoryNode[]
 }

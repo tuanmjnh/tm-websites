@@ -789,6 +789,18 @@ One behaviour worth knowing when checking this with `curl`: without an HTML `Acc
 
 Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
 
+## Shared packages: the registry works, `link:` does not (WEB-14, 2026-11-13)
+
+`@tuanmjnh/tm-types@0.1.0` was installed from npm (`pnpm add` through the workspace), not linked, and it needed no Vite or Tailwind config: `.pnpm` places it in the app's dependency graph and a types-only package never reaches the bundle. Two things cost time and belong in any repeat: `minimumReleaseAge` blocks a release this new until the exact version is added to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`, and the shared `ApiResponse<T>` has an optional `data`, so every consumer that assumes a payload fails the typecheck until the endpoint's type narrows it (`vue-tsc` found two such pages, which is the useful part).
+
+Verification for a types-only adoption is typecheck plus the live contract, not a browser: `POST /api/auth/login` then `GET /api/v1/admin/categories` on the dev CMS — `{ success: true, data: [], tree: [] }` — is enough to prove the shape the type claims.
+
+## `tm-hub` has the `StatusBadge` bug too (2026-11-13)
+
+The same precompiled `resolveComponent('UBadge')` lookup fails in `tm-hub`, so its non-clickable pills (`app/pages/administration/{apps,configs,content,roles}.vue`) render as empty `<ubadge>` custom elements; the `clickable` ones draw a plain `<button>` and look correct, which is why a "pills render" check can pass while half the badges are invisible. Read from the running dev server (`:4000`): the package's module resolves `tm-hub/node_modules/.pnpm/vue@3.5.44…` — one Vue instance, unlike `tm-websites` — but the app's component registry holds only `RouterLink`, `RouterView`, `Icon`, `LazyIcon` and the i18n components, with no `UBadge`/`UIcon`.
+
+So `tm-hub` needs only the registry half of the fix: a client plugin registering `UBadge` and `UIcon` from `#components`, with no `dedupe` and no `vue` dependency. `tm-websites` proved that mechanism on 2026-11-13 — with a single Vue instance and the two components registered, the pills drew `span[data-slot="base"]` with `bg-success/10` and real contrast ratios.
+
 ## Shared packages from `tm-platform` (WEB-13, 2026-11-13)
 
 A `link:` dependency on `@tuanmjnh/tm-ui` renders nothing in the CMS and still passes every gate. Reproduce it before adopting anything from that repo: mount `StatusBadge` from the package and read `document.querySelectorAll('ubadge').length` in the live page — a non-zero count means the component resolved to a bare tag name, not to a component.

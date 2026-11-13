@@ -1022,6 +1022,12 @@ Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are no
 - **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
 - **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
+### WEB-14 — first shared package from `tm-platform` (landed 2026-11-13)
+
+- `@tuanmjnh/tm-types@0.1.0` from the npm registry in `cms-base`; `useCategoryAdmin` types its envelope with the shared `ApiResponse<T>`, narrowed so `data` stays required. `minimumReleaseAge` needed the one-line exclusion in `pnpm-workspace.yaml`; typecheck 0 errors, `verify:all` 27/27, live `GET /api/v1/admin/categories` → `{ success, data, tree }`.
+- Still out: `tm-ui` until it is published (WEB-13). `tm-utils` and `tm-validators` do not fit the current contracts (Hub device credentials and upstream AI errors; page/limit pagination) — do not force them in.
+- Found on the way: `tm-hub` shows the same empty-`StatusBadge` bug — its non-clickable pills are unresolved `<ubadge>` elements because the app registry has no `UBadge`/`UIcon`, even though it has a single Vue instance. The fix there is a client plugin registering both from `#components`; the detail is in `08`.
+
 ### WEB-13 — shared packages from `tm-platform` (probe, blocked 2026-11-13)
 
 - `tm-websites` stays on local components for now. `@tuanmjnh/tm-ui` cannot be consumed through `link:` here: the package resolves its own `vue` (3.5.45 vs 3.5.44), Vite loads two Vue instances, and its precompiled `resolveComponent('UBadge')` renders empty `<ubadge>` tags while every gate stays green.

@@ -303,6 +303,9 @@ importers:
       '@tm/nuxt-layer-core':
         specifier: workspace:*
         version: link:../core-base
+      '@tuanmjnh/tm-types':
+        specifier: ^0.1.0
+        version: 0.1.0
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -3249,6 +3252,7 @@ packages:
 
   '@tiptap/y-tiptap@3.0.12':
     resolution: {integrity: sha512-MlmBpmm4xiRDZmk4hiwnjScOrUtiEBYwqeJBvrDil30Eq1GqrZEox1mciBpOnnpfN731fH07OPeGS7uHryPX0g==}
+    deprecated: Persistent position migrations can cause excessive collaborative document growth. Upgrade all collaborating clients to 3.1.0 or later.
     peerDependencies:
       prosemirror-model: ^1.7.1
       prosemirror-state: ^1.2.3
@@ -3259,6 +3263,9 @@ packages:
   '@trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1':
     resolution: {integrity: sha512-/67zpWDBLV+oYAEL682s1ktXL0HgqX76f6gaVGkGnVZlBbm1zd0v4Bz8MFF2GGhoX9rvfq3KSQHubFHwa6w6/Q==}
     engines: {node: '>=12'}
+
+  '@tuanmjnh/tm-types@0.1.0':
+    resolution: {integrity: sha512-Gdf1MLCO8C2OGSC9CjyzQShDtJrzLOoUedNCXQZ6n3LpliZxJItD4L636W3TsVi09pZwTGeQ1AHtUjY7+nA5YA==}
 
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
@@ -11582,6 +11589,8 @@ snapshots:
       json5: 2.2.3
       magic-string: 0.30.21
       string.prototype.matchall: 4.1.0
+
+  '@tuanmjnh/tm-types@0.1.0': {}
 
   '@tybys/wasm-util@0.10.4':
     dependencies:
