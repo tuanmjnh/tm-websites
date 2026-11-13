@@ -1,7 +1,7 @@
 import type { Model, Types } from 'mongoose'
 import type { AdminContentAudit } from '@tm/flow-contracts/content-admin'
 import type { AuditAction, AuditActor, AuditEntryDocument, AuditResourceType } from '../models/audit'
-import { SYSTEM_AUDIT_ACTOR } from '../models/audit'
+import { AUDIT_REASON_MAX, SYSTEM_AUDIT_ACTOR } from '../models/audit'
 import type { ContentDraft } from '../models/content'
 
 /**
@@ -16,6 +16,25 @@ export interface ContentAuditMeta {
   model: Model<AuditEntryDocument>
   actor?: AuditActor
   requestId?: string | null
+  /** Operator note from the request; stored as-is once trimmed and capped. */
+  reason?: string | null
+}
+
+/**
+ * One normalisation for every domain: trim, drop control characters so a note
+ * cannot forge extra lines in a log view, collapse runs of whitespace, and cap
+ * the length. Anything empty becomes `null` rather than an empty string.
+ */
+export function normalizeAuditReason(value: unknown): string | null {
+  const raw = typeof value === 'string' ? value : ''
+  let cleaned = ''
+  for (const character of raw) {
+    const code = character.codePointAt(0) ?? 0
+    // Control characters would let one note forge extra lines in a log view.
+    cleaned += code < 32 || code === 127 ? ' ' : character
+  }
+  const collapsed = cleaned.replace(/\s+/g, ' ').trim().slice(0, AUDIT_REASON_MAX).trim()
+  return collapsed.length > 0 ? collapsed : null
 }
 
 export interface RecordAuditInput {
@@ -106,6 +125,7 @@ export async function recordContentAudit(
     fromStatus: input.fromStatus,
     toStatus: input.toStatus,
     changedFields: input.changedFields,
+    reason: normalizeAuditReason(meta.reason),
     actor: meta.actor ?? SYSTEM_AUDIT_ACTOR,
     requestId: meta.requestId ?? null,
   })
@@ -151,6 +171,7 @@ function toAdminAuditEntry(entry: AuditEntryRecord): AdminContentAudit {
     fromStatus: (entry.fromStatus as AdminContentAudit['fromStatus']) ?? null,
     toStatus: (entry.toStatus as AdminContentAudit['toStatus']) ?? null,
     changedFields: entry.changedFields ?? [],
+    reason: entry.reason ?? null,
     actor: {
       id: entry.actor?.id ?? 'system',
       name: entry.actor?.name ?? '',

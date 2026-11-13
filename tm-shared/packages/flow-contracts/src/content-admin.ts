@@ -112,6 +112,8 @@ export const AdminContentAuditSchema = z.object({
   fromStatus: z.enum(ADMIN_CONTENT_STATUSES).nullable(),
   toStatus: z.enum(ADMIN_CONTENT_STATUSES).nullable(),
   changedFields: z.array(z.string()),
+  /** Operator note captured with the mutation, or null when none was given. */
+  reason: z.string().nullable(),
   actor: AdminContentAuditActorSchema,
   requestId: z.string().nullable(),
   createdAt: z.string(),

@@ -533,6 +533,27 @@ Bulk runs with the local Hub on `:4000` (or `TM_AUTH_MODE=mock` for local-only U
 
 Probe content, its audit entries and revisions must be deleted afterwards; the sequence above is also covered by `pnpm test:audit` (7 checks), which needs no CMS server.
 
+### Audit write path: category and media (P2.c rest, 2026-11-13)
+
+The category and media services already recorded `audit_logs` rows, but nothing proved it and the entries carried no human intent. Both are now covered.
+
+| Check (disposable database, `pnpm test:audit-write`) | Expected |
+| --- | --- |
+| Create a category | One `category`/`create` row: resource id and key, revision 1, `changedFields` includes `key`, the session actor, the request id and the reason |
+| Update its locales | One `category`/`update` row at revision 2 with `changedFields: ['locales']` — only the fields that differ |
+| Delete a category with a child | `CATEGORY_HAS_CHILDREN` and **no** audit row: a refused command leaves no trace |
+| Delete a leaf category | `category`/`delete` row at `record.revision + 1`, same convention as content |
+| Upload, edit and delete a media file | `media`/`create`, `media`/`update` (`['title']`) and `media`/`delete` rows, each with the actor and reason |
+| A mutation with no note | `reason: null` and `requestId: null`; the actor is still recorded, and the previous reason is never reused |
+| List the audit log | `resourceType=category` returns 5 rows newest first, `resourceType=media` returns 3, a key search returns the three media rows, and another site returns `[]` |
+| `normalizeAuditReason` | Trims, collapses whitespace, turns control characters into spaces (a note cannot forge extra lines in the log view), caps at 500 characters, and maps blank or non-string input to `null` |
+
+How the note arrives: `x-audit-reason` on the mutation request, read by `writeMetaOf`, so every module that already builds write meta (content, category, media, settings, menu, catalog) gets it without each body schema learning a new field. `AUDIT_REASON_MAX` (500) lives in `models/audit.ts`, next to `changedFields` and `actor`.
+
+The Audit Log page renders the note above the actor line, quoted. **No CMS screen asks for a reason yet**: the header is supported end to end and shown when present, but every current save sends none, so the field is `null` in practice until an editor UI collects it. Recorded here so it is not mistaken for a working input.
+
+Gate: `pnpm test:audit-write` — 11 checks, part of `verify:all` (DOMAIN_GATES). The read side stays in `pnpm test:audit` (9 checks).
+
 ### Retention: revisions and audit (P2.c)
 
 `pnpm prune:retention` trims the two collections that grow without a bound. It is an operator command, not a scheduled job, and it only touches one site's own database.

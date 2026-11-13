@@ -19,6 +19,13 @@ export const AUDIT_RESOURCE_TYPES = [
 ] as const
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number]
 
+/**
+ * Why the operator made the change. Free text supplied by the client (the CMS
+ * sends it in `x-audit-reason`), trimmed and capped so one paste cannot fill a
+ * document; it is the only audit field that carries human intent.
+ */
+export const AUDIT_REASON_MAX = 500
+
 export const AUDIT_ACTIONS = [
   'create',
   'update',
@@ -58,6 +65,8 @@ export interface AuditEntryDocument {
   toStatus: string | null
   /** Top-level fields the action touched (`status`, `locales`, `tags`, ...). */
   changedFields: string[]
+  /** Operator-supplied note; `null` when the mutation carried none. */
+  reason: string | null
   actor: AuditActor
   requestId: string | null
   createdAt: Date
@@ -83,6 +92,7 @@ export const auditSchema = new Schema<AuditEntryDocument>(
     fromStatus: { type: String, default: null },
     toStatus: { type: String, default: null },
     changedFields: { type: [String], default: [] },
+    reason: { type: String, default: null, maxlength: AUDIT_REASON_MAX },
     actor: { type: ActorSchema, required: true },
     requestId: { type: String, default: null },
   },

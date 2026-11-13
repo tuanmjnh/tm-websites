@@ -22,6 +22,7 @@ const DOMAIN_GATES = [
   'test:catalog',
   'test:media',
   'test:audit',
+  'test:audit-write',
   'test:settings',
   'test:menus',
   'test:bulk',

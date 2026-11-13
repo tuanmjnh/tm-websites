@@ -15,6 +15,7 @@ import { MediaStorageError } from './mediaStorage'
 import { AdminTagRenameRequestSchema } from '@tm/flow-contracts/tag-admin'
 import { ATTRIBUTE_KEY_PATTERN, ATTRIBUTE_VALUE_MAX_LENGTH } from '#server/models/content'
 import { IdempotencyError, normalizeIdempotencyKey } from './idempotency'
+import { normalizeAuditReason } from '#server/services/contentAudit'
 
 /** Query/body contracts for the admin content API. */
 export const ContentListQuerySchema = z.object({
@@ -190,8 +191,11 @@ export function writeMetaOf(
 ) {
   const actor = { id: user.id, name: user.name ?? '', email: user.email ?? '' }
   const requestId = requestIdOf(event)
+  // A header rather than a body field: the note describes the request, and the
+  // body schemas of six different modules would each have to learn about it.
+  const reason = normalizeAuditReason(getHeader(event, 'x-audit-reason'))
   return {
-    audit: { model: auditModel, actor, requestId },
+    audit: { model: auditModel, actor, requestId, reason },
     revision: { model: revisionModel, actor, requestId },
   }
 }

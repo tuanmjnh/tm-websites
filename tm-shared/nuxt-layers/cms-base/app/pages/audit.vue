@@ -237,6 +237,10 @@ if (canRead.value) await load()
                   </UBadge>
                 </div>
 
+                <p v-if="entry.reason" class="mt-1 text-xs italic text-default">
+                  “{{ entry.reason }}”
+                </p>
+
                 <p class="mt-1 text-xs text-muted">
                   {{ entry.actor.name || entry.actor.email || t('admin.audit.systemActor') }}
                   <span v-if="entry.actor.email && entry.actor.name"> · {{ entry.actor.email }}</span>

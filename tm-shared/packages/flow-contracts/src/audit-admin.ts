@@ -55,6 +55,8 @@ export const AdminAuditEntrySchema = z.object({
   fromStatus: z.string().nullable(),
   toStatus: z.string().nullable(),
   changedFields: z.array(z.string()),
+  /** Operator note captured with the mutation, or null when none was given. */
+  reason: z.string().nullable(),
   actor: AdminAuditActorSchema,
   requestId: z.string().nullable(),
   createdAt: z.string(),

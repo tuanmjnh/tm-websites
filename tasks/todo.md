@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | P0 | Documentation reset (v2 docs, ADR, archive) | Done — links verified, no application PASS implied |
 | P1 | IAM contract and BFF | **In progress, blocked cross-repo** — adapter/CSRF/proxy, verified-context gate and a 27-check `test:iam` in the default gate set landed; authoritative session/revocation and entitlement still have to come from Hub |
-| P2 | Business foundation (trusted DB binding, shared models, audit/idempotency) | **In progress** — tenant-bound DB binding, validated model, migrations v1–v3, audit read surface, retention command (manual, dry-run default) and idempotent retries landed; audit still covers content only |
+| P2 | Business foundation (trusted DB binding, shared models, audit/idempotency) | **In progress** — tenant-bound DB binding, validated model, migrations v1–v3, audit read surface, a write path with actor/reason for content, category, media, settings and menu, the retention command (manual, dry-run default) and idempotent retries landed; only import/export and jobs are unaudited |
 | P3 | Content/media/site vertical slice on MongoDB | **In progress** — content module with audit/revisions/bulk, media library with local storage and attachments, tag management, category tree and ordering, site settings/menus with a storefront projection, redirect map (301/302/410), and the storefront readers (pages, `/bai-viet`, search, tags, categories, cart) landed; public media origin and Hub content export are blocked |
 | P4 | Catalog/search | **In progress** — CAT-01 landed (catalog CRUD, variants/attributes editor, bulk price/stock, barcode) and the storefront reads published items; CAT-02's serial/IMEI part waits for inventory (P6) |
 | P5–P8 | Commerce/CRM, inventory/purchasing, finance, HR/comms | Planned — no slice starts before P4's remaining gap and the P5 domain decisions |
@@ -305,7 +305,7 @@ Verified over HTTP on `:4005` (2 entries, filters, paging, `422` cases, `401` an
 | Suites: `pnpm test:retention` 5 live checks (cap, cutoff, site isolation, dry run, re-run no-op, option bounds) | `scripts/build/test-retention-service.ts` |
 | Operator runbook + dry-run/apply evidence on `sen-tuan` | `docs/v2/08-operations-and-verification.md`, `docs/v2/05-feature-parity.md` |
 
-Still open in P2.c: audit covers content only (queue item 5), no concurrent-key race test, no idempotency for public writes, no per-record history for category/media. Retention is settled: the periods are Q16's 50/365 and the manual schedule is written down in `08`.
+Still open in P2.c: no concurrent-key race test, no idempotency for public writes, no per-record history for category/media, and no CMS screen collects an audit reason yet (the header and the display are in place). Retention is settled: the periods are Q16's 50/365 and the manual schedule is written down in `08`.
 
 ### P2.d — site settings (landed 2026-11-08)
 
@@ -994,7 +994,7 @@ Each item is sized for one session, needs no new decision or credential, and car
 | 2 ✅ 2026-11-13 | **WEB-12 states and responsive layout** | Same row, second half — no page has been checked in its loading/empty/error/404/410 forms or at two viewports | Those states verified on listing, detail and cart pages at desktop and mobile widths, with the result recorded in `08` |
 | 3 ✅ 2026-11-13 | **WEB-12 fixes** | Whatever 1–2 turn up; accessibility findings are only worth something once they are repaired or explicitly deferred | Each defect is fixed with the check re-run, or written into `05` as a deliberate deferral |
 | 4 ✅ 2026-11-13 | **CNT retention policy** | P3.c's open gap: revision retention is a placeholder and nothing schedules `prune:retention` | Documented defaults, a documented manual schedule, dry-run still the default, and a test that prunes only what it should |
-| 5 | **OPS-01 audit for category and media** | P2.c's open gap: the audit read surface covers content only, so category/media writes are invisible | Category and media writes appear in the audit list with actor/reason, covered by a domain test |
+| 5 ✅ 2026-11-13 | **OPS-01 audit for category and media** | P2.c's open gap: the audit read surface covers content only, so category/media writes are invisible | Category and media writes appear in the audit list with actor/reason, covered by a domain test |
 | 6 | **WEB-09 scoped purge** | The documented gap: every save deletes the whole handler cache instead of the keys it touched (CDN purge stays deferred by Q12) | A catalog or settings write drops only the site/tenant keys it should, and a test proves an unrelated site's cache survives |
 
 **Slice 1 landed 2026-11-13.** Browser sweep on six storefront pages plus the 404: fixed the missing `html[lang]` (layout and error page), added a skip link and the `#main` target, named the two header navs, the filter input, pagination and the breadcrumbs (new `a11y.*` keys), removed an unnamed duplicate image link and lifted the card title from `h3` to `h2`. Evidence and the list of what was **not** verified are in `08`. `pnpm verify:all` 25/25 afterwards.
@@ -1003,7 +1003,9 @@ Each item is sized for one session, needs no new decision or credential, and car
 
 **Slice 4 landed 2026-11-13.** The queue item was really a documentation defect: Q16 had already decided 50 snapshots and 365 audit days and the code matched, but `08` still called them placeholders awaiting an owner decision, and no schedule had ever been written. `08` now states the policy, its guard-rail bounds and the three triggers for a manual run (monthly, after a bulk import/restore, before archiving a site); `todo`'s P2.c paragraph no longer lists retention as open. Dry run stays the default and `test:retention` keeps covering scope.
 
-**Next: item 5** — audit trail for category and media writes.
+**Slice 5 landed 2026-11-13.** The services already wrote category/media rows, so the slice became: prove it, and give the rows the operator's intent. `reason` is now a field on `audit_logs` (capped at 500, normalised once), carried from `x-audit-reason` by `writeMetaOf`, returned by both read models and rendered above the actor on the Audit Log page. New gate `test:audit-write` (11 checks: the three actions per domain, a refused command writing nothing, `null` without a note, list + search + site isolation, normaliser edge cases) runs inside `verify:all`. Honest gap, recorded in `08`: no CMS screen asks for a reason yet.
+
+**Next: item 6** — scope the cache purge instead of dropping the whole handler cache.
 
 ### Not queued (decided out of scope, do not re-open)
 

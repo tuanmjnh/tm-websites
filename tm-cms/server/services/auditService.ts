@@ -54,6 +54,7 @@ function toEntry(record: AuditRecord): AdminAuditEntry {
     fromStatus: record.fromStatus ?? null,
     toStatus: record.toStatus ?? null,
     changedFields: Array.isArray(record.changedFields) ? record.changedFields : [],
+    reason: record.reason ?? null,
     actor: {
       id: record.actor?.id ?? '',
       name: record.actor?.name ?? '',
