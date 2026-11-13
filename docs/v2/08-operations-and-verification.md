@@ -159,7 +159,21 @@ Offline still worked after the swap: with the server killed, a reload rendered t
 
 Cleanup: `index.vue` reverted, a clean build rebuilt so `.output` matches the source again, the worker unregistered, both caches deleted, the server stopped and `:4016` left free.
 
-Still not covered: install-to-home-screen UI, and two consecutive updates where the second changes a chunk that the first build kept.
+### Second consecutive update, changing a chunk the first build kept (2026-11-12)
+
+The gap above was the case the first test could not reach: update B added a chunk, so it never had to replace one the previous build was already caching. This run used a fingerprint instead of prose:
+
+* **Fingerprint** = sha256 (first 16 hex chars) of the sorted `path@revision` pairs of the worker's precache cache, compared against the same fingerprint computed from `/sw.js` served by the server. Equal fingerprints mean the cache is exactly that build's manifest; `metadata differ` in any single entry changes it.
+* Baseline build: the clean rebuild of the committed source, `sw.js` sha1 `063dfaa3a418`, 86 entries, fingerprint `2930cb93deec1af3`, layout chunk `_nuxt/BVibjFae.js`.
+* Visible change in a chunk **both** builds contain: `<p data-pwa-update-probe>PWA-UPDATE-C-LAYOUT</p>` in `web-base/app/layouts/default.vue`, built in 49.2s. That chunk was renamed `BVibjFae.js` → `CRAD2BXR.js`; the new manifest fingerprint was `1a93060bd32f5144` and 16 manifest lines differed (two URLs added, two removed, the build id changed) — an update that must delete a previously precached file.
+
+One reload of the same page, still with no unregister and no cache clearing, produced: cache fingerprint `1a93060bd32f5144` (equal to the new manifest), old `BVibjFae.js` absent, `CRAD2BXR.js` present, page rendering the layout marker, page still controlled, `tm-offline` still exactly `/offline.html`. Killing the server afterwards still rendered the offline shell.
+
+Cleanup: layout reverted, clean rebuild (so `.output` matches the source again), worker unregistered, caches deleted, server stopped, `:4016` free.
+
+One harness artifact is worth recording so nobody debugs a phantom: on a *freshly* reopened tab I first saw an empty precache and a cache literally named `undefined`. The `undefined` cache was mine — `caches.open(names.find(...))` with no match creates one — and the empty precache was the worker's `skipWaiting` + `clients.claim` auto-reload destroying the evaluation context mid-install. Closing the tab, reopening and waiting gave 86 entries whose fingerprint equalled the manifest. Neither was a product bug.
+
+Still not covered: install-to-home-screen UI, and updates where the browser is closed between the two builds.
 
 ## Database preparation and migrations
 

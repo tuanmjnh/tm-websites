@@ -749,6 +749,18 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Two bugs found by testing, not reading: a one-line `STATIC_GATES` made the slice swallow `OPT_IN_GATES` (reason strings became "gates"), and a commented-out gate inside the array still counted | fixed, described in `docs/v2/08` |
 | Negative: `test:iam` commented out → 189/190 exit 1; fake package.json script → exit 1; restored → 190/190 exit 0 | `.devlogs/gates.log` |
 
+### PWA second update replacing a shared chunk (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| Fingerprint method: sha256 of sorted `path@revision` from the worker's precache cache, compared with the same fingerprint from the served `/sw.js` | `docs/v2/08` |
+| Baseline clean build: 86 entries, fingerprint `2930cb93deec1af3`, layout chunk `_nuxt/BVibjFae.js` present | measured in-browser + from `/sw.js` |
+| Marker in `web-base/app/layouts/default.vue` (a chunk both builds hold) → build in 49.2s, chunk renamed `BVibjFae.js` → `CRAD2BXR.js`, fingerprint `1a93060bd32f5144`, 16 manifest lines changed | `.devlogs/build-web-pwa-c.log` |
+| One reload, no unregister → cache fingerprint equals the new manifest, old chunk gone, new chunk present, marker rendered, still controlled, `tm-offline` intact | browser run |
+| Offline after the second update: server killed → offline shell; then layout reverted, clean rebuild, worker unregistered, caches cleared, `:4016` free | browser + `netstat` |
+| Harness artifact recorded: my own `caches.open(undefined)` created a cache named `undefined`, and an auto-reload destroyed an evaluation context mid-install — neither was a product bug | `docs/v2/08` |
+| Limits: install-to-home-screen UI, and updates with the browser closed between builds, still untested | — |
+
 ### PWA update path (landed 2026-11-12)
 
 | Slice | Evidence |
