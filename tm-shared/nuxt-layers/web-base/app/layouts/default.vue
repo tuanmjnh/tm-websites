@@ -32,6 +32,10 @@ const switchLocale = async () => {
   if (next) await setLocale(next)
 }
 
+// Declares the document language for assistive technology; the storefront keeps
+// unprefixed URLs (Q20), so this attribute is the only signal of the active locale.
+useHead(() => ({ htmlAttrs: { lang: locale.value } }))
+
 // The cart lives in localStorage, so the badge can only be filled after mount.
 const { count: cartCount, hydrate: hydrateCart } = useCart()
 onMounted(() => hydrateCart())
@@ -40,6 +44,12 @@ onMounted(() => hydrateCart())
 <template>
   <div class="relative min-h-screen">
     <div class="udmt-backdrop" />
+
+    <!-- First tab stop: lets a keyboard or screen-reader user bypass the header. -->
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-[4px] focus:border focus:border-default focus:bg-elevated focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-highlighted focus:shadow-lg"
+    >{{ t('a11y.skipToContent') }}</a>
 
     <header class="sticky top-0 z-30 border-b border-default bg-elevated/40 backdrop-blur-xl">
       <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -50,7 +60,7 @@ onMounted(() => hydrateCart())
           </span>
         </NuxtLink>
 
-        <nav class="hidden items-center gap-6 text-sm font-medium md:flex">
+        <nav class="hidden items-center gap-6 text-sm font-medium md:flex" :aria-label="t('a11y.mainNav')">
           <div
             v-for="link in navLinks"
             :key="`${link.to}:${link.label}`"
@@ -110,7 +120,10 @@ onMounted(() => hydrateCart())
         </div>
       </div>
 
-      <nav class="flex items-center gap-5 overflow-x-auto border-t border-default/40 px-4 py-2 text-xs font-medium md:hidden">
+      <nav
+        class="flex items-center gap-5 overflow-x-auto border-t border-default/40 px-4 py-2 text-xs font-medium md:hidden"
+        :aria-label="t('a11y.mobileNav')"
+      >
         <NuxtLink
           v-for="link in navLinks"
           :key="link.to"
@@ -123,7 +136,7 @@ onMounted(() => hydrateCart())
       </nav>
     </header>
 
-    <main class="relative z-10">
+    <main id="main" tabindex="-1" class="relative z-10 outline-none">
       <slot />
     </main>
 

@@ -633,6 +633,33 @@ Coverage: `pnpm test:web-site` (10 pure checks) and `pnpm test:web-site-db` (6 l
 
 Probe documents, audit entries and idempotency keys must be removed afterwards. The service-level sequence is `pnpm test:settings` (8 checks).
 
+## Storefront accessibility baseline (WEB-12.a, 2026-11-13)
+
+Driven against the real dev server (`pnpm dev:web`, `TM_MONGO_DB=sen-tuan`, `TM_SITE_ID=sentuan`, `:4006`) in the packaged Chromium, on the seeded sentuan data. Each page was read from the live DOM rather than from source: landmarks, heading sequence, `html[lang]`, `img[alt]`, accessible names of every link/button, and every input's label.
+
+| Page | Before | After |
+| --- | --- | --- |
+| `/` | no `lang`, no skip link, one link whose only child was a decorative placeholder div (no accessible name) | `lang` follows the locale, skip link is the first tab stop, the duplicate image link is out of the AT tree |
+| `/products` | no input label (placeholder only), `h1 → h3` heading skip, pagination `nav` unlabeled | input labeled, cards are `h2`, pagination labeled |
+| `/products/bo-hn-bo` | no `lang` | clean |
+| `/categories/<slug>` | `lang` missing, breadcrumb label hardcoded English | clean, breadcrumb follows the locale |
+| `/bai-viet` | `lang` missing | clean |
+| `/gio-hang` | `lang` missing | clean, quantity/remove controls named |
+| 404 | `lang` empty, no layout | `lang` set (the error page replaces the layout, so it sets `htmlAttrs` itself); still no site header/footer by design |
+
+What was fixed in `tm-shared/nuxt-layers/web-base`:
+
+- `layouts/default.vue`: `useHead(() => ({ htmlAttrs: { lang: locale.value } }))` (the storefront keeps unprefixed URLs, so this attribute is the only locale signal), a skip link to `#main`, `id="main" tabindex="-1"` on the main landmark, and labels on both header navs.
+- `error.vue`: its own `htmlAttrs.lang`, because the error page replaces the layout that normally sets it.
+- `components/WebContentList.vue`: the card image link duplicates the title link, so it is now `aria-hidden="true" tabindex="-1"` instead of an unnamed second link.
+- `components/CatalogProductCard.vue`: card title `h3 → h2` (it sat directly under the page `h1`).
+- `pages/products/index.vue`: `aria-label` on the filter input; `:aria-label` on `UPagination` in this page and `categories/[slug].vue`.
+- Six breadcrumb `nav`s: `aria-label="Breadcrumb"` → `t('a11y.breadcrumb')` (the one in `pages/danh-muc/[slug].vue` is in the owner's pending category work and therefore ships with that change, not this one); new `a11y` block (`skipToContent`, `mainNav`, `mobileNav`, `breadcrumb`, `pagination`) in both `tm-web/i18n/locales/*.json`.
+
+Verified after the fixes: `lang` is `vi` on load and `en` after the in-header locale switch (all labels, the skip link and the pagination label follow it — no hardcoded English left on a Vietnamese page); heading sequence has no skips on every page above; no unnamed control and no unlabeled input anywhere in the audited set; every image has an `alt`; the skip link is the first focusable element and becomes visible at 16×16 px on focus; the brand link shows the UA focus outline.
+
+Not verified in this slice: real `Tab` key traversal could not be driven — the packaged Chromium only moves focus on a real key event when its window has OS focus, and `Tab` left `document.activeElement` on `<body>`; tab order was therefore read from the DOM (skip link first, then brand, then nav) and the skip link's focus styles were checked by focusing it programmatically. Colour contrast, screen-reader output and the 410 branch are not measured yet; 410 belongs to the next slice with the redirect map.
+
 ## Customer build matrix
 
 Read the registry before each run. At this baseline: CMS supports default, sentuan, bagpost, thanhtung, hoangvi; Web supports default, sentuan, bagpost. Disabled app/customer combinations should fail, not silently build another customer.

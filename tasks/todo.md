@@ -2,7 +2,7 @@
 
 > Canonical documentation: [`docs/v2/README.md`](../docs/v2/README.md) · Execution contract: [`docs/v2/09-ai-execution.md`](../docs/v2/09-ai-execution.md) · Ownership: [ADR 0001](../docs/decisions/0001-rebuild-ownership.md)
 >
-> This is the single active queue. Phase definitions live in [`07-delivery-roadmap.md`](../docs/v2/07-delivery-roadmap.md); scope lives in [`05-feature-parity.md`](../docs/v2/05-feature-parity.md). The v1-era record at the bottom is evidence only, not a plan.
+> This is the single active queue. The **Queue** section below is the plan: dated slice records above it and the v1-era record at the bottom are evidence, not instructions. Phase definitions live in [`07-delivery-roadmap.md`](../docs/v2/07-delivery-roadmap.md); scope lives in [`05-feature-parity.md`](../docs/v2/05-feature-parity.md).
 >
 > Decisions: [`tasks/questions.md`](questions.md) (status table H) and [ADR 0002](../docs/decisions/0002-owner-decisions.md) — Q1–Q22 and D1–D5 were closed on 2026-11-09, so no slice waits on a question any more. Only four external facts are still missing (production Mongo URI, Cloudinary credentials, Vercel credentials/domains, legacy snapshot); see [§4 of ADR 0002](../docs/decisions/0002-owner-decisions.md#4-waiting_input-facts-with-no-workaround).
 
@@ -11,11 +11,13 @@
 | Phase | Deliverable | Status |
 | --- | --- | --- |
 | P0 | Documentation reset (v2 docs, ADR, archive) | Done — links verified, no application PASS implied |
-| P1 | IAM contract and BFF | **In progress** — P1.a (adapter/CSRF/proxy) and P1.b (verified-context gate) landed |
-| P2 | Business foundation (trusted DB binding, shared models, audit/idempotency) | **In progress** — tenant-bound DB binding, validated model, migrations v1–v3, content audit and idempotent retries landed |
-| P3 | Content/media/site vertical slice on MongoDB | **In progress** — CMS content module with audit, retry safety and revision diff/restore runs on MongoDB; Web reads the same collection for pages and the `/bai-viet` listing; media library with local storage, uploads and content attachments (P3.e); bulk publish/archive/delete with per-row results and bulk media move/delete (P3.f); Web discovery with tag/category landing pages, a category index and bounded public search (WEB-02); unified public search page over content and products (WEB-04); crawl policy with robots.txt and a sitemap covering tag/category pages (WEB-08); client-owned cart with server-side re-quoting (WEB-05) |
-| P4 | Catalog/search | Planned |
-| P5–P10 | Commerce/CRM, inventory/purchasing, finance, HR/comms, hardening, migration | Planned |
+| P1 | IAM contract and BFF | **In progress, blocked cross-repo** — adapter/CSRF/proxy, verified-context gate and a 27-check `test:iam` in the default gate set landed; authoritative session/revocation and entitlement still have to come from Hub |
+| P2 | Business foundation (trusted DB binding, shared models, audit/idempotency) | **In progress** — tenant-bound DB binding, validated model, migrations v1–v3, audit read surface, retention command (manual, dry-run default) and idempotent retries landed; audit still covers content only |
+| P3 | Content/media/site vertical slice on MongoDB | **In progress** — content module with audit/revisions/bulk, media library with local storage and attachments, tag management, category tree and ordering, site settings/menus with a storefront projection, redirect map (301/302/410), and the storefront readers (pages, `/bai-viet`, search, tags, categories, cart) landed; public media origin and Hub content export are blocked |
+| P4 | Catalog/search | **In progress** — CAT-01 landed (catalog CRUD, variants/attributes editor, bulk price/stock, barcode) and the storefront reads published items; CAT-02's serial/IMEI part waits for inventory (P6) |
+| P5–P8 | Commerce/CRM, inventory/purchasing, finance, HR/comms | Planned — no slice starts before P4's remaining gap and the P5 domain decisions |
+| P9 | Hardening and parity closure | **In progress** — `verify:all` (25 steps) runs in CI against a disposable Mongo, the PWA is verified end to end (install, offline, three update paths, cross-customer isolation) and every customer app builds in `test:build-matrix`; open: accessibility, per-customer browser pass, CDN/provider cache |
+| P10 | Migration and launch | Planned — needs the legacy snapshot and production authorization |
 
 ## P1 — IAM contract and BFF
 
@@ -982,28 +984,39 @@ Next smallest slice this audit points at: a cross-customer asset isolation check
 | `/danh-muc` index leaves the index while it has no category | `tm-shared/nuxt-layers/web-base/app/pages/danh-muc/index.vue` |
 | Limits: `/bai-viet` has no page URLs (cursor pagination) | — |
 
-## Next slices
+## Queue — the next slices, in order
 
-### Ready now (no decision or credential needed)
+Each item is sized for one session, needs no new decision or credential, and carries its own verification. Work top to bottom; if an item uncovers a defect, finish that fix inside the item rather than opening a new one.
 
-Nothing in the current docs is both unblocked and meaningful right now (the two keyword search records above closed the last gap that did not need a decision or credential): each remaining gap is either decided out of scope, waiting for a credential, or a whole domain (orders, stock, finance, HR, CRM) that the v2 plan puts after the storefront parity work rather than in this queue.
+| # | Slice | Why it is next | Done when |
+| --- | --- | --- | --- |
+| 1 ✅ 2026-11-13 | **WEB-12 accessibility baseline** | The only `Partial: foundation` row in `05-feature-parity.md` with no evidence at all: pages were read, never driven with a keyboard or a screen-reader structure | Every storefront page checked in a real browser for landmarks, heading order, `lang`, image `alt`, named controls, and a keyboard path through header/footer/cart; results recorded in `08` |
+| 2 | **WEB-12 states and responsive layout** | Same row, second half — no page has been checked in its loading/empty/error/404/410 forms or at two viewports | Those states verified on listing, detail and cart pages at desktop and mobile widths, with the result recorded in `08` |
+| 3 | **WEB-12 fixes** | Whatever 1–2 turn up; accessibility findings are only worth something once they are repaired or explicitly deferred | Each defect is fixed with the check re-run, or written into `05` as a deliberate deferral |
+| 4 | **CNT retention policy** | P3.c's open gap: revision retention is a placeholder and nothing schedules `prune:retention` | Documented defaults, a documented manual schedule, dry-run still the default, and a test that prunes only what it should |
+| 5 | **OPS-01 audit for category and media** | P2.c's open gap: the audit read surface covers content only, so category/media writes are invisible | Category and media writes appear in the audit list with actor/reason, covered by a domain test |
+| 6 | **WEB-09 scoped purge** | The documented gap: every save deletes the whole handler cache instead of the keys it touched (CDN purge stays deferred by Q12) | A catalog or settings write drops only the site/tenant keys it should, and a test proves an unrelated site's cache survives |
 
-### Deliberately not in scope (decided, not blocked)
+**Slice 1 landed 2026-11-13.** Browser sweep on six storefront pages plus the 404: fixed the missing `html[lang]` (layout and error page), added a skip link and the `#main` target, named the two header navs, the filter input, pagination and the breadcrumbs (new `a11y.*` keys), removed an unnamed duplicate image link and lifted the card title from `h3` to `h2`. Evidence and the list of what was **not** verified are in `08`. `pnpm verify:all` 25/25 afterwards.
+
+**Next: item 2** — the same pages in their loading/empty/error/410 forms and at desktop + mobile widths.
+
+### Not queued (decided out of scope, do not re-open)
 
 Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are not re-opened as gaps:
 
-- **WEB-06 checkout** — no payment provider and no order storage (Q17). The cart and its server-side re-quote remain the end of the flow; the three invariants (server reprice, duplicate rejection, out-of-stock refusal) stay listed for the slice that opens it.
-- **WEB-07 forms** — no delivery target (Q18), so there is no stub that would swallow submissions. The settings' contact address is the only address in the system.
-- **Media in the public projection, logo URL, OG images** — no public media origin (Q19/Q13); the `PublicSite` schema has no media field on purpose.
+- **WEB-06 checkout** — no payment provider and no order storage (Q17). The cart and its server-side re-quote remain the end of the flow.
+- **WEB-07 forms** — no delivery target (Q18), so there is no stub that would swallow submissions.
+- **Media in the public projection, logo URL, OG images** — no public media origin (Q19/Q13).
 - **Locale-prefixed URLs and `hreflang`** — storefront keeps `no_prefix` (Q20).
-- **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21); `pnpm prune:retention` is manual and dry-run by default.
-- **Hub import and the three remaining customers** — no export authorisation and no database names (Q5/Q22/Q2), so only `sentuan` is exercised.
+- **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
+- **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
 ### Waiting for an external fact (no workaround)
 
-- **Production `TM_MONGO_URI`** — production data work and P10. Local and disposable databases are what CI exercises today.
-- **Cloudinary credentials** (or another public origin) — the projection above.
-- **Vercel token + customer domains** — deployment; nothing here is built for a host-specific runtime beyond the current Nitro targets.
+- **Production `TM_MONGO_URI`** — production data work and P10.
+- **Cloudinary credentials** (or another public origin) — the public media projection.
+- **Vercel token + customer domains** — deployment and per-customer environments.
 - **Legacy data snapshot** — migration dry-run; no fixture is invented to stand in for it.
 
 ## Superseded v1 decisions

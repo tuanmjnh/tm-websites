@@ -204,7 +204,7 @@ useHead(() => {
     <CatalogStateNotice v-if="status === 'disconnected' || status === 'unavailable'" :status="status" />
 
     <template v-else-if="item">
-      <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+      <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted" :aria-label="t('a11y.breadcrumb')">
         <NuxtLink to="/" class="transition-colors hover:text-primary">{{ t('common.home') }}</NuxtLink>
         <span aria-hidden="true">/</span>
         <NuxtLink to="/products" class="transition-colors hover:text-primary">{{ t('catalog.title') }}</NuxtLink>

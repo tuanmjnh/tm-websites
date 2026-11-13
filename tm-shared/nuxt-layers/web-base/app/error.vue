@@ -5,7 +5,7 @@ const props = defineProps<{
   error: NuxtError
 }>()
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 const { customer } = useCustomerConfig()
 
 const statusCode = computed(() => props.error?.statusCode ?? 500)
@@ -34,9 +34,11 @@ const description = computed(() => {
  * keeps a crawler from treating the rendered body as a page while a 5xx or a
  * filtered response is being served. It carries no canonical for the same reason.
  */
-useHead({
+useHead(() => ({
   meta: [{ name: 'robots', content: 'noindex, follow' }],
-})
+  // The error page replaces the layout, so the layout's `htmlAttrs` never runs here.
+  htmlAttrs: { lang: locale.value },
+}))
 
 const goHome = () => clearError({ redirect: '/' })
 </script>

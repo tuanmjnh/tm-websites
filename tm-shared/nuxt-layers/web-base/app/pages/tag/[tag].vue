@@ -106,7 +106,7 @@ useHead({
 
 <template>
   <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-    <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+    <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted" :aria-label="t('a11y.breadcrumb')">
       <NuxtLink to="/" class="transition-colors hover:text-primary">{{ t('common.home') }}</NuxtLink>
       <span aria-hidden="true">/</span>
       <NuxtLink to="/bai-viet" class="transition-colors hover:text-primary">{{ t('post.indexTitle') }}</NuxtLink>

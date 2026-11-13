@@ -157,7 +157,7 @@ useHead(() => {
 
 <template>
   <article v-if="content" class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-    <nav class="mb-6 flex items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+    <nav class="mb-6 flex items-center gap-2 text-xs text-muted" :aria-label="t('a11y.breadcrumb')">
       <NuxtLink to="/" class="transition-colors hover:text-primary">
         {{ t('common.home') }}
       </NuxtLink>

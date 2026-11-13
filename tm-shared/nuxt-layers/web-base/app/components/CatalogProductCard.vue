@@ -57,9 +57,9 @@ const compareAtPrice = computed(() =>
         {{ primaryCategory }}
       </p>
 
-      <h3 class="mt-1 line-clamp-2 text-sm font-semibold text-highlighted transition-colors group-hover:text-primary">
+      <h2 class="mt-1 line-clamp-2 text-sm font-semibold text-highlighted transition-colors group-hover:text-primary">
         {{ name }}
-      </h3>
+      </h2>
 
       <p v-if="summary" class="mt-1 line-clamp-2 text-xs text-muted">
         {{ summary }}

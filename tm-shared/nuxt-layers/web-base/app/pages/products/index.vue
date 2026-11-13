@@ -193,6 +193,7 @@ useHead({
           v-model="searchInput"
           icon="i-lucide-search"
           :placeholder="t('catalog.searchPlaceholder')"
+          :aria-label="t('catalog.searchPlaceholder')"
           class="w-full sm:flex-1"
           :loading="pending"
           @update:model-value="onSearch"
@@ -270,6 +271,7 @@ useHead({
 
       <div v-if="total > PAGE_SIZE" class="mt-8 flex justify-center">
         <UPagination
+          :aria-label="t('a11y.pagination')"
           v-model:page="pageModel"
           :total="total"
           :items-per-page="PAGE_SIZE"

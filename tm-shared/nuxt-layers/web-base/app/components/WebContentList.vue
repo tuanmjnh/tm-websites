@@ -47,7 +47,8 @@ const tagPath = (tag: string) => `/tag/${encodeURIComponent(tag)}`
         :key="item.key"
         class="flex flex-col overflow-hidden rounded-[4px] border border-default/60 bg-elevated/20"
       >
-        <NuxtLink :to="item.path" class="block">
+        <!-- Duplicate of the title link below: kept for the mouse, hidden from AT and the tab order. -->
+        <NuxtLink :to="item.path" class="block" aria-hidden="true" tabindex="-1">
           <img
             v-if="item.image"
             :src="item.image"

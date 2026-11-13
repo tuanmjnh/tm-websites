@@ -157,12 +157,12 @@
   "error": {
     "notFoundTitle": "Page not found",
     "notFoundDescription": "The page you are looking for does not exist, was removed, or is not published yet.",
-  "goneTitle": "This page has been removed",
-  "goneDescription": "This content was removed from the site and will not be back.",
-  "contentNotFound": "This article or page does not exist, was removed, or is not published yet.",
-  "productNotFound": "This product does not exist, is no longer sold, or is not published yet.",
-  "categoryNotFound": "This category does not exist or was removed.",
-  "contentUnavailable": "This content cannot be loaded right now. Please try again shortly.",
+    "goneTitle": "This page has been removed",
+    "goneDescription": "This content was removed from the site and will not be back.",
+    "contentNotFound": "This article or page does not exist, was removed, or is not published yet.",
+    "productNotFound": "This product does not exist, is no longer sold, or is not published yet.",
+    "categoryNotFound": "This category does not exist or was removed.",
+    "contentUnavailable": "This content cannot be loaded right now. Please try again shortly.",
     "serverTitle": "Unable to load this page",
     "serverDescription": "Something went wrong while loading the content. Please try again shortly.",
     "backHome": "Back to home"
@@ -199,5 +199,12 @@
     "page": "Page",
     "post": "Article",
     "fragment": "Content block"
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content",
+    "mainNav": "Main navigation",
+    "mobileNav": "Main navigation (compact)",
+    "breadcrumb": "Breadcrumb",
+    "pagination": "Pagination"
   }
 }

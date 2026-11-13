@@ -148,7 +148,7 @@ useHead(() => {
     <CatalogStateNotice v-if="activeStatus === 'disconnected' || activeStatus === 'unavailable'" :status="activeStatus" />
 
     <template v-else-if="category">
-      <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted" aria-label="Breadcrumb">
+      <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted" :aria-label="t('a11y.breadcrumb')">
         <NuxtLink to="/" class="transition-colors hover:text-primary">{{ t('common.home') }}</NuxtLink>
         <span aria-hidden="true">/</span>
         <NuxtLink to="/categories" class="transition-colors hover:text-primary">{{ t('category.indexTitle') }}</NuxtLink>
@@ -188,6 +188,7 @@ useHead(() => {
 
       <div v-if="total > PAGE_SIZE" class="mt-8 flex justify-center">
         <UPagination
+          :aria-label="t('a11y.pagination')"
           v-model:page="pageModel"
           :total="total"
           :items-per-page="PAGE_SIZE"
