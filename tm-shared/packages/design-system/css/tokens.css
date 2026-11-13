@@ -10,12 +10,50 @@
   --radius-xl: 10px;
 }
 
+/*
+ * Text contrast on light surfaces.
+ *
+ * The palette's 500 step is chosen for fills and dark backgrounds; as text on
+ * white it lands around 2:1 (amber-500, the storefront's primary) and 4.4:1 for
+ * muted body copy, both under WCAG AA. 800 and 600 measure ~6.6:1 and ~7:1 on
+ * white, and the 800 step still clears AA (5.6:1) on the pale `bg-primary/10`
+ * chips and badges. Nuxt UI states its own values on a zero-specificity
+ * `:where(...)` selector, so this block reaches dark mode as well; the `.dark`
+ * block below restores dark's lighter steps (primary-400, neutral-400).
+ */
 :root {
   --ui-radius: 6px;
   --udmt-ambient: 14%;
+  --ui-primary: var(--ui-color-primary-800);
+  --ui-text-muted: var(--ui-color-neutral-600);
+  --ui-text-dimmed: var(--ui-color-neutral-600);
+}
+
+/*
+ * `text-muted` and `text-dimmed` are translucent mixes of the body colour in
+ * Nuxt UI, so on a light surface they fade towards white instead of holding a
+ * readable ratio (measured 2.5:1 and 1.2:1). Point the utilities at solid
+ * palette steps instead: 600 on light, 400/500 on dark, as the tokens above.
+ */
+.text-muted {
+  color: var(--ui-color-neutral-600);
+}
+
+.text-dimmed {
+  color: var(--ui-color-neutral-600);
 }
 
 .dark {
   --udmt-ambient: 26%;
+  --ui-primary: var(--ui-color-primary-400);
+  --ui-text-muted: var(--ui-color-neutral-400);
+  --ui-text-dimmed: var(--ui-color-neutral-500);
 }
 
+.dark .text-muted {
+  color: var(--ui-color-neutral-400);
+}
+
+.dark .text-dimmed {
+  color: var(--ui-color-neutral-500);
+}

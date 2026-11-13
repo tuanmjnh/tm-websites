@@ -789,6 +789,38 @@ One behaviour worth knowing when checking this with `curl`: without an HTML `Acc
 
 Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
 
+## Colour contrast (WEB-12.d, 2026-11-13)
+
+Measured with axe-core 4.10.2 (`color-contrast` rule only) against the live dev storefront (`:4018`, `sen-tuan`), in both colour modes. The storefront has no theme switch: it follows the OS, so a visitor on a light desktop gets the light theme, which is where the problems were.
+
+Baseline on `/products` (light): 39 text nodes under AA. The causes were in the palette, not in a page:
+
+- `--ui-primary` resolved to the palette's 500 step (amber-500), which is ~2:1 as text on white, and ~1.7:1 on the pale `bg-primary/10` chips and badges. Fills are fine at that step; text is not.
+- `text-muted` and `text-dimmed` are translucent mixes of the body colour in Nuxt UI, so they fade towards white: 2.5:1 for muted, 1.2:1 for dimmed. Overriding `--ui-text-muted` alone changed nothing — the utilities do not read it.
+
+What changed in `tm-shared/packages/design-system/css/tokens.css`:
+
+- `:root` (light): `--ui-primary: var(--ui-color-primary-800)` (~6.6:1 on white, 5.6:1 on `bg-primary/10`), `--ui-text-muted` and `--ui-text-dimmed` at `neutral-600` (~7:1).
+- `.dark`: the same three re-stated at dark's lighter steps (`primary-400`, `neutral-400`, `neutral-500`). This was necessary: Nuxt UI states its light values on a zero-specificity `:where(...)` selector, so the light block reached dark mode and turned grey-on-black text into 2.3:1 — the dark theme's measured 0 violations only came back once dark re-declared them.
+- `.text-muted` and `.text-dimmed` now resolve to solid `neutral-600` (light) / `neutral-400`–`500` (dark) instead of the translucent mix.
+
+Evidence after the change (0 violations in every row; numbers are text nodes axe could resolve):
+
+| Page | Light | Dark |
+| --- | --- | --- |
+| `/` | 95 pass, 0 violations | 95 pass, 0 violations |
+| `/products` | 105 pass, 0 violations | 105 pass, 0 violations |
+| `/bai-viet` | 30 pass, 0 violations | 30 pass, 0 violations |
+| `/khong-ton-tai` (404) | 5 pass, 0 violations | 5 pass, 0 violations |
+| `/products/bo-hn-bo`, `/gio-hang` | 0 violations (measured with the backdrop visible; see the caveats) | 0 violations |
+
+How the measurement had to be set up, because two things in this UI quietly corrupt a naive run:
+
+- **The decorative backdrop.** `.udmt-backdrop` paints a radial amber gradient behind everything, and axe reports every element over a gradient as *incomplete* ("background colour could not be determined") rather than checking it. With it visible, `/bai-viet` resolved only 12 nodes and "0 violations" meant little. The table's runs hide that element (it is `aria-hidden` decoration, a ≤14% tint over the base surface) so the base surface can be read; 2 nodes per page stay unresolved (image overlays).
+- **Frozen transitions.** `.bento-card` carries `transition: all .2s`; in a background tab Chrome pauses transitions, so a card measured mid-switch kept the *previous* theme's surface. That produced a run where every product card read as dark-on-dark (24–56 false violations) while the screenshot showed a white card. Every run above injects `transition: none; animation: none` before measuring; the card then reports its real `oklab(0.97 / 0.82)` surface.
+
+Not covered: the CMS inherits the same tokens (it shares the design system) but its light theme was not re-measured; colour contrast is the only rule run, so focus rings, screen-reader output and the pending affordance stay as they were; and `text-primary` on photographic media is not measured by anything here.
+
 ## Customer build matrix
 
 Read the registry before each run. At this baseline: CMS supports default, sentuan, bagpost, thanhtung, hoangvi; Web supports default, sentuan, bagpost. Disabled app/customer combinations should fail, not silently build another customer.
