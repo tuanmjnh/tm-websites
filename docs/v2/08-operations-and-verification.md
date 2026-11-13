@@ -789,6 +789,16 @@ One behaviour worth knowing when checking this with `curl`: without an HTML `Acc
 
 Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
 
+## Shared packages from `tm-platform` (WEB-13, 2026-11-13)
+
+A `link:` dependency on `@tuanmjnh/tm-ui` renders nothing in the CMS and still passes every gate. Reproduce it before adopting anything from that repo: mount `StatusBadge` from the package and read `document.querySelectorAll('ubadge').length` in the live page — a non-zero count means the component resolved to a bare tag name, not to a component.
+
+Why: the package's `dist` is precompiled by `scripts/build-sfc.mjs`, so its render functions call `resolveComponent('UBadge' | 'UIcon')` at runtime, and `link:` makes Vite resolve the package's own `vue` (3.5.45) instead of this repo's (3.5.44). With two Vue module instances the app registry is populated correctly but the package's `resolveComponent` has no `currentInstance`, so it returns the string. Nothing logs an error; `nuxt build` and `vue-tsc` stay green.
+
+The wiring used for the probe, for whoever repeats it once the package is published: `"@tuanmjnh/tm-ui": "link:../../../../tm-platform/packages/tm-ui"` in the layer that imports it (`cms-base`, not `core-base` — TypeScript resolves from the importing file's directory), `vite.server.fs.allow` for that directory in `tm-cms/nuxt.config.ts`, `@source "<layer>/node_modules/@tuanmjnh/tm-ui/dist"` in `tm-shared/packages/design-system/css/index.css` (without it the pills' `bg-success/10` never reach the CSS), and a client plugin registering `UBadge`/`UIcon` from `#components`. Do not add `vue` to `tm-cms/package.json` to make `dedupe` resolve a root copy: that broke `vue-tsc` with 122 errors.
+
+The pills' contrast is fine under the WEB-12.d tokens once they render: 6.44:1 and 5.85:1 in light, 7.95:1 and 9.03:1 in dark, measured by compositing the 10 % tint over the page background (`getComputedStyle` returns `oklch`, so parse colours through a canvas, not a number regex).
+
 ## Colour contrast (WEB-12.d, 2026-11-13)
 
 Measured with axe-core 4.10.2 (`color-contrast` rule only) against the live dev storefront (`:4018`, `sen-tuan`), in both colour modes. The storefront has no theme switch: it follows the OS, so a visitor on a light desktop gets the light theme, which is where the problems were.

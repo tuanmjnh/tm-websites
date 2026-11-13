@@ -1022,12 +1022,19 @@ Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are no
 - **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
 - **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
+### WEB-13 — shared packages from `tm-platform` (probe, blocked 2026-11-13)
+
+- `tm-websites` stays on local components for now. `@tuanmjnh/tm-ui` cannot be consumed through `link:` here: the package resolves its own `vue` (3.5.45 vs 3.5.44), Vite loads two Vue instances, and its precompiled `resolveComponent('UBadge')` renders empty `<ubadge>` tags while every gate stays green.
+- The probe covered the full wiring (`link:` dependency in `cms-base`, `vite.server.fs.allow`, `@source` for the package's `dist`, `UBadge`/`UIcon` registered from `#components`) and was reverted whole; evidence and traps are in `08` under "Shared packages from `tm-platform`".
+- Next: re-run the adoption after `@tuanmjnh/tm-ui` is published to the registry (peer-resolved `vue` = one instance), or after `tm-platform` ships the raw SFCs instead of a precompiled `dist`. Start with the pure-TypeScript packages (`tm-utils`, `tm-validators`, `tm-types`), which have none of this coupling.
+
 ### Waiting for an external fact (no workaround)
 
 - **Production `TM_MONGO_URI`** — production data work and P10.
 - **Cloudinary credentials** (or another public origin) — the public media projection.
 - **Vercel token + customer domains** — deployment and per-customer environments.
 - **Legacy data snapshot** — migration dry-run; no fixture is invented to stand in for it.
+- **`@tuanmjnh/tm-ui` publish** (npm OTP) — the only way a Vue-dependent package from `tm-platform` can be adopted without a second Vue instance (WEB-13).
 
 ## Superseded v1 decisions
 
