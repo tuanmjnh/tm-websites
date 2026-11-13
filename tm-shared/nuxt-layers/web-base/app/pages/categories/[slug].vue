@@ -189,6 +189,8 @@ useHead(() => {
       <div v-if="total > PAGE_SIZE" class="mt-8 flex justify-center">
         <UPagination
           :aria-label="t('a11y.pagination')"
+          class="w-full"
+          :ui="{ list: 'flex-wrap justify-center' }"
           v-model:page="pageModel"
           :total="total"
           :items-per-page="PAGE_SIZE"

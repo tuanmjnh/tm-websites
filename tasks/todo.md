@@ -991,15 +991,17 @@ Each item is sized for one session, needs no new decision or credential, and car
 | # | Slice | Why it is next | Done when |
 | --- | --- | --- | --- |
 | 1 ✅ 2026-11-13 | **WEB-12 accessibility baseline** | The only `Partial: foundation` row in `05-feature-parity.md` with no evidence at all: pages were read, never driven with a keyboard or a screen-reader structure | Every storefront page checked in a real browser for landmarks, heading order, `lang`, image `alt`, named controls, and a keyboard path through header/footer/cart; results recorded in `08` |
-| 2 | **WEB-12 states and responsive layout** | Same row, second half — no page has been checked in its loading/empty/error/404/410 forms or at two viewports | Those states verified on listing, detail and cart pages at desktop and mobile widths, with the result recorded in `08` |
-| 3 | **WEB-12 fixes** | Whatever 1–2 turn up; accessibility findings are only worth something once they are repaired or explicitly deferred | Each defect is fixed with the check re-run, or written into `05` as a deliberate deferral |
+| 2 ✅ 2026-11-13 | **WEB-12 states and responsive layout** | Same row, second half — no page has been checked in its loading/empty/error/404/410 forms or at two viewports | Those states verified on listing, detail and cart pages at desktop and mobile widths, with the result recorded in `08` |
+| 3 ✅ 2026-11-13 | **WEB-12 fixes** | Whatever 1–2 turn up; accessibility findings are only worth something once they are repaired or explicitly deferred | Each defect is fixed with the check re-run, or written into `05` as a deliberate deferral |
 | 4 | **CNT retention policy** | P3.c's open gap: revision retention is a placeholder and nothing schedules `prune:retention` | Documented defaults, a documented manual schedule, dry-run still the default, and a test that prunes only what it should |
 | 5 | **OPS-01 audit for category and media** | P2.c's open gap: the audit read surface covers content only, so category/media writes are invisible | Category and media writes appear in the audit list with actor/reason, covered by a domain test |
 | 6 | **WEB-09 scoped purge** | The documented gap: every save deletes the whole handler cache instead of the keys it touched (CDN purge stays deferred by Q12) | A catalog or settings write drops only the site/tenant keys it should, and a test proves an unrelated site's cache survives |
 
 **Slice 1 landed 2026-11-13.** Browser sweep on six storefront pages plus the 404: fixed the missing `html[lang]` (layout and error page), added a skip link and the `#main` target, named the two header navs, the filter input, pagination and the breadcrumbs (new `a11y.*` keys), removed an unnamed duplicate image link and lifted the card title from `h3` to `h2`. Evidence and the list of what was **not** verified are in `08`. `pnpm verify:all` 25/25 afterwards.
 
-**Next: item 2** — the same pages in their loading/empty/error/410 forms and at desktop + mobile widths.
+**Slices 2 and 3 landed 2026-11-13 (same day).** Empty search, catalog-unavailable (a second dev server pointed at a dead Mongo, stopped afterwards), 404 and the 390/1280 px layouts were checked on five pages; the one defect found — a 10 px page overflow caused by a 392 px `UPagination` row — is fixed by letting the pagination list wrap, and 410 plus the pending affordance stay listed as unverified in `08`. Mapping the three findings back to the phase rows is done, so the queue continues at item 4.
+
+**Next: item 4** — revision retention policy and its schedule.
 
 ### Not queued (decided out of scope, do not re-open)
 

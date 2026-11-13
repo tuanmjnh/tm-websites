@@ -660,6 +660,31 @@ Verified after the fixes: `lang` is `vi` on load and `en` after the in-header lo
 
 Not verified in this slice: real `Tab` key traversal could not be driven — the packaged Chromium only moves focus on a real key event when its window has OS focus, and `Tab` left `document.activeElement` on `<body>`; tab order was therefore read from the DOM (skip link first, then brand, then nav) and the skip link's focus styles were checked by focusing it programmatically. Colour contrast, screen-reader output and the 410 branch are not measured yet; 410 belongs to the next slice with the redirect map.
 
+## Storefront states and responsive widths (WEB-12.b, 2026-11-13)
+
+Same server and data as the accessibility baseline. Each state was reached with a real request, not by mocking a component; nothing was written to the database.
+
+| State | How it was reached | Result |
+| --- | --- | --- |
+| Empty listing | `/tim-kiem?q=zzzznotfound` | "No result matches “zzzznotfound”." with the heading intact |
+| Catalog unavailable | a second dev server on `:4017` with `TM_MONGO_URI=mongodb://127.0.0.1:27999` (nothing listening), `NUXT_IGNORE_LOCK=1`; the cached `/products` payload still answered, a cache-busting `?sort=price-asc&page=2` returned `503 error.catalogUnavailable` | The page renders its heading and the "Catalog temporarily unavailable / Product data could not be read right now" notice instead of an empty grid or a crash |
+| 404 | `/khong-ton-tai-abc` | `noindex, follow`, `lang`, `h1`, a single "back home" action; no header/footer by design |
+| 410 | not exercised | There is no redirect mapping in the local data, and creating one would mean inventing data; the branch still needs a real mapping |
+
+Responsive widths were checked at 390×844 and 1280×800 by measuring `documentElement.scrollWidth` against `clientWidth` and the computed grid/nav of the live page:
+
+| Page | 390 px | 1280 px |
+| --- | --- | --- |
+| `/` | no horizontal overflow | — |
+| `/products` | one card per row, filter full width, compact nav only | cards multi-column, desktop nav, compact nav hidden |
+| `/products/bo-hn-bo` | no overflow, quantity input keeps its label | — |
+| `/categories/<slug>` | one card per row, no overflow | four columns, no overflow |
+| `/gio-hang` | no overflow, compact nav only | — |
+
+The one defect this found and fixed: `UPagination` rendered a 392 px row inside a 373 px viewport on `/products`, so the whole page had a 10 px horizontal scroll (the pagination `nav` is a flex item with `min-width: auto`, so adding `flex-wrap` to the root could not shrink it, and the shrinking attempt then pushed a button past the edge). It is now `class="w-full"` with `:ui="{ list: 'flex-wrap justify-center' }"` in both `products/index.vue` and `categories/[slug].vue`: at 390 px the list wraps to two rows (`nav` height 68 px) and `scrollWidth` equals `clientWidth`.
+
+Not verified: the client-side loading/pending affordance (it relies on the API answering slowly, which a local server cannot produce deterministically) and the 410 branch above.
+
 ## Customer build matrix
 
 Read the registry before each run. At this baseline: CMS supports default, sentuan, bagpost, thanhtung, hoangvi; Web supports default, sentuan, bagpost. Disabled app/customer combinations should fail, not silently build another customer.
