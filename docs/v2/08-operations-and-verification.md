@@ -799,6 +799,8 @@ The same precompiled `resolveComponent('UBadge')` lookup fails in `tm-hub`, so i
 
 So `tm-hub` needs only the registry half of the fix: a client plugin registering `UBadge` and `UIcon` from `#components`, with no `dedupe` and no `vue` dependency. `tm-websites` proved that mechanism on 2026-11-13 — with a single Vue instance and the two components registered, the pills drew `span[data-slot="base"]` with `bg-success/10` and real contrast ratios.
 
+That plugin now exists in `tm-hub` (`app/plugins/tm-ui-globals.client.ts`, uncommitted — that repo is mid-migration and its working tree is the owner's). `pnpm typecheck` there reports 0 errors, and the running dev server's registry on `/login` now lists `UBadge` and `UIcon` next to Nuxt UI's own `Icon`/`LazyIcon`, so both preconditions hold. The admin pages themselves still need a signed-in session to look at: `/administration/configs` redirects to `/login` without one, and no test account is documented in that repo.
+
 ## Shared packages from `tm-platform` (WEB-13, 2026-11-13)
 
 A `link:` dependency on `@tuanmjnh/tm-ui` renders nothing in the CMS and still passes every gate. Reproduce it before adopting anything from that repo: mount `StatusBadge` from the package and read `document.querySelectorAll('ubadge').length` in the live page — a non-zero count means the component resolved to a bare tag name, not to a component.
