@@ -1022,6 +1022,14 @@ Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are no
 - **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
 - **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
+### WEB-17 — the dead-link gate, and the rest of the browser pass (landed 2026-11-13)
+
+- Review of WEB-16: `/about` no longer repeats `/contact`'s channel block, both pages share one `WebNotice` empty state, and the keys only the removed block used are gone.
+- New default gate `pnpm test:web-routes` fails on any literal navigation target with no page behind it, and the catch-all page does not count as one; proven by deleting `about.vue` and watching it name the dead link with file:line. `verify:all` is 28/28.
+- Per-customer pass finished: `default` and `bagpost` storefronts, and the `bagpost`/`thanhtung`/`hoangvi` CMS login pages all render their own brand, title and theme colour with no foreign name. Matrix 8/8 in 319s.
+- Finding: a matrix output is not runnable (`ERR_MODULE_NOT_FOUND: devalue`) — preview from the app's own `.output` after `TM_CUSTOMER_ID=<id> pnpm build:web|cms`.
+- Open: no signed-in CMS pass (needs a Hub account), and runtime-built links (`/products/${slug}`) plus CMS-managed menu rows stay outside the gate.
+
 ### WEB-16 — `/about` and `/contact` exist now (landed 2026-11-13)
 
 - The per-customer browser pass on the `sentuan` production build found both routes answering `404` while the header and footer link to them. Added two settings-driven pages in `web-base` (company name, description, email, phone, address, social links) with honest empty states and `noindex` while empty.

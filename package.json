@@ -22,6 +22,7 @@
     "test:hub": "tsx scripts/build/test-hub-contracts.ts",
     "test:web-content": "tsx scripts/build/test-web-content.ts && tsx scripts/build/test-web-content-db.ts",
     "test:web-cart": "tsx scripts/build/test-web-cart.ts",
+    "test:web-routes": "tsx scripts/build/test-web-routes.ts",
     "test:iam": "tsx scripts/build/test-cms-iam.ts",
     "hub:check": "tsx scripts/build/check-hub.ts",
     "cache:clear": "rimraf tm-cms/.nuxt tm-web/.nuxt tm-cms/.output tm-web/.output node_modules/.cache node_modules/.vite",

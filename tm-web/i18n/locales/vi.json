@@ -210,10 +210,7 @@
   "about": {
     "title": "Giới thiệu {company}",
     "metaFallback": "Thông tin về {company}.",
-    "details": "Thông tin liên hệ",
-    "email": "Email",
-    "phone": "Điện thoại",
-    "address": "Địa chỉ",
+    "contactLink": "Xem thông tin liên hệ",
     "emptyTitle": "Trang này chưa có nội dung",
     "emptyHint": "Quản trị viên có thể bổ sung mô tả và thông tin công ty trong phần cài đặt của website."
   },

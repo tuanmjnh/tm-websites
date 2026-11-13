@@ -45,6 +45,9 @@ const STATIC_GATES = [
   'validate:registry',
   'verify:scaffold',
   'test:purge-scope',
+  // Reads the storefront's page files and its hand-written links; no build or
+  // database needed, so it belongs in the default run.
+  'test:web-routes',
 ]
 
 const GATES: Gate[] = [...DOMAIN_GATES, ...STATIC_GATES].map(script => ({ name: script, script }))

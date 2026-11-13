@@ -789,6 +789,30 @@ One behaviour worth knowing when checking this with `curl`: without an HTML `Acc
 
 Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
 
+## The per-customer browser pass, and why a matrix output is not a preview (2026-11-13)
+
+The matrix was rebuilt after WEB-16/WEB-17 (8/8 targets, 319s), then each customer was opened in the browser from its own build:
+
+| customer | app | checked | result |
+| --- | --- | --- | --- |
+| `default` | web | `/`, `/about`, `/contact`, `/products`, `/bai-viet` | `200`, title "TM Enterprise Storefront", theme `#8b5cf6` |
+| `bagpost` | web | the same routes plus the public APIs | `200`, title "Bag Post Logistics & Packaging", theme `#10b981`, correct brand everywhere, no other customer's name; the `bag-post` database holds 0 products and 0 categories, so an empty listing is the data, not a failure |
+| `bagpost` | cms | `/login` | `200`, "Bag Post CMS", `#10b981`, email + password |
+| `thanhtung` | cms | `/login` | `200`, "Thanh Tùng CMS", `#3b82f6` |
+| `hoangvi` | cms | `/login` | `200`, "Hoàng Vi CMS", `#f43f5e` |
+
+No page carried another customer's name in any of the five. The first attempt cost time and is worth recording: running `.devlogs/build-matrix/<customer>/<app>/.output/server/index.mjs` answers `500` with `ERR_MODULE_NOT_FOUND: Cannot find package 'devalue' … chunks/routes/renderer.mjs`. A matrix output is a build artifact validated in place, not a runnable tree — its externals resolve relative to the app directory and there is no `node_modules` beside `.devlogs`. Build the app's own output instead:
+
+```bash
+TM_CUSTOMER_ID=bagpost pnpm build:cms
+PORT=4021 NUXT_MONGO_URI=mongodb://127.0.0.1:27017 NUXT_MONGO_DB=bag-post NUXT_SITE_ID=bagpost \
+  node tm-cms/.output/server/index.mjs
+```
+
+Same customer, same build: `200` and the login page renders. The storefront happened to run from the matrix copy only because web inlines everything it needs.
+
+Not covered: the CMS was checked up to the login page — signing in needs a Hub account, and there is none for these customers. `thanhtung` and `hoangvi` have no storefront in the registry, so there is no web pass for them.
+
 ## Previewing a matrix build, and one browser pass (2026-11-13)
 
 `pnpm test:build-matrix` built all eight targets in 319s — web and CMS for `default` and `sentuan`, web for `bagpost`, CMS for `bagpost`/`thanhtung`/`hoangvi` — with the storefront isolation suite at its usual 24/24 per build. That run is also the regression check for the `vue` alias added in WEB-15: every CMS customer build executes `tm-cms/nuxt.config.ts`, so a broken alias would fail the matrix, not just `sentuan`.

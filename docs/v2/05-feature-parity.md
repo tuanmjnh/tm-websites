@@ -527,6 +527,14 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Evidence (browser `:4006/tim-kiem`): `?q=nh%C3%A3n-hi%E1%BB%87u-probe` rendered the heading for that term with the `Probe public kw` card, proving the page finds a record by keyword alone. The probe record, its 3 audit rows and 3 revisions were deleted afterwards (`content` 3, `audit_logs` 1).
 - Limits: matching is a raw regex on the stored keyword, so accents and case-insensitivity behave as Mongo's `i` flag does but there is no diacritic folding (`nhan-hieu-probe` does not find `nhãn-hiệu-probe`), no phrase/synonym handling, and keyword matches are not highlighted differently from title matches on the search page.
 
+### WEB-17 — a dead-link gate, and a second look at WEB-16 (landed 2026-11-13)
+
+- The review found the two pages rendering the same thing twice: `/about` printed exactly the email/phone/address block `/contact` owns, and the empty state was copy-pasted. `/about` now shows only the customer's description plus a link to `/contact`, and both pages render the shared `WebNotice` (the same shape as the existing `CatalogStateNotice`), so the layer has one empty state instead of three. `contact.vue` also stopped modelling "no link" as `href: ''` — the address row simply has no `href` — and the four about-only message keys left with the block they described.
+- What let the bug through: a link to a page that does not exist typechecks, lints and builds. `pnpm test:web-routes` (`scripts/build/test-web-routes.ts`, part of the default `verify:all` set) reads the page files, scans the layer's literal internal targets (`to=`, `to:`, `href=`, `navigateTo`, `router.push`) and fails with `target (file:line)`.
+- The catch-all page deliberately does not satisfy a link: it renders CMS content by path, which is exactly how `/about` answered `404` while still "having a page". Without that rule the gate would pass on any href and be worthless.
+- Proven both ways: delete `about.vue` and the gate exits `1`, naming `/about has no page file` and `links point at pages that do not exist: /contact (tm-shared/nuxt-layers/web-base/app/pages/about.vue:45)`; restore it and it is green again, with `pnpm verify:all` at 28/28.
+- Not covered: literal targets only. A link built at runtime (`/products/${slug}`) is out of scope, and so is a CMS-managed menu row — those hrefs are admin content, not routes in the repository.
+
 ### WEB-16 — the header's `/about` and `/contact` links pointed at nothing (landed 2026-11-13)
 
 - Found in the per-customer browser pass, not by a gate: on the production build of `sentuan`, `/products`, `/bai-viet`, `/danh-muc` and a product detail answered `200`, while `/about` and `/contact` answered `404` — although both the header fallback menu (`usePublicSite`) and the footer (`layouts/default.vue`) link to them, and the web layer has no such pages.

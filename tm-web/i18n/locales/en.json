@@ -210,10 +210,7 @@
   "about": {
     "title": "About {company}",
     "metaFallback": "Information about {company}.",
-    "details": "Contact details",
-    "email": "Email",
-    "phone": "Phone",
-    "address": "Address",
+    "contactLink": "See the contact details",
     "emptyTitle": "This page has no content yet",
     "emptyHint": "An administrator can add a description and company details in the website settings."
   },

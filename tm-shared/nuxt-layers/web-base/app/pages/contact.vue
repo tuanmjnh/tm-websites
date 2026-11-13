@@ -6,13 +6,13 @@ const { socialLinks } = useSiteConfig()
 /**
  * The contact channels are the ones the customer saved in site settings; the
  * storefront never invents a phone number or an address, so a site that has
- * saved none gets an explicit empty state instead of a form that goes nowhere.
+ * saved none gets an explicit notice instead of a form that goes nowhere.
  */
 const channels = computed(() => [
   contactEmail.value && { icon: 'i-lucide-mail', label: t('contact.email'), value: contactEmail.value, href: `mailto:${contactEmail.value}` },
   contactPhone.value && { icon: 'i-lucide-phone', label: t('contact.phone'), value: contactPhone.value, href: `tel:${contactPhone.value.replace(/\s+/g, '')}` },
-  contactAddress.value && { icon: 'i-lucide-map-pin', label: t('contact.address'), value: contactAddress.value, href: '' },
-].filter(Boolean) as Array<{ icon: string, label: string, value: string, href: string }>)
+  contactAddress.value && { icon: 'i-lucide-map-pin', label: t('contact.address'), value: contactAddress.value, href: undefined },
+].filter(Boolean) as Array<{ icon: string, label: string, value: string, href?: string }>)
 
 const robots = usePageRobots({ empty: () => !channels.value.length && !socialLinks.value.length })
 
@@ -57,15 +57,12 @@ useSeoMeta({
       </dl>
     </section>
 
-    <div v-else class="panel border-dashed p-8 text-center">
-      <UIcon name="i-lucide-mail-question-mark" class="mx-auto mb-3 size-8 text-dimmed" aria-hidden="true" />
-      <p class="text-sm font-medium text-highlighted">
-        {{ t('contact.emptyTitle') }}
-      </p>
-      <p class="mt-1 text-xs text-muted">
-        {{ t('contact.emptyHint') }}
-      </p>
-    </div>
+    <WebNotice
+      v-else
+      icon="i-lucide-mail-question-mark"
+      :title="t('contact.emptyTitle')"
+      :description="t('contact.emptyHint')"
+    />
 
     <section v-if="socialLinks.length" class="mt-6">
       <h2 class="text-sm font-semibold text-highlighted">
