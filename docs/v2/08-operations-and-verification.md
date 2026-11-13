@@ -746,7 +746,7 @@ What was fixed in `tm-shared/nuxt-layers/web-base`:
 
 Verified after the fixes: `lang` is `vi` on load and `en` after the in-header locale switch (all labels, the skip link and the pagination label follow it — no hardcoded English left on a Vietnamese page); heading sequence has no skips on every page above; no unnamed control and no unlabeled input anywhere in the audited set; every image has an `alt`; the skip link is the first focusable element and becomes visible at 16×16 px on focus; the brand link shows the UA focus outline.
 
-Not verified in this slice: real `Tab` key traversal could not be driven — the packaged Chromium only moves focus on a real key event when its window has OS focus, and `Tab` left `document.activeElement` on `<body>`; tab order was therefore read from the DOM (skip link first, then brand, then nav) and the skip link's focus styles were checked by focusing it programmatically. Colour contrast, screen-reader output and the 410 branch are not measured yet; 410 belongs to the next slice with the redirect map.
+Not verified in this slice: real `Tab` key traversal could not be driven — the packaged Chromium only moves focus on a real key event when its window has OS focus, and `Tab` left `document.activeElement` on `<body>`; tab order was therefore read from the DOM (skip link first, then brand, then nav) and the skip link's focus styles were checked by focusing it programmatically. Colour contrast and screen-reader output are not measured yet. The 410 branch was exercised later, with a real redirect row — see the next section.
 
 ## Storefront states and responsive widths (WEB-12.b, 2026-11-13)
 
@@ -757,7 +757,7 @@ Same server and data as the accessibility baseline. Each state was reached with 
 | Empty listing | `/tim-kiem?q=zzzznotfound` | "No result matches “zzzznotfound”." with the heading intact |
 | Catalog unavailable | a second dev server on `:4017` with `TM_MONGO_URI=mongodb://127.0.0.1:27999` (nothing listening), `NUXT_IGNORE_LOCK=1`; the cached `/products` payload still answered, a cache-busting `?sort=price-asc&page=2` returned `503 error.catalogUnavailable` | The page renders its heading and the "Catalog temporarily unavailable / Product data could not be read right now" notice instead of an empty grid or a crash |
 | 404 | `/khong-ton-tai-abc` | `noindex, follow`, `lang`, `h1`, a single "back home" action; no header/footer by design |
-| 410 | not exercised | There is no redirect mapping in the local data, and creating one would mean inventing data; the branch still needs a real mapping |
+| 410 | `/probe-gone`, after the CMS stored a real `410` redirect row | the site's own error page with `Trang này đã được gỡ`, `noindex, follow`, `lang`, a single "back home" action (see the 410 section below for the full run) |
 
 Responsive widths were checked at 390×844 and 1280×800 by measuring `documentElement.scrollWidth` against `clientWidth` and the computed grid/nav of the live page:
 
@@ -771,7 +771,23 @@ Responsive widths were checked at 390×844 and 1280×800 by measuring `documentE
 
 The one defect this found and fixed: `UPagination` rendered a 392 px row inside a 373 px viewport on `/products`, so the whole page had a 10 px horizontal scroll (the pagination `nav` is a flex item with `min-width: auto`, so adding `flex-wrap` to the root could not shrink it, and the shrinking attempt then pushed a button past the edge). It is now `class="w-full"` with `:ui="{ list: 'flex-wrap justify-center' }"` in both `products/index.vue` and `categories/[slug].vue`: at 390 px the list wraps to two rows (`nav` height 68 px) and `scrollWidth` equals `clientWidth`.
 
-Not verified: the client-side loading/pending affordance (it relies on the API answering slowly, which a local server cannot produce deterministically) and the 410 branch above.
+Not verified: the client-side loading/pending affordance (it relies on the API answering slowly, which a local server cannot produce deterministically).
+
+## The 410 branch with a real redirect row (WEB-12.c, 2026-11-13)
+
+The branch had no mapping in local data, and inventing one is off the table, so the row was created through the CMS the way an operator would create it, then removed with the same tooling. CMS `:4005` (mock session, `TM_WEB_REVALIDATE_URL`/`TM_REVALIDATE_SECRET` pointing at the storefront) and storefront `:4018` (`sen-tuan`), both stopped afterwards.
+
+1. Baseline: `GET /probe-gone` → `404`; the `content_redirects` collection was empty.
+2. `POST /api/v1/admin/redirects` with `{"from":"/probe-gone","to":"","statusCode":410,"note":"verify slice"}` and `x-audit-reason` → `201`, `x-storefront-revalidate: revalidated`, stored `revision: 1`.
+3. Purge with the save's reason (`redirect.create` → `site` scope) → `removedCount: 0`: the CMS had already dropped the two site keys.
+4. `GET /probe-gone` with `Accept: text/html` → **`410`** and the site's error page: `#__nuxt` shell, `h1` "Trang này đã được gỡ", the description from `error.contentGone`, `noindex, follow`, `Cache-Control: no-store`.
+5. `{"from":"/probe-move","to":"/","statusCode":301}` → `201`; `GET /probe-move` → `301` with `Location: /`. So the gone row and the moving row do not interfere.
+6. Cleanup through the CMS: `DELETE /api/v1/admin/redirects/<id>` answers `422` without `?revision=` and `200` with it; `content_redirects` 2 → 0, `content_revisions` 0, then the four `audit_logs` rows (two create, two delete) were removed and the collection's redirect entries went 4 → 0.
+7. The redirect lookup caches a path for 30 s (`publicRedirects.ts`), so `/probe-gone` kept answering `410` briefly; once that entry expired it answered `404` again, and `/probe-move` `404` too — the deleted rows really are gone, not merely hidden.
+
+One behaviour worth knowing when checking this with `curl`: without an HTML `Accept` header (curl's default `*/*`) Nitro answers a dev-mode JSON error envelope instead of the page. That is not specific to `410` — `GET /khong-ton-tai` behaves the same way and renders `Không tìm thấy trang` only when asked with `Accept: text/html` — so a check of these states must send a browser-like `Accept`.
+
+Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
 
 ## Customer build matrix
 

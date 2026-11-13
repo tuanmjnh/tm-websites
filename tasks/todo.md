@@ -1007,6 +1007,8 @@ Each item is sized for one session, needs no new decision or credential, and car
 
 **Slice 6 landed 2026-11-13.** The queue is now empty: every item that did not need a decision or a credential has landed. `POST /api/_internal/purge` drops only the tenant and scope its reason names (`site`, `catalog`, or both for a category rename), the site projection's cache key finally names its tenant, and the redirect map is cleared per database. Gate `test:purge-scope` (8 checks, no Mongo) runs in `verify:all`; `08` records both the two-server isolation proof and real CMS saves in each direction (mock session): a catalog create reached the storefront purge and left the site keys alone, a settings save did the mirror image, and both probes were removed afterwards. Still open by decision: the purge is secret-authenticated but not signed or replay-limited, and a CDN needs its own purge (Q12).
 
+**Slice 7 landed 2026-11-13.** The last unexercised storefront state is now checked with real data instead of deferred: a `410` redirect row written through the CMS made the storefront answer `410` with its own error page, a `301` row still redirected, and both rows plus their four audit entries were removed afterwards — after the 30 s lookup cache expired, both paths answered `404` again. Recording it surfaced one trap worth keeping: checks that send no HTML `Accept` get Nitro's JSON envelope, which made 404 look broken too. WEB-12 is now open only on the pending affordance, colour contrast and a click on the back-home button; the queue is empty again.
+
 ### Not queued (decided out of scope, do not re-open)
 
 Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are not re-opened as gaps:
