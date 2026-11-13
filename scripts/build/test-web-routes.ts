@@ -151,8 +151,7 @@ const QUERY_LINK_PATTERN = /(?:path:\s*['"]([^'"]+)['"][^}]*?query:\s*\{([^}]*)\
 interface QueryLink {
   path: string
   keys: string[]
-  file: string
-  line: number
+  source: string
 }
 
 function readQueryLinks(root: string): QueryLink[] {
@@ -169,14 +168,14 @@ function readQueryLinks(root: string): QueryLink[] {
         const keys = body.split(',').map(part => part.trim().split(':')[0].trim())
           .filter(key => /^[A-Za-z_][A-Za-z0-9_]*$/.test(key))
         if (keys.length === 0) continue
-        const line = source.slice(0, match.index ?? 0).split('\n').length
-        out.push({ path: target, keys, file: relative, line })
+        const line = source.slice(0, match.index).split('\n').length
+        out.push({ path: target, keys, source: `${relative}:${line}` })
       }
       return out
     })
 }
 
-function acceptedQueryKeys(root: string, route: string): Set<string> | 'any' | 'none' | null {
+function acceptedQueryKeys(root: string, route: string): Set<string> | 'any' | null {
   // null = target page not found (the path gate will catch it)
   const page = readPages(root).find(p => p.route === (route.replace(/\/$/, '') || '/'))
   if (!page) return null
@@ -186,8 +185,9 @@ function acceptedQueryKeys(root: string, route: string): Set<string> | 'any' | '
   const keys = new Set<string>()
   for (const match of source.matchAll(/route\.query\[['"]([^'"]+)['"]\]/g)) keys.add(match[1])
   for (const match of source.matchAll(/route\.query\.([A-Za-z_][A-Za-z0-9_]*)/g)) keys.add(match[1])
-  // A page that never reads route.query at all is out of scope for this check.
-  if (keys.size === 0) return 'none'
+  // A page that reads no query params (or does not exist) is out of scope here;
+  // the path gate covers missing pages, and ignored params are not a mismatch.
+  if (keys.size === 0) return null
   return keys
 }
 
@@ -203,10 +203,10 @@ check('every query key in a navigation link is read by the target page', () => {
   for (const { app, links } of queryLinksByApp) {
     for (const link of links) {
       const accepted = acceptedQueryKeys(app.root, link.path)
-      if (accepted === null || accepted === 'any' || accepted === 'none') continue
+      if (accepted === null || accepted === 'any') continue
       for (const key of link.keys) {
         if (!accepted.has(key)) {
-          mismatches.push(`${link.file}:${link.line}: ${link.path}: query key "${key}" is never read by the target page`)
+          mismatches.push(`${link.source}: ${link.path}: query key "${key}" is never read by the target page`)
         }
       }
     }
