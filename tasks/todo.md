@@ -749,6 +749,17 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 | Two bugs found by testing, not reading: a one-line `STATIC_GATES` made the slice swallow `OPT_IN_GATES` (reason strings became "gates"), and a commented-out gate inside the array still counted | fixed, described in `docs/v2/08` |
 | Negative: `test:iam` commented out → 189/190 exit 1; fake package.json script → exit 1; restored → 190/190 exit 0 | `.devlogs/gates.log` |
 
+### PWA update across a browser session (landed 2026-11-12)
+
+| Slice | Evidence |
+| --- | --- |
+| Build A on `:4016`: 86 entries, cache fingerprint `15ab645c10d02648` equal to A's manifest, worker controlling | browser run |
+| Every tab of the profile closed and the server stopped; no unregister or cache clearing at any point | same run |
+| Build B (marker in `web-base/app/pages/index.vue`, 47.6s): manifest fingerprint `a28d5206e52fb541`, 16 lines changed, `BuHMAric.js` out / `DAo_CYY_.js` in | `.devlogs/build-web-reopen-b.log` |
+| New tab on the same port: page self-reloaded (`navigation type = reload`, the autoUpdate switch on an already-controlled page), marker rendered, cache fingerprint equals B, A-only chunk gone, B chunk present, `tm-offline` intact | browser run |
+| Offline after the session-restart update: server killed → offline shell; then probe reverted, clean rebuild, worker unregistered, caches cleared, `:4016` free | browser + `netstat` |
+| Scope: tabs and server closed, but the Chromium process may have kept running — a session restart, not a cold process restart. Install-to-home-screen UI still untested | `docs/v2/08` |
+
 ### PWA second update replacing a shared chunk (landed 2026-11-12)
 
 | Slice | Evidence |

@@ -173,7 +173,22 @@ Cleanup: layout reverted, clean rebuild (so `.output` matches the source again),
 
 One harness artifact is worth recording so nobody debugs a phantom: on a *freshly* reopened tab I first saw an empty precache and a cache literally named `undefined`. The `undefined` cache was mine — `caches.open(names.find(...))` with no match creates one — and the empty precache was the worker's `skipWaiting` + `clients.claim` auto-reload destroying the evaluation context mid-install. Closing the tab, reopening and waiting gave 86 entries whose fingerprint equalled the manifest. Neither was a product bug.
 
-Still not covered: install-to-home-screen UI, and updates where the browser is closed between the two builds.
+### Update across a browser session, second build behind the same port (2026-11-12)
+
+Last remaining update case: the browser is gone between the two builds, so the only thing carrying state is the registration on disk.
+
+1. Build A: clean rebuild of the committed source, served on `:4016`. Opened a tab: 86 precache entries, worker controlling, cache fingerprint `15ab645c10d02648` equal to A's manifest, no marker.
+2. Every tab of that profile was closed and the server stopped — no unregister, no cache clearing at any point in this run.
+3. Build B: `<p data-pwa-reopen-probe>PWA-UPDATE-REOPEN-B</p>` in `web-base/app/pages/index.vue`, built in 47.6s, manifest fingerprint `a28d5206e52fb541`, 16 manifest lines changed (`BuHMAric.js` and `DKwBXJmb.js` dropped, `DAo_CYY_.js` and `DU0JkgpL.js` added).
+4. B served on the same `:4016`, a new tab opened.
+
+Result: the page reloaded itself once — `performance.getEntriesByType('navigation')[0].type` came back `"reload"`, which is the autoUpdate switch firing on a page an **older** worker already controlled; a first install on an uncontrolled page would have reported `"navigate"`. After that reload the marker rendered, the cache fingerprint was `a28d5206e52fb541` (B's manifest), the A-only chunk `BuHMAric.js` was gone, the B chunk `DAo_CYY_.js` was present, `tm-offline` still held exactly `/offline.html`, and the page stayed controlled.
+
+Offline after the reopened-session update still works: server killed, reload, offline shell.
+
+Cleanup: probe reverted, clean rebuild (`.output` matches the source again), worker unregistered, caches deleted, server stopped, `:4016` free.
+
+What this does and does not cover: "closed the browser" means every tab of the profile was closed and the server stopped; the Chromium process itself may still be running in the background, so this is a session restart rather than a cold OS-level process restart. Install-to-home-screen UI remains untested.
 
 ## Database preparation and migrations
 
