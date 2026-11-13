@@ -527,6 +527,13 @@ Related open rows this touches: SYS-02, WEB-02, WEB-09 and WEB-11 still depend o
 - Evidence (browser `:4006/tim-kiem`): `?q=nh%C3%A3n-hi%E1%BB%87u-probe` rendered the heading for that term with the `Probe public kw` card, proving the page finds a record by keyword alone. The probe record, its 3 audit rows and 3 revisions were deleted afterwards (`content` 3, `audit_logs` 1).
 - Limits: matching is a raw regex on the stored keyword, so accents and case-insensitivity behave as Mongo's `i` flag does but there is no diacritic folding (`nhan-hieu-probe` does not find `nhãn-hiệu-probe`), no phrase/synonym handling, and keyword matches are not highlighted differently from title matches on the search page.
 
+### WEB-18 — product names are highlighted, and a query-param bug in the search page (landed 2026-11-13)
+
+- `CatalogProductCard` gains an optional `term` prop; when it is set the name and the summary render through the existing `WebSearchHighlight` instead of plain text, so the visitor's term is wrapped in `<mark>`. `tim-kiem.vue` passes `q` and `products/index.vue` passes `listQuery.search`, so the highlight only ever reflects a query that was actually searched.
+- The same page had a real bug hidden behind the same code path: `tim-kiem.vue`'s "view all products" link was `query: { search: q }`, but `products/index.vue` reads `route.query.q` (its `search` field is derived from `q`). The link landed on the unfiltered list. It now passes `q`.
+- Evidence (`sentuan`, built into `tm-web/.output`, preview on `:4018`, `q=Bo`): `/tim-kiem` renders 16 `<mark>` across 8 product cards, the view-all link is `/products?q=Bo`, and `/products?q=Bo` renders 24 `<mark>` on the same names. `pnpm typecheck` 0, `pnpm lint` 0, `pnpm test:web-routes` 4/4, `pnpm verify:all` 28/28.
+- Limits: only literal terms are highlighted and only in the card title and summary; the term is escaped before it becomes a pattern, so it cannot inject markup. The `CatalogProductCard`'s category and price are deliberately left plain.
+
 ### WEB-17 — a dead-link gate, and a second look at WEB-16 (landed 2026-11-13)
 
 - The review found the two pages rendering the same thing twice: `/about` printed exactly the email/phone/address block `/contact` owns, and the empty state was copy-pasted. `/about` now shows only the customer's description plus a link to `/contact`, and both pages render the shared `WebNotice` (the same shape as the existing `CatalogStateNotice`), so the layer has one empty state instead of three. `contact.vue` also stopped modelling "no link" as `href: ''` — the address row simply has no `href` — and the four about-only message keys left with the block they described.

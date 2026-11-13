@@ -1022,6 +1022,13 @@ Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are no
 - **Durable events, queue, cron** — nothing schedules publishes or pruning (Q12/Q21).
 - **Hub import and the three remaining customers' real data** — no export authorisation and no database names (Q5/Q22/Q2).
 
+### WEB-18 — product-name highlighting, and a query-param fix (landed 2026-11-13)
+
+- `CatalogProductCard` now takes an optional `term` and renders name + summary through `WebSearchHighlight`; `tim-kiem.vue` passes `q` and `products/index.vue` passes `listQuery.search`.
+- Fixed `tim-kiem.vue`'s "view all products" link, which was `query: { search: q }` while the catalog page reads `route.query.q` and therefore silently dropped the filter.
+- Evidence on `sentuan` with `q=Bo`: 16 `<mark>` on the search page, 24 on the catalog page, and the link is `/products?q=Bo`. `typecheck`/`lint`/`test:web-routes`/`verify:all` (28/28) green.
+- Open: the query-param mismatch is not covered by any gate (the dead-link gate only sees paths), so a test for the "view all" link's `q` would be the natural next step.
+
 ### WEB-17 — the dead-link gate, and the rest of the browser pass (landed 2026-11-13)
 
 - Review of WEB-16: `/about` no longer repeats `/contact`'s channel block, both pages share one `WebNotice` empty state, and the keys only the removed block used are gone.

@@ -3,6 +3,12 @@ import type { PublicCatalogItemSummary } from '@tm/flow-contracts'
 
 const props = defineProps<{
   item: PublicCatalogItemSummary
+  /**
+   * The applied search term, when the card is rendered for a filtered listing.
+   * Passing the visitor's live input instead would highlight words the query
+   * never searched for.
+   */
+  term?: string
 }>()
 
 const { t, locale } = useI18n()
@@ -58,11 +64,11 @@ const compareAtPrice = computed(() =>
       </p>
 
       <h2 class="mt-1 line-clamp-2 text-sm font-semibold text-highlighted transition-colors group-hover:text-primary">
-        {{ name }}
+        <WebSearchHighlight :text="name" :term="term" />
       </h2>
 
       <p v-if="summary" class="mt-1 line-clamp-2 text-xs text-muted">
-        {{ summary }}
+        <WebSearchHighlight :text="summary" :term="term" />
       </p>
     </div>
 

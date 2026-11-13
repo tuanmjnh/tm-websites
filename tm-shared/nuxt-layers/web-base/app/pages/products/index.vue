@@ -247,7 +247,7 @@ useHead({
       </div>
 
       <div v-if="items.length" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <CatalogProductCard v-for="item in items" :key="item.id" :item="item" />
+        <CatalogProductCard v-for="item in items" :key="item.id" :item="item" :term="listQuery.search" />
       </div>
 
       <div v-else-if="pending" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

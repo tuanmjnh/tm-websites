@@ -157,13 +157,13 @@ useHead({
             {{ t('search.productSection') }}
             <span class="ml-1 text-xs font-normal text-muted">{{ productTotal }}</span>
           </h2>
-          <NuxtLink :to="{ path: '/products', query: { search: q } }" class="text-xs font-medium text-primary hover:underline">
+          <NuxtLink :to="{ path: '/products', query: { q } }" class="text-xs font-medium text-primary hover:underline">
             {{ t('search.viewAllProducts') }}
           </NuxtLink>
         </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <CatalogProductCard v-for="product in products" :key="product.id" :item="product" />
+          <CatalogProductCard v-for="product in products" :key="product.id" :item="product" :term="q" />
         </div>
       </section>
 
