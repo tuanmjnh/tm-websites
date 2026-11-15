@@ -8,8 +8,8 @@ import {
   SITE_MODULES,
   defaultSiteSettings,
 } from '@tm/flow-contracts/settings-admin'
-import type { AuditActor, AuditEntryDocument } from '../models/audit'
 import type { SiteSettingsDocument } from '../models/settings'
+import type { ContentAuditMeta } from './contentAudit'
 import { recordContentAudit } from './contentAudit'
 
 /**
@@ -31,7 +31,9 @@ export class SettingsServiceError extends Error {
 }
 
 export interface SettingsWriteMeta {
-  audit: { model: Model<AuditEntryDocument>, actor?: AuditActor, requestId?: string | null }
+  // The shared audit meta, so the operator's note is stored like it is for
+  // content, catalog and the rest instead of being dropped at the type.
+  audit: ContentAuditMeta
 }
 
 type SettingsRecord = SiteSettingsDocument & { _id: unknown }

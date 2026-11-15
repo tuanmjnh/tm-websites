@@ -1,6 +1,6 @@
 import { AdminSiteSettingsSchema } from '@tm/flow-contracts/settings-admin'
 import { SettingsServiceError, updateSiteSettings } from '#server/services/settingsService'
-import { idempotencyKeyOf, requestIdOf } from '#server/utils/contentApi'
+import { idempotencyKeyOf, writeMetaOf } from '#server/utils/contentApi'
 import { executeIdempotent } from '#server/utils/idempotency'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
@@ -23,15 +23,15 @@ export default defineEventHandler(async (event) => {
   const siteId = resolveSiteId(event)
   const body = await readBody(event)
   const idempotencyKey = idempotencyKeyOf(event)
-  const actor = { id: user.id, name: user.name ?? '', email: user.email ?? '' }
 
   try {
-    const executed = await withPreparedDb(event, ({ Settings, Audit, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ Settings, Audit, Revision, IdempotencyKey }) =>
       executeIdempotent(
         { model: IdempotencyKey, siteId, action: 'settings.update', key: idempotencyKey, payload: body },
         async () => {
+          // The shared helper, so the `x-audit-reason` note is read here too.
           const settings = await updateSiteSettings(Settings, siteId, body, {
-            audit: { model: Audit, actor, requestId: requestIdOf(event) },
+            audit: writeMetaOf(event, user, Audit, Revision).audit,
           })
           return {
             statusCode: 200,

@@ -177,6 +177,31 @@ async function integration() {
         'a locale that is not stored cannot change the document',
       )
     })
+
+    await check('the operator note is stored on the audit entry, normalised', async () => {
+      const current = await getSiteSettings(Settings, OTHER_SITE)
+      await updateSiteSettings(Settings, OTHER_SITE, {
+        revision: current.revision,
+        company: { phone: '0912 345 678' },
+      }, { audit: { model: Audit, actor: ADMIN, requestId: 'req_reason', reason: '  Cập nhật\n theo yêu cầu  ' } })
+
+      const entry = await Audit.findOne({ siteId: OTHER_SITE, requestId: 'req_reason' }).lean()
+      assert.ok(entry, 'the save left an audit entry behind')
+      assert.equal(entry.reason, 'Cập nhật theo yêu cầu', 'trimmed and collapsed like every other domain')
+      assert.deepEqual(entry.changedFields, ['company'])
+    })
+
+    await check('a save without a note records a null reason, never an empty string', async () => {
+      const current = await getSiteSettings(Settings, OTHER_SITE)
+      await updateSiteSettings(Settings, OTHER_SITE, {
+        revision: current.revision,
+        company: { phone: '0900 000 999' },
+      }, { audit: { model: Audit, actor: ADMIN, requestId: 'req_no_reason' } })
+
+      const entry = await Audit.findOne({ siteId: OTHER_SITE, requestId: 'req_no_reason' }).lean()
+      assert.ok(entry)
+      assert.equal(entry.reason, null)
+    })
   } finally {
     await closeDatabaseConnections()
   }
