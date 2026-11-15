@@ -44,6 +44,9 @@ const STATIC_GATES = [
   'lint',
   'validate:registry',
   'verify:scaffold',
+  // Reads the admin routes as source: no build, no database, so it belongs in the
+  // default run and fails fast when a route forgets the audit reason.
+  'verify:audit-meta',
   'test:purge-scope',
   // Reads the storefront's page files and its hand-written links; no build or
   // database needed, so it belongs in the default run.
