@@ -85,7 +85,7 @@ const deleteOpen = ref(false)
 const scheduleOpen = ref(false)
 const scheduleAt = ref('')
 const scheduleBusy = ref(false)
-const auditReason = ref('')
+const { reason: auditReason, resetOnClose } = useAuditReason()
 
 // Bulk selection lives in the page (not the row) so one confirm dialog can cover
 // every checked record and one request can report per-row outcomes.
@@ -809,13 +809,8 @@ onMounted(async () => {
   await Promise.all([load(), loadTagOptions()])
 })
 
-// A typed reason belongs to its dialog, so cancelling with the button,
-// Escape or the backdrop never leaves it behind for the next action.
-for (const open of [formOpen, scheduleOpen, deleteOpen, bulkOpen]) {
-  watch(open, (value) => {
-    if (!value) auditReason.value = ''
-  })
-}
+// A cancelled note must not ride along with the next action.
+resetOnClose(formOpen, scheduleOpen, deleteOpen, bulkOpen)
 </script>
 
 <template>

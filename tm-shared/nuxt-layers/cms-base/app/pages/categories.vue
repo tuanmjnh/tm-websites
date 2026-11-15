@@ -32,7 +32,7 @@ const deleteOpen = ref(false)
 const deleting = ref<AdminCategory | null>(null)
 const deleteBusy = ref(false)
 const deleteError = ref<string | null>(null)
-const auditReason = ref('')
+const { reason: auditReason, resetOnClose } = useAuditReason()
 
 const rows = computed(() => {
   const out: { node: AdminCategoryNode, depth: number }[] = []
@@ -354,13 +354,8 @@ async function moveTo(key: string, parent: string | null, index: number) {
 
 if (canRead.value) await load()
 
-// A typed reason belongs to its dialog, so cancelling with the button,
-// Escape or the backdrop never leaves it behind for the next action.
-for (const open of [formOpen, deleteOpen]) {
-  watch(open, (value) => {
-    if (!value) auditReason.value = ''
-  })
-}
+// A cancelled note must not ride along with the next action.
+resetOnClose(formOpen, deleteOpen)
 </script>
 
 <template>

@@ -44,7 +44,7 @@ const deleteOpen = ref(false)
 const deleting = ref<AdminMedia | null>(null)
 const deleteBusy = ref(false)
 const deleteError = ref<string | null>(null)
-const auditReason = ref('')
+const { reason: auditReason, resetOnClose } = useAuditReason()
 
 // Bulk selection is kept by id so a reload can prune files that no longer
 // exist, while the rows that failed stay selected for another attempt.
@@ -323,13 +323,8 @@ watch([() => filters.kind, () => filters.folder], () => void load())
 
 if (canRead.value) await load()
 
-// A typed reason belongs to its dialog, so cancelling with the button,
-// Escape or the backdrop never leaves it behind for the next action.
-for (const open of [editOpen, deleteOpen, bulkMoveOpen, bulkDeleteOpen]) {
-  watch(open, (value) => {
-    if (!value) auditReason.value = ''
-  })
-}
+// A cancelled note must not ride along with the next action.
+resetOnClose(editOpen, deleteOpen, bulkMoveOpen, bulkDeleteOpen)
 </script>
 
 <template>

@@ -28,7 +28,7 @@ const saving = ref(false)
 const formError = ref<string | null>(null)
 const source = ref<AdminTag | null>(null)
 const target = ref('')
-const auditReason = ref('')
+const { reason: auditReason, resetOnClose } = useAuditReason()
 
 const detachOpen = ref(false)
 const detaching = ref(false)
@@ -147,13 +147,8 @@ async function confirmDetach() {
 
 if (canRead.value) await load()
 
-// A typed reason belongs to its dialog, so cancelling with the button,
-// Escape or the backdrop never leaves it behind for the next action.
-for (const open of [formOpen, detachOpen]) {
-  watch(open, (value) => {
-    if (!value) auditReason.value = ''
-  })
-}
+// A cancelled note must not ride along with the next action.
+resetOnClose(formOpen, detachOpen)
 </script>
 
 <template>

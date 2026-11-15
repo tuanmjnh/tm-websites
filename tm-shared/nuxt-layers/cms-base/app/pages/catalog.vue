@@ -237,7 +237,7 @@ const formOpen = ref(false)
 const editingId = ref<string | null>(null)
 const editingRevision = ref(0)
 const formError = ref<string | null>(null)
-const auditReason = ref('')
+const { reason: auditReason, resetOnClose } = useAuditReason()
 
 const form = reactive({
   key: '',
@@ -540,13 +540,8 @@ async function removeCategory(category: AdminCatalogCategory) {
   }
 }
 
-// A typed reason belongs to its dialog, so cancelling with the button,
-// Escape or the backdrop never leaves it behind for the next action.
-for (const open of [formOpen, bulkOpen, categoriesOpen]) {
-  watch(open, (value) => {
-    if (!value) auditReason.value = ''
-  })
-}
+// A cancelled note must not ride along with the next action.
+resetOnClose(formOpen, bulkOpen, categoriesOpen)
 </script>
 
 <template>

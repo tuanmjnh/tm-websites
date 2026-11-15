@@ -61,7 +61,7 @@ const choicesError = ref<string | null>(null)
 const deleteOpen = ref(false)
 const deleteBusy = ref(false)
 const deleteError = ref<string | null>(null)
-const auditReason = ref('')
+const { reason: auditReason, resetOnClose } = useAuditReason()
 
 const dirty = computed(() => {
   if (!detail.value) return false
@@ -549,13 +549,8 @@ async function confirmDelete() {
 
 if (canRead.value) await loadMenus()
 
-// A typed reason belongs to its dialog, so cancelling with the button,
-// Escape or the backdrop never leaves it behind for the next action.
-for (const open of [createOpen, itemOpen, deleteOpen]) {
-  watch(open, (value) => {
-    if (!value) auditReason.value = ''
-  })
-}
+// A cancelled note must not ride along with the next action.
+resetOnClose(createOpen, deleteOpen)
 </script>
 
 <template>
