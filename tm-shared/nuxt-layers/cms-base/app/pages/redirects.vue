@@ -136,8 +136,8 @@ async function submit() {
   }
 }
 
-async function toggleActive(row: AdminRedirect) {
-  if (busyId.value) return
+async function toggleActive(row: AdminRedirect, reason?: string): Promise<boolean> {
+  if (busyId.value) return false
   busyId.value = row.id
   try {
     await update(row.id, {
@@ -147,15 +147,32 @@ async function toggleActive(row: AdminRedirect) {
       isActive: !row.isActive,
       note: row.note,
       revision: row.revision,
-    })
+    }, reason)
     toast.add({ title: row.isActive ? t('admin.redirects.disabled') : t('admin.redirects.enabled'), color: 'success' })
     await load()
+    return true
   } catch (e) {
     toast.add({ title: describeError(e), color: 'error' })
     if (errorCode(e) === 'REDIRECT_REVISION_CONFLICT') await load()
+    return false
   } finally {
     busyId.value = null
   }
+}
+
+/** Enabling or disabling a redirect asks for a note, like every other mutation. */
+const toggleOpen = ref(false)
+const toggleTarget = ref<AdminRedirect | null>(null)
+
+function askToggle(row: AdminRedirect) {
+  toggleTarget.value = row
+  auditReason.value = ''
+  toggleOpen.value = true
+}
+
+async function confirmToggle() {
+  if (!toggleTarget.value) return
+  if (await toggleActive(toggleTarget.value, auditReason.value.trim() || undefined)) toggleOpen.value = false
 }
 
 const deleteOpen = ref(false)
@@ -190,7 +207,7 @@ async function confirmDelete() {
 if (canRead.value) await load()
 
 // A cancelled note must not ride along with the next action.
-resetOnClose(formOpen, deleteOpen)
+resetOnClose(formOpen, deleteOpen, toggleOpen)
 </script>
 
 <template>
@@ -269,7 +286,7 @@ resetOnClose(formOpen, deleteOpen)
                 size="xs"
                 :loading="busyId === row.id"
                 :title="row.isActive ? t('admin.redirects.disable') : t('admin.redirects.enable')"
-                @click="toggleActive(row)"
+                @click="askToggle(row)"
               />
               <UButton
                 icon="i-lucide-pencil"
@@ -292,6 +309,35 @@ resetOnClose(formOpen, deleteOpen)
         </div>
       </div>
     </CmsBasePage>
+
+    <UModal
+      v-model:open="toggleOpen"
+      :title="t(toggleTarget?.isActive ? 'admin.redirects.disable' : 'admin.redirects.enable')"
+      :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }"
+    >
+      <template #body>
+        <UInput
+          v-model="auditReason"
+          class="w-full"
+          :maxlength="500"
+          :placeholder="t('common.auditReasonPlaceholder')"
+          :aria-label="t('common.auditReason')"
+        />
+      </template>
+      <template #footer="{ close }">
+        <div class="flex w-full items-center justify-end gap-2">
+          <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="close()" />
+          <UButton
+            color="primary"
+            variant="soft"
+            size="sm"
+            :label="t(toggleTarget?.isActive ? 'admin.redirects.disable' : 'admin.redirects.enable')"
+            :loading="busyId === toggleTarget?.id"
+            @click="confirmToggle"
+          />
+        </div>
+      </template>
+    </UModal>
 
     <UModal
       v-model:open="formOpen"

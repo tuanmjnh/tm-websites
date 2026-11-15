@@ -442,19 +442,44 @@ async function save() {
   }
 }
 
-// Row-menu actions pass no reason, so a note typed in a dialog cannot leak in.
-async function act(item: AdminCatalogItem, event: AdminCatalogEvent, reason?: string) {
-  if (!canWrite.value || busyId.value) return
+// One status event for one record; the note comes from the dialog that opened it,
+// so a note typed somewhere else can never ride along.
+async function act(item: AdminCatalogItem, event: AdminCatalogEvent, reason?: string): Promise<boolean> {
+  if (!canWrite.value || busyId.value) return false
   busyId.value = item.id
   try {
     await runEvent(item.id, event, item.revision, reason)
     toast.add({ title: t(`admin.catalog.messages.${event}`), color: 'success' })
     await Promise.all([load(), loadReferenceData()])
+    return true
   } catch (caught) {
     toast.add({ title: messageFor(errorCode(caught)), color: 'error' })
+    return false
   } finally {
     busyId.value = null
   }
+}
+
+/**
+ * A status change from the row still needs a note, so the row opens a small
+ * dialog rather than posting straight away.
+ */
+const actOpen = ref(false)
+const actTarget = ref<AdminCatalogItem | null>(null)
+const actEvent = ref<AdminCatalogEvent | null>(null)
+
+const actLabel = computed(() => (actEvent.value ? t(`admin.catalog.actions.${actEvent.value}`) : ''))
+
+function askAct(item: AdminCatalogItem, event: AdminCatalogEvent) {
+  actTarget.value = item
+  actEvent.value = event
+  auditReason.value = ''
+  actOpen.value = true
+}
+
+async function confirmAct() {
+  if (!actTarget.value || !actEvent.value) return
+  if (await act(actTarget.value, actEvent.value, auditReason.value.trim() || undefined)) actOpen.value = false
 }
 
 // ------------------------------------------------------------ category panel
@@ -541,7 +566,7 @@ async function removeCategory(category: AdminCatalogCategory) {
 }
 
 // A cancelled note must not ride along with the next action.
-resetOnClose(formOpen, bulkOpen, categoriesOpen)
+resetOnClose(formOpen, actOpen, bulkOpen, categoriesOpen)
 </script>
 
 <template>
@@ -647,7 +672,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
               icon="i-lucide-upload"
               :label="t('admin.catalog.actions.publish')"
               :disabled="!canWrite || busyId === item.id"
-              @click="act(item, 'publish')"
+              @click="askAct(item, 'publish')"
             />
             <UButton
               v-if="item.status === 'published'"
@@ -657,7 +682,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
               icon="i-lucide-archive"
               :label="t('admin.catalog.actions.archive')"
               :disabled="!canWrite || busyId === item.id"
-              @click="act(item, 'archive')"
+              @click="askAct(item, 'archive')"
             />
             <UButton
               v-if="item.status === 'deleted'"
@@ -667,7 +692,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
               icon="i-lucide-rotate-ccw"
               :label="t('admin.catalog.actions.restore')"
               :disabled="!canWrite || busyId === item.id"
-              @click="act(item, 'restore')"
+              @click="askAct(item, 'restore')"
             />
             <UButton
               color="neutral"
@@ -686,7 +711,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
               icon="i-lucide-trash-2"
               :label="t('admin.catalog.actions.delete')"
               :disabled="!canWrite || busyId === item.id"
-              @click="act(item, 'delete')"
+              @click="askAct(item, 'delete')"
             />
           </div>
         </div>
@@ -853,6 +878,31 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
             @click="formOpen = false"
           />
           <UButton :loading="saving" :disabled="!canWrite" :label="t('admin.catalog.save')" @click="save" />
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="actOpen" :title="actLabel" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
+      <template #body>
+        <UInput
+          v-model="auditReason"
+          class="w-full"
+          :maxlength="500"
+          :placeholder="t('common.auditReasonPlaceholder')"
+          :aria-label="t('common.auditReason')"
+        />
+      </template>
+      <template #footer="{ close }">
+        <div class="flex w-full items-center justify-end gap-2">
+          <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="close()" />
+          <UButton
+            :color="actEvent === 'delete' ? 'error' : 'primary'"
+            variant="soft"
+            size="sm"
+            :label="actLabel"
+            :loading="busyId === actTarget?.id"
+            @click="confirmAct"
+          />
         </div>
       </template>
     </UModal>

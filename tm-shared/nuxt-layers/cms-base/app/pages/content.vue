@@ -443,6 +443,7 @@ const categoryLabel = (key: string) => {
 
 function openDetail(entry: AdminContent) {
   selected.value = entry
+  auditReason.value = ''
   menuRefs.value = []
   historyEntries.value = []
   revisionEntries.value = []
@@ -810,7 +811,7 @@ onMounted(async () => {
 })
 
 // A cancelled note must not ride along with the next action.
-resetOnClose(formOpen, scheduleOpen, deleteOpen, bulkOpen)
+resetOnClose(detailOpen, formOpen, scheduleOpen, deleteOpen, bulkOpen)
 </script>
 
 <template>
@@ -1221,6 +1222,16 @@ resetOnClose(formOpen, scheduleOpen, deleteOpen, bulkOpen)
 
       <template #footer="{ close }">
         <div class="flex w-full flex-wrap items-center justify-end gap-2">
+          <!-- The actions in this footer are one click, so the note for the audit
+               trail is asked here instead of in a dialog of its own. -->
+          <UInput
+            v-if="canWrite"
+            v-model="auditReason"
+            class="w-full"
+            :maxlength="500"
+            :placeholder="t('common.auditReasonPlaceholder')"
+            :aria-label="t('common.auditReason')"
+          />
           <UButton color="neutral" variant="ghost" size="sm" :label="t('admin.content.close')" @click="close()" />
           <template v-if="canWrite && selected">
             <UButton
@@ -1231,7 +1242,7 @@ resetOnClose(formOpen, scheduleOpen, deleteOpen, bulkOpen)
               size="sm"
               :label="t('admin.content.actions.restore')"
               :loading="busyId === selected.id"
-              @click="act(selected, 'restore')"
+              @click="act(selected, 'restore', null, auditReason.trim() || undefined)"
             />
             <template v-else>
               <UButton
@@ -1250,7 +1261,7 @@ resetOnClose(formOpen, scheduleOpen, deleteOpen, bulkOpen)
                 size="sm"
                 :label="t('admin.content.actions.unpublish')"
                 :loading="busyId === selected.id"
-                @click="act(selected, 'unpublish')"
+                @click="act(selected, 'unpublish', null, auditReason.trim() || undefined)"
               />
               <UButton
                 v-else
@@ -1260,7 +1271,7 @@ resetOnClose(formOpen, scheduleOpen, deleteOpen, bulkOpen)
                 size="sm"
                 :label="t('admin.content.actions.publish')"
                 :loading="busyId === selected.id"
-                @click="act(selected, 'publish')"
+                @click="act(selected, 'publish', null, auditReason.trim() || undefined)"
               />
               <UButton
                 v-if="selected.status !== 'published'"
