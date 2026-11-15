@@ -7,6 +7,7 @@ import {
   mapHubUser,
   refreshViaHub,
   toHubRequestError,
+  normalizeAuthMode,
   totpLoginViaHub,
 } from '../../tm-cms/server/utils/hubClient.js'
 import type { HubAuthTransport } from '../../tm-cms/server/utils/hubClient.js'
@@ -361,6 +362,15 @@ check('mock auth is refused in production', () => {
   assert.equal(isMockAuthAllowed('mock', 'test'), true)
   assert.equal(isMockAuthAllowed('mock', 'production'), false)
   assert.equal(isMockAuthAllowed('hub', 'development'), false)
+})
+
+check('only the exact auth mode string enables mock', () => {
+  assert.equal(normalizeAuthMode('mock'), 'mock')
+  assert.equal(normalizeAuthMode('MOCK'), 'hub')
+  assert.equal(normalizeAuthMode('mock '), 'hub')
+  assert.equal(normalizeAuthMode('true'), 'hub')
+  assert.equal(normalizeAuthMode(''), 'hub')
+  assert.equal(normalizeAuthMode(undefined), 'hub')
 })
 
 console.log('\n   Error translation')

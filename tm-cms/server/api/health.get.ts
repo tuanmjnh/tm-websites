@@ -31,6 +31,9 @@ export default defineEventHandler(async (event) => {
       // Deployment health only: no URIs, hosts, credentials or tenant ids.
       status: database === 'error' ? 'degraded' : 'ok',
       hub: settings.baseUrl && settings.appId ? 'configured' : 'unconfigured',
+      // Which auth path this process actually took at startup, so a dev server can
+      // be checked instead of guessed at.
+      authMode: settings.authMode,
       database,
     },
   })

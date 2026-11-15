@@ -1,3 +1,4 @@
+import type { HubTokens } from '#server/utils/hubClient'
 import { isHubProxyPathDenied, resolveHubUrl, sanitizeHubProxyPath } from '@tm/flow-utils/hub'
 
 const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -14,6 +15,14 @@ export default defineEventHandler(async (event) => {
 
   if (BODY_METHODS.has(getMethod(event).toUpperCase())) {
     assertSameOriginMutation(event)
+  }
+
+  // Mock mode issues `mock_access_token`, which TM Hub rejects. Forwarding it
+  // anyway made every Hub-backed screen fail with a real 401 saying "wrong email
+  // or password", which reads like a login bug and hides the actual cause: Hub
+  // data is simply unavailable while the session is mocked.
+  if (isMockAuth(event)) {
+    return errorResponse(503, 'MOCK_HUB_UNAVAILABLE', 'TM Hub không khả dụng ở chế độ xác thực giả lập')
   }
 
   let accessToken = getAccessToken(event)
@@ -61,7 +70,19 @@ export default defineEventHandler(async (event) => {
         return errorResponse(401, 'UNAUTHENTICATED', 'Phiên đăng nhập đã hết hạn')
       }
 
-      const tokens = await hubRefresh(event, refreshToken)
+      let tokens: HubTokens
+      try {
+        tokens = await hubRefresh(event, refreshToken)
+      } catch (error) {
+        // A dead refresh token is an expired session, not bad credentials: the
+        // visitor already signed in, so telling them their password is wrong
+        // sends them looking for a problem that does not exist.
+        if (error instanceof HubRequestError && error.statusCode === 401) {
+          clearAuthCookies(event)
+          return errorResponse(401, 'SESSION_EXPIRED', 'Phiên đăng nhập đã hết hạn')
+        }
+        throw error
+      }
       setAuthCookies(event, tokens)
       accessToken = tokens.accessToken
       response = await callHub(accessToken)

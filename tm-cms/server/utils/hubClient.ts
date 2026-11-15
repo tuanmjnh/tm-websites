@@ -56,14 +56,30 @@ export class HubRequestError extends Error {
   }
 }
 
+export type AuthMode = 'hub' | 'mock'
+
 export interface HubSettings {
   baseUrl: string
   appId: string
   tenantId: string
   secret: string
-  authMode: string
+  authMode: AuthMode
 }
 
+/**
+ * Only the exact value `mock` turns the bypass on; anything else fails closed to
+ * Hub. A typo (`MOCK`, `mock `, `true`) must never silently hand out mock
+ * sessions.
+ */
+export function normalizeAuthMode(raw: unknown): AuthMode {
+  return raw === 'mock' ? 'mock' : 'hub'
+}
+
+/**
+ * The one source of the effective auth mode: `authMode` in the runtime config,
+ * which nuxt.config fills from `TM_AUTH_MODE` when the server starts. There is
+ * no database override — restart the dev server after changing the variable.
+ */
 export function getHubSettings(event: H3Event): HubSettings {
   const config = useRuntimeConfig(event)
   return {
@@ -71,7 +87,7 @@ export function getHubSettings(event: H3Event): HubSettings {
     appId: String(config.public.hubAppId || config.public.appId || ''),
     tenantId: String(config.public.tenantId || ''),
     secret: String(config.hubSecret || ''),
-    authMode: String(config.authMode || 'hub'),
+    authMode: normalizeAuthMode(config.authMode),
   }
 }
 
