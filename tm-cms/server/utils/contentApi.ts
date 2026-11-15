@@ -16,6 +16,7 @@ import { AdminTagRenameRequestSchema } from '@tm/flow-contracts/tag-admin'
 import { ATTRIBUTE_KEY_PATTERN, ATTRIBUTE_VALUE_MAX_LENGTH } from '#server/models/content'
 import { IdempotencyError, normalizeIdempotencyKey } from './idempotency'
 import { normalizeAuditReason } from '#server/services/contentAudit'
+import type { ContentAuditMeta } from '#server/services/contentAudit'
 
 /** Query/body contracts for the admin content API. */
 export const ContentListQuerySchema = z.object({
@@ -179,6 +180,26 @@ export function idempotencyKeyOf(event: H3Event): string | null {
 }
 
 /**
+ * The audit half of a mutation's write meta: the actor from the verified session
+ * and the operator's note from the request header. Routes that write no revision
+ * (site settings) hand this to their service directly.
+ */
+export function auditMetaOf(
+  event: H3Event,
+  user: UserSession,
+  auditModel: Model<AuditEntryDocument>,
+): ContentAuditMeta {
+  // A header rather than a body field: the note describes the request, and the
+  // body schemas of six different modules would each have to learn about it.
+  return {
+    model: auditModel,
+    actor: { id: user.id, name: user.name ?? '', email: user.email ?? '' },
+    requestId: requestIdOf(event),
+    reason: normalizeAuditReason(getHeader(event, 'x-audit-reason')),
+  }
+}
+
+/**
  * Audit and revision writes for one mutation, with the actor taken from the
  * verified session only. Both receive the same request id, so the activity trail
  * and the snapshot can be correlated.
@@ -189,13 +210,9 @@ export function writeMetaOf(
   auditModel: Model<AuditEntryDocument>,
   revisionModel: Model<ContentRevisionDocument>,
 ) {
-  const actor = { id: user.id, name: user.name ?? '', email: user.email ?? '' }
-  const requestId = requestIdOf(event)
-  // A header rather than a body field: the note describes the request, and the
-  // body schemas of six different modules would each have to learn about it.
-  const reason = normalizeAuditReason(getHeader(event, 'x-audit-reason'))
+  const audit = auditMetaOf(event, user, auditModel)
   return {
-    audit: { model: auditModel, actor, requestId, reason },
-    revision: { model: revisionModel, actor, requestId },
+    audit,
+    revision: { model: revisionModel, actor: audit.actor, requestId: audit.requestId },
   }
 }
