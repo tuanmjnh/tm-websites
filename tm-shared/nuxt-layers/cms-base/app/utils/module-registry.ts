@@ -41,7 +41,9 @@ export const CMS_MODULE_MAP = {
     navKey: 'nav.catalog',
     descriptionKey: 'modules.catalog.description',
     pendingHintKey: 'modules.catalog.pendingHint',
-    dataSource: 'pending',
+    // CAT-01 runs on the tenant database; only CAT-02 (serial/IMEI) is still open,
+    // and that waits on inventory rather than on a connection.
+    dataSource: 'connected',
   },
   orders: {
     key: 'orders',
