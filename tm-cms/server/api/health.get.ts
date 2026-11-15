@@ -31,10 +31,10 @@ export default defineEventHandler(async (event) => {
       // Deployment health only: no URIs, hosts, credentials or tenant ids.
       status: database === 'error' ? 'degraded' : 'ok',
       hub: settings.baseUrl && settings.appId ? 'configured' : 'unconfigured',
-      // Which auth path this process actually took at startup, so a dev server can
-      // be checked instead of guessed at.
-      authMode: settings.authMode,
       database,
+      // Development aid: which auth path this process took at startup. Health is
+      // public, so production does not advertise that the bypass is switched on.
+      ...(process.env.NODE_ENV === 'production' ? {} : { authMode: settings.authMode }),
     },
   })
 })

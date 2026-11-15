@@ -74,12 +74,9 @@ export default defineEventHandler(async (event) => {
       try {
         tokens = await hubRefresh(event, refreshToken)
       } catch (error) {
-        // A dead refresh token is an expired session, not bad credentials: the
-        // visitor already signed in, so telling them their password is wrong
-        // sends them looking for a problem that does not exist.
+        // A dead refresh token is an expired session, not bad credentials.
         if (error instanceof HubRequestError && error.statusCode === 401) {
-          clearAuthCookies(event)
-          return errorResponse(401, 'SESSION_EXPIRED', 'Phiên đăng nhập đã hết hạn')
+          return endExpiredSession(event)
         }
         throw error
       }

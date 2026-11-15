@@ -16,8 +16,7 @@ export default defineEventHandler(async (event) => {
     return successResponse({ event, data: null, message: 'Token refreshed' })
   } catch (error) {
     if (error instanceof HubRequestError && error.statusCode === 401) {
-      clearAuthCookies(event)
-      return errorResponse(401, 'REFRESH_FAILED', 'Phiên đăng nhập đã hết hạn')
+      return endExpiredSession(event)
     }
 
     return translateHubAuthError(error)

@@ -56,3 +56,14 @@ export function getRefreshToken(event: H3Event) {
 export function isMockAuth(event: H3Event) {
   return getHubSettings(event).authMode === 'mock'
 }
+
+/**
+ * Hub rejected the refresh token, so the session is over: the cookies go with it.
+ * One answer for both callers (the refresh route and the Hub proxy) and one code,
+ * so a client can tell "sign in again" apart from "wrong credentials" — the two
+ * used to disagree on the code while sharing the message.
+ */
+export function endExpiredSession(event: H3Event) {
+  clearAuthCookies(event)
+  return errorResponse(401, 'SESSION_EXPIRED', 'Phiên đăng nhập đã hết hạn')
+}
