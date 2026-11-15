@@ -237,13 +237,7 @@ resetOnClose(formOpen, detachOpen)
           <UFormField :label="t('admin.tags.fields.name')" name="tag-name">
             <UInput v-model="target" class="w-full" :maxlength="ADMIN_TAG_MAX_LENGTH" autofocus @keyup.enter="submitRename" />
           </UFormField>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
           <p v-if="mergeTarget" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs text-default">
             {{ t('admin.tags.mergeHint', { name: mergeTarget.name, count: mergeTarget.count }) }}
           </p>
@@ -268,12 +262,9 @@ resetOnClose(formOpen, detachOpen)
           {{ t('admin.tags.detachHint', { name: detachTarget?.name ?? '', count: detachTarget?.count ?? 0 }) }}
         </p>
         <p class="mt-2 text-xs text-muted">{{ t('admin.tags.detachGuard') }}</p>
-        <UInput
+        <AuditReasonField
           v-model="auditReason"
-          class="mt-3 w-full"
-          :placeholder="t('common.auditReasonPlaceholder')"
-          :aria-label="t('common.auditReason')"
-          :maxlength="500"
+          class="mt-3"
         />
         <p v-if="detachError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">
           {{ detachError }}

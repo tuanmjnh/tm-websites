@@ -473,13 +473,12 @@ const actLabel = computed(() => (actEvent.value ? t(`admin.catalog.actions.${act
 function askAct(item: AdminCatalogItem, event: AdminCatalogEvent) {
   actTarget.value = item
   actEvent.value = event
-  auditReason.value = ''
   actOpen.value = true
 }
 
-async function confirmAct() {
+async function confirmAct(reason?: string) {
   if (!actTarget.value || !actEvent.value) return
-  if (await act(actTarget.value, actEvent.value, auditReason.value.trim() || undefined)) actOpen.value = false
+  if (await act(actTarget.value, actEvent.value, reason)) actOpen.value = false
 }
 
 // ------------------------------------------------------------ category panel
@@ -566,7 +565,7 @@ async function removeCategory(category: AdminCatalogCategory) {
 }
 
 // A cancelled note must not ride along with the next action.
-resetOnClose(formOpen, actOpen, bulkOpen, categoriesOpen)
+resetOnClose(formOpen, bulkOpen, categoriesOpen)
 </script>
 
 <template>
@@ -864,12 +863,9 @@ resetOnClose(formOpen, actOpen, bulkOpen, categoriesOpen)
 
       <template #footer>
         <div class="flex w-full flex-wrap items-center justify-end gap-2">
-          <UInput
+          <AuditReasonField
             v-model="auditReason"
             class="w-full sm:mr-auto sm:w-64"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
           />
           <UButton
             color="neutral"
@@ -882,30 +878,14 @@ resetOnClose(formOpen, actOpen, bulkOpen, categoriesOpen)
       </template>
     </UModal>
 
-    <UModal v-model:open="actOpen" :title="actLabel" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
-      <template #body>
-        <UInput
-          v-model="auditReason"
-          class="w-full"
-          :maxlength="500"
-          :placeholder="t('common.auditReasonPlaceholder')"
-          :aria-label="t('common.auditReason')"
-        />
-      </template>
-      <template #footer="{ close }">
-        <div class="flex w-full items-center justify-end gap-2">
-          <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="close()" />
-          <UButton
-            :color="actEvent === 'delete' ? 'error' : 'primary'"
-            variant="soft"
-            size="sm"
-            :label="actLabel"
-            :loading="busyId === actTarget?.id"
-            @click="confirmAct"
-          />
-        </div>
-      </template>
-    </UModal>
+    <AuditReasonModal
+      v-model:open="actOpen"
+      :title="actLabel"
+      :confirm-label="actLabel"
+      :confirm-color="actEvent === 'delete' ? 'error' : 'primary'"
+      :loading="busyId === actTarget?.id"
+      @confirm="confirmAct"
+    />
 
     <UModal v-model:open="bulkOpen" :title="t('admin.catalog.bulk.title')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
       <template #body>
@@ -926,13 +906,7 @@ resetOnClose(formOpen, actOpen, bulkOpen, categoriesOpen)
           <UFormField :label="t('admin.catalog.fields.stock')">
             <UInput v-model.number="bulkForm.stock" type="number" class="w-full" :placeholder="t('admin.catalog.bulk.keep')" />
           </UFormField>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
         </div>
       </template>
       <template #footer>
@@ -995,13 +969,7 @@ resetOnClose(formOpen, actOpen, bulkOpen, categoriesOpen)
             </UFormField>
           </div>
 
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
         </div>
       </template>
 

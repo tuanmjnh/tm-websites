@@ -555,13 +555,7 @@ resetOnClose(editOpen, deleteOpen, bulkMoveOpen, bulkDeleteOpen)
           </UFormField>
           <RecordHistory v-if="editing" resource-type="media" :resource-id="editing.id" />
 
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
 
           <p v-if="editError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ editError }}</p>
         </div>
@@ -579,13 +573,7 @@ resetOnClose(editOpen, deleteOpen, bulkMoveOpen, bulkDeleteOpen)
         <div class="flex flex-col gap-3 text-sm">
           <p class="text-muted">{{ t('admin.media.deleteDescription') }}</p>
           <p class="font-mono text-xs text-highlighted">{{ deleting?.originalName }}</p>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
           <p v-if="deleteError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ deleteError }}</p>
         </div>
       </template>
@@ -605,13 +593,7 @@ resetOnClose(editOpen, deleteOpen, bulkMoveOpen, bulkDeleteOpen)
             <UInput v-model="bulkFolder" class="w-full font-mono" placeholder="landing/hero" />
           </UFormField>
           <p class="text-[11px] text-muted">{{ t('admin.media.bulk.moveHint') }}</p>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
           <p v-if="bulkError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ bulkError }}</p>
           <div v-if="bulkFailures.length" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs">
             <p class="font-medium text-highlighted">{{ t('admin.media.bulk.failedRows', { count: bulkFailures.length }) }}</p>
@@ -642,13 +624,7 @@ resetOnClose(editOpen, deleteOpen, bulkMoveOpen, bulkDeleteOpen)
       <template #body>
         <div class="flex flex-col gap-3 text-sm">
           <p class="text-muted">{{ t('admin.media.bulk.deleteDescription', { count: selectedIds.length }) }}</p>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
           <p v-if="bulkError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ bulkError }}</p>
           <div v-if="bulkFailures.length" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs">
             <p class="font-medium text-highlighted">{{ t('admin.media.bulk.failedRows', { count: bulkFailures.length }) }}</p>

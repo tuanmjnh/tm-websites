@@ -1224,13 +1224,9 @@ resetOnClose(detailOpen, formOpen, scheduleOpen, deleteOpen, bulkOpen)
         <div class="flex w-full flex-wrap items-center justify-end gap-2">
           <!-- The actions in this footer are one click, so the note for the audit
                trail is asked here instead of in a dialog of its own. -->
-          <UInput
+          <AuditReasonField
             v-if="canWrite"
             v-model="auditReason"
-            class="w-full"
-            :maxlength="500"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
           />
           <UButton color="neutral" variant="ghost" size="sm" :label="t('admin.content.close')" @click="close()" />
           <template v-if="canWrite && selected">
@@ -1493,13 +1489,7 @@ resetOnClose(detailOpen, formOpen, scheduleOpen, deleteOpen, bulkOpen)
             </UFormField>
           </div>
 
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
           <p v-if="formError" class="text-sm text-error">{{ formError }}</p>
         </div>
       </template>
@@ -1527,13 +1517,7 @@ resetOnClose(detailOpen, formOpen, scheduleOpen, deleteOpen, bulkOpen)
           <UFormField :label="t('admin.content.fields.publishAt')" name="scheduleAt">
             <UInput v-model="scheduleAt" type="datetime-local" class="w-full" />
           </UFormField>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
         </div>
       </template>
       <template #footer="{ close }">
@@ -1557,12 +1541,9 @@ resetOnClose(detailOpen, formOpen, scheduleOpen, deleteOpen, bulkOpen)
           {{ t('admin.content.deleteConfirmText', { title: selected?.locales[0]?.title ?? selected?.key ?? '' }) }}
         </p>
         <p class="mt-2 text-xs text-muted">{{ t('admin.content.softDeleteNote') }}</p>
-        <UInput
+        <AuditReasonField
           v-model="auditReason"
-          class="mt-3 w-full"
-          :placeholder="t('common.auditReasonPlaceholder')"
-          :aria-label="t('common.auditReason')"
-          :maxlength="500"
+          class="mt-3"
         />
       </template>
       <template #footer="{ close }">
@@ -1588,13 +1569,7 @@ resetOnClose(detailOpen, formOpen, scheduleOpen, deleteOpen, bulkOpen)
       <template #body>
         <div class="flex flex-col gap-3">
           <p class="text-sm text-muted">{{ t(`admin.content.bulk.confirm.${bulkAction}`) }}</p>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
 
           <div v-if="bulkResult" class="flex flex-col gap-2">
             <p class="text-sm font-medium text-highlighted">

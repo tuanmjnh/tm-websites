@@ -803,13 +803,7 @@ resetOnClose(createOpen, deleteOpen)
           <UFormField :label="t('admin.menus.fields.name')">
             <UInput v-model="createForm.name" class="w-full" placeholder="Menu chính" />
           </UFormField>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
           <p v-if="createError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ createError }}</p>
         </div>
       </template>
@@ -889,12 +883,9 @@ resetOnClose(createOpen, deleteOpen)
     <UModal v-model:open="deleteOpen" :title="t('admin.menus.deleteTitle')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
       <template #body>
         <p class="text-sm text-default">{{ t('admin.menus.deleteHint', { name: detail?.name || '' }) }}</p>
-        <UInput
+        <AuditReasonField
           v-model="auditReason"
-          class="mt-3 w-full"
-          :placeholder="t('common.auditReasonPlaceholder')"
-          :aria-label="t('common.auditReason')"
-          :maxlength="500"
+          class="mt-3"
         />
         <p v-if="deleteError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ deleteError }}</p>
       </template>

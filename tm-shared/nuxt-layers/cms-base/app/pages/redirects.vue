@@ -164,15 +164,17 @@ async function toggleActive(row: AdminRedirect, reason?: string): Promise<boolea
 const toggleOpen = ref(false)
 const toggleTarget = ref<AdminRedirect | null>(null)
 
+const toggleLabel = computed(() =>
+  t(toggleTarget.value?.isActive ? 'admin.redirects.disable' : 'admin.redirects.enable'))
+
 function askToggle(row: AdminRedirect) {
   toggleTarget.value = row
-  auditReason.value = ''
   toggleOpen.value = true
 }
 
-async function confirmToggle() {
+async function confirmToggle(reason?: string) {
   if (!toggleTarget.value) return
-  if (await toggleActive(toggleTarget.value, auditReason.value.trim() || undefined)) toggleOpen.value = false
+  if (await toggleActive(toggleTarget.value, reason)) toggleOpen.value = false
 }
 
 const deleteOpen = ref(false)
@@ -207,7 +209,7 @@ async function confirmDelete() {
 if (canRead.value) await load()
 
 // A cancelled note must not ride along with the next action.
-resetOnClose(formOpen, deleteOpen, toggleOpen)
+resetOnClose(formOpen, deleteOpen)
 </script>
 
 <template>
@@ -310,34 +312,13 @@ resetOnClose(formOpen, deleteOpen, toggleOpen)
       </div>
     </CmsBasePage>
 
-    <UModal
+    <AuditReasonModal
       v-model:open="toggleOpen"
-      :title="t(toggleTarget?.isActive ? 'admin.redirects.disable' : 'admin.redirects.enable')"
-      :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }"
-    >
-      <template #body>
-        <UInput
-          v-model="auditReason"
-          class="w-full"
-          :maxlength="500"
-          :placeholder="t('common.auditReasonPlaceholder')"
-          :aria-label="t('common.auditReason')"
-        />
-      </template>
-      <template #footer="{ close }">
-        <div class="flex w-full items-center justify-end gap-2">
-          <UButton color="neutral" variant="ghost" size="sm" :label="t('common.cancel')" @click="close()" />
-          <UButton
-            color="primary"
-            variant="soft"
-            size="sm"
-            :label="t(toggleTarget?.isActive ? 'admin.redirects.disable' : 'admin.redirects.enable')"
-            :loading="busyId === toggleTarget?.id"
-            @click="confirmToggle"
-          />
-        </div>
-      </template>
-    </UModal>
+      :title="toggleLabel"
+      :confirm-label="toggleLabel"
+      :loading="busyId === toggleTarget?.id"
+      @confirm="confirmToggle"
+    />
 
     <UModal
       v-model:open="formOpen"
@@ -367,13 +348,7 @@ resetOnClose(formOpen, deleteOpen, toggleOpen)
           <UFormField :label="t('admin.redirects.fields.note')" name="redirect-note">
             <UInput v-model="form.note" class="w-full" :maxlength="200" :placeholder="t('admin.redirects.fields.noteHint')" />
           </UFormField>
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
           <p v-if="formError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ formError }}</p>
         </div>
       </template>
@@ -394,12 +369,9 @@ resetOnClose(formOpen, deleteOpen, toggleOpen)
         <p class="text-sm text-default">
           {{ t('admin.redirects.deleteHint', { from: deleteTarget?.from ?? '' }) }}
         </p>
-        <UInput
+        <AuditReasonField
           v-model="auditReason"
-          class="mt-3 w-full"
-          :placeholder="t('common.auditReasonPlaceholder')"
-          :aria-label="t('common.auditReason')"
-          :maxlength="500"
+          class="mt-3"
         />
         <p v-if="deleteError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">
           {{ deleteError }}

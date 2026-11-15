@@ -377,14 +377,11 @@ onMounted(load)
           </div>
 
           <div class="flex flex-wrap items-center gap-3 border-t border-default/40 pt-3">
-            <UInput
+            <AuditReasonField
               v-model="auditReason"
               size="sm"
-              class="w-full sm:w-64"
+              class="sm:w-64"
               :disabled="!canWrite"
-              :placeholder="t('common.auditReasonPlaceholder')"
-              :aria-label="t('common.auditReason')"
-              :maxlength="500"
             />
             <UButton
               size="sm"

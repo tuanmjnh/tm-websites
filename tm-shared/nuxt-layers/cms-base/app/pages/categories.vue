@@ -514,13 +514,7 @@ resetOnClose(formOpen, deleteOpen)
 
           <RecordHistory v-if="editing" resource-type="category" :resource-id="editing.id" />
 
-          <UInput
-            v-model="auditReason"
-            class="w-full"
-            :placeholder="t('common.auditReasonPlaceholder')"
-            :aria-label="t('common.auditReason')"
-            :maxlength="500"
-          />
+          <AuditReasonField v-model="auditReason" />
 
           <p v-if="formError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ formError }}</p>
         </div>
@@ -542,12 +536,9 @@ resetOnClose(formOpen, deleteOpen)
         <p v-if="deleteError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">
           {{ deleteError }}
         </p>
-        <UInput
+        <AuditReasonField
           v-model="auditReason"
-          class="mt-3 w-full"
-          :placeholder="t('common.auditReasonPlaceholder')"
-          :aria-label="t('common.auditReason')"
-          :maxlength="500"
+          class="mt-3"
         />
       </template>
       <template #footer>
