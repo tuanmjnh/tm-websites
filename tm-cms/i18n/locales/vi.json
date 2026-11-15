@@ -1030,8 +1030,7 @@
       "readyHint": "Phân hệ đã kết nối nguồn dữ liệu. Giao diện nghiệp vụ sẽ hiển thị số liệu thật."
     },
     "catalog": {
-      "description": "Quản lý danh mục, thuộc tính và giá bán của toàn bộ sản phẩm",
-      "pendingHint": "Cần kết nối cơ sở dữ liệu tenant cho sản phẩm, danh mục và biến thể trước khi hiển thị dữ liệu."
+      "description": "Quản lý danh mục, thuộc tính và giá bán của toàn bộ sản phẩm"
     },
     "orders": {
       "description": "Theo dõi toàn bộ vòng đời đơn hàng từ tạo mới đến khi giao thành công",
@@ -1050,8 +1049,7 @@
       "pendingHint": "Cần kết nối kho dữ liệu báo cáo và dịch vụ xuất tệp trước khi hiển thị dữ liệu."
     },
     "media": {
-      "description": "Hình ảnh, video và tài nguyên số phân phối qua cổng media của TM Hub",
-      "pendingHint": "Cần cấu hình Cloudinary trong TM Hub trước khi thư viện media có thể hiển thị tài nguyên."
+      "description": "Hình ảnh, video và tài nguyên số phân phối qua cổng media của TM Hub"
     },
     "aiWorkspace": {
       "description": "Không gian tác vụ AI hỗ trợ biên tập nội dung và vận hành",

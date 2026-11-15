@@ -1030,8 +1030,7 @@
       "readyHint": "The module is connected to its data source. Business data will render here."
     },
     "catalog": {
-      "description": "Manage categories, attributes and pricing for the entire product catalog",
-      "pendingHint": "Connect the tenant database for products, categories and variants before any data can be shown."
+      "description": "Manage categories, attributes and pricing for the entire product catalog"
     },
     "orders": {
       "description": "Track the full order lifecycle from creation to successful delivery",
@@ -1050,8 +1049,7 @@
       "pendingHint": "Connect the reporting data store and export service before any data can be shown."
     },
     "media": {
-      "description": "Images, video and digital assets served through the TM Hub media gateway",
-      "pendingHint": "Configure Cloudinary in TM Hub before the media library can list assets."
+      "description": "Images, video and digital assets served through the TM Hub media gateway"
     },
     "aiWorkspace": {
       "description": "AI task workspace for content editing and operations",

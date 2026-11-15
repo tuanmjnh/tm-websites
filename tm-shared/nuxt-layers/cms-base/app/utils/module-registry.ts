@@ -27,8 +27,12 @@ export interface CmsModuleDefinition {
   navKey: string
   /** i18n key for the page description. */
   descriptionKey: string
-  /** i18n key explaining what is still missing before the module can show data. */
-  pendingHintKey: string
+  /**
+   * i18n key explaining what is still missing before the module can show data.
+   * Only an unwired module has one: a connected module that kept a hint would be
+   * telling the editor to connect something that already is.
+   */
+  pendingHintKey?: string
   dataSource: CmsModuleDataSource
 }
 
@@ -40,7 +44,6 @@ export const CMS_MODULE_MAP = {
     disabledIcon: 'i-lucide-package-x',
     navKey: 'nav.catalog',
     descriptionKey: 'modules.catalog.description',
-    pendingHintKey: 'modules.catalog.pendingHint',
     // CAT-01 runs on the tenant database; only CAT-02 (serial/IMEI) is still open,
     // and that waits on inventory rather than on a connection.
     dataSource: 'connected',
@@ -92,7 +95,6 @@ export const CMS_MODULE_MAP = {
     disabledIcon: 'i-lucide-image-off',
     navKey: 'nav.media',
     descriptionKey: 'modules.media.description',
-    pendingHintKey: 'modules.media.pendingHint',
     dataSource: 'connected',
   },
   aiWorkspace: {

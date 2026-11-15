@@ -10,10 +10,17 @@ import { CMS_MODULES } from '../../tm-shared/nuxt-layers/cms-base/app/utils/modu
  * a database first. Nothing rendered that flag for catalog, so no test or browser
  * pass could notice. The rule is mechanical — a pending module is exactly a module
  * whose page renders the shared pending page — and it is checked here.
+ *
+ * The page is parsed, not grepped: the gate reads the `<ModulePendingPage>` tag and
+ * its `module-key` attribute, so attribute order, line breaks and quoted values do
+ * not matter, and a page that only mentions the component in a comment passes
+ * nothing.
  */
 
 const rootDir = process.cwd()
-const pagesDir = path.join(rootDir, 'tm-shared/nuxt-layers/cms-base/app/pages')
+const appDir = 'tm-shared/nuxt-layers/cms-base/app'
+const pagesDir = path.join(rootDir, appDir, 'pages')
+const componentFile = path.join(rootDir, appDir, 'components/ModulePendingPage.vue')
 
 const errors: string[] = []
 let checkCount = 0
@@ -29,9 +36,31 @@ function check(condition: boolean, label: string, details: string[] = []) {
   errors.push(label)
 }
 
+const relative = file => path.relative(rootDir, file).split(path.sep).join('/')
+
+/** Comments are blanked with spaces so offsets stay put and prose never matches. */
+function stripComments(text: string): string {
+  return text
+    .replace(/\/\/[^\n]*/g, match => ' '.repeat(match.length))
+    .replace(/<!--[\s\S]*?-->/g, match => match.replace(/[^\n]/g, ' '))
+    .replace(/\/\*[\s\S]*?\*\//g, match => match.replace(/[^\n]/g, ' '))
+}
+
+const locales = ['en', 'vi'].map((name) => {
+  const file = path.join(rootDir, 'tm-cms/i18n/locales', `${name}.json`)
+  return { name, json: JSON.parse(fs.readFileSync(file, 'utf-8')) }
+})
+
+const lookup = (json: unknown, key: string): unknown =>
+  key.split('.').reduce<unknown>((node, part) => {
+    if (!node || typeof node !== 'object') return undefined
+    return (node as Record<string, unknown>)[part]
+  }, json)
+
 console.log('🔍 Checking the CMS module registry against its pages...\n')
 
 check(CMS_MODULES.length > 0, `the registry declares modules (${CMS_MODULES.length})`)
+check(fs.existsSync(componentFile), `${relative(componentFile)} exists`)
 
 const routes = new Set<string>()
 const duplicated: string[] = []
@@ -41,31 +70,42 @@ for (const module of CMS_MODULES) {
   routes.add(module.route)
 
   const page = path.join(pagesDir, `${module.route.replace(/^\//, '')}.vue`)
-  const relative = path.relative(rootDir, page).split(path.sep).join('/')
-
   if (!fs.existsSync(page)) {
-    check(false, `${module.key}: ${relative} exists`)
+    check(false, `${module.key}: ${relative(page)} exists`)
     continue
   }
 
-  const text = fs.readFileSync(page, 'utf-8')
-  const rendersPendingPage = text.includes('<ModulePendingPage')
-  const usesKey = text.includes(`module-key="${module.key}"`)
+  const code = stripComments(fs.readFileSync(page, 'utf-8'))
+  const tag = code.match(/<ModulePendingPage\b([^>]*)>/)
+  const usedKey = tag?.[1].match(/module-key\s*=\s*["']([^"']*)["']/)?.[1]
 
   if (module.dataSource === 'pending') {
-    check(
-      rendersPendingPage && usesKey,
-      `${module.key}: a pending module renders ModulePendingPage for its own key`,
-      [`${relative}: expected "<ModulePendingPage module-key=\"${module.key}\""`],
-    )
+    check(Boolean(tag), `${module.key}: a pending module renders ModulePendingPage`, [
+      `${relative(page)}: expected <ModulePendingPage module-key="${module.key}" />`,
+    ])
+    check(usedKey === module.key, `${module.key}: the pending page names its own module`, [
+      `${relative(page)}: module-key is ${usedKey === undefined ? 'missing' : `"${usedKey}"`}`,
+    ])
+
+    const hintKey = module.pendingHintKey
+    check(Boolean(hintKey), `${module.key}: a pending module declares a pendingHintKey`)
+    if (hintKey) {
+      const missing = locales.filter(locale => typeof lookup(locale.json, hintKey) !== 'string')
+      check(
+        missing.length === 0,
+        `${module.key}: ${hintKey} exists in every locale`,
+        missing.map(locale => `${locale.name}.json: no "${hintKey}"`),
+      )
+    }
     continue
   }
 
-  check(
-    !rendersPendingPage && !usesKey,
-    `${module.key}: a connected module is not the pending page`,
-    [`${relative}: connected modules need a real page, not the pending stub`],
-  )
+  check(!tag, `${module.key}: a connected module is not the pending page`, [
+    `${relative(page)}: a connected module needs a real page`,
+  ])
+  check(!module.pendingHintKey, `${module.key}: a connected module declares no pendingHintKey`, [
+    `"${module.pendingHintKey}": never rendered, because the module is connected`,
+  ])
 }
 
 check(duplicated.length === 0, 'every module route is unique', duplicated.map(route => `${route}: declared twice`))
