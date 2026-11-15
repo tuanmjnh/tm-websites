@@ -442,11 +442,12 @@ async function save() {
   }
 }
 
-async function act(item: AdminCatalogItem, event: AdminCatalogEvent) {
+// Row-menu actions pass no reason, so a note typed in a dialog cannot leak in.
+async function act(item: AdminCatalogItem, event: AdminCatalogEvent, reason?: string) {
   if (!canWrite.value || busyId.value) return
   busyId.value = item.id
   try {
-    await runEvent(item.id, event, item.revision)
+    await runEvent(item.id, event, item.revision, reason)
     toast.add({ title: t(`admin.catalog.messages.${event}`), color: 'success' })
     await Promise.all([load(), loadReferenceData()])
   } catch (caught) {
@@ -537,6 +538,14 @@ async function removeCategory(category: AdminCatalogCategory) {
   } finally {
     categoryBusy.value = false
   }
+}
+
+// A typed reason belongs to its dialog, so cancelling with the button,
+// Escape or the backdrop never leaves it behind for the next action.
+for (const open of [formOpen, bulkOpen, categoriesOpen]) {
+  watch(open, (value) => {
+    if (!value) auditReason.value = ''
+  })
 }
 </script>
 
@@ -840,6 +849,7 @@ async function removeCategory(category: AdminCatalogCategory) {
             class="w-full sm:mr-auto sm:w-64"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
           <UButton
             color="neutral"
@@ -876,6 +886,7 @@ async function removeCategory(category: AdminCatalogCategory) {
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
         </div>
       </template>
@@ -944,6 +955,7 @@ async function removeCategory(category: AdminCatalogCategory) {
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
         </div>
       </template>

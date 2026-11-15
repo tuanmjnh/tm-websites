@@ -548,6 +548,14 @@ async function confirmDelete() {
 }
 
 if (canRead.value) await loadMenus()
+
+// A typed reason belongs to its dialog, so cancelling with the button,
+// Escape or the backdrop never leaves it behind for the next action.
+for (const open of [createOpen, itemOpen, deleteOpen]) {
+  watch(open, (value) => {
+    if (!value) auditReason.value = ''
+  })
+}
 </script>
 
 <template>
@@ -805,6 +813,7 @@ if (canRead.value) await loadMenus()
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
           <p v-if="createError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ createError }}</p>
         </div>
@@ -890,6 +899,7 @@ if (canRead.value) await loadMenus()
           class="mt-3 w-full"
           :placeholder="t('common.auditReasonPlaceholder')"
           :aria-label="t('common.auditReason')"
+          :maxlength="500"
         />
         <p v-if="deleteError" class="mt-3 rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ deleteError }}</p>
       </template>

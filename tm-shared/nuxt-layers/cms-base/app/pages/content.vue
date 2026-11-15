@@ -627,7 +627,9 @@ async function act(entry: AdminContent, event: AdminContentEvent, publishAt?: st
   if (!canWrite.value) return
   busyId.value = entry.id
   try {
-    const updated = await runEvent(entry.id, event, entry.revision, publishAt, reason ?? (auditReason.value.trim() || undefined))
+    // Only a dialog collects a reason, so a row-menu publish or archive never
+    // replays a note typed for a different record.
+    const updated = await runEvent(entry.id, event, entry.revision, publishAt, reason)
     const messages: Record<AdminContentEvent, string> = {
       publish: 'admin.content.published',
       schedule: 'admin.content.scheduled',
@@ -769,16 +771,16 @@ const rowActions = (entry: AdminContent) => {
   if (!canWrite.value) return actions
 
   if (entry.status === 'deleted' || entry.status === 'archived') {
-    actions.push({ label: t('admin.content.actions.restore'), icon: 'i-lucide-rotate-ccw', onSelect: () => act(entry, 'restore') })
+    actions.push({ label: t('admin.content.actions.restore'), icon: 'i-lucide-rotate-ccw', onSelect: () => act(entry, 'restore', null) })
   } else {
     actions.push({ label: t('admin.content.actions.edit'), icon: 'i-lucide-pencil', onSelect: () => openEdit(entry) })
     if (entry.status === 'published') {
-      actions.push({ label: t('admin.content.actions.unpublish'), icon: 'i-lucide-eye-off', onSelect: () => act(entry, 'unpublish') })
+      actions.push({ label: t('admin.content.actions.unpublish'), icon: 'i-lucide-eye-off', onSelect: () => act(entry, 'unpublish', null) })
     } else {
-      actions.push({ label: t('admin.content.actions.publish'), icon: 'i-lucide-send', onSelect: () => act(entry, 'publish') })
+      actions.push({ label: t('admin.content.actions.publish'), icon: 'i-lucide-send', onSelect: () => act(entry, 'publish', null) })
       actions.push({ label: t('admin.content.actions.schedule'), icon: 'i-lucide-calendar-clock', onSelect: () => askSchedule(entry) })
     }
-    actions.push({ label: t('admin.content.actions.archive'), icon: 'i-lucide-archive', onSelect: () => act(entry, 'archive') })
+    actions.push({ label: t('admin.content.actions.archive'), icon: 'i-lucide-archive', onSelect: () => act(entry, 'archive', null) })
   }
 
   actions.push({ label: t('admin.content.actions.delete'), icon: 'i-lucide-trash-2', onSelect: () => askDelete(entry) })
@@ -806,6 +808,14 @@ watch([status, typeFilter, tagFilter], () => load())
 onMounted(async () => {
   await Promise.all([load(), loadTagOptions()])
 })
+
+// A typed reason belongs to its dialog, so cancelling with the button,
+// Escape or the backdrop never leaves it behind for the next action.
+for (const open of [formOpen, scheduleOpen, deleteOpen, bulkOpen]) {
+  watch(open, (value) => {
+    if (!value) auditReason.value = ''
+  })
+}
 </script>
 
 <template>
@@ -1482,6 +1492,7 @@ onMounted(async () => {
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
           <p v-if="formError" class="text-sm text-error">{{ formError }}</p>
         </div>
@@ -1515,6 +1526,7 @@ onMounted(async () => {
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
         </div>
       </template>
@@ -1544,6 +1556,7 @@ onMounted(async () => {
           class="mt-3 w-full"
           :placeholder="t('common.auditReasonPlaceholder')"
           :aria-label="t('common.auditReason')"
+          :maxlength="500"
         />
       </template>
       <template #footer="{ close }">
@@ -1574,6 +1587,7 @@ onMounted(async () => {
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
 
           <div v-if="bulkResult" class="flex flex-col gap-2">

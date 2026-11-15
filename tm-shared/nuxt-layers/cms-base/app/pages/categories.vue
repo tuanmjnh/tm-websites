@@ -353,6 +353,14 @@ async function moveTo(key: string, parent: string | null, index: number) {
 }
 
 if (canRead.value) await load()
+
+// A typed reason belongs to its dialog, so cancelling with the button,
+// Escape or the backdrop never leaves it behind for the next action.
+for (const open of [formOpen, deleteOpen]) {
+  watch(open, (value) => {
+    if (!value) auditReason.value = ''
+  })
+}
 </script>
 
 <template>
@@ -516,6 +524,7 @@ if (canRead.value) await load()
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
 
           <p v-if="formError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ formError }}</p>
@@ -543,6 +552,7 @@ if (canRead.value) await load()
           class="mt-3 w-full"
           :placeholder="t('common.auditReasonPlaceholder')"
           :aria-label="t('common.auditReason')"
+          :maxlength="500"
         />
       </template>
       <template #footer>

@@ -322,6 +322,14 @@ watch(() => filters.q, () => {
 watch([() => filters.kind, () => filters.folder], () => void load())
 
 if (canRead.value) await load()
+
+// A typed reason belongs to its dialog, so cancelling with the button,
+// Escape or the backdrop never leaves it behind for the next action.
+for (const open of [editOpen, deleteOpen, bulkMoveOpen, bulkDeleteOpen]) {
+  watch(open, (value) => {
+    if (!value) auditReason.value = ''
+  })
+}
 </script>
 
 <template>
@@ -557,6 +565,7 @@ if (canRead.value) await load()
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
 
           <p v-if="editError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ editError }}</p>
@@ -580,6 +589,7 @@ if (canRead.value) await load()
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
           <p v-if="deleteError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ deleteError }}</p>
         </div>
@@ -605,6 +615,7 @@ if (canRead.value) await load()
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
           <p v-if="bulkError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ bulkError }}</p>
           <div v-if="bulkFailures.length" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs">
@@ -641,6 +652,7 @@ if (canRead.value) await load()
             class="w-full"
             :placeholder="t('common.auditReasonPlaceholder')"
             :aria-label="t('common.auditReason')"
+            :maxlength="500"
           />
           <p v-if="bulkError" class="rounded-sm border border-error/40 bg-error/10 p-2 text-xs text-error">{{ bulkError }}</p>
           <div v-if="bulkFailures.length" class="rounded-sm border border-warning/40 bg-warning/10 p-2 text-xs">

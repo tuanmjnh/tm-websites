@@ -384,6 +384,7 @@ onMounted(load)
               :disabled="!canWrite"
               :placeholder="t('common.auditReasonPlaceholder')"
               :aria-label="t('common.auditReason')"
+              :maxlength="500"
             />
             <UButton
               size="sm"
