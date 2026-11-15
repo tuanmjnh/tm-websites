@@ -33,6 +33,10 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
 const uploadError = ref<string | null>(null)
 const uploadProgress = ref('')
+// The picker posts as soon as files are chosen, so the note for the audit trail is
+// collected in a dialog between picking them and sending them.
+const pendingFiles = ref<File[]>([])
+const uploadOpen = ref(false)
 
 const editOpen = ref(false)
 const editing = ref<AdminMedia | null>(null)
@@ -147,12 +151,20 @@ async function load(reset = true) {
   }
 }
 
-async function onFiles(event: Event) {
+function onFiles(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files ?? [])
   input.value = ''
   if (!files.length || !canUpload.value) return
 
+  pendingFiles.value = files
+  uploadError.value = null
+  uploadOpen.value = true
+}
+
+async function confirmUpload(reason?: string) {
+  if (!pendingFiles.value.length || uploading.value) return
+  const files = pendingFiles.value
   uploading.value = true
   uploadError.value = null
   try {
@@ -161,7 +173,7 @@ async function onFiles(event: Event) {
       await upload({
         file,
         folder: filters.folder === 'all' || filters.folder === 'root' ? undefined : filters.folder,
-      })
+      }, reason)
     }
     toast.add({ title: t('admin.media.uploaded'), color: 'success' })
     await load()
@@ -172,6 +184,8 @@ async function onFiles(event: Event) {
   } finally {
     uploading.value = false
     uploadProgress.value = ''
+    pendingFiles.value = []
+    uploadOpen.value = false
   }
 }
 
@@ -540,6 +554,14 @@ resetOnClose(editOpen, deleteOpen, bulkMoveOpen, bulkDeleteOpen)
         </div>
       </div>
     </CmsBasePage>
+
+    <AuditReasonModal
+      v-model:open="uploadOpen"
+      :title="t('admin.media.upload')"
+      :confirm-label="t('admin.media.upload')"
+      :loading="uploading"
+      @confirm="confirmUpload"
+    />
 
     <UModal v-model:open="editOpen" :title="t('admin.media.editTitle')">
       <template #body>
