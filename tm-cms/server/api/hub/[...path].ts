@@ -1,5 +1,6 @@
 import type { HubTokens } from '#server/utils/hubClient'
 import { isHubProxyPathDenied, resolveHubUrl, sanitizeHubProxyPath } from '@tm/flow-utils/hub'
+import { H3Error } from 'h3'
 
 const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -93,6 +94,12 @@ export default defineEventHandler(async (event) => {
 
     return response._data
   } catch (error) {
+    // `errorResponse` throws, so the answers raised inside the try (expired session,
+    // missing refresh token) arrive here as h3 errors. Swallowing them as a Hub
+    // failure replaced a 401 "sign in again" with a 502 the client cannot act on.
+    if (error instanceof H3Error) {
+      throw error
+    }
     if (error instanceof HubRequestError) {
       return translateHubAuthError(error)
     }
