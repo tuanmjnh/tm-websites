@@ -4,23 +4,24 @@ import path from 'node:path'
 /**
  * Gate: a route must not answer for an error it raised itself.
  *
- * `errorResponse()` throws. A `try` whose body raises one of those answers and a
- * `catch` that replies with a fixed error — typically `502 HUB_UNAVAILABLE` — turns
- * the answer into the catch's: the Hub proxy told clients the Hub was unreachable
- * when the real answer was "sign in again", and nothing in the suite noticed until
- * the branch was exercised by hand. A catch may answer a fixed error only if it
- * rethrows the errors it does not recognise (`instanceof H3Error` or `throw error`).
+ * `errorResponse()` throws. A `try` that raises one of those answers and a `catch`
+ * that replies with a fixed error — typically `502 HUB_UNAVAILABLE` — replaces the
+ * answer with the catch's: the Hub proxy told clients the Hub was unreachable when
+ * the real answer was "sign in again", and nothing in the suite noticed until the
+ * branch was exercised by hand.
  *
- * Catches that delegate to a translator (`translateContentError`,
- * `translateHubAuthError`) are fine by contract: those rethrow anything foreign.
+ * A catch may answer a fixed error only if it hands h3 errors back: `instanceof
+ * H3Error` or h3's `isError(error)`. Catches that delegate to a translator
+ * (`translateContentError`, `translateHubAuthError`) are fine by contract — those
+ * rethrow anything foreign.
  */
 
 const rootDir = process.cwd()
 const routesDir = path.join(rootDir, 'tm-cms/server/api')
 
-/** Answers a catch must hand back untouched when it did not raise them. */
-const RETHROW = /instanceof\s+H3Error|instanceof\s+HubRequestError[^\n]*\n?[^\n]*throw\s+error|throw\s+error\b/
+const RETHROWS_H3 = /instanceof\s+H3Error|isError\(\s*error\s*\)/
 
+/** Comments out, offsets kept: prose must never match a pattern. */
 function stripComments(text: string): string {
   return text
     .replace(/\/\*[\s\S]*?\*\//g, match => match.replace(/[^\n]/g, ' '))
@@ -35,63 +36,50 @@ function listFiles(dir: string): string[] {
   })
 }
 
-/** Index of the brace that closes the one opened at `open`. */
+/** Index of the brace closing the block opened at `open`, or the end of the file. */
 function blockEnd(code: string, open: number): number {
   let depth = 0
   for (let i = open; i < code.length; i++) {
     if (code[i] === '{') depth++
-    else if (code[i] === '}') {
-      depth--
-      if (depth === 0) return i
-    }
+    else if (code[i] === '}' && --depth === 0) return i
   }
   return code.length
 }
 
-const failures: Array<{ where: string, answer: string }> = []
+const lines = (code: string, index: number) => code.slice(0, index).split('\n').length
+const failures: string[] = []
 let files = 0
-let riskyCatches = 0
 
 for (const file of listFiles(routesDir)) {
   files++
   const code = stripComments(fs.readFileSync(file, 'utf-8'))
-  let index = code.indexOf('try {')
+  const where = path.relative(rootDir, file).split(path.sep).join('/')
 
-  while (index !== -1) {
-    const tryLine = code.slice(0, index).split('\n').length
-    const bodyStart = code.indexOf('{', index)
-    const bodyEnd = blockEnd(code, bodyStart)
-    const body = code.slice(bodyStart + 1, bodyEnd)
-    const rest = code.slice(bodyEnd + 1)
-    const catchKeyword = rest.match(/^\s*catch\s*(\([^)]*\))?\s*\{/)
-    index = code.indexOf('try {', bodyEnd)
+  for (let at = code.indexOf('try {'); at !== -1; at = code.indexOf('try {', at + 1)) {
+    const body = code.slice(at + 4, blockEnd(code, code.indexOf('{', at)))
+    if (!body.includes('errorResponse(')) continue
 
-    if (!catchKeyword || !/errorResponse\(/.test(body)) continue
+    const rest = code.slice(at + 4 + body.length + 1)
+    const match = rest.match(/^\s*catch\s*(?:\([^)]*\))?\s*\{/)
+    if (!match) continue
 
-    const catchOpen = bodyEnd + 1 + catchKeyword[0].length - 1
-    const catchBody = code.slice(catchOpen + 1, blockEnd(code, catchOpen))
+    const catchBody = rest.slice(match[0].length, blockEnd(rest, match[0].length - 1))
     const answer = catchBody.match(/errorResponse\(\s*(\d{3})\s*,\s*['"]([A-Z_]+)['"]/)
-    if (!answer || RETHROW.test(catchBody)) continue
+    if (!answer || RETHROWS_H3.test(catchBody)) continue
 
-    riskyCatches++
-    failures.push({
-      where: `${path.relative(rootDir, file).split(path.sep).join('/')}:${tryLine}`,
-      answer: `${answer[1]} ${answer[2]}`,
-    })
+    failures.push(`  ❌ ${where}:${lines(code, at)} answers ${answer[1]} ${answer[2]} over an error its own try raised`)
+    failures.push(`      rethrow first: if (error instanceof H3Error) throw error`)
   }
 }
 
 console.log(`🔍 Checking ${files} route files for catches that answer over their own errors...\n`)
 
 if (failures.length === 0) {
-  console.log(`🎉 ${files} route files clean; ${riskyCatches} fixed answers hiding a raised one.`)
+  console.log(`🎉 ${files}/${files} route files clean.`)
   process.exit(0)
 }
 
-for (const failure of failures) {
-  console.error(`  ❌ ${failure.where} answers ${failure.answer} over an error its own try raised`)
-  console.error(`      rethrow first: if (error instanceof H3Error) throw error`)
-}
-
-console.log(`\n⚠️  ${failures.length}/${files} route files swallow an answer they raised.`)
+console.error(failures.join('\n'))
+const count = failures.length / 2
+console.log(`\n⚠️  ${count} catch${count === 1 ? '' : 'es'} swallow an answer they raised.`)
 process.exit(1)
