@@ -9,7 +9,7 @@ import type {
   AdminCatalogStatusFilter,
   AdminCatalogVariant,
 } from '@tm/flow-contracts/catalog-admin'
-import { getItemPriceRange } from '@tm/flow-utils/price'
+import { effectivePrice, getItemPriceRange } from '@tm/flow-utils/price'
 import { escapeHtml } from '@tm/flow-utils'
 
 const { t } = useI18n()
@@ -345,6 +345,16 @@ function addVariant() {
 
 function removeVariant(index: number) {
   form.variants.splice(index, 1)
+}
+
+function variantCustomerPrice(variant: AdminCatalogVariant): number {
+  return effectivePrice(variant)
+}
+
+function duplicateVariantSku(index: number): boolean {
+  const sku = form.variants[index]?.sku?.trim()
+  if (!sku) return false
+  return form.variants.some((variant, otherIndex) => otherIndex !== index && variant.sku.trim() === sku)
 }
 
 function addAttribute() {
@@ -808,7 +818,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
             <UFormField :label="t('admin.catalog.fields.basePrice')">
               <UInput v-model.number="form.basePrice" type="number" class="w-full" />
             </UFormField>
-            <UFormField :label="t('admin.catalog.fields.salePrice')">
+            <UFormField :label="t('admin.catalog.fields.salePrice')" :hint="t('admin.catalog.fields.price', { price: (form.salePrice || form.basePrice || 0).toLocaleString('vi-VN') })">
               <UInput v-model.number="form.salePrice" type="number" class="w-full" />
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.sku')">
@@ -848,6 +858,20 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
                       :aria-label="t('admin.catalog.fields.removeVariant')"
                       @click="removeVariant(index)"
                     />
+                  </div>
+                  <div class="sm:col-span-6 flex flex-wrap items-center gap-3 text-xs">
+                    <span class="text-muted">
+                      {{ t('admin.catalog.fields.price', { price: variantCustomerPrice(variant).toLocaleString('vi-VN') }) }}
+                    </span>
+                    <span v-if="!variant.sku.trim()" class="text-error">
+                      {{ t('admin.catalog.errors.variantSkuRequired') }}
+                    </span>
+                    <span v-else-if="duplicateVariantSku(index)" class="text-error">
+                      {{ t('admin.catalog.errors.variantSkuDuplicate') }}
+                    </span>
+                    <span v-if="variant.stock < 0" class="text-error">
+                      {{ t('admin.catalog.errors.stockNegative') }}
+                    </span>
                   </div>
                 </div>
                 <p v-if="!form.variants.length" class="text-xs text-muted">

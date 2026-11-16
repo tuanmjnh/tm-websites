@@ -933,7 +933,9 @@
         "loadFailed": "Không tải được danh mục. Hãy tải lại trang để thử lại.",
         "notConfigured": "Khách hàng này chưa cấu hình cơ sở dữ liệu nên chưa đọc được danh mục.",
         "variantRequired": "Sản phẩm có biến thể cần ít nhất một biến thể.",
-        "variantSkuRequired": "Mỗi biến thể cần có SKU."
+        "variantSkuRequired": "Mỗi biến thể cần có SKU.",
+        "variantSkuDuplicate": "SKU bị trùng với biến thể khác.",
+        "stockNegative": "Tồn kho không được âm."
       },
       "categories": {
         "title": "Danh mục sản phẩm",
