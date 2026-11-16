@@ -43,20 +43,16 @@ export const getItemDisplayPrice = (item?: ItemLike | null): ItemPrice => {
     }
   }
 
-  let minPrice = item.salePrice || item.basePrice || Infinity
-  let minBasePrice = item.basePrice || Infinity
-
-  for (const v of item.variants) {
-    if (!v) continue
-    const currentPrice = effectivePrice(v)
-    if (currentPrice > 0 && currentPrice < minPrice) minPrice = currentPrice
-    const currentBase = v.basePrice || 0
-    if (currentBase > 0 && currentBase < minBasePrice) minBasePrice = currentBase
-  }
+  // A variable product is priced by its variants; its own basePrice/salePrice are
+  // only a summary, so they must not drag the minimum below (or above) what the
+  // variants actually cost.
+  const variants = item.variants.filter((variant): variant is VariantLike => Boolean(variant))
+  const prices = variants.map(variant => effectivePrice(variant)).filter(price => price > 0)
+  const bases = variants.map(variant => variant.basePrice || 0).filter(base => base > 0)
 
   return {
-    price: minPrice === Infinity ? 0 : minPrice,
-    basePrice: minBasePrice === Infinity ? 0 : minBasePrice
+    price: prices.length ? Math.min(...prices) : 0,
+    basePrice: bases.length ? Math.min(...bases) : 0
   }
 }
 

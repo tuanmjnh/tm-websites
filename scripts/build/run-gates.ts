@@ -65,6 +65,8 @@ const STATIC_GATES = [
   // their own try raised. Static, no build, no database.
   'verify:error-answers',
   'test:purge-scope',
+  // Pure price rules shared by the storefront and the CMS list: no build or database.
+  'test:price',
   // Reads the storefront's page files and its hand-written links; no build or
   // database needed, so it belongs in the default run.
   'test:web-routes',
