@@ -197,12 +197,14 @@ function rowSubtitle(item: AdminCatalogItem): string {
   // Base price before any discount, so a reduced row can show what it used to
   // cost. A variable product's own basePrice is only a summary, so read the
   // variants when there are any.
-  const baseValues = item.type === 'variable' && item.variants?.length
+  const rawBaseValues = item.type === 'variable' && item.variants?.length
     ? item.variants.map(variant => variant.basePrice || 0)
     : [item.basePrice || 0]
-  const baseMin = Math.min(...baseValues)
-  const baseMax = Math.max(...baseValues)
-  const discounted = baseMin > min || baseMax > max
+  const baseValues = rawBaseValues.filter(value => value > 0)
+  const hasBase = baseValues.length > 0
+  const baseMin = hasBase ? Math.min(...baseValues) : 0
+  const baseMax = hasBase ? Math.max(...baseValues) : 0
+  const discounted = hasBase && (baseMin > min || baseMax > max)
 
   const sku = item.sku.trim()
     || (item.variants?.length
