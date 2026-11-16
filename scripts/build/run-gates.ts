@@ -23,6 +23,9 @@ const DOMAIN_GATES = [
   'test:media',
   'test:audit',
   'test:audit-write',
+  // Backs up a seeded database, restores it and compares bytes: the launch path
+  // was untested, and a restore that only counts rows proves nothing.
+  'test:backup-restore',
   'test:settings',
   'test:menus',
   'test:bulk',

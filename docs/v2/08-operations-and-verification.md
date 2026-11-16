@@ -890,6 +890,36 @@ The same defect had a second half in the shared copy: `admin.errors.generic` sai
 
 Not covered: Hub-backed screens in mock mode answer `503 MOCK_HUB_UNAVAILABLE` by design, so users/roles/routes/configs/mail/notifications/integrations were not exercised signed-in; they are transitional pages (Q5) with no local data model yet. Their real behavior still needs a Hub session.
 
+## Backup and restore (2026-11-16)
+
+There was no backup path at all: no `mongodump` call, no script, no drill. `mongodump` also cannot be assumed on an operator's machine, so the backup is logical and lives in the application:
+
+```bash
+pnpm backup:database --customer sentuan --out .backups
+pnpm restore:database --from .backups/sen-tuan                    # verifies only
+pnpm restore:database --from .backups/sen-tuan --database sen-tuan-drill --apply
+```
+
+- One JSONL file per collection plus `manifest.json` (format version, creation time, per collection: document count, sha256, indexes).
+- Documents are written in `_id` order after a canonical encode: Dates, ObjectIds, binary (`Binary` from the driver or `Buffer`) and bigints are tagged, object keys are sorted. Two dumps of unchanged data are therefore byte-identical, and a restored database re-hashes to the same value.
+- A restore verifies every file against the manifest **before** inserting anything, replaces each collection rather than appending (so restoring twice cannot duplicate rows), recreates the non-`_id` indexes, then re-hashes what landed.
+- The restore CLI is a dry run unless `--apply`, and refuses to overwrite the database the dump came from without `--force`.
+
+Evidence, 2026-11-16 on `sen-tuan` (`mongodb://127.0.0.1:27017`):
+
+| Step | Result |
+| --- | --- |
+| `backup:database --customer sentuan` | 53 collections, 1340 documents, 4.1 MB under `.backups/sen-tuan`; every collection has a hash and its indexes recorded |
+| `restore:database --from .backups/sen-tuan` (dry run) | verified all 53 files, wrote nothing |
+| `restore:database … --apply` (same database) | refused: "Refusing to overwrite the live database \"sen-tuan\"" |
+| `restore:database … --database sen-tuan-drill --apply` | 53 collections restored, every collection re-hashed to the backup value |
+| run twice | identical counts and hashes, no duplicates |
+| scratch database | dropped afterwards; `sen-tuan` unchanged |
+
+`pnpm test:backup-restore` (9 checks, inside `verify:all`) covers the same ground on a disposable database, plus the two ways a dump lies: an edited line is refused by hash before any insert (and the target stays empty), and a collection dropped at the source leaves its old file empty instead of stale. Types are proven to survive: an ObjectId reference, a Date and a binary blob come back as the same types.
+
+**Not covered, and worth knowing before relying on it:** collection validators, collation, views and database-level settings are not in the dump (indexes are). Media bytes are **not** backed up at all — uploaded files live on disk (`.data/media`) while Mongo only holds their rows, so a database restore would point at files that no longer exist. There is no off-site copy and no schedule; both belong with the launch runbook.
+
 ## The Vue alias that unblocked the `link:` adoption (WEB-15, 2026-11-13)
 
 WEB-13 stopped at "two Vue instances": with `link:`, Vite resolved `vue` from `tm-platform`'s tree (3.5.45) instead of the app's (3.5.44), the package's precompiled `resolveComponent('UBadge')` then ran without a `currentInstance`, and the pills rendered as empty `<ubadge>` elements while every gate stayed green. `vite.resolve.dedupe: ['vue']` did not help — there is no `vue` reachable from this app's `node_modules`, so dedupe had nothing to point at — and adding `vue` to `tm-cms/package.json` to give it one broke `vue-tsc` with 122 errors, including `Cannot find module 'vue'` in a layer file with no dependency of its own.
