@@ -607,7 +607,17 @@ The category and media services already recorded `audit_logs` rows, but nothing 
 
 How the note arrives: `x-audit-reason` on the mutation request, read by `writeMetaOf`, so every module that already builds write meta (content, category, media, settings, menu, catalog) gets it without each body schema learning a new field. `AUDIT_REASON_MAX` (500) lives in `models/audit.ts`, next to `changedFields` and `actor`.
 
-The Audit Log page renders the note above the actor line, quoted. **No CMS screen asks for a reason yet**: the header is supported end to end and shown when present, but every current save sends none, so the field is `null` in practice until an editor UI collects it. Recorded here so it is not mistaken for a working input.
+The Audit Log page renders the note above the actor line, quoted. **Every CMS write screen now asks for it** (`AuditReasonModal` for single actions, `AuditReasonField` in the edit forms, on catalog, categories, content, media, menus, redirects, tags and settings); the note is optional, so a save without one still stores `null`.
+
+Checked end to end on 2026-11-16 (`sentuan`, mock session, `:4005`), because a doc line here had claimed no screen collected it:
+
+| Step in the browser | Expected | Result |
+| --- | --- | --- |
+| `/categories` → Create category, note `verify: audit reason reaches the log` | row appears; one `create` entry | row shown as `Revision 1`; `audit_logs` row has that exact reason |
+| Delete that category through the dialog, note `verify: delete dialog sends the note` | delete confirmed; one `delete` entry | both rows in `/api/v1/admin/audit?resourceType=category`, reasons intact |
+| `/audit` → Recent activity | the note above the actor | `“verify: delete dialog sends the note” Quản trị viên · admin@example.com` |
+
+The probe category and its two audit rows were removed afterwards (`audit_logs` back to its single pre-existing row). Still not collected: import/export and background jobs write no audit rows at all, and the page→header wiring has no automated test — `test:audit-write` proves the header and the storage, this pass proves the screens.
 
 Gate: `pnpm test:audit-write` — 11 checks, part of `verify:all` (DOMAIN_GATES). The read side stays in `pnpm test:audit` (9 checks).
 
