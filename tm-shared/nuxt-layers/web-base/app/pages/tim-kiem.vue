@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PublicContentListItem } from '@tm/flow-contracts/content-public'
+import type { PublicCatalogItemSummary, PublicCatalogList } from '@tm/flow-contracts'
 import { PUBLIC_CONTENT_SEARCH_MAX } from '@tm/flow-contracts/content-public'
 import { buildCanonicalUrl } from '@tm/flow-utils/seo'
 
@@ -34,22 +35,90 @@ const q = computed(() => readQuery('q').slice(0, PUBLIC_CONTENT_SEARCH_MAX))
 const search = ref(q.value)
 watch(q, value => { search.value = value })
 
-const { data: contentResult, error: contentError, pending: contentPending } = await useAsyncData(
-  () => `search:content:${q.value}:${locale.value}`,
-  async () => {
-    if (!q.value) return [] as PublicContentListItem[]
-    const response = await $fetch<{ success: boolean, data: PublicContentListItem[] }>('/api/public/content', {
-      query: { q: q.value, locale: locale.value, limit: SECTION_LIMIT },
-    })
-    return response.data
-  },
-  { watch: [q, locale] },
-)
+const contentItems = ref<PublicContentListItem[]>([])
+const contentCursor = ref<string | null>(null)
+const contentHasMore = ref(false)
+const contentPending = ref(false)
+const contentError = ref(false)
+const contentLoadingMore = ref(false)
+
+async function fetchContent(reset: boolean) {
+  if (!q.value) {
+    contentItems.value = []
+    contentCursor.value = null
+    contentHasMore.value = false
+    return
+  }
+  if (reset) {
+    contentPending.value = true
+    contentError.value = false
+    contentItems.value = []
+    contentCursor.value = null
+    contentHasMore.value = false
+  } else {
+    contentLoadingMore.value = true
+  }
+  try {
+    const response = await $fetch<{ success: boolean, data: PublicContentListItem[], nextCursor: string | null }>(
+      '/api/public/content',
+      {
+        query: {
+          q: q.value,
+          locale: locale.value,
+          limit: SECTION_LIMIT,
+          ...(reset ? {} : { cursor: contentCursor.value ?? undefined }),
+        },
+      },
+    )
+    const data = response.data ?? []
+    contentItems.value = reset ? data : [...contentItems.value, ...data]
+    contentCursor.value = response.nextCursor ?? null
+    contentHasMore.value = Boolean(response.nextCursor)
+  } catch {
+    if (reset) contentError.value = true
+  } finally {
+    if (reset) contentPending.value = false
+    else contentLoadingMore.value = false
+  }
+}
+
+watch([q, locale], () => fetchContent(true), { immediate: true })
+
+async function loadMoreContent() {
+  if (!contentHasMore.value || contentLoadingMore.value) return
+  await fetchContent(false)
+}
 
 const catalogQuery = computed(() => ({ search: q.value, page: 1, limit: SECTION_LIMIT, sort: 'newest' }))
-const { items: products, total: productTotal, result: productResult, pending: productPending } = useCatalogList(catalogQuery)
+const { items: baseProducts, total: productTotal, result: productResult, pending: productPending } = useCatalogList(catalogQuery)
 
-const contentItems = computed(() => contentResult.value ?? [])
+const extraProducts = ref<PublicCatalogItemSummary[]>([])
+const productPage = ref(1)
+const productLoadingMore = ref(false)
+
+watch(q, () => {
+  extraProducts.value = []
+  productPage.value = 1
+}, { immediate: true })
+
+const products = computed(() => [...baseProducts.value, ...extraProducts.value])
+const productHasMore = computed(() => products.value.length < productTotal.value)
+
+async function loadMoreProducts() {
+  if (!productHasMore.value || productLoadingMore.value) return
+  productLoadingMore.value = true
+  try {
+    const response = await $fetch<PublicCatalogList>('/api/public/products', {
+      query: { search: q.value, page: productPage.value + 1, limit: SECTION_LIMIT, sort: 'newest' },
+    })
+    extraProducts.value = [...extraProducts.value, ...(response.data ?? [])]
+    productPage.value += 1
+  } catch {
+    // keep the current list; the section already shows its status
+  } finally {
+    productLoadingMore.value = false
+  }
+}
 const noResults = computed(() =>
   q.value
   && !contentPending.value
@@ -149,6 +218,17 @@ useHead({
             </div>
           </li>
         </ul>
+
+        <div v-if="contentHasMore" class="mt-4">
+          <UButton
+            color="neutral"
+            variant="soft"
+            size="sm"
+            :loading="contentLoadingMore"
+            :label="t('search.loadMoreContent')"
+            @click="loadMoreContent"
+          />
+        </div>
       </section>
 
       <section v-if="products.length">
@@ -164,6 +244,17 @@ useHead({
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <CatalogProductCard v-for="product in products" :key="product.id" :item="product" :term="q" />
+        </div>
+
+        <div v-if="productHasMore" class="mt-4">
+          <UButton
+            color="neutral"
+            variant="soft"
+            size="sm"
+            :loading="productLoadingMore"
+            :label="t('search.loadMoreProducts')"
+            @click="loadMoreProducts"
+          />
         </div>
       </section>
 

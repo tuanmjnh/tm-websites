@@ -193,6 +193,8 @@
     "productSection": "Sản phẩm",
     "viewAllContent": "Xem tất cả bài viết",
     "viewAllProducts": "Xem tất cả sản phẩm",
+    "loadMoreContent": "Xem thêm bài viết",
+    "loadMoreProducts": "Xem thêm sản phẩm",
     "productsUnavailable": "Danh mục sản phẩm chưa được kết nối nên kết quả chỉ gồm bài viết và trang."
   },
   "contentType": {

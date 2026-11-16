@@ -193,6 +193,8 @@
     "productSection": "Products",
     "viewAllContent": "View all articles",
     "viewAllProducts": "View all products",
+    "loadMoreContent": "Load more articles",
+    "loadMoreProducts": "Load more products",
     "productsUnavailable": "The catalog is not connected, so results only include articles and pages."
   },
   "contentType": {
