@@ -632,6 +632,16 @@ The remaining four dialogs went through the same check in the browser the same d
 
 Nine writes, nine rows, every note preserved verbatim; the `sentuan` database was then returned to its starting counts (`catalog_items` 241, `content` 2, `site_menus` 0, media library empty, `audit_logs` its single pre-existing row).
 
+The three bulk paths take the same note through the same header, and were checked the same way (one probe per domain, seeded through the API with a note, then driven through the selection bar in the browser):
+
+| Bulk action | Probe | Audit row |
+| --- | --- | --- |
+| Catalog → tick row → `Update in bulk (1 selected)` → stock `7` | `probe-bulk-catalog` | `catalog_item`/`update`, `changedFields: ["stock"]`, note intact |
+| Content → tick row → `Archive` → confirm dialog | `pages/probe-bulk-content` | `content`/`archive` → `archived`, note intact |
+| Media → tick card → `Move to folder` → `probe-bulk` | `probe-bulk.png` | `media`/`update`, `changedFields: ["folder"]`, note intact |
+
+One row per record: a bulk action over several rows writes one audit entry per record, not one summary entry. Probes and their six audit rows were removed afterwards, and the uploaded probe file was deleted from `.data/media` too (`catalog_items` 241, `content` 2, `site_menus` 0, `media` 0, `audit_logs` 1).
+
 How the media row was reached is worth stating exactly: the library was empty, so the probe file was **seeded through the API** (`POST /api/v1/admin/media` multipart with `x-audit-reason`); the edit and delete dialogs were driven in the browser. The upload dialog's own file picker was not driven (the browser tool cannot set a file input), so that one path is proven only at the composable/API level. Still not collected: import/export and background jobs write no audit rows at all, and the page→header wiring has no automated test — `test:audit-write` proves the header and the storage, this pass proves the screens.
 
 Gate: `pnpm test:audit-write` — 11 checks, part of `verify:all` (DOMAIN_GATES). The read side stays in `pnpm test:audit` (9 checks).
