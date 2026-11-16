@@ -11,6 +11,7 @@ import type {
 } from '@tm/flow-contracts/catalog-admin'
 import { effectivePrice, getItemPriceRange } from '@tm/flow-utils/price'
 import { escapeHtml } from '@tm/flow-utils'
+import { buildCatalogCategoryDraft } from '../utils/catalog-category-draft'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -558,6 +559,7 @@ const categoriesOpen = ref(false)
 const categoryBusy = ref(false)
 const categoryError = ref<string | null>(null)
 const categoryEditing = ref<string | null>(null)
+const categoryOriginal = ref<AdminCatalogCategory | null>(null)
 const emptyCategoryDraft = () => ({
   key: '',
   title: '',
@@ -580,6 +582,7 @@ const parentItems = computed(() => [
 
 function resetCategoryForm() {
   categoryEditing.value = null
+  categoryOriginal.value = null
   categoryError.value = null
   auditReason.value = ''
   Object.assign(categoryDraft.value, emptyCategoryDraft())
@@ -587,6 +590,7 @@ function resetCategoryForm() {
 
 function editCategory(category: AdminCatalogCategory) {
   categoryEditing.value = category.id
+  categoryOriginal.value = category
   categoryError.value = null
   Object.assign(categoryDraft.value, {
     key: category.key,
@@ -605,19 +609,7 @@ async function saveCategory() {
   categoryBusy.value = true
   categoryError.value = null
   try {
-    const draft = {
-      key: categoryDraft.value.key,
-      parent: categoryDraft.value.parent,
-      order: Number(categoryDraft.value.order) || 0,
-      title: { vi: categoryDraft.value.title },
-      slug: { vi: categoryDraft.value.title },
-      description: { vi: categoryDraft.value.description },
-      thumbnail: categoryDraft.value.thumbnail.trim() || null,
-      seo: {
-        title: { vi: categoryDraft.value.seoTitle },
-        description: { vi: categoryDraft.value.seoDescription },
-      },
-    }
+    const draft = buildCatalogCategoryDraft(categoryDraft.value, categoryOriginal.value)
     const reason = auditReason.value.trim() || undefined
     if (categoryEditing.value) {
       const current = categories.value.find(category => category.id === categoryEditing.value)

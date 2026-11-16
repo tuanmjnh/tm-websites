@@ -16,6 +16,7 @@ import {
 } from '../../tm-cms/server/services/catalogService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { buildCatalogCategoryDraft } from '../../tm-shared/nuxt-layers/cms-base/app/utils/catalog-category-draft.js'
 
 let checks = 0
 
@@ -45,6 +46,36 @@ const OTHER_SITE = 'bagpost'
 console.log('catalog service')
 
 try {
+  await check('editing a category keeps the locales the panel does not show', () => {
+    const payload = buildCatalogCategoryDraft({
+      key: 'trang-suc',
+      parent: null,
+      order: 1,
+      title: 'Trang sức mới',
+      description: 'Mô tả mới',
+      thumbnail: ' https://cdn.example.com/trang-suc-moi.jpg ',
+      seoTitle: 'SEO mới',
+      seoDescription: 'Mô tả SEO mới',
+    }, {
+      title: { vi: 'Trang sức', en: 'Jewelry' },
+      slug: { vi: 'trang-suc', en: 'jewelry' },
+      description: { vi: 'Mô tả cũ', en: 'Old description' },
+      seo: {
+        title: { vi: 'SEO cũ', en: 'Old SEO' },
+        description: { vi: 'Mô tả SEO cũ', en: 'Old SEO description' },
+      },
+    })
+
+    assert.deepEqual(payload.title, { vi: 'Trang sức mới', en: 'Jewelry' })
+    assert.deepEqual(payload.slug, { vi: 'Trang sức mới', en: 'jewelry' })
+    assert.deepEqual(payload.description, { vi: 'Mô tả mới', en: 'Old description' })
+    assert.deepEqual(payload.seo, {
+      title: { vi: 'SEO mới', en: 'Old SEO' },
+      description: { vi: 'Mô tả SEO mới', en: 'Old SEO description' },
+    })
+    assert.equal(payload.thumbnail, 'https://cdn.example.com/trang-suc-moi.jpg')
+  })
+
   let parentId = ''
   await check('creates a category with a normalized key and computed path', async () => {
     const created = await createCatalogCategory(CatalogCategory, SITE, {
