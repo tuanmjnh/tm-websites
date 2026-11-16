@@ -215,6 +215,7 @@
           "noChanges": "Không có thay đổi nào để lưu.",
           "invalid": "Dữ liệu chưa hợp lệ: kiểm tra email, ngôn ngữ mặc định và danh sách ngôn ngữ bật.",
           "forbidden": "Tài khoản không có quyền sửa cấu hình (configs.write).",
+          "loadFailed": "Không tải được cấu hình. Hãy tải lại trang để thử lại.",
           "unavailable": "Không lưu được cấu hình, thử lại sau."
         },
         "choose": "Chọn ảnh",

@@ -215,6 +215,7 @@
           "noChanges": "There is nothing to save.",
           "invalid": "The data is not valid: check the email, the default locale and the enabled locales.",
           "forbidden": "This account cannot change settings (configs.write).",
+          "loadFailed": "The settings could not be loaded. Reload the page to try again.",
           "unavailable": "Could not save the settings; try again."
         },
         "choose": "Choose image",

@@ -213,8 +213,10 @@ async function load() {
 
   try {
     applySettings(await fetchSettings())
-  } catch (e) {
-    error.value = t(`admin.configs.site.errors.${describeSettingsError(e)}`)
+  } catch {
+    // This is the read. The save path below describes itself; reusing its copy
+    // here told editors a save had failed when nothing had been sent.
+    error.value = t('admin.configs.site.errors.loadFailed')
   } finally {
     loading.value = false
   }
