@@ -90,7 +90,8 @@ export async function requireVerifiedContext(event: H3Event): Promise<UserSessio
       accessToken: getAccessToken(event),
       refreshToken: getRefreshToken(event),
       fetchMe: token => hubFetchMe(event, token),
-      refresh: token => hubRefresh(event, token),
+      // Shared with the proxy and the refresh route: one rotation per token.
+      refresh: token => renewSessionTokens(event, token),
     })
 
     if (resolved.tokens) {

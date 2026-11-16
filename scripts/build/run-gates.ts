@@ -35,6 +35,7 @@ const DOMAIN_GATES = [
   'test:web-site',
   'test:web-cart',
   'test:iam',
+  'test:refresh-coordinator',
   'test:revalidate',
   'test:web-site-db',
 ]

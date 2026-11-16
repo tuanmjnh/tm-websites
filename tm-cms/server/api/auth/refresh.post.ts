@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const tokens = await hubRefresh(event, refreshToken)
+    const tokens = await renewSessionTokens(event, refreshToken)
     setAuthCookies(event, tokens)
     return successResponse({ event, data: null, message: 'Token refreshed' })
   } catch (error) {

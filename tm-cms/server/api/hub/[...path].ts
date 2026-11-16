@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
 
       let tokens: HubTokens
       try {
-        tokens = await hubRefresh(event, refreshToken)
+        tokens = await renewSessionTokens(event, refreshToken)
       } catch (error) {
         // A dead refresh token is an expired session, not bad credentials.
         if (error instanceof HubRequestError && error.statusCode === 401) {

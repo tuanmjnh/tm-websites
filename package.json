@@ -27,6 +27,7 @@
     "test:web-cart": "tsx scripts/build/test-web-cart.ts",
     "test:web-routes": "tsx scripts/build/test-web-routes.ts",
     "test:iam": "tsx scripts/build/test-cms-iam.ts",
+    "test:refresh-coordinator": "tsx scripts/build/test-refresh-coordinator.ts",
     "hub:check": "tsx scripts/build/check-hub.ts",
     "cache:clear": "rimraf tm-cms/.nuxt tm-web/.nuxt tm-cms/.output tm-web/.output node_modules/.cache node_modules/.vite",
     "test:db": "tsx scripts/build/test-database-binding.ts",
