@@ -1,18 +1,13 @@
 <script setup lang="ts">
-const { t, locale } = useI18n()
-const { brandName, seo } = usePublicSite()
+const { t } = useI18n()
+const { brandName } = usePublicSite()
 
 /**
  * The storefront owns no about-page copy: the page is the description the
  * customer saved in site settings, and an explicit notice while it is empty.
  * Contact channels live on `/contact` and are not repeated here.
  */
-const description = computed(() => {
-  const code = String(locale.value || '')
-  const localized = seo.value?.defaultDescriptions?.[code]
-  if (localized && localized.trim()) return localized.trim()
-  return seo.value?.defaultDescription || ''
-})
+const description = useSiteSeoDescription()
 
 const robots = usePageRobots({ empty: () => !description.value })
 
