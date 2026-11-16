@@ -290,6 +290,7 @@ useHead(() => {
                 >
                   {{ variant.name ? readLocalized(variant.name, locale) : variant.sku }}
                   <span class="ml-1 text-dimmed">{{ formatCatalogPrice(variant.price, currency, locale) }}</span>
+                  <span v-if="variant.compareAtPrice && variant.compareAtPrice > variant.price" class="ml-1 text-dimmed line-through">{{ formatCatalogPrice(variant.compareAtPrice, currency, locale) }}</span>
                   <span v-if="!variant.inStock" class="ml-1 text-dimmed">({{ t('catalog.outOfStock') }})</span>
                 </button>
               </div>
@@ -371,6 +372,9 @@ useHead(() => {
                     <td class="px-3 py-2 text-muted">{{ variant.sku || '—' }}</td>
                     <td class="px-3 py-2 font-medium text-highlighted">
                       {{ formatCatalogPrice(variant.price, currency, locale) }}
+                      <span v-if="variant.compareAtPrice && variant.compareAtPrice > variant.price" class="ml-1 text-dimmed line-through">
+                        {{ formatCatalogPrice(variant.compareAtPrice, currency, locale) }}
+                      </span>
                     </td>
                     <td class="px-3 py-2 text-muted">
                       {{ variant.inStock ? t('catalog.inStock') : t('catalog.outOfStock') }}

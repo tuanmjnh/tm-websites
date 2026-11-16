@@ -877,6 +877,8 @@
         "noSku": "no SKU",
         "price": "Price {price}",
         "priceRange": "Price {min} – {max}",
+        "originalPrice": "was {price}",
+        "originalPriceRange": "was {min} – {max}",
         "variantCount": "{count} variants",
         "uom": "Unit",
         "stock": "Stock",

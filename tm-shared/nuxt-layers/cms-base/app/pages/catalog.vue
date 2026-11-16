@@ -193,18 +193,35 @@ function rowSubtitle(item: AdminCatalogItem): string {
   const format = (value: number) => value.toLocaleString('vi-VN')
   const { min, max } = getItemPriceRange(item)
 
+  // Base price before any discount, so a reduced row can show what it used to
+  // cost. A variable product's own basePrice is only a summary, so read the
+  // variants when there are any.
+  const baseValues = item.type === 'variable' && item.variants.length
+    ? item.variants.map(variant => variant.basePrice || 0)
+    : [item.basePrice || 0]
+  const baseMin = Math.min(...baseValues)
+  const baseMax = Math.max(...baseValues)
+  const discounted = baseMin > min || baseMax > max
+
   const sku = item.sku.trim()
     || (item.variants.length > 0
       ? t('admin.catalog.fields.variantCount', { count: item.variants.length })
       : t('admin.catalog.fields.noSku'))
 
+  const priceLabel = min === max
+    ? t('admin.catalog.fields.price', { price: format(min) })
+    : t('admin.catalog.fields.priceRange', { min: format(min), max: format(max) })
+  const originalLabel = discounted
+    ? (baseMin === baseMax
+        ? t('admin.catalog.fields.originalPrice', { price: format(baseMin) })
+        : t('admin.catalog.fields.originalPriceRange', { min: format(baseMin), max: format(baseMax) }))
+    : ''
+
   return [
     item.key,
     sku,
     item.barcode.trim(),
-    min === max
-      ? t('admin.catalog.fields.price', { price: format(min) })
-      : t('admin.catalog.fields.priceRange', { min: format(min), max: format(max) }),
+    originalLabel ? `${priceLabel} (${originalLabel})` : priceLabel,
     t('admin.catalog.fields.categoriesCount', { count: item.categories.length }),
   ].filter(Boolean).join(' · ')
 }
