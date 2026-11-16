@@ -20,6 +20,7 @@
     "verify:scaffold": "tsx scripts/verify-scaffold.ts",
     "verify:audit-meta": "tsx scripts/build/verify-audit-meta.ts",
     "verify:modules": "tsx scripts/build/verify-modules.ts",
+    "verify:audit-reason-ui": "tsx scripts/build/verify-audit-reason-ui.ts",
     "verify:error-answers": "tsx scripts/build/verify-error-answers.ts",
     "test:layers": "tsx scripts/build/test-layer-priority.ts",
     "test:hub": "tsx scripts/build/test-hub-contracts.ts",

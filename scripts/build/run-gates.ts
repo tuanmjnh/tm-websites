@@ -50,6 +50,9 @@ const STATIC_GATES = [
   'verify:audit-meta',
   // Compares the module registry with the pages behind it: static, no build.
   'verify:modules',
+  // Client half of the audit note: every write screen keeps its note control and
+  // hands the typed note to a composable. Static, no build.
+  'verify:audit-reason-ui',
   // Reads the admin routes as source: catches that answer over an errorResponse
   // their own try raised. Static, no build, no database.
   'verify:error-answers',
