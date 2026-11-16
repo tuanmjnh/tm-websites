@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { CMS_MODULES } from '../../tm-shared/nuxt-layers/cms-base/app/utils/module-registry.js'
+import { CMS_MODULE_BLOCKERS, CMS_MODULES } from '../../tm-shared/nuxt-layers/cms-base/app/utils/module-registry.js'
 
 /**
  * Gate: the CMS module registry and its pages must agree.
@@ -87,15 +87,23 @@ for (const module of CMS_MODULES) {
       `${relative(page)}: module-key is ${usedKey === undefined ? 'missing' : `"${usedKey}"`}`,
     ])
 
+    // The blocker is the difference between "we need a connection" and "nobody
+    // has agreed what this module stores yet"; a bare `pending` claims the first.
+    const blocker = module.blocker
+    check(
+      Boolean(blocker) && CMS_MODULE_BLOCKERS.includes(blocker!),
+      `${module.key}: a pending module says why it is pending`,
+      [`blocker is ${blocker === undefined ? 'missing' : `"${blocker}"`}`],
+    )
+
     const hintKey = module.pendingHintKey
     check(Boolean(hintKey), `${module.key}: a pending module declares a pendingHintKey`)
     if (hintKey) {
-      const missing = locales.filter(locale => typeof lookup(locale.json, hintKey) !== 'string')
-      check(
-        missing.length === 0,
-        `${module.key}: ${hintKey} exists in every locale`,
-        missing.map(locale => `${locale.name}.json: no "${hintKey}"`),
-      )
+      const keys = [hintKey, `modules.blockers.${blocker}`, blocker === 'out-of-scope' ? 'modules.status.outOfScopeText' : 'modules.status.decisionText']
+      const missing = locales.flatMap(locale => keys
+        .filter(key => typeof lookup(locale.json, key) !== 'string')
+        .map(key => `${locale.name}.json: no "${key}"`))
+      check(missing.length === 0, `${module.key}: its hint and blocker copy exist in every locale`, missing)
     }
     continue
   }
@@ -106,6 +114,8 @@ for (const module of CMS_MODULES) {
   check(!module.pendingHintKey, `${module.key}: a connected module declares no pendingHintKey`, [
     `"${module.pendingHintKey}": never rendered, because the module is connected`,
   ])
+  check(!module.blocker, `${module.key}: a connected module declares no blocker`,
+    [`"${module.blocker}": nothing is blocking a connected module`])
 }
 
 check(duplicated.length === 0, 'every module route is unique', duplicated.map(route => `${route}: declared twice`))

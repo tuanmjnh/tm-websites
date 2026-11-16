@@ -1026,34 +1026,41 @@
       "pending": "Chưa kết nối",
       "disabledText": "Phân hệ {module} chưa nằm trong gói đăng ký của khách hàng này.",
       "pendingText": "Phân hệ {module} đang chờ kết nối dữ liệu.",
+      "decisionText": "Phân hệ {module} đang chờ thống nhất mô hình dữ liệu trước khi bắt đầu.",
+      "outOfScopeText": "Phân hệ {module} không nằm trong phạm vi đợt này.",
       "disabledHint": "Liên hệ quản trị viên TM Hub để bổ sung phân hệ này vào gói đăng ký.",
       "readyHint": "Phân hệ đã kết nối nguồn dữ liệu. Giao diện nghiệp vụ sẽ hiển thị số liệu thật."
+    },
+    "blockers": {
+      "waiting-data": "Chờ kết nối dữ liệu",
+      "waiting-decision": "Chờ mô hình dữ liệu",
+      "out-of-scope": "Ngoài phạm vi đợt này"
     },
     "catalog": {
       "description": "Quản lý danh mục, thuộc tính và giá bán của toàn bộ sản phẩm"
     },
     "orders": {
       "description": "Theo dõi toàn bộ vòng đời đơn hàng từ tạo mới đến khi giao thành công",
-      "pendingHint": "Cần kết nối API đơn hàng và thanh toán của tenant trước khi hiển thị dữ liệu."
+      "pendingHint": "Đợt này không lưu đơn hàng ở đâu cả: checkout chưa làm và chưa có mô hình đơn hàng, nên phân hệ chưa đọc hay ghi được đơn nào."
     },
     "inventory": {
       "description": "Theo dõi số lượng tồn, định mức tối thiểu và cảnh báo hết hàng",
-      "pendingHint": "Cần kết nối kho và API tồn kho của tenant trước khi hiển thị dữ liệu."
+      "pendingHint": "Tồn kho cần sổ kho với giữ chỗ và phiếu nhập xuất trước; mô hình đó chưa được thống nhất nên chưa có số liệu tồn."
     },
     "finance": {
       "description": "Theo dõi dòng tiền, công nợ và hiệu quả lợi nhuận theo kỳ",
-      "pendingHint": "Cần kết nối sổ quỹ, công nợ và API kế toán của tenant trước khi hiển thị dữ liệu."
+      "pendingHint": "Tài chính cần mô hình bút toán và công nợ trước, phụ thuộc vào quyết định về đơn hàng và tồn kho."
     },
     "reports": {
       "description": "Tổng hợp báo cáo vận hành, bán hàng và tài chính theo kỳ",
-      "pendingHint": "Cần kết nối kho dữ liệu báo cáo và dịch vụ xuất tệp trước khi hiển thị dữ liệu."
+      "pendingHint": "Báo cáo tổng hợp từ sổ quỹ và dữ liệu tồn kho, nên chỉ có sau khi tài chính và tồn kho được mô hình hoá."
     },
     "media": {
       "description": "Hình ảnh, video và tài nguyên số phân phối qua cổng media của TM Hub"
     },
     "aiWorkspace": {
       "description": "Không gian tác vụ AI hỗ trợ biên tập nội dung và vận hành",
-      "pendingHint": "Cần cấu hình nhà cung cấp mô hình và hàng đợi tác vụ AI trước khi hiển thị dữ liệu."
+      "pendingHint": "AI Workspace đã được quyết định nằm ngoài đợt này (Q15), nên không kết nối nhà cung cấp nào và không có việc nào được lên lịch."
     }
   },
   "settings": {

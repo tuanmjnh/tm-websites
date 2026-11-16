@@ -19,6 +19,8 @@ const dataSourceLabel = computed(
 )
 // Only an unwired module declares one; `verify:modules` keeps it that way.
 const pendingHint = computed(() => (definition.value.pendingHintKey ? t(definition.value.pendingHintKey) : ''))
+const blocker = computed(() => definition.value.blocker || '')
+const blockerLabel = computed(() => (blocker.value ? t(`modules.blockers.${blocker.value}`) : ''))
 </script>
 
 <template>
@@ -32,6 +34,12 @@ const pendingHint = computed(() => (definition.value.pendingHintKey ? t(definiti
       <StatusBadge
         :label="dataSourceLabel"
         :color="connected ? 'success' : 'warning'"
+        class="rounded-[4px]"
+      />
+      <StatusBadge
+        v-if="blockerLabel"
+        :label="blockerLabel"
+        color="neutral"
         class="rounded-[4px]"
       />
     </div>

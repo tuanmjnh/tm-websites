@@ -1026,34 +1026,41 @@
       "pending": "Not connected",
       "disabledText": "The {module} module is not included in this customer's subscription.",
       "pendingText": "The {module} module is waiting for a data connection.",
+      "decisionText": "The {module} module is waiting for its data model to be agreed before any work starts.",
+      "outOfScopeText": "The {module} module is out of scope for this round.",
       "disabledHint": "Ask a TM Hub administrator to add this module to the subscription.",
       "readyHint": "The module is connected to its data source. Business data will render here."
+    },
+    "blockers": {
+      "waiting-data": "Awaiting data connection",
+      "waiting-decision": "Awaiting data model",
+      "out-of-scope": "Out of scope this round"
     },
     "catalog": {
       "description": "Manage categories, attributes and pricing for the entire product catalog"
     },
     "orders": {
       "description": "Track the full order lifecycle from creation to successful delivery",
-      "pendingHint": "Connect the tenant order and payment APIs before any data can be shown."
+      "pendingHint": "No order is stored anywhere in this round: checkout was left out and no order model was accepted, so the module cannot read or write one yet."
     },
     "inventory": {
       "description": "Track stock levels, minimum thresholds and low-stock alerts",
-      "pendingHint": "Connect the tenant warehouse and inventory APIs before any data can be shown."
+      "pendingHint": "Stock needs a ledger with reservations and movements first; that model is not agreed yet, so nothing here reads stock levels."
     },
     "finance": {
       "description": "Track cash flow, receivables and profitability by period",
-      "pendingHint": "Connect the tenant ledger, receivables and accounting APIs before any data can be shown."
+      "pendingHint": "Finance needs a posting and payable/receivable model first, which follows the order and inventory decisions."
     },
     "reports": {
       "description": "Aggregate operations, sales and finance reports by period",
-      "pendingHint": "Connect the reporting data store and export service before any data can be shown."
+      "pendingHint": "Reports aggregate the ledger and stock data, so they arrive after finance and inventory are modelled."
     },
     "media": {
       "description": "Images, video and digital assets served through the TM Hub media gateway"
     },
     "aiWorkspace": {
       "description": "AI task workspace for content editing and operations",
-      "pendingHint": "Configure a model provider and AI task queue before any data can be shown."
+      "pendingHint": "AI Workspace was left out of this round by decision (Q15), so no provider is connected and no work is planned for it here."
     }
   },
   "settings": {

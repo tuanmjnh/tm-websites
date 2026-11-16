@@ -18,6 +18,19 @@ export type CmsModuleKey =
 
 export type CmsModuleDataSource = 'connected' | 'pending'
 
+/**
+ * Why a pending module cannot show data yet. The distinction is the point: the
+ * modules below are not all "waiting for a connection" — most wait for a data
+ * model that does not exist, and one was left out of this round by decision.
+ *
+ * - `waiting-data`     the model exists and only the tenant source is missing
+ * - `waiting-decision` no accepted data model yet (P5 domain decisions)
+ * - `out-of-scope`     decided out of this round (ADR 0002)
+ */
+export type CmsModuleBlocker = 'waiting-data' | 'waiting-decision' | 'out-of-scope'
+
+export const CMS_MODULE_BLOCKERS: readonly CmsModuleBlocker[] = ['waiting-data', 'waiting-decision', 'out-of-scope']
+
 export interface CmsModuleDefinition {
   key: CmsModuleKey
   route: string
@@ -33,6 +46,8 @@ export interface CmsModuleDefinition {
    * telling the editor to connect something that already is.
    */
   pendingHintKey?: string
+  /** Why the module is pending; absent on a connected module. */
+  blocker?: CmsModuleBlocker
   dataSource: CmsModuleDataSource
 }
 
@@ -56,6 +71,9 @@ export const CMS_MODULE_MAP = {
     navKey: 'nav.orders',
     descriptionKey: 'modules.orders.description',
     pendingHintKey: 'modules.orders.pendingHint',
+    // Nothing stores an order: Q17 left checkout out and no order model was
+    // accepted, so this waits on a decision rather than on a connection.
+    blocker: 'waiting-decision',
     dataSource: 'pending',
   },
   inventory: {
@@ -66,6 +84,8 @@ export const CMS_MODULE_MAP = {
     navKey: 'nav.inventory',
     descriptionKey: 'modules.inventory.description',
     pendingHintKey: 'modules.inventory.pendingHint',
+    // A stock ledger with reservations is a data model, not a connection.
+    blocker: 'waiting-decision',
     dataSource: 'pending',
   },
   finance: {
@@ -76,6 +96,7 @@ export const CMS_MODULE_MAP = {
     navKey: 'nav.finance',
     descriptionKey: 'modules.finance.description',
     pendingHintKey: 'modules.finance.pendingHint',
+    blocker: 'waiting-decision',
     dataSource: 'pending',
   },
   reports: {
@@ -86,6 +107,8 @@ export const CMS_MODULE_MAP = {
     navKey: 'nav.reports',
     descriptionKey: 'modules.reports.description',
     pendingHintKey: 'modules.reports.pendingHint',
+    // Reports read the ledger and stock data, so they follow finance/inventory.
+    blocker: 'waiting-decision',
     dataSource: 'pending',
   },
   media: {
@@ -105,6 +128,9 @@ export const CMS_MODULE_MAP = {
     navKey: 'nav.aiWorkspace',
     descriptionKey: 'modules.aiWorkspace.description',
     pendingHintKey: 'modules.aiWorkspace.pendingHint',
+    // Q15: out of v2 scope. Its old hint told editors to configure a provider,
+    // which implied work that is not planned.
+    blocker: 'out-of-scope',
     dataSource: 'pending',
   },
 } satisfies Record<CmsModuleKey, CmsModuleDefinition>
