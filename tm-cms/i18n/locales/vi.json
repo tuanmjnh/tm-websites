@@ -924,6 +924,8 @@
         "categoryInUse": "Danh mục còn sản phẩm, không xoá được.",
         "categoryHasChildren": "Danh mục còn danh mục con, không xoá được.",
         "generic": "Không lưu được thay đổi. Vui lòng thử lại.",
+        "loadFailed": "Không tải được danh mục. Hãy tải lại trang để thử lại.",
+        "notConfigured": "Khách hàng này chưa cấu hình cơ sở dữ liệu nên chưa đọc được danh mục.",
         "variantRequired": "Sản phẩm có biến thể cần ít nhất một biến thể.",
         "variantSkuRequired": "Mỗi biến thể cần có SKU."
       },

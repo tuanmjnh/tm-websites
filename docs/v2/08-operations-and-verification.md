@@ -533,41 +533,41 @@ Bulk runs with the local Hub on `:4000` (or `TM_AUTH_MODE=mock` for local-only U
 
 Probe content, its audit entries and revisions must be deleted afterwards; the sequence above is also covered by `pnpm test:audit` (7 checks), which needs no CMS server.
 
-### Storefront cache purge: scopes and tenants (WEB-09, 2026-11-13)
-
-`POST /api/_internal/purge` (secret in `x-revalidate-secret`, reason in the JSON body) no longer drops the whole Nitro handler cache. It removes the entries whose key carries the deployment's database and the scope the reason names:
-
-| Key part | Example | Meaning |
-| --- | --- | --- |
-| database | `sen_tuan`, `bag_post` | `TM_MONGO_DB` slugged; two customers can share one Nitro cache |
-| scope | `site`, `catalog` | `site` = `/api/public/site` + `/api/public/site-config`; `catalog` = product/category reads |
-| rest | `products__api_public_products_limit_1` | namespace + path + query, all slugged |
-
-Separators are `__` on purpose: Nitro stores a handler entry as `nitro:handlers:...` and sanitises the key with `String(key).replace(/\W/g, "")`, so punctuation does not survive and `_` does. Entries written before this change (`catalogbagpostproducts...`, `publicsitevi`) are no longer matched by a scoped purge; they expire on their own TTL (300 s stale window) and `{ "scope": "all" }` removes them immediately.
-
-| Reason | Scopes dropped |
-| --- | --- |
-| `catalog.item.*` | `catalog` |
-| `catalog.category.*` | `site` + `catalog` (a renamed category appears in menus and URLs) |
-| `menu.*`, `settings.*`, `redirect.*` | `site` |
-| anything else / missing | `site` + `catalog` (never under-invalidate silently) |
-
-The redirect map outside Nitro's cache is now cleared per database and only with a `site`/`all` purge, instead of process-wide on every call.
-
-Live check (two dev servers, `:4018` sentuan and `:4019` bag-post sharing one cache store, both stopped afterwards):
-
-| Step | Result |
-| --- | --- |
-| Warm products, product detail, site, site-config on sentuan; products on bag-post | 5 handler entries |
-| `{"reason":"catalog.item.update"}` | removed 2 (both sentuan catalog keys), 2 remaining (sentuan site key + bag-post key) |
-| `{"reason":"settings.update"}` | removed 2 (both sentuan site keys), 0 remaining for sentuan |
-| `{"reason":"settings.update"}` again | 0 removed |
-| Warm again, then `{"reason":"catalog.category.update"}` | removed 2 (one per scope), 1 remaining — the bag-post key |
-| `{"scope":"all"}` | removed 1 — that same bag-post key, proving it had survived the scoped purges |
-| No secret / wrong secret | `401` |
-| `{"scope":"everything"}` | `422 INVALID_CACHE_SCOPE` |
-| `{"reason":"import.finished"}` | `["site","catalog"]` |
-
+### Storefront cache purge: scopes and tenants (WEB-09, 2026-11-13)
+
+`POST /api/_internal/purge` (secret in `x-revalidate-secret`, reason in the JSON body) no longer drops the whole Nitro handler cache. It removes the entries whose key carries the deployment's database and the scope the reason names:
+
+| Key part | Example | Meaning |
+| --- | --- | --- |
+| database | `sen_tuan`, `bag_post` | `TM_MONGO_DB` slugged; two customers can share one Nitro cache |
+| scope | `site`, `catalog` | `site` = `/api/public/site` + `/api/public/site-config`; `catalog` = product/category reads |
+| rest | `products__api_public_products_limit_1` | namespace + path + query, all slugged |
+
+Separators are `__` on purpose: Nitro stores a handler entry as `nitro:handlers:...` and sanitises the key with `String(key).replace(/\W/g, "")`, so punctuation does not survive and `_` does. Entries written before this change (`catalogbagpostproducts...`, `publicsitevi`) are no longer matched by a scoped purge; they expire on their own TTL (300 s stale window) and `{ "scope": "all" }` removes them immediately.
+
+| Reason | Scopes dropped |
+| --- | --- |
+| `catalog.item.*` | `catalog` |
+| `catalog.category.*` | `site` + `catalog` (a renamed category appears in menus and URLs) |
+| `menu.*`, `settings.*`, `redirect.*` | `site` |
+| anything else / missing | `site` + `catalog` (never under-invalidate silently) |
+
+The redirect map outside Nitro's cache is now cleared per database and only with a `site`/`all` purge, instead of process-wide on every call.
+
+Live check (two dev servers, `:4018` sentuan and `:4019` bag-post sharing one cache store, both stopped afterwards):
+
+| Step | Result |
+| --- | --- |
+| Warm products, product detail, site, site-config on sentuan; products on bag-post | 5 handler entries |
+| `{"reason":"catalog.item.update"}` | removed 2 (both sentuan catalog keys), 2 remaining (sentuan site key + bag-post key) |
+| `{"reason":"settings.update"}` | removed 2 (both sentuan site keys), 0 remaining for sentuan |
+| `{"reason":"settings.update"}` again | 0 removed |
+| Warm again, then `{"reason":"catalog.category.update"}` | removed 2 (one per scope), 1 remaining — the bag-post key |
+| `{"scope":"all"}` | removed 1 — that same bag-post key, proving it had survived the scoped purges |
+| No secret / wrong secret | `401` |
+| `{"scope":"everything"}` | `422 INVALID_CACHE_SCOPE` |
+| `{"reason":"import.finished"}` | `["site","catalog"]` |
+
 CMS → storefront, end to end (CMS `:4005` with `TM_AUTH_MODE=mock`, `TM_WEB_REVALIDATE_URL=http://localhost:4018`, `TM_REVALIDATE_SECRET` matching the storefront's `REVALIDATE_SECRET`; storefront `:4018`, `sen-tuan`; both stopped afterwards):
 
 1. Warm the storefront: `GET /api/public/products?limit=1`, `/api/public/products/bo-hn-bo`, `/api/public/site`, `/api/public/site-config` → four handler entries.
@@ -586,31 +586,31 @@ The other direction — a settings save must clear only the site projection (sam
 6. `GET /api/public/site` then served the new name, i.e. the purged key really was re-rendered from the save.
 7. Cleanup: `settings` 1 → 0, `audit_logs` (`settings` / `site-settings`) 1 → 0, `idempotency_keys` 0 → 0 for that action; the admin endpoint returned `revision: 0` / `''` again, and one last `settings.update` purge removed the two keys re-cached by the read in step 6, after which the storefront served `''` again.
 
-Gate: `pnpm test:purge-scope` — 8 checks, no Mongo and no server (map-backed storage), part of `verify:all` (STATIC_GATES).
-
-Not done: the purge request is still authenticated by a shared secret only, not a signed or replay-limited event (WEB-09's event half), and a CDN in front of the storefront would still need its own purge call (Q12).
-
-### Audit write path: category and media (P2.c rest, 2026-11-13)
-
-The category and media services already recorded `audit_logs` rows, but nothing proved it and the entries carried no human intent. Both are now covered.
-
-| Check (disposable database, `pnpm test:audit-write`) | Expected |
-| --- | --- |
-| Create a category | One `category`/`create` row: resource id and key, revision 1, `changedFields` includes `key`, the session actor, the request id and the reason |
-| Update its locales | One `category`/`update` row at revision 2 with `changedFields: ['locales']` — only the fields that differ |
-| Delete a category with a child | `CATEGORY_HAS_CHILDREN` and **no** audit row: a refused command leaves no trace |
-| Delete a leaf category | `category`/`delete` row at `record.revision + 1`, same convention as content |
-| Upload, edit and delete a media file | `media`/`create`, `media`/`update` (`['title']`) and `media`/`delete` rows, each with the actor and reason |
-| A mutation with no note | `reason: null` and `requestId: null`; the actor is still recorded, and the previous reason is never reused |
-| List the audit log | `resourceType=category` returns 5 rows newest first, `resourceType=media` returns 3, a key search returns the three media rows, and another site returns `[]` |
-| `normalizeAuditReason` | Trims, collapses whitespace, turns control characters into spaces (a note cannot forge extra lines in the log view), caps at 500 characters, and maps blank or non-string input to `null` |
-
-How the note arrives: `x-audit-reason` on the mutation request, read by `writeMetaOf`, so every module that already builds write meta (content, category, media, settings, menu, catalog) gets it without each body schema learning a new field. `AUDIT_REASON_MAX` (500) lives in `models/audit.ts`, next to `changedFields` and `actor`.
-
-The Audit Log page renders the note above the actor line, quoted. **No CMS screen asks for a reason yet**: the header is supported end to end and shown when present, but every current save sends none, so the field is `null` in practice until an editor UI collects it. Recorded here so it is not mistaken for a working input.
-
-Gate: `pnpm test:audit-write` — 11 checks, part of `verify:all` (DOMAIN_GATES). The read side stays in `pnpm test:audit` (9 checks).
-
+Gate: `pnpm test:purge-scope` — 8 checks, no Mongo and no server (map-backed storage), part of `verify:all` (STATIC_GATES).
+
+Not done: the purge request is still authenticated by a shared secret only, not a signed or replay-limited event (WEB-09's event half), and a CDN in front of the storefront would still need its own purge call (Q12).
+
+### Audit write path: category and media (P2.c rest, 2026-11-13)
+
+The category and media services already recorded `audit_logs` rows, but nothing proved it and the entries carried no human intent. Both are now covered.
+
+| Check (disposable database, `pnpm test:audit-write`) | Expected |
+| --- | --- |
+| Create a category | One `category`/`create` row: resource id and key, revision 1, `changedFields` includes `key`, the session actor, the request id and the reason |
+| Update its locales | One `category`/`update` row at revision 2 with `changedFields: ['locales']` — only the fields that differ |
+| Delete a category with a child | `CATEGORY_HAS_CHILDREN` and **no** audit row: a refused command leaves no trace |
+| Delete a leaf category | `category`/`delete` row at `record.revision + 1`, same convention as content |
+| Upload, edit and delete a media file | `media`/`create`, `media`/`update` (`['title']`) and `media`/`delete` rows, each with the actor and reason |
+| A mutation with no note | `reason: null` and `requestId: null`; the actor is still recorded, and the previous reason is never reused |
+| List the audit log | `resourceType=category` returns 5 rows newest first, `resourceType=media` returns 3, a key search returns the three media rows, and another site returns `[]` |
+| `normalizeAuditReason` | Trims, collapses whitespace, turns control characters into spaces (a note cannot forge extra lines in the log view), caps at 500 characters, and maps blank or non-string input to `null` |
+
+How the note arrives: `x-audit-reason` on the mutation request, read by `writeMetaOf`, so every module that already builds write meta (content, category, media, settings, menu, catalog) gets it without each body schema learning a new field. `AUDIT_REASON_MAX` (500) lives in `models/audit.ts`, next to `changedFields` and `actor`.
+
+The Audit Log page renders the note above the actor line, quoted. **No CMS screen asks for a reason yet**: the header is supported end to end and shown when present, but every current save sends none, so the field is `null` in practice until an editor UI collects it. Recorded here so it is not mistaken for a working input.
+
+Gate: `pnpm test:audit-write` — 11 checks, part of `verify:all` (DOMAIN_GATES). The read side stays in `pnpm test:audit` (9 checks).
+
 ### Retention: revisions and audit (P2.c)
 
 `pnpm prune:retention` trims the two collections that grow without a bound. It is an operator command, not a scheduled job, and it only touches one site's own database.
@@ -629,16 +629,16 @@ TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=sen-tuan \
 | `--keep-revisions 0`, `--audit-days 0`, non-integer values | Exit `1` with `RETENTION_OPTIONS_INVALID`; nothing is deleted |
 | Missing `TM_MONGO_DB` or `--site` | Exit `1` with a message naming the missing input |
 
-Policy (Q16, closed 2026-11-09): the newest **50 revision snapshots per content record** and **365 days of `audit_logs`** are kept; `--keep-revisions` may range 1–500 and `--audit-days` 1–3650, and those bounds are guard rails rather than defaults. Any other value needs the owner, not an operator preference. The command stays dry-run unless `--apply` is passed.
-
-Schedule — manual by decision, because Q12/Q21 ruled out a cron, queue or worker:
-
-- **Monthly, per live site.** Dry run first, read the counts, then `--apply`. A monthly run should report a small steady number; a jump means either a bulk edit or a missed month, so check which before applying.
-- **After a bulk import, restore or migration, before the backup** is taken, so the snapshot is not dominated by superseded revisions.
-- **Before a site is archived or its database exported.**
-
-Record the `dryRun` report and the deleted counts in the site's operations log. Nothing in the app enforces the schedule, so a missed month is only visible as a larger next report.
-
+Policy (Q16, closed 2026-11-09): the newest **50 revision snapshots per content record** and **365 days of `audit_logs`** are kept; `--keep-revisions` may range 1–500 and `--audit-days` 1–3650, and those bounds are guard rails rather than defaults. Any other value needs the owner, not an operator preference. The command stays dry-run unless `--apply` is passed.
+
+Schedule — manual by decision, because Q12/Q21 ruled out a cron, queue or worker:
+
+- **Monthly, per live site.** Dry run first, read the counts, then `--apply`. A monthly run should report a small steady number; a jump means either a bulk edit or a missed month, so check which before applying.
+- **After a bulk import, restore or migration, before the backup** is taken, so the snapshot is not dominated by superseded revisions.
+- **Before a site is archived or its database exported.**
+
+Record the `dryRun` report and the deleted counts in the site's operations log. Nothing in the app enforces the schedule, so a missed month is only visible as a larger next report.
+
 Coverage: `pnpm test:retention` (5 checks, disposable database) — the cap, the audit cutoff, site isolation, dry run and the idempotent re-run.
 
 ### Site menus smoke (P2.d)
@@ -721,56 +721,56 @@ Coverage: `pnpm test:web-site` (10 pure checks) and `pnpm test:web-site-db` (6 l
 
 Probe documents, audit entries and idempotency keys must be removed afterwards. The service-level sequence is `pnpm test:settings` (8 checks).
 
-## Storefront accessibility baseline (WEB-12.a, 2026-11-13)
-
-Driven against the real dev server (`pnpm dev:web`, `TM_MONGO_DB=sen-tuan`, `TM_SITE_ID=sentuan`, `:4006`) in the packaged Chromium, on the seeded sentuan data. Each page was read from the live DOM rather than from source: landmarks, heading sequence, `html[lang]`, `img[alt]`, accessible names of every link/button, and every input's label.
-
-| Page | Before | After |
-| --- | --- | --- |
-| `/` | no `lang`, no skip link, one link whose only child was a decorative placeholder div (no accessible name) | `lang` follows the locale, skip link is the first tab stop, the duplicate image link is out of the AT tree |
-| `/products` | no input label (placeholder only), `h1 → h3` heading skip, pagination `nav` unlabeled | input labeled, cards are `h2`, pagination labeled |
-| `/products/bo-hn-bo` | no `lang` | clean |
-| `/categories/<slug>` | `lang` missing, breadcrumb label hardcoded English | clean, breadcrumb follows the locale |
-| `/bai-viet` | `lang` missing | clean |
-| `/gio-hang` | `lang` missing | clean, quantity/remove controls named |
-| 404 | `lang` empty, no layout | `lang` set (the error page replaces the layout, so it sets `htmlAttrs` itself); still no site header/footer by design |
-
-What was fixed in `tm-shared/nuxt-layers/web-base`:
-
-- `layouts/default.vue`: `useHead(() => ({ htmlAttrs: { lang: locale.value } }))` (the storefront keeps unprefixed URLs, so this attribute is the only locale signal), a skip link to `#main`, `id="main" tabindex="-1"` on the main landmark, and labels on both header navs.
-- `error.vue`: its own `htmlAttrs.lang`, because the error page replaces the layout that normally sets it.
-- `components/WebContentList.vue`: the card image link duplicates the title link, so it is now `aria-hidden="true" tabindex="-1"` instead of an unnamed second link.
-- `components/CatalogProductCard.vue`: card title `h3 → h2` (it sat directly under the page `h1`).
-- `pages/products/index.vue`: `aria-label` on the filter input; `:aria-label` on `UPagination` in this page and `categories/[slug].vue`.
-- Six breadcrumb `nav`s: `aria-label="Breadcrumb"` → `t('a11y.breadcrumb')` (the one in `pages/danh-muc/[slug].vue` is in the owner's pending category work and therefore ships with that change, not this one); new `a11y` block (`skipToContent`, `mainNav`, `mobileNav`, `breadcrumb`, `pagination`) in both `tm-web/i18n/locales/*.json`.
-
-Verified after the fixes: `lang` is `vi` on load and `en` after the in-header locale switch (all labels, the skip link and the pagination label follow it — no hardcoded English left on a Vietnamese page); heading sequence has no skips on every page above; no unnamed control and no unlabeled input anywhere in the audited set; every image has an `alt`; the skip link is the first focusable element and becomes visible at 16×16 px on focus; the brand link shows the UA focus outline.
-
-Not verified in this slice: real `Tab` key traversal could not be driven — the packaged Chromium only moves focus on a real key event when its window has OS focus, and `Tab` left `document.activeElement` on `<body>`; tab order was therefore read from the DOM (skip link first, then brand, then nav) and the skip link's focus styles were checked by focusing it programmatically. Colour contrast and screen-reader output are not measured yet. The 410 branch was exercised later, with a real redirect row — see the next section.
-
-## Storefront states and responsive widths (WEB-12.b, 2026-11-13)
-
-Same server and data as the accessibility baseline. Each state was reached with a real request, not by mocking a component; nothing was written to the database.
-
-| State | How it was reached | Result |
-| --- | --- | --- |
-| Empty listing | `/tim-kiem?q=zzzznotfound` | "No result matches “zzzznotfound”." with the heading intact |
-| Catalog unavailable | a second dev server on `:4017` with `TM_MONGO_URI=mongodb://127.0.0.1:27999` (nothing listening), `NUXT_IGNORE_LOCK=1`; the cached `/products` payload still answered, a cache-busting `?sort=price-asc&page=2` returned `503 error.catalogUnavailable` | The page renders its heading and the "Catalog temporarily unavailable / Product data could not be read right now" notice instead of an empty grid or a crash |
-| 404 | `/khong-ton-tai-abc` | `noindex, follow`, `lang`, `h1`, a single "back home" action; no header/footer by design |
-| 410 | `/probe-gone`, after the CMS stored a real `410` redirect row | the site's own error page with `Trang này đã được gỡ`, `noindex, follow`, `lang`, a single "back home" action (see the 410 section below for the full run) |
-
-Responsive widths were checked at 390×844 and 1280×800 by measuring `documentElement.scrollWidth` against `clientWidth` and the computed grid/nav of the live page:
-
-| Page | 390 px | 1280 px |
-| --- | --- | --- |
-| `/` | no horizontal overflow | — |
-| `/products` | one card per row, filter full width, compact nav only | cards multi-column, desktop nav, compact nav hidden |
-| `/products/bo-hn-bo` | no overflow, quantity input keeps its label | — |
-| `/categories/<slug>` | one card per row, no overflow | four columns, no overflow |
-| `/gio-hang` | no overflow, compact nav only | — |
-
-The one defect this found and fixed: `UPagination` rendered a 392 px row inside a 373 px viewport on `/products`, so the whole page had a 10 px horizontal scroll (the pagination `nav` is a flex item with `min-width: auto`, so adding `flex-wrap` to the root could not shrink it, and the shrinking attempt then pushed a button past the edge). It is now `class="w-full"` with `:ui="{ list: 'flex-wrap justify-center' }"` in both `products/index.vue` and `categories/[slug].vue`: at 390 px the list wraps to two rows (`nav` height 68 px) and `scrollWidth` equals `clientWidth`.
-
+## Storefront accessibility baseline (WEB-12.a, 2026-11-13)
+
+Driven against the real dev server (`pnpm dev:web`, `TM_MONGO_DB=sen-tuan`, `TM_SITE_ID=sentuan`, `:4006`) in the packaged Chromium, on the seeded sentuan data. Each page was read from the live DOM rather than from source: landmarks, heading sequence, `html[lang]`, `img[alt]`, accessible names of every link/button, and every input's label.
+
+| Page | Before | After |
+| --- | --- | --- |
+| `/` | no `lang`, no skip link, one link whose only child was a decorative placeholder div (no accessible name) | `lang` follows the locale, skip link is the first tab stop, the duplicate image link is out of the AT tree |
+| `/products` | no input label (placeholder only), `h1 → h3` heading skip, pagination `nav` unlabeled | input labeled, cards are `h2`, pagination labeled |
+| `/products/bo-hn-bo` | no `lang` | clean |
+| `/categories/<slug>` | `lang` missing, breadcrumb label hardcoded English | clean, breadcrumb follows the locale |
+| `/bai-viet` | `lang` missing | clean |
+| `/gio-hang` | `lang` missing | clean, quantity/remove controls named |
+| 404 | `lang` empty, no layout | `lang` set (the error page replaces the layout, so it sets `htmlAttrs` itself); still no site header/footer by design |
+
+What was fixed in `tm-shared/nuxt-layers/web-base`:
+
+- `layouts/default.vue`: `useHead(() => ({ htmlAttrs: { lang: locale.value } }))` (the storefront keeps unprefixed URLs, so this attribute is the only locale signal), a skip link to `#main`, `id="main" tabindex="-1"` on the main landmark, and labels on both header navs.
+- `error.vue`: its own `htmlAttrs.lang`, because the error page replaces the layout that normally sets it.
+- `components/WebContentList.vue`: the card image link duplicates the title link, so it is now `aria-hidden="true" tabindex="-1"` instead of an unnamed second link.
+- `components/CatalogProductCard.vue`: card title `h3 → h2` (it sat directly under the page `h1`).
+- `pages/products/index.vue`: `aria-label` on the filter input; `:aria-label` on `UPagination` in this page and `categories/[slug].vue`.
+- Six breadcrumb `nav`s: `aria-label="Breadcrumb"` → `t('a11y.breadcrumb')` (the one in `pages/danh-muc/[slug].vue` is in the owner's pending category work and therefore ships with that change, not this one); new `a11y` block (`skipToContent`, `mainNav`, `mobileNav`, `breadcrumb`, `pagination`) in both `tm-web/i18n/locales/*.json`.
+
+Verified after the fixes: `lang` is `vi` on load and `en` after the in-header locale switch (all labels, the skip link and the pagination label follow it — no hardcoded English left on a Vietnamese page); heading sequence has no skips on every page above; no unnamed control and no unlabeled input anywhere in the audited set; every image has an `alt`; the skip link is the first focusable element and becomes visible at 16×16 px on focus; the brand link shows the UA focus outline.
+
+Not verified in this slice: real `Tab` key traversal could not be driven — the packaged Chromium only moves focus on a real key event when its window has OS focus, and `Tab` left `document.activeElement` on `<body>`; tab order was therefore read from the DOM (skip link first, then brand, then nav) and the skip link's focus styles were checked by focusing it programmatically. Colour contrast and screen-reader output are not measured yet. The 410 branch was exercised later, with a real redirect row — see the next section.
+
+## Storefront states and responsive widths (WEB-12.b, 2026-11-13)
+
+Same server and data as the accessibility baseline. Each state was reached with a real request, not by mocking a component; nothing was written to the database.
+
+| State | How it was reached | Result |
+| --- | --- | --- |
+| Empty listing | `/tim-kiem?q=zzzznotfound` | "No result matches “zzzznotfound”." with the heading intact |
+| Catalog unavailable | a second dev server on `:4017` with `TM_MONGO_URI=mongodb://127.0.0.1:27999` (nothing listening), `NUXT_IGNORE_LOCK=1`; the cached `/products` payload still answered, a cache-busting `?sort=price-asc&page=2` returned `503 error.catalogUnavailable` | The page renders its heading and the "Catalog temporarily unavailable / Product data could not be read right now" notice instead of an empty grid or a crash |
+| 404 | `/khong-ton-tai-abc` | `noindex, follow`, `lang`, `h1`, a single "back home" action; no header/footer by design |
+| 410 | `/probe-gone`, after the CMS stored a real `410` redirect row | the site's own error page with `Trang này đã được gỡ`, `noindex, follow`, `lang`, a single "back home" action (see the 410 section below for the full run) |
+
+Responsive widths were checked at 390×844 and 1280×800 by measuring `documentElement.scrollWidth` against `clientWidth` and the computed grid/nav of the live page:
+
+| Page | 390 px | 1280 px |
+| --- | --- | --- |
+| `/` | no horizontal overflow | — |
+| `/products` | one card per row, filter full width, compact nav only | cards multi-column, desktop nav, compact nav hidden |
+| `/products/bo-hn-bo` | no overflow, quantity input keeps its label | — |
+| `/categories/<slug>` | one card per row, no overflow | four columns, no overflow |
+| `/gio-hang` | no overflow, compact nav only | — |
+
+The one defect this found and fixed: `UPagination` rendered a 392 px row inside a 373 px viewport on `/products`, so the whole page had a 10 px horizontal scroll (the pagination `nav` is a flex item with `min-width: auto`, so adding `flex-wrap` to the root could not shrink it, and the shrinking attempt then pushed a button past the edge). It is now `class="w-full"` with `:ui="{ list: 'flex-wrap justify-center' }"` in both `products/index.vue` and `categories/[slug].vue`: at 390 px the list wraps to two rows (`nav` height 68 px) and `scrollWidth` equals `clientWidth`.
+
 Not verified: the client-side loading/pending affordance (it relies on the API answering slowly, which a local server cannot produce deterministically).
 
 ## The 410 branch with a real redirect row (WEB-12.c, 2026-11-13)
@@ -787,8 +787,8 @@ The branch had no mapping in local data, and inventing one is off the table, so 
 
 One behaviour worth knowing when checking this with `curl`: without an HTML `Accept` header (curl's default `*/*`) Nitro answers a dev-mode JSON error envelope instead of the page. That is not specific to `410` — `GET /khong-ton-tai` behaves the same way and renders `Không tìm thấy trang` only when asked with `Accept: text/html` — so a check of these states must send a browser-like `Accept`.
 
-Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
-
+Still not verified in this branch: the client-side `clearError({ redirect: '/' })` action (read from the DOM as a button, not clicked), and 410 for a path that also has content behind it.
+
 ## The per-customer browser pass, and why a matrix output is not a preview (2026-11-13)
 
 The matrix was rebuilt after WEB-16/WEB-17 (8/8 targets, 319s), then each customer was opened in the browser from its own build:
@@ -811,7 +811,7 @@ PORT=4021 NUXT_MONGO_URI=mongodb://127.0.0.1:27017 NUXT_MONGO_DB=bag-post NUXT_S
 
 Same customer, same build: `200` and the login page renders. The storefront happened to run from the matrix copy only because web inlines everything it needs.
 
-Not covered: the CMS was checked up to the login page — signing in needs a Hub account, and there is none for these customers. `thanhtung` and `hoangvi` have no storefront in the registry, so there is no web pass for them.
+Not covered at the time: the CMS was checked up to the login page — signing in needs a Hub account, and there is none for these customers. `thanhtung` and `hoangvi` have no storefront in the registry, so there is no web pass for them. **Superseded 2026-11-16:** `TM_AUTH_MODE=mock` signs in without a Hub account, so the CMS pass now covers signed-in screens for all five customers — see the section below.
 
 ## Previewing a matrix build, and one browser pass (2026-11-13)
 
@@ -826,7 +826,30 @@ PORT=4018 NUXT_MONGO_URI=mongodb://127.0.0.1:27017 NUXT_CATALOG_DB_NAME=sen-tuan
 
 With those, `/`, `/products`, a product detail, `/bai-viet` and `/danh-muc` answer `200`, the home page lists eight real products, and the title/theme colour are `sentuan`'s with no other customer's name anywhere in the document.
 
-The pass also turned up dead links the gates cannot see: `/about` and `/contact` returned `404` while the header and footer link to both. They now exist as settings-driven pages (see `05`, WEB-16). Two limits worth stating: this was one customer's storefront, and the CMS browser pass is still blocked on a Hub session.
+The pass also turned up dead links the gates cannot see: `/about` and `/contact` returned `404` while the header and footer link to both. They now exist as settings-driven pages (see `05`, WEB-16). Two limits worth stating: this was one customer's storefront, and the CMS browser pass was still blocked on a Hub session (closed on 2026-11-16, below).
+
+## Signed-in CMS pass for all five customers, in mock mode (2026-11-16)
+
+The missing half of the pass above was never a data problem: it needed a session. `TM_AUTH_MODE=mock` issues one without a Hub account (dev only — the gate refuses mock in production with `503 AUTH_MODE_FORBIDDEN`), so each customer's CMS was started on the same port, signed in through the form, and driven in the browser:
+
+```bash
+TM_CUSTOMER_ID=bagpost TM_AUTH_MODE=mock TM_MONGO_URI=mongodb://127.0.0.1:27017 pnpm dev:cms
+```
+
+| customer | signed in | `/settings` reports | `/catalog` | other customer's name? |
+| --- | --- | --- | --- | --- |
+| `default` | yes | `default` / TM Enterprise Platform / `app_default_cms` | `503 DATABASE_NOT_CONFIGURED` → "This customer has no database configured yet…" | no |
+| `sentuan` | yes | `sentuan` / Sen Tuấn Jewelry & Gemstones / `app_sentuan_cms` | 200, 241 products | no |
+| `bagpost` | yes | `bagpost` / Bag Post Logistics & Packaging / `app_bag_post_cms` | 200, 0 products (empty `bag-post` data, not a failure) | no |
+| `thanhtung` | yes | `thanhtung` / Thanh Tùng Industrial Commerce / `app_thanh_tung_cms` | database unconfigured, same coded 503 | no |
+| `hoangvi` | yes | `hoangvi` / Hoàng Vi Beauty & Cosmetics / `app_hoang_vi_cms` | database unconfigured, same coded 503 | no |
+
+Two defects the pass found, both fixed inside it:
+
+- A customer with no database (a legitimate state: `default`, `thanhtung`, `hoangvi`) answered **`503 Server Error` with no error code** on every admin read, because `DatabaseBindingError` escaped `withCustomerDb` as a plain `Error`. `withCustomerDb` now answers `503 DATABASE_NOT_CONFIGURED` (or the specific binding code) with the usual envelope, so every admin route benefits without touching the routes.
+- The catalog list reported a **failed save** for a failed read — `admin.catalog.errors.generic` says "The change could not be saved", and the list's catch reused it. The list now has its own copy (`loadFailed`) and names the unconfigured-database case exactly `(notConfigured)`.
+
+Not covered: Hub-backed screens in mock mode answer `503 MOCK_HUB_UNAVAILABLE` by design, so users/roles/routes/configs/mail/notifications/integrations were not exercised signed-in; they are transitional pages (Q5) with no local data model yet. Their real behavior still needs a Hub session.
 
 ## The Vue alias that unblocked the `link:` adoption (WEB-15, 2026-11-13)
 

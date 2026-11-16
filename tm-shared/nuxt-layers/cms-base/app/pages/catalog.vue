@@ -201,10 +201,17 @@ async function load() {
     entries.value = payload.data
     counts.value = payload.meta?.counts ?? {}
   } catch (caught) {
-    error.value = messageFor(errorCode(caught))
+    // A failed read is not a failed save: the generic mutation copy told editors to
+    // retry a change they never made.
+    error.value = loadMessageFor(errorCode(caught))
   } finally {
     loading.value = false
   }
+}
+
+function loadMessageFor(code: string | null) {
+  if (code === 'DATABASE_NOT_CONFIGURED') return t('admin.catalog.errors.notConfigured')
+  return t('admin.catalog.errors.loadFailed')
 }
 
 async function loadReferenceData() {

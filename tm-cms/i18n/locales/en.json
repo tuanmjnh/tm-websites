@@ -924,6 +924,8 @@
         "categoryInUse": "The category still has products, so it cannot be deleted.",
         "categoryHasChildren": "The category still has child categories, so it cannot be deleted.",
         "generic": "The change could not be saved. Please try again.",
+        "loadFailed": "The catalog could not be loaded. Reload the page to try again.",
+        "notConfigured": "This customer has no database configured yet, so the catalog cannot be read.",
         "variantRequired": "A variable product needs at least one variant.",
         "variantSkuRequired": "Every variant needs a SKU."
       },

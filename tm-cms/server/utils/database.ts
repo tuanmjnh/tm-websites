@@ -122,10 +122,23 @@ export function getDatabaseBinding(event: H3Event): DatabaseBinding {
   })
 }
 
+/**
+ * A missing or misdeclared binding is a deployment state, not a server fault. It is
+ * answered here, once, so every admin route returns a coded envelope instead of the
+ * bare `503 Server Error` an uncaught DatabaseBindingError produced: the CMS needs
+ * `DATABASE_NOT_CONFIGURED` to tell an editor this customer has no database yet.
+ */
 export async function withCustomerDb<T>(event: H3Event, handler: (connection: Connection) => Promise<T>): Promise<T> {
-  const binding = getDatabaseBinding(event)
-  const connection = await connectDatabase(binding)
-  return handler(connection)
+  try {
+    const binding = getDatabaseBinding(event)
+    const connection = await connectDatabase(binding)
+    return await handler(connection)
+  } catch (error) {
+    if (error instanceof DatabaseBindingError) {
+      return errorResponse(error.statusCode, error.code, 'Cơ sở dữ liệu của khách hàng chưa sẵn sàng')
+    }
+    throw error
+  }
 }
 
 /** Test/shutdown helper: closes every pooled connection this process opened. */
