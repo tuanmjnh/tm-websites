@@ -67,14 +67,11 @@ const canonical = computed(() => {
 const title = computed(() => (category.value ? readLocalized(category.value.name, locale.value) : ''))
 const description = computed(() => (category.value?.description ? readLocalized(category.value.description, locale.value) : ''))
 
-/** A per-category SEO title wins, then the displayed name. */
-const seoTitle = computed(() => (category.value?.seo?.title
-  ? readLocalized(category.value.seo.title, locale.value) || title.value
-  : title.value))
-
-const seoDescription = computed(() => (category.value?.seo?.description
-  ? readLocalized(category.value.seo.description, locale.value) || description.value || t('category.indexSubtitle')
-  : description.value || t('category.indexSubtitle')))
+/** A per-category SEO value wins, then the displayed copy. */
+const seoTitle = computed(() => readLocalized(category.value?.seo?.title, locale.value) || title.value)
+const seoDescription = computed(() => readLocalized(category.value?.seo?.description, locale.value)
+  || description.value
+  || t('category.indexSubtitle'))
 
 /** The three steps the template shows, with the category as the current page. */
 const breadcrumbs = computed(() => buildBreadcrumbJsonLd(baseUrl, category.value

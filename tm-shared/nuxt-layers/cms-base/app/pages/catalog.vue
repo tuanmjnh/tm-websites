@@ -558,7 +558,7 @@ const categoriesOpen = ref(false)
 const categoryBusy = ref(false)
 const categoryError = ref<string | null>(null)
 const categoryEditing = ref<string | null>(null)
-const categoryDraft = ref({
+const emptyCategoryDraft = () => ({
   key: '',
   title: '',
   parent: null as string | null,
@@ -568,6 +568,8 @@ const categoryDraft = ref({
   seoTitle: '',
   seoDescription: '',
 })
+
+const categoryDraft = ref(emptyCategoryDraft())
 
 const parentItems = computed(() => [
   { label: t('admin.catalog.categories.noParent'), value: null },
@@ -580,16 +582,7 @@ function resetCategoryForm() {
   categoryEditing.value = null
   categoryError.value = null
   auditReason.value = ''
-  Object.assign(categoryDraft.value, {
-    key: '',
-    title: '',
-    parent: null,
-    order: 0,
-    description: '',
-    thumbnail: '',
-    seoTitle: '',
-    seoDescription: '',
-  })
+  Object.assign(categoryDraft.value, emptyCategoryDraft())
 }
 
 function editCategory(category: AdminCatalogCategory) {

@@ -78,6 +78,11 @@ export const AdminCatalogItemSchema = z.object({
 })
 export type AdminCatalogItem = z.infer<typeof AdminCatalogItemSchema>
 
+const AdminCatalogCategorySeoSchema = z.object({
+  title: z.record(z.string(), z.string()),
+  description: z.record(z.string(), z.string()),
+})
+
 export const AdminCatalogCategorySchema = z.object({
   id: z.string(),
   siteId: z.string(),
@@ -89,10 +94,7 @@ export const AdminCatalogCategorySchema = z.object({
   fullPath: z.record(z.string(), z.string()),
   description: z.record(z.string(), z.string()),
   thumbnail: z.string().nullable(),
-  seo: z.object({
-    title: z.record(z.string(), z.string()),
-    description: z.record(z.string(), z.string()),
-  }),
+  seo: AdminCatalogCategorySeoSchema,
   revision: z.number(),
   itemCount: z.number(),
   createdAt: z.string().nullable(),
@@ -143,10 +145,7 @@ export const AdminCatalogCategoryDraftSchema = z.object({
   slug: z.record(z.string(), z.string()),
   description: z.record(z.string(), z.string()),
   thumbnail: z.string().nullable(),
-  seo: z.object({
-    title: z.record(z.string(), z.string()),
-    description: z.record(z.string(), z.string()),
-  }),
+  seo: AdminCatalogCategorySeoSchema,
 })
 export type AdminCatalogCategoryDraft = z.infer<typeof AdminCatalogCategoryDraftSchema>
 

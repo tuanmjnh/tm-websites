@@ -266,6 +266,7 @@ export function normalizeCatalogCategoryInput(input: unknown): CatalogCategoryDr
   const parent = source.parent === null || source.parent === undefined || source.parent === ''
     ? null
     : normalizeSlug(source.parent)
+  const seo = readRecord(source.seo)
 
   try {
     return CatalogCategoryDraftSchema.parse({
@@ -276,13 +277,10 @@ export function normalizeCatalogCategoryInput(input: unknown): CatalogCategoryDr
       slug,
       description: normalizeLocalized(source.description, 500),
       thumbnail: typeof source.thumbnail === 'string' && source.thumbnail.trim() ? source.thumbnail.trim() : null,
-      seo: (() => {
-        const seo = readRecord(source.seo)
-        return {
-          title: normalizeLocalized(seo?.title, 200),
-          description: normalizeLocalized(seo?.description, 500),
-        }
-      })(),
+      seo: {
+        title: normalizeLocalized(seo?.title, 200),
+        description: normalizeLocalized(seo?.description, 500),
+      },
     })
   } catch (error) {
     return translateZod(error)
