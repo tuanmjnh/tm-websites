@@ -19,6 +19,11 @@ const trimmed = (max: number) => z.string().trim().max(max)
 
 const CompanySchema = z.object({
   name: trimmed(120),
+  /** Per-locale display name; an absent or empty entry falls back to `name`. */
+  names: z.object({
+    vi: trimmed(120),
+    en: trimmed(120),
+  }).partial(),
   legalName: trimmed(160),
   taxId: trimmed(40),
   email: z.union([z.literal(''), z.string().trim().email().max(160)]),
@@ -98,6 +103,7 @@ export function defaultSiteSettings(siteId: string): AdminSiteSettings {
     revision: 0,
     company: {
       name: '',
+      names: {},
       legalName: '',
       taxId: '',
       email: '',

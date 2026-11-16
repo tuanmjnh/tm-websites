@@ -22,6 +22,7 @@ const { fetchSettings, saveSettings, describeError: describeSettingsError } = us
 const form = reactive({
   revision: 0,
   companyName: '',
+  companyNames: { vi: '', en: '' } as Record<string, string>,
   legalName: '',
   taxId: '',
   email: '',
@@ -59,6 +60,7 @@ const titlePreviewFor = (locale: string) => {
 function applySettings(settings: AdminSiteSettings) {
   form.revision = settings.revision
   form.companyName = settings.company.name
+  form.companyNames = { vi: settings.company.names?.vi ?? '', en: settings.company.names?.en ?? '' }
   form.legalName = settings.company.legalName
   form.taxId = settings.company.taxId
   form.email = settings.company.email
@@ -133,9 +135,10 @@ async function saveSite() {
   settingsMessage.value = null
   const patch: AdminSiteSettingsPatch = {
     revision: form.revision,
-    company: {
-      name: form.companyName,
-      legalName: form.legalName,
+          company: {
+        name: form.companyName,
+        names: { ...form.companyNames },
+        legalName: form.legalName,
       taxId: form.taxId,
       email: form.email,
       phone: form.phone,
@@ -291,6 +294,19 @@ onMounted(load)
           <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <UFormField :label="t('admin.configs.site.fields.name')">
               <UInput v-model="form.companyName" size="sm" :disabled="!canWrite" :maxlength="120" />
+            </UFormField>
+            <UFormField
+              v-for="locale in SETTINGS_LOCALES"
+              :key="`company-name-${locale}`"
+              :label="t('admin.configs.site.fields.nameLocale', { locale: locale.toUpperCase() })"
+            >
+              <UInput
+                v-model="form.companyNames[locale]"
+                size="sm"
+                :disabled="!canWrite"
+                :maxlength="120"
+                :placeholder="form.companyName"
+              />
             </UFormField>
             <UFormField :label="t('admin.configs.site.fields.legalName')">
               <UInput v-model="form.legalName" size="sm" :disabled="!canWrite" :maxlength="160" />

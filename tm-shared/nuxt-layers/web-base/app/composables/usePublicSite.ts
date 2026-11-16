@@ -44,7 +44,12 @@ export const usePublicSite = () => {
   const company = computed(() => publicSite.value?.company)
   const seo = computed(() => publicSite.value?.seo)
 
-  const brandName = computed(() => company.value?.name || companyName.value)
+  const brandName = computed(() => {
+    const code = String(locale.value || '')
+    const localized = company.value?.names?.[code]
+    if (localized && localized.trim()) return localized.trim()
+    return company.value?.name || companyName.value
+  })
   const contactEmail = computed(() => company.value?.email || siteConfig.value.supportEmail || '')
   const contactPhone = computed(() => company.value?.phone || siteConfig.value.supportPhone || '')
   const contactAddress = computed(() => company.value?.address || siteConfig.value.address || '')

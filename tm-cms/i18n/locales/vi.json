@@ -189,6 +189,7 @@
         "revision": "Bản cấu hình {revision}",
         "fields": {
           "name": "Tên hiển thị",
+          "nameLocale": "Tên hiển thị ({locale})",
           "legalName": "Tên pháp lý",
           "taxId": "Mã số thuế",
           "email": "Email liên hệ",

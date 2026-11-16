@@ -44,6 +44,7 @@ function toAdminSettings(record: SettingsRecord): AdminSiteSettings {
     revision: record.revision,
     company: {
       name: record.company?.name ?? '',
+      names: normalizeCompanyNames(record.company?.names),
       legalName: record.company?.legalName ?? '',
       taxId: record.company?.taxId ?? '',
       email: record.company?.email ?? '',
@@ -82,6 +83,16 @@ export async function getSiteSettings(
 }
 
 /** Only known locales with a usable string, so a stray key never reaches the API. */
+function normalizeCompanyNames(input: unknown): Partial<Record<SettingsLocale, string>> {
+  const source = (input && typeof input === 'object') ? input as Record<string, unknown> : {}
+  const result: Partial<Record<SettingsLocale, string>> = {}
+  for (const locale of SETTINGS_LOCALES) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
 function normalizeTitleTemplates(input: unknown): Partial<Record<SettingsLocale, string>> {
   const source = (input && typeof input === 'object') ? input as Record<string, unknown> : {}
   const result: Partial<Record<SettingsLocale, string>> = {}
@@ -123,6 +134,26 @@ function normalizeLocales(
     throw new SettingsServiceError(422, 'SETTINGS_LOCALES_INVALID', 'The default locale must be one of the enabled locales')
   }
   return { default: input.default, enabled: [...enabled] }
+}
+
+/**
+ * `company` is merged field by field, and `names` key by key: saving only the
+ * English name must not drop the Vietnamese one.
+ */
+function mergeCompanySettings(
+  current: AdminSiteSettings['company'],
+  patch: AdminSiteSettingsPatch['company'],
+): AdminSiteSettings['company'] {
+  const next: AdminSiteSettings['company'] = { ...current, ...(patch ?? {}) }
+  if (patch?.names) {
+    const merged: Partial<Record<SettingsLocale, string>> = {}
+    for (const locale of SETTINGS_LOCALES) {
+      const value = locale in patch.names ? patch.names[locale] : current.names[locale]
+      if (typeof value === 'string' && value.trim()) merged[locale] = value.trim()
+    }
+    next.names = merged
+  }
+  return next
 }
 
 /**
@@ -186,7 +217,7 @@ export async function updateSiteSettings(
 
   const merged: AdminSiteSettings = {
     ...current,
-    company: { ...current.company, ...(patch.company ?? {}) },
+    company: mergeCompanySettings(current.company, patch.company),
     seo: mergeSeoSettings(current.seo, patch.seo),
     locales: normalizeLocales({ ...current.locales, ...(patch.locales ?? {}) }),
     modules: { ...current.modules, ...(patch.modules ?? {}) },

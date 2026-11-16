@@ -16,6 +16,8 @@ export const SITE_MODULES = ['content', 'catalog', 'orders', 'inventory'] as con
 
 export interface SiteSettingsCompany {
   name: string
+  /** locale -> display name; a missing or empty entry falls back to `name`. */
+  names: Record<string, string>
   legalName: string
   taxId: string
   email: string
@@ -58,6 +60,7 @@ export interface SiteSettingsDocument {
 const CompanySchema = new Schema<SiteSettingsCompany>(
   {
     name: { type: String, default: '' },
+    names: { type: Schema.Types.Mixed, default: () => ({}) },
     legalName: { type: String, default: '' },
     taxId: { type: String, default: '' },
     email: { type: String, default: '' },

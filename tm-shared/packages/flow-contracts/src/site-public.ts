@@ -42,6 +42,8 @@ export type PublicMenu = z.infer<typeof PublicMenuSchema>
 export const PublicSiteSchema = z.object({
   company: z.object({
     name: z.string(),
+    /** Per-locale display name; absent locale keeps `name`. */
+    names: z.record(z.string(), z.string()),
     email: z.string(),
     phone: z.string(),
     address: z.string(),
@@ -69,7 +71,7 @@ export type PublicSite = z.infer<typeof PublicSiteSchema>
 
 export function emptyPublicSite(): PublicSite {
   return {
-    company: { name: '', email: '', phone: '', address: '', logoMediaId: '' },
+    company: { name: '', names: {}, email: '', phone: '', address: '', logoMediaId: '' },
     seo: { titleTemplate: '%s', titleTemplates: {}, defaultDescriptions: {}, defaultImageMediaIds: {}, defaultDescription: '', defaultImageMediaId: '' },
     locales: { default: 'vi', enabled: ['vi'] },
     menus: [],
@@ -207,6 +209,22 @@ function readTitleTemplates(input: unknown, enabled: readonly string[]): Record<
 }
 
 /**
+ * Locale company names are advisory: only enabled locales with a non-empty
+ * string are published, and the storefront falls back to `name`.
+ */
+function readCompanyNames(input: unknown, enabled: readonly string[]): Record<string, string> {
+  if (!input || typeof input !== 'object') return {}
+  const source = input as Record<string, unknown>
+  const allowed = enabled.length ? enabled : ['vi']
+  const result: Record<string, string> = {}
+  for (const locale of allowed) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
+/**
  * Locale descriptions are advisory: only enabled locales with a non-empty string
  * are published, and the storefront falls back to `defaultDescription`.
  */
@@ -270,6 +288,7 @@ export function buildPublicSite(input: {
   return {
     company: {
       name: readString(company.name),
+      names: readCompanyNames(company.names, enabled),
       email: readString(company.email),
       phone: readString(company.phone),
       address: readString(company.address),

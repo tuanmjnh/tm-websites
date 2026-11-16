@@ -189,6 +189,7 @@
         "revision": "Settings revision {revision}",
         "fields": {
           "name": "Display name",
+          "nameLocale": "Display name ({locale})",
           "legalName": "Legal name",
           "taxId": "Tax id",
           "email": "Contact email",
