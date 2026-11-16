@@ -9,6 +9,7 @@ import type {
   AdminCatalogStatusFilter,
   AdminCatalogVariant,
 } from '@tm/flow-contracts/catalog-admin'
+import { getItemPriceRange } from '@tm/flow-utils/price'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -183,14 +184,14 @@ const statusColor = (value: AdminCatalogStatus) => {
  * 0` and the row looked like a blank product, so both fields fall back to the variants
  * first. Built as one string rather than four template fragments: the separators stay
  * in one place and a missing barcode simply drops out.
+ *
+ * The price is what a customer would pay (`salePrice` when set, base price otherwise),
+ * read through the same helper the storefront uses, so the list cannot advertise a
+ * different number than the shop does.
  */
 function rowSubtitle(item: AdminCatalogItem): string {
   const format = (value: number) => value.toLocaleString('vi-VN')
-  const prices = item.type === 'variable'
-    ? item.variants.map(variant => variant.basePrice).filter(price => Number.isFinite(price))
-    : []
-  const min = prices.length > 0 ? Math.min(...prices) : item.basePrice
-  const max = prices.length > 0 ? Math.max(...prices) : item.basePrice
+  const { min, max } = getItemPriceRange(item)
 
   const sku = item.sku.trim()
     || (item.variants.length > 0

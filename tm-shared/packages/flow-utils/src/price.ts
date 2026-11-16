@@ -1,15 +1,36 @@
 import type { ItemPrice } from './types'
 
 interface VariantLike {
-  salePrice?: number
+  salePrice?: number | null
   basePrice?: number
 }
 
 interface ItemLike {
   type?: string
-  salePrice?: number
+  salePrice?: number | null
   basePrice?: number
   variants?: VariantLike[] | null
+}
+
+/**
+ * What a customer actually pays: the sale price when there is one, the base price
+ * otherwise. The one rule the storefront and the CMS both have to agree on.
+ */
+export const effectivePrice = (entry?: VariantLike | null): number =>
+  entry?.salePrice || entry?.basePrice || 0
+
+/**
+ * The cheapest and dearest price a customer could pay. A variable item's own
+ * `basePrice`/`salePrice` are a summary of its variants, so the variants decide.
+ */
+export const getItemPriceRange = (item?: ItemLike | null): { min: number, max: number } => {
+  if (!item) return { min: 0, max: 0 }
+
+  const prices = item.type === 'variable' && item.variants?.length
+    ? item.variants.map(variant => effectivePrice(variant))
+    : [effectivePrice(item)]
+
+  return { min: Math.min(...prices), max: Math.max(...prices) }
 }
 
 export const getItemDisplayPrice = (item?: ItemLike | null): ItemPrice => {
@@ -17,7 +38,7 @@ export const getItemDisplayPrice = (item?: ItemLike | null): ItemPrice => {
 
   if (item.type !== 'variable' || !item.variants?.length) {
     return {
-      price: item.salePrice || item.basePrice || 0,
+      price: effectivePrice(item),
       basePrice: item.basePrice || 0
     }
   }
@@ -27,7 +48,7 @@ export const getItemDisplayPrice = (item?: ItemLike | null): ItemPrice => {
 
   for (const v of item.variants) {
     if (!v) continue
-    const currentPrice = v.salePrice || v.basePrice || 0
+    const currentPrice = effectivePrice(v)
     if (currentPrice > 0 && currentPrice < minPrice) minPrice = currentPrice
     const currentBase = v.basePrice || 0
     if (currentBase > 0 && currentBase < minBasePrice) minBasePrice = currentBase

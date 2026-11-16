@@ -47,7 +47,9 @@ export {
 } from './format'
 
 export {
+  effectivePrice,
   getItemDisplayPrice,
+  getItemPriceRange,
   numberToVietnameseWords
 } from './price'
 
