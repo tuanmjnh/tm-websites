@@ -173,9 +173,14 @@ useHead({
       {{ t('search.hint') }}
     </p>
 
-    <p v-else-if="noResults" class="rounded-sm border border-default/60 p-6 text-sm text-muted">
-      {{ t('search.empty', { q }) }}
-    </p>
+    <div v-else-if="noResults" class="rounded-sm border border-default/60 p-6 text-sm text-muted">
+      <p>{{ t('search.empty', { q }) }}</p>
+      <p class="mt-2">{{ t('search.suggestionsHint') }}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <NuxtLink to="/products" class="text-primary hover:underline">{{ t('search.browseProducts') }}</NuxtLink>
+        <NuxtLink to="/bai-viet" class="text-primary hover:underline">{{ t('search.browseArticles') }}</NuxtLink>
+      </div>
+    </div>
 
     <template v-else>
       <p v-if="contentError" class="mb-6 rounded-sm border border-error/40 bg-error/10 p-4 text-sm text-error">
