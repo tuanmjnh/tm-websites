@@ -30,6 +30,8 @@ const form = reactive({
   logoMediaId: '',
   titleTemplate: '%s',
   titleTemplates: { vi: '', en: '' } as Record<string, string>,
+  defaultDescriptions: { vi: '', en: '' } as Record<string, string>,
+  defaultImageMediaIds: { vi: '', en: '' } as Record<string, string>,
   defaultDescription: '',
   defaultImageMediaId: '',
   defaultLocale: 'vi' as (typeof SETTINGS_LOCALES)[number],
@@ -65,6 +67,8 @@ function applySettings(settings: AdminSiteSettings) {
   form.logoMediaId = settings.company.logoMediaId
   form.titleTemplate = settings.seo.titleTemplate
   form.titleTemplates = { vi: settings.seo.titleTemplates?.vi ?? '', en: settings.seo.titleTemplates?.en ?? '' }
+  form.defaultDescriptions = { vi: settings.seo.defaultDescriptions?.vi ?? '', en: settings.seo.defaultDescriptions?.en ?? '' }
+  form.defaultImageMediaIds = { vi: settings.seo.defaultImageMediaIds?.vi ?? '', en: settings.seo.defaultImageMediaIds?.en ?? '' }
   form.defaultDescription = settings.seo.defaultDescription
   form.defaultImageMediaId = settings.seo.defaultImageMediaId
   form.defaultLocale = settings.locales.default
@@ -141,6 +145,8 @@ async function saveSite() {
     seo: {
       titleTemplate: form.titleTemplate,
       titleTemplates: { ...form.titleTemplates },
+      defaultDescriptions: { ...form.defaultDescriptions },
+      defaultImageMediaIds: { ...form.defaultImageMediaIds },
       defaultDescription: form.defaultDescription,
       defaultImageMediaId: form.defaultImageMediaId,
     },
@@ -327,6 +333,20 @@ onMounted(load)
             <UFormField :label="t('admin.configs.site.fields.defaultDescription')" class="sm:col-span-2">
               <UInput v-model="form.defaultDescription" size="sm" :disabled="!canWrite" :maxlength="300" />
             </UFormField>
+            <UFormField
+              v-for="locale in SETTINGS_LOCALES"
+              :key="`default-description-${locale}`"
+              :label="t('admin.configs.site.fields.defaultDescriptionLocale', { locale: locale.toUpperCase() })"
+              class="sm:col-span-2"
+            >
+              <UInput
+                v-model="form.defaultDescriptions[locale]"
+                size="sm"
+                :disabled="!canWrite"
+                :maxlength="300"
+                :placeholder="form.defaultDescription"
+              />
+            </UFormField>
             <UFormField :label="t('admin.configs.site.fields.logo')">
               <div class="flex items-center gap-2">
                 <UInput :model-value="mediaLabel(form.logoMediaId)" readonly size="sm" class="min-w-0 flex-1" />
@@ -340,6 +360,19 @@ onMounted(load)
                 <UButton size="sm" color="neutral" variant="soft" :label="t('admin.configs.site.choose')" :disabled="!canWrite" @click="openPicker('seoImage')" />
                 <UButton v-if="form.defaultImageMediaId" size="sm" color="neutral" variant="ghost" icon="i-lucide-x" :disabled="!canWrite" :aria-label="t('admin.configs.site.clear')" @click="form.defaultImageMediaId = ''" />
               </div>
+            </UFormField>
+            <UFormField
+              v-for="locale in SETTINGS_LOCALES"
+              :key="`default-image-${locale}`"
+              :label="t('admin.configs.site.fields.seoImageLocale', { locale: locale.toUpperCase() })"
+            >
+              <UInput
+                v-model="form.defaultImageMediaIds[locale]"
+                size="sm"
+                :disabled="!canWrite"
+                :maxlength="64"
+                :placeholder="form.defaultImageMediaId"
+              />
             </UFormField>
           </div>
 

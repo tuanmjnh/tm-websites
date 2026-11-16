@@ -51,6 +51,10 @@ export const PublicSiteSchema = z.object({
     titleTemplate: z.string(),
     /** Locale overrides; an absent locale keeps `titleTemplate`. */
     titleTemplates: z.record(z.string(), z.string()),
+    /** Per-locale default description; absent locale keeps `defaultDescription`. */
+    defaultDescriptions: z.record(z.string(), z.string()),
+    /** Per-locale default OG image media id; absent locale keeps `defaultImageMediaId`. */
+    defaultImageMediaIds: z.record(z.string(), z.string()),
     defaultDescription: z.string(),
     defaultImageMediaId: z.string(),
   }),
@@ -66,7 +70,7 @@ export type PublicSite = z.infer<typeof PublicSiteSchema>
 export function emptyPublicSite(): PublicSite {
   return {
     company: { name: '', email: '', phone: '', address: '', logoMediaId: '' },
-    seo: { titleTemplate: '%s', titleTemplates: {}, defaultDescription: '', defaultImageMediaId: '' },
+    seo: { titleTemplate: '%s', titleTemplates: {}, defaultDescriptions: {}, defaultImageMediaIds: {}, defaultDescription: '', defaultImageMediaId: '' },
     locales: { default: 'vi', enabled: ['vi'] },
     menus: [],
   }
@@ -202,6 +206,38 @@ function readTitleTemplates(input: unknown, enabled: readonly string[]): Record<
   return result
 }
 
+/**
+ * Locale descriptions are advisory: only enabled locales with a non-empty string
+ * are published, and the storefront falls back to `defaultDescription`.
+ */
+function readDefaultDescriptions(input: unknown, enabled: readonly string[]): Record<string, string> {
+  if (!input || typeof input !== 'object') return {}
+  const source = input as Record<string, unknown>
+  const allowed = enabled.length ? enabled : ['vi']
+  const result: Record<string, string> = {}
+  for (const locale of allowed) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
+/**
+ * Locale OG image media ids are advisory: only enabled locales with a non-empty
+ * string are published, and the storefront falls back to `defaultImageMediaId`.
+ */
+function readDefaultImageMediaIds(input: unknown, enabled: readonly string[]): Record<string, string> {
+  if (!input || typeof input !== 'object') return {}
+  const source = input as Record<string, unknown>
+  const allowed = enabled.length ? enabled : ['vi']
+  const result: Record<string, string> = {}
+  for (const locale of allowed) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
 export function buildPublicSite(input: {
   settings: Record<string, unknown> | null
   menus: readonly Record<string, unknown>[]
@@ -242,6 +278,8 @@ export function buildPublicSite(input: {
     seo: {
       titleTemplate: readString(seo.titleTemplate, '%s'),
       titleTemplates: readTitleTemplates(seo.titleTemplates, enabled),
+      defaultDescriptions: readDefaultDescriptions(seo.defaultDescriptions, enabled),
+      defaultImageMediaIds: readDefaultImageMediaIds(seo.defaultImageMediaIds, enabled),
       defaultDescription: readString(seo.defaultDescription),
       defaultImageMediaId: readString(seo.defaultImageMediaId),
     },

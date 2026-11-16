@@ -198,11 +198,13 @@
           "titleTemplateLocale": "Tiêu đề SEO ({locale})",
           "titleTemplateLocaleHint": "Để trống thì dùng mẫu chung ở trên.",
           "defaultDescription": "Mô tả SEO mặc định",
+          "defaultDescriptionLocale": "Mô tả SEO ({locale})",
           "defaultLocale": "Ngôn ngữ mặc định",
           "enabledLocales": "Ngôn ngữ bật",
           "modules": "Module",
           "logo": "Logo",
-          "seoImage": "Ảnh SEO mặc định"
+          "seoImage": "Ảnh SEO mặc định",
+          "seoImageLocale": "Ảnh SEO ({locale})"
         },
         "modules": {
           "content": "Nội dung",

@@ -37,6 +37,21 @@ const SeoSchema = z.object({
     vi: trimmed(160),
     en: trimmed(160),
   }).partial(),
+  /**
+   * Per-locale default description. An absent or empty entry falls back to
+   * `defaultDescription`, so a single-language site never has to think about it.
+   */
+  defaultDescriptions: z.object({
+    vi: trimmed(300),
+    en: trimmed(300),
+  }).partial(),
+  /**
+   * Per-locale default OG image media id, same fallback rule as above.
+   */
+  defaultImageMediaIds: z.object({
+    vi: trimmed(64),
+    en: trimmed(64),
+  }).partial(),
   defaultDescription: trimmed(300),
   defaultImageMediaId: trimmed(64),
 })
@@ -93,6 +108,8 @@ export function defaultSiteSettings(siteId: string): AdminSiteSettings {
     seo: {
       titleTemplate: '%s',
       titleTemplates: {},
+      defaultDescriptions: {},
+      defaultImageMediaIds: {},
       defaultDescription: '',
       defaultImageMediaId: '',
     },

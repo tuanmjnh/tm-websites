@@ -123,15 +123,24 @@ check('locale title templates are published for enabled locales only', () => {
   const site = buildPublicSite({
     settings: {
       ...settings,
-      seo: { ...settings.seo, titleTemplates: { vi: '  %s · Sen Tuấn  ', en: '', fr: '%s | X' } },
+      seo: {
+        ...settings.seo,
+        titleTemplates: { vi: '  %s · Sen Tuấn  ', en: '', fr: '%s | X' },
+        defaultDescriptions: { vi: '  Mô tả  ', en: '', fr: 'x' },
+        defaultImageMediaIds: { vi: 'img1', en: '', fr: 'img2' },
+      },
     },
     menus: [],
   })
   assert.deepEqual(site.seo.titleTemplates, { vi: '%s · Sen Tuấn' }, 'empty and not-enabled locales are dropped')
+  assert.deepEqual(site.seo.defaultDescriptions, { vi: 'Mô tả' }, 'empty and not-enabled locales are dropped')
+  assert.deepEqual(site.seo.defaultImageMediaIds, { vi: 'img1' }, 'empty and not-enabled locales are dropped')
   assert.equal(PublicSiteSchema.safeParse(site).success, true)
 
   const plain = buildPublicSite({ settings, menus: [] })
   assert.deepEqual(plain.seo.titleTemplates, {}, 'a site without overrides publishes an empty map')
+  assert.deepEqual(plain.seo.defaultDescriptions, {}, 'a site without overrides publishes an empty map')
+  assert.deepEqual(plain.seo.defaultImageMediaIds, {}, 'a site without overrides publishes an empty map')
 })
 
 check('menus keep both keys, sorted, and an empty menu survives', () => {

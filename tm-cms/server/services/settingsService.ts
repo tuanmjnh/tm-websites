@@ -54,6 +54,8 @@ function toAdminSettings(record: SettingsRecord): AdminSiteSettings {
     seo: {
       titleTemplate: record.seo?.titleTemplate ?? '%s',
       titleTemplates: normalizeTitleTemplates(record.seo?.titleTemplates),
+      defaultDescriptions: normalizeDefaultDescriptions(record.seo?.defaultDescriptions),
+      defaultImageMediaIds: normalizeDefaultImageMediaIds(record.seo?.defaultImageMediaIds),
       defaultDescription: record.seo?.defaultDescription ?? '',
       defaultImageMediaId: record.seo?.defaultImageMediaId ?? '',
     },
@@ -81,6 +83,26 @@ export async function getSiteSettings(
 
 /** Only known locales with a usable string, so a stray key never reaches the API. */
 function normalizeTitleTemplates(input: unknown): Partial<Record<SettingsLocale, string>> {
+  const source = (input && typeof input === 'object') ? input as Record<string, unknown> : {}
+  const result: Partial<Record<SettingsLocale, string>> = {}
+  for (const locale of SETTINGS_LOCALES) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
+function normalizeDefaultDescriptions(input: unknown): Partial<Record<SettingsLocale, string>> {
+  const source = (input && typeof input === 'object') ? input as Record<string, unknown> : {}
+  const result: Partial<Record<SettingsLocale, string>> = {}
+  for (const locale of SETTINGS_LOCALES) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
+function normalizeDefaultImageMediaIds(input: unknown): Partial<Record<SettingsLocale, string>> {
   const source = (input && typeof input === 'object') ? input as Record<string, unknown> : {}
   const result: Partial<Record<SettingsLocale, string>> = {}
   for (const locale of SETTINGS_LOCALES) {
@@ -121,6 +143,22 @@ function mergeSeoSettings(
       if (typeof value === 'string' && value.trim()) merged[locale] = value.trim()
     }
     next.titleTemplates = merged
+  }
+  if (patch?.defaultDescriptions) {
+    const merged: Partial<Record<SettingsLocale, string>> = {}
+    for (const locale of SETTINGS_LOCALES) {
+      const value = locale in patch.defaultDescriptions ? patch.defaultDescriptions[locale] : current.defaultDescriptions[locale]
+      if (typeof value === 'string' && value.trim()) merged[locale] = value.trim()
+    }
+    next.defaultDescriptions = merged
+  }
+  if (patch?.defaultImageMediaIds) {
+    const merged: Partial<Record<SettingsLocale, string>> = {}
+    for (const locale of SETTINGS_LOCALES) {
+      const value = locale in patch.defaultImageMediaIds ? patch.defaultImageMediaIds[locale] : current.defaultImageMediaIds[locale]
+      if (typeof value === 'string' && value.trim()) merged[locale] = value.trim()
+    }
+    next.defaultImageMediaIds = merged
   }
   return next
 }

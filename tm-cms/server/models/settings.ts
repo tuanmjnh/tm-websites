@@ -28,6 +28,10 @@ export interface SiteSettingsSeo {
   titleTemplate: string
   /** locale -> template; a missing or empty entry falls back to `titleTemplate`. */
   titleTemplates: Record<string, string>
+  /** locale -> default description; a missing or empty entry falls back to `defaultDescription`. */
+  defaultDescriptions: Record<string, string>
+  /** locale -> default OG image media id; a missing or empty entry falls back to `defaultImageMediaId`. */
+  defaultImageMediaIds: Record<string, string>
   defaultDescription: string
   defaultImageMediaId: string
 }
@@ -68,6 +72,8 @@ const SeoSchema = new Schema<SiteSettingsSeo>(
   {
     titleTemplate: { type: String, default: '%s' },
     titleTemplates: { type: Schema.Types.Mixed, default: () => ({}) },
+    defaultDescriptions: { type: Schema.Types.Mixed, default: () => ({}) },
+    defaultImageMediaIds: { type: Schema.Types.Mixed, default: () => ({}) },
     defaultDescription: { type: String, default: '' },
     defaultImageMediaId: { type: String, default: '' },
   },
