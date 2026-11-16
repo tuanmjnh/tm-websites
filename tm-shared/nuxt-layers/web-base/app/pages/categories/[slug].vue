@@ -67,6 +67,15 @@ const canonical = computed(() => {
 const title = computed(() => (category.value ? readLocalized(category.value.name, locale.value) : ''))
 const description = computed(() => (category.value?.description ? readLocalized(category.value.description, locale.value) : ''))
 
+/** A per-category SEO title wins, then the displayed name. */
+const seoTitle = computed(() => (category.value?.seo?.title
+  ? readLocalized(category.value.seo.title, locale.value) || title.value
+  : title.value))
+
+const seoDescription = computed(() => (category.value?.seo?.description
+  ? readLocalized(category.value.seo.description, locale.value) || description.value || t('category.indexSubtitle')
+  : description.value || t('category.indexSubtitle')))
+
 /** The three steps the template shows, with the category as the current page. */
 const breadcrumbs = computed(() => buildBreadcrumbJsonLd(baseUrl, category.value
   ? [
@@ -95,10 +104,10 @@ const robots = usePageRobots({
 })
 
 useSeoMeta({
-  title: () => title.value,
-  description: () => description.value || t('category.indexSubtitle'),
-  ogTitle: () => title.value,
-  ogDescription: () => description.value,
+  title: () => seoTitle.value,
+  description: () => seoDescription.value,
+  ogTitle: () => seoTitle.value,
+  ogDescription: () => seoDescription.value,
   ogType: 'website',
   ogUrl: () => canonical.value,
   ogImage: () => resolveSiteUrl(baseUrl, category.value?.image || '/branding/og-cover.png'),
@@ -120,7 +129,7 @@ useHead(() => {
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
           name: title.value,
-          description: description.value || undefined,
+          description: seoDescription.value || undefined,
           url: canonical.value,
         }).replace(/</g, '\\u003c'),
       },

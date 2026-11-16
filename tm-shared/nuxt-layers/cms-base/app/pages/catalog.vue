@@ -563,6 +563,10 @@ const categoryDraft = ref({
   title: '',
   parent: null as string | null,
   order: 0,
+  description: '',
+  thumbnail: '',
+  seoTitle: '',
+  seoDescription: '',
 })
 
 const parentItems = computed(() => [
@@ -576,7 +580,16 @@ function resetCategoryForm() {
   categoryEditing.value = null
   categoryError.value = null
   auditReason.value = ''
-  Object.assign(categoryDraft.value, { key: '', title: '', parent: null, order: 0 })
+  Object.assign(categoryDraft.value, {
+    key: '',
+    title: '',
+    parent: null,
+    order: 0,
+    description: '',
+    thumbnail: '',
+    seoTitle: '',
+    seoDescription: '',
+  })
 }
 
 function editCategory(category: AdminCatalogCategory) {
@@ -587,6 +600,10 @@ function editCategory(category: AdminCatalogCategory) {
     title: category.title.vi ?? '',
     parent: category.parent ? categories.value.find(entry => entry.id === category.parent)?.key ?? null : null,
     order: category.order,
+    description: category.description.vi ?? '',
+    thumbnail: category.thumbnail ?? '',
+    seoTitle: category.seo.title.vi ?? '',
+    seoDescription: category.seo.description.vi ?? '',
   })
 }
 
@@ -601,8 +618,12 @@ async function saveCategory() {
       order: Number(categoryDraft.value.order) || 0,
       title: { vi: categoryDraft.value.title },
       slug: { vi: categoryDraft.value.title },
-      description: {},
-      thumbnail: null,
+      description: { vi: categoryDraft.value.description },
+      thumbnail: categoryDraft.value.thumbnail.trim() || null,
+      seo: {
+        title: { vi: categoryDraft.value.seoTitle },
+        description: { vi: categoryDraft.value.seoDescription },
+      },
     }
     const reason = auditReason.value.trim() || undefined
     if (categoryEditing.value) {
@@ -1046,6 +1067,18 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
             </UFormField>
             <UFormField :label="t('admin.catalog.categories.order')">
               <UInput v-model.number="categoryDraft.order" type="number" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.categories.description')" class="sm:col-span-2">
+              <UTextarea v-model="categoryDraft.description" :rows="2" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.categories.image')" class="sm:col-span-2">
+              <UInput v-model="categoryDraft.thumbnail" class="w-full" placeholder="https://..." />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.categories.seoTitle')">
+              <UInput v-model="categoryDraft.seoTitle" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.categories.seoDescription')">
+              <UInput v-model="categoryDraft.seoDescription" class="w-full" />
             </UFormField>
           </div>
 

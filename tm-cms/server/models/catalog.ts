@@ -156,6 +156,7 @@ export const CatalogCategoryDraftSchema = z.object({
   slug: LocalizedTextSchema,
   description: LocalizedTextSchema.default({}),
   thumbnail: z.string().trim().max(500).nullable().default(null),
+  seo: CatalogSeoSchema.pick({ title: true, description: true }).default({ title: {}, description: {} }),
 }).superRefine((draft, ctx) => {
   if (!draft.title.vi) {
     ctx.addIssue({ code: 'custom', path: ['title', 'vi'], message: 'A Vietnamese title is required' })
@@ -275,6 +276,13 @@ export function normalizeCatalogCategoryInput(input: unknown): CatalogCategoryDr
       slug,
       description: normalizeLocalized(source.description, 500),
       thumbnail: typeof source.thumbnail === 'string' && source.thumbnail.trim() ? source.thumbnail.trim() : null,
+      seo: (() => {
+        const seo = readRecord(source.seo)
+        return {
+          title: normalizeLocalized(seo?.title, 200),
+          description: normalizeLocalized(seo?.description, 500),
+        }
+      })(),
     })
   } catch (error) {
     return translateZod(error)

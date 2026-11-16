@@ -219,12 +219,24 @@ export function toCatalogCategory(record: CatalogRecord): PublicCatalogCategory 
 
   const description = toLocalizedString(record.description)
   const image = realImage(record.thumbnail)
+  const seo = asRecord(record.seo)
+  const seoTitle = toLocalizedString(seo?.title)
+  const seoDescription = toLocalizedString(seo?.description)
+  const hasSeo = Object.keys(seoTitle).length > 0 || Object.keys(seoDescription).length > 0
 
   return {
     ...ref,
     ...(Object.keys(description).length ? { description } : {}),
     parentId: record.pid === undefined || record.pid === null ? null : String(record.pid),
     image,
+    ...(hasSeo
+      ? {
+          seo: {
+            ...(Object.keys(seoTitle).length ? { title: seoTitle } : {}),
+            ...(Object.keys(seoDescription).length ? { description: seoDescription } : {}),
+          },
+        }
+      : {}),
   }
 }
 

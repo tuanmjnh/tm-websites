@@ -160,6 +160,10 @@ export function toAdminCatalogCategory(record: CatalogCategoryRecord, itemCount 
     fullPath: record.fullPath ?? {},
     description: record.description ?? {},
     thumbnail: record.thumbnail ?? null,
+    seo: {
+      title: record.seo?.title ?? {},
+      description: record.seo?.description ?? {},
+    },
     revision: record.revision,
     itemCount,
     createdAt: iso(record.createdAt),
@@ -719,6 +723,7 @@ export async function updateCatalogCategory(
         fullPath: buildFullPath(draft.slug, parentPath),
         description: draft.description,
         thumbnail: draft.thumbnail,
+        seo: draft.seo,
       },
       $inc: { revision: 1 },
     },

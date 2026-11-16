@@ -946,6 +946,10 @@
         "parent": "Danh mục cha",
         "noParent": "Không có (danh mục gốc)",
         "order": "Thứ tự",
+        "description": "Mô tả danh mục",
+        "image": "Ảnh danh mục (URL)",
+        "seoTitle": "Tiêu đề SEO",
+        "seoDescription": "Mô tả SEO",
         "add": "Thêm danh mục",
         "empty": "Chưa có danh mục sản phẩm."
       }

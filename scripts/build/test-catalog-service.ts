@@ -51,12 +51,19 @@ try {
       key: 'Trang sức',
       title: { vi: 'Trang sức' },
       slug: { vi: 'Trang Sức' },
+      description: { vi: 'Trang sức bạc và vàng' },
+      thumbnail: 'https://cdn.example.com/trang-suc.jpg',
+      seo: { title: { vi: 'Trang sức cao cấp' }, description: { vi: 'Bộ sưu tập trang sức' } },
     })
     parentId = created.id
     assert.equal(created.key, 'trang-suc')
     assert.equal(created.slug.vi, 'trang-suc')
     assert.equal(created.fullPath.vi, '/trang-suc')
     assert.equal(created.revision, 1)
+    assert.equal(created.description.vi, 'Trang sức bạc và vàng')
+    assert.equal(created.thumbnail, 'https://cdn.example.com/trang-suc.jpg')
+    assert.equal(created.seo.title.vi, 'Trang sức cao cấp')
+    assert.equal(created.seo.description.vi, 'Bộ sưu tập trang sức')
   })
 
   let childId = ''

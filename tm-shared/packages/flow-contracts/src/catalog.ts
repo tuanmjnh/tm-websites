@@ -69,6 +69,10 @@ export const PublicCatalogCategorySchema = PublicCatalogCategoryRefSchema.extend
   description: LocalizedTextSchema.optional(),
   parentId: z.string().nullable().optional(),
   image: z.string().nullable().optional(),
+  seo: z.object({
+    title: LocalizedTextSchema.optional(),
+    description: LocalizedTextSchema.optional(),
+  }).optional(),
   itemCount: z.number().int().nonnegative().optional(),
 })
 export type PublicCatalogCategory = z.infer<typeof PublicCatalogCategorySchema>

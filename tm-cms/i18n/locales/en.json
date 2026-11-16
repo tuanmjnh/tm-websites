@@ -944,6 +944,10 @@
         "parent": "Parent category",
         "noParent": "None (root category)",
         "order": "Order",
+        "description": "Category description",
+        "image": "Category image (URL)",
+        "seoTitle": "SEO title",
+        "seoDescription": "SEO description",
         "add": "Add category",
         "empty": "No product categories yet."
       }
