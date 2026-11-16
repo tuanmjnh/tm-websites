@@ -876,6 +876,8 @@
         "barcodeHint": "Không bắt buộc, không trùng trong cùng site",
         "noSku": "chưa có SKU",
         "price": "Giá {price}",
+        "priceRange": "Giá {min} – {max}",
+        "variantCount": "{count} biến thể",
         "uom": "Đơn vị tính",
         "stock": "Tồn kho",
         "manageStock": "Quản lý tồn kho",

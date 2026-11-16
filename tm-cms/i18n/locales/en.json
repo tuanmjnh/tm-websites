@@ -876,6 +876,8 @@
         "barcodeHint": "Optional, unique within this site",
         "noSku": "no SKU",
         "price": "Price {price}",
+        "priceRange": "Price {min} – {max}",
+        "variantCount": "{count} variants",
         "uom": "Unit",
         "stock": "Stock",
         "manageStock": "Manage stock",

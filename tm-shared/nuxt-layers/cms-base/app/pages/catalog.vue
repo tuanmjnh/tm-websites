@@ -175,6 +175,32 @@ const statusColor = (value: AdminCatalogStatus) => {
   }
 }
 
+/**
+ * A variable product carries its SKU and price on the variants, so an empty `sku` and a
+ * `basePrice` of 0 are correct data — rendered naively the row read like a blank
+ * product. Both labels look at the variants first and only fall back to the item.
+ */
+function skuLabel(item: AdminCatalogItem): string {
+  if (item.sku) return item.sku
+  const variants = item.type === 'variable' ? item.variants.filter(variant => variant.sku) : []
+  if (variants.length > 0) return t('admin.catalog.fields.variantCount', { count: variants.length })
+  return t('admin.catalog.fields.noSku')
+}
+
+function priceLabel(item: AdminCatalogItem): string {
+  const format = (value: number) => value.toLocaleString('vi-VN')
+  const prices = item.type === 'variable'
+    ? item.variants.map(variant => Number(variant.basePrice)).filter(value => Number.isFinite(value))
+    : []
+  if (prices.length === 0) return t('admin.catalog.fields.price', { price: format(item.basePrice) })
+
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  return min === max
+    ? t('admin.catalog.fields.price', { price: format(min) })
+    : t('admin.catalog.fields.priceRange', { min: format(min), max: format(max) })
+}
+
 function messageFor(code: string | null) {
   if (code === 'CATALOG_REVISION_CONFLICT') return t('admin.catalog.errors.revisionConflict')
   if (code === 'CATALOG_BULK_EMPTY') return t('admin.catalog.errors.bulkEmpty')
@@ -662,9 +688,9 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
               </UBadge>
             </div>
             <p class="mt-1 truncate text-xs text-muted">
-              {{ item.key }} · {{ item.sku || t('admin.catalog.fields.noSku') }}
+              {{ item.key }} · {{ skuLabel(item) }}
               <template v-if="item.barcode"> · {{ item.barcode }}</template> ·
-              {{ t('admin.catalog.fields.price', { price: item.basePrice.toLocaleString('vi-VN') }) }} ·
+              {{ priceLabel(item) }} ·
               {{ t('admin.catalog.fields.categoriesCount', { count: item.categories.length }) }}
             </p>
           </div>
