@@ -36,8 +36,15 @@ const { data: latestPosts } = await useAsyncData<PublicContentListItem[]>(
   { watch: [locale], default: () => [] as PublicContentListItem[] }
 )
 
-// The settings document owns the site description; the translated copy is the fallback.
-const siteDescription = computed(() => seo.value?.defaultDescription || t('home.seo.description', { company: brandName.value }))
+// The settings document owns the site description; a per-locale override wins, then
+// the site-wide default, then the translated copy. The image id is stored but
+// cannot yet be resolved to a URL (public media origin is still undecided).
+const siteDescription = computed(() => {
+  const code = String(locale.value || '')
+  const localized = seo.value?.defaultDescriptions?.[code]
+  if (localized && localized.trim()) return localized.trim()
+  return seo.value?.defaultDescription || t('home.seo.description', { company: brandName.value })
+})
 
 /** Only the bare home URL is the page; campaign tags and ignored parameters are views. */
 const robots = usePageRobots()

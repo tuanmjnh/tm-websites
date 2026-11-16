@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { brandName, seo } = usePublicSite()
 
 /**
@@ -7,7 +7,12 @@ const { brandName, seo } = usePublicSite()
  * customer saved in site settings, and an explicit notice while it is empty.
  * Contact channels live on `/contact` and are not repeated here.
  */
-const description = computed(() => seo.value?.defaultDescription || '')
+const description = computed(() => {
+  const code = String(locale.value || '')
+  const localized = seo.value?.defaultDescriptions?.[code]
+  if (localized && localized.trim()) return localized.trim()
+  return seo.value?.defaultDescription || ''
+})
 
 const robots = usePageRobots({ empty: () => !description.value })
 
