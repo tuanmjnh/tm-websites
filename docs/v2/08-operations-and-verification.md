@@ -918,7 +918,24 @@ Evidence, 2026-11-16 on `sen-tuan` (`mongodb://127.0.0.1:27017`):
 
 `pnpm test:backup-restore` (9 checks, inside `verify:all`) covers the same ground on a disposable database, plus the two ways a dump lies: an edited line is refused by hash before any insert (and the target stays empty), and a collection dropped at the source leaves its old file empty instead of stale. Types are proven to survive: an ObjectId reference, a Date and a binary blob come back as the same types.
 
-**Not covered, and worth knowing before relying on it:** collection validators, collation, views and database-level settings are not in the dump (indexes are). Media bytes are **not** backed up at all — uploaded files live on disk (`.data/media`) while Mongo only holds their rows, so a database restore would point at files that no longer exist. There is no off-site copy and no schedule; both belong with the launch runbook.
+### The other half: media bytes (2026-11-16)
+
+The database dump restores the `media` rows; the files those rows point at live on disk (`TM_MEDIA_DIR`, default `.data/media/<customer>`) and were covered by nothing, so a database-only restore would produce a library of rows pointing at 404s. `backup:media` / `restore:media` copy one customer's subtree next to the dump:
+
+```bash
+pnpm backup:media --customer sentuan --out .backups
+pnpm restore:media --customer sentuan --from .backups/media/sentuan [--apply] [--prune]
+```
+
+- One file per key with a manifest (size + sha256 for each); keys are stored relative with forward slashes, so an archive moves between machines.
+- The archive directory is cleared before writing: a file left from an earlier run cannot be restored as if it belonged to this customer.
+- A restore verifies every file first, copies, then re-hashes what it wrote. `--prune` also deletes files in the target the archive does not know — off by default, because deleting media nobody backed up is not something a restore should assume.
+
+Evidence on `sen-tuan` the same day: two real uploads (a PNG and a PDF, 100 bytes total) went in through `POST /api/v1/admin/media`, `backup:media` recorded both files under `.backups/media/sentuan`, the dry run verified them, `restore:media --apply` into a scratch root reported 2 files / 100 bytes re-hashed to the archive values, and `cmp` confirmed the PNG and PDF were byte-identical to the live copies. The probes, their rows and the audit rows were removed afterwards (`media` 0 rows, library empty).
+
+`pnpm test:media-backup` (11 checks, filesystem only, inside `verify:all`) covers the same ground on a temporary tree, plus the three ways an archive lies: an edited file (refused by hash before anything is written), a file the manifest does not know (refused), and a missing manifest (refused rather than treated as an empty archive). It also proves `--prune` behaviour, empty roots and that re-archiving clears a file the source no longer has.
+
+**Still not covered, and worth knowing before relying on it:** collection validators, collation, views and database-level settings are not in the dump (indexes are). There is no off-site copy and no schedule for either half; both belong with the launch runbook, along with the fact that `restore:database` will happily point at media keys whose files were never restored unless the operator runs `restore:media` too.
 
 ## The Vue alias that unblocked the `link:` adoption (WEB-15, 2026-11-13)
 

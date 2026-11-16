@@ -56,6 +56,8 @@ const STATIC_GATES = [
   // Client half of the audit note: every write screen keeps its note control and
   // hands the typed note to a composable. Static, no build.
   'verify:audit-reason-ui',
+  // The media archive half of the backup: filesystem only, no build, no database.
+  'test:media-backup',
   // Reads the admin routes as source: catches that answer over an errorResponse
   // their own try raised. Static, no build, no database.
   'verify:error-answers',
