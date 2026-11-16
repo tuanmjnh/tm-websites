@@ -617,7 +617,22 @@ Checked end to end on 2026-11-16 (`sentuan`, mock session, `:4005`), because a d
 | Delete that category through the dialog, note `verify: delete dialog sends the note` | delete confirmed; one `delete` entry | both rows in `/api/v1/admin/audit?resourceType=category`, reasons intact |
 | `/audit` → Recent activity | the note above the actor | `“verify: delete dialog sends the note” Quản trị viên · admin@example.com` |
 
-The probe category and its two audit rows were removed afterwards (`audit_logs` back to its single pre-existing row). Still not collected: import/export and background jobs write no audit rows at all, and the page→header wiring has no automated test — `test:audit-write` proves the header and the storage, this pass proves the screens.
+The remaining four dialogs went through the same check in the browser the same day (one probe per domain, each removed in the same pass):
+
+| Dialog | Action taken | Audit row |
+| --- | --- | --- |
+| Catalog → New product (`Reason / note` in the form) | create `probe-audit-catalog` | `catalog_item`/`create`, note intact |
+| Catalog row → Delete (`AuditReasonModal`) | delete that product | `catalog_item`/`delete`, note intact |
+| Content → Create content record (field in the form) | create `pages/probe-audit-content` | `content`/`create`, note intact |
+| Content row → open record → Delete (field in the drawer) | delete that record | `content`/`delete` → `deleted`, note intact |
+| Media → Edit file details (field in the form) | rename the probe file, rev 1 → 2 | `media`/`update` with `changedFields: ["title"]`, note intact |
+| Media → Delete file (`AuditReasonModal`) | delete the probe file | `media`/`delete`, note intact |
+| Menus → New menu (field in the form) | create `probe-audit-menu` | `menu`/`create`, note intact |
+| Menus → Delete menu (`AuditReasonModal`) | delete that menu | `menu`/`delete`, note intact |
+
+Nine writes, nine rows, every note preserved verbatim; the `sentuan` database was then returned to its starting counts (`catalog_items` 241, `content` 2, `site_menus` 0, media library empty, `audit_logs` its single pre-existing row).
+
+How the media row was reached is worth stating exactly: the library was empty, so the probe file was **seeded through the API** (`POST /api/v1/admin/media` multipart with `x-audit-reason`); the edit and delete dialogs were driven in the browser. The upload dialog's own file picker was not driven (the browser tool cannot set a file input), so that one path is proven only at the composable/API level. Still not collected: import/export and background jobs write no audit rows at all, and the page→header wiring has no automated test — `test:audit-write` proves the header and the storage, this pass proves the screens.
 
 Gate: `pnpm test:audit-write` — 11 checks, part of `verify:all` (DOMAIN_GATES). The read side stays in `pnpm test:audit` (9 checks).
 
