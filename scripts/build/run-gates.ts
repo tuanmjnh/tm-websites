@@ -49,6 +49,9 @@ const STATIC_GATES = [
   'verify:audit-meta',
   // Compares the module registry with the pages behind it: static, no build.
   'verify:modules',
+  // Reads the admin routes as source: catches that answer over an errorResponse
+  // their own try raised. Static, no build, no database.
+  'verify:error-answers',
   'test:purge-scope',
   // Reads the storefront's page files and its hand-written links; no build or
   // database needed, so it belongs in the default run.
