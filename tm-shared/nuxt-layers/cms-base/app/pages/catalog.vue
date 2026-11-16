@@ -176,29 +176,36 @@ const statusColor = (value: AdminCatalogStatus) => {
 }
 
 /**
- * A variable product carries its SKU and price on the variants, so an empty `sku` and a
- * `basePrice` of 0 are correct data — rendered naively the row read like a blank
- * product. Both labels look at the variants first and only fall back to the item.
+ * The line under a product's title: key, SKU, barcode, price, category count.
+ *
+ * A variable product keeps its SKU and its price on the variants, so the item's own
+ * `sku` is empty and its `basePrice` is 0. Read literally that printed `no SKU · Price
+ * 0` and the row looked like a blank product, so both fields fall back to the variants
+ * first. Built as one string rather than four template fragments: the separators stay
+ * in one place and a missing barcode simply drops out.
  */
-function skuLabel(item: AdminCatalogItem): string {
-  if (item.sku) return item.sku
-  const variants = item.type === 'variable' ? item.variants.filter(variant => variant.sku) : []
-  if (variants.length > 0) return t('admin.catalog.fields.variantCount', { count: variants.length })
-  return t('admin.catalog.fields.noSku')
-}
-
-function priceLabel(item: AdminCatalogItem): string {
+function rowSubtitle(item: AdminCatalogItem): string {
   const format = (value: number) => value.toLocaleString('vi-VN')
   const prices = item.type === 'variable'
-    ? item.variants.map(variant => Number(variant.basePrice)).filter(value => Number.isFinite(value))
+    ? item.variants.map(variant => variant.basePrice).filter(price => Number.isFinite(price))
     : []
-  if (prices.length === 0) return t('admin.catalog.fields.price', { price: format(item.basePrice) })
+  const min = prices.length > 0 ? Math.min(...prices) : item.basePrice
+  const max = prices.length > 0 ? Math.max(...prices) : item.basePrice
 
-  const min = Math.min(...prices)
-  const max = Math.max(...prices)
-  return min === max
-    ? t('admin.catalog.fields.price', { price: format(min) })
-    : t('admin.catalog.fields.priceRange', { min: format(min), max: format(max) })
+  const sku = item.sku.trim()
+    || (item.variants.length > 0
+      ? t('admin.catalog.fields.variantCount', { count: item.variants.length })
+      : t('admin.catalog.fields.noSku'))
+
+  return [
+    item.key,
+    sku,
+    item.barcode.trim(),
+    min === max
+      ? t('admin.catalog.fields.price', { price: format(min) })
+      : t('admin.catalog.fields.priceRange', { min: format(min), max: format(max) }),
+    t('admin.catalog.fields.categoriesCount', { count: item.categories.length }),
+  ].filter(Boolean).join(' · ')
 }
 
 function messageFor(code: string | null) {
@@ -687,12 +694,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
                 {{ t(`admin.catalog.type.${item.type}`) }}
               </UBadge>
             </div>
-            <p class="mt-1 truncate text-xs text-muted">
-              {{ item.key }} · {{ skuLabel(item) }}
-              <template v-if="item.barcode"> · {{ item.barcode }}</template> ·
-              {{ priceLabel(item) }} ·
-              {{ t('admin.catalog.fields.categoriesCount', { count: item.categories.length }) }}
-            </p>
+            <p class="mt-1 truncate text-xs text-muted">{{ rowSubtitle(item) }}</p>
           </div>
 
           <div class="flex flex-wrap items-center gap-1">
