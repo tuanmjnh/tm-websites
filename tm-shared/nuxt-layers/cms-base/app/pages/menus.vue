@@ -137,6 +137,7 @@ const describeError = (e: unknown) => {
   if (status === 403) return t('admin.errors.forbidden')
   if (status === 404) return t('admin.errors.notFound')
   if (!status) return t('admin.errors.network')
+  if (status === 503) return t('admin.errors.unavailable')
   return t('admin.errors.generic')
 }
 

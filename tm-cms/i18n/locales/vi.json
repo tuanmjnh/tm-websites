@@ -123,10 +123,11 @@
   "admin": {
     "errors": {
       "unauthorized": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-      "forbidden": "Tài khoản không có quyền xem dữ liệu này trong TM Hub.",
-      "notFound": "Không tìm thấy tài nguyên trong TM Hub.",
-      "network": "Không thể kết nối TM Hub. Kiểm tra kết nối và thử lại.",
-      "generic": "TM Hub trả về lỗi không mong đợi."
+      "forbidden": "Tài khoản không có quyền xem dữ liệu này.",
+      "notFound": "Không tìm thấy tài nguyên này.",
+      "network": "Không kết nối được máy chủ. Kiểm tra kết nối và thử lại.",
+      "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+      "unavailable": "Nguồn dữ liệu này chưa sẵn sàng cho khách hàng này."
     },
     "users": {
       "title": "Người dùng & Truy cập",

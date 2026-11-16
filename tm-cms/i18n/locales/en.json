@@ -123,10 +123,11 @@
   "admin": {
     "errors": {
       "unauthorized": "Your session has expired. Sign in again.",
-      "forbidden": "Your account does not have permission for this data in TM Hub.",
-      "notFound": "This resource was not found in TM Hub.",
-      "network": "Cannot reach TM Hub. Check the connection and try again.",
-      "generic": "TM Hub returned an unexpected error."
+      "forbidden": "Your account does not have permission for this data.",
+      "notFound": "This resource was not found.",
+      "network": "Cannot reach the server. Check the connection and try again.",
+      "generic": "Something went wrong. Please try again.",
+      "unavailable": "This data source is not available for this customer yet."
     },
     "users": {
       "title": "Users & Access",

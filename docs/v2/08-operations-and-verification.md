@@ -849,6 +849,8 @@ Two defects the pass found, both fixed inside it:
 - A customer with no database (a legitimate state: `default`, `thanhtung`, `hoangvi`) answered **`503 Server Error` with no error code** on every admin read, because `DatabaseBindingError` escaped `withCustomerDb` as a plain `Error`. `withCustomerDb` now answers `503 DATABASE_NOT_CONFIGURED` (or the specific binding code) with the usual envelope, so every admin route benefits without touching the routes.
 - The catalog list reported a **failed save** for a failed read — `admin.catalog.errors.generic` says "The change could not be saved", and the list's catch reused it. The list now has its own copy (`loadFailed`) and names the unconfigured-database case exactly `(notConfigured)`.
 
+The same defect had a second half in the shared copy: `admin.errors.generic` said "The change could not be saved" and `forbidden`/`notFound`/`network` all named TM Hub, on six pages that read the customer's own Mongo. Those messages are neutral now and every read mapper (six pages plus `useHubAdmin`) answers `503` with `admin.errors.unavailable`, so an unconfigured database reads as one on every list screen instead of looking like a failed save or a Hub fault. Save-oriented copy under `admin.catalog.errors` is unchanged.
+
 Not covered: Hub-backed screens in mock mode answer `503 MOCK_HUB_UNAVAILABLE` by design, so users/roles/routes/configs/mail/notifications/integrations were not exercised signed-in; they are transitional pages (Q5) with no local data model yet. Their real behavior still needs a Hub session.
 
 ## The Vue alias that unblocked the `link:` adoption (WEB-15, 2026-11-13)
