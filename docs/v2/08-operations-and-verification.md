@@ -935,7 +935,25 @@ Evidence on `sen-tuan` the same day: two real uploads (a PNG and a PDF, 100 byte
 
 `pnpm test:media-backup` (11 checks, filesystem only, inside `verify:all`) covers the same ground on a temporary tree, plus the three ways an archive lies: an edited file (refused by hash before anything is written), a file the manifest does not know (refused), and a missing manifest (refused rather than treated as an empty archive). It also proves `--prune` behaviour, empty roots and that re-archiving clears a file the source no longer has.
 
-**Still not covered, and worth knowing before relying on it:** collection validators, collation, views and database-level settings are not in the dump (indexes are). There is no off-site copy and no schedule for either half; both belong with the launch runbook, along with the fact that `restore:database` will happily point at media keys whose files were never restored unless the operator runs `restore:media` too.
+### One command for both halves (2026-11-16)
+
+Two commands that must both be run is a command someone will half-run, and the half is the dangerous one (rows restored, files missing). So the pair has its own entry points:
+
+```bash
+pnpm backup:all  --customer sentuan --out .backups
+pnpm restore:all --customer sentuan --out .backups [--database scratch] [--root <media root>] [--apply] [--prune] [--force]
+```
+
+- `backup:all` writes the dump and the archive, then **verifies its own output** before printing anything: a backup nobody has read back is a hope.
+- `restore:all` verifies *both* halves against their manifests **before the first write**, then restores the database and the bytes in that order. Verifying first is the whole point — discovering a missing or edited media archive after the database was already overwritten leaves the two halves disagreeing, which is the state the pair exists to prevent.
+- A missing half is a typed error naming the command that writes it (`… has no media archive; run "pnpm backup:media …" (a database-only restore leaves every media URL pointing at a file that is not there)`), not a stack trace.
+- Same guard as `restore:database`: writing into the database the dump came from needs `--force`. A drill names a scratch database and a scratch media root.
+
+Evidence on `sen-tuan` the same day: one real upload (a 19-byte PNG through `POST /api/v1/admin/media`) → `backup:all` reported 53 collections / 1342 documents and 1 media file, both halves verified immediately → `restore:all` dry run verified the pair and wrote nothing → `restore:all --database sen-tuan-all-drill --root .devlogs/all-drill --apply` restored 53 collections and 1 file, every collection and every file re-hashed to the backup values, the drill database held the 241 `catalog_items` rows and the `media` row, and `cmp` confirmed the restored PNG was byte-identical. The drill database was dropped and the probe's row, file and audit row were removed afterwards (`catalog_items` 241, `media` 0, `audit_logs` 1).
+
+`pnpm test:backup-bundle` (11 checks, inside `verify:all`) proves the pairing on a disposable database and a temporary tree: the plan keeps the dump and archive paths apart, `backup:all` verifies what it wrote, the pair verifies from disk alone, a missing archive / missing dump / edited media file / edited dump are each refused **before** anything is written (the edits keep the size and the document count, so only the sha256 can catch them), a dry run writes nothing, `apply` restores both halves with matching bytes, restoring over the dump's own database needs `--force`, and a missing half surfaces as a typed `BackupBundleError`.
+
+**Still not covered, and worth knowing before relying on it:** collection validators, collation, views and database-level settings are not in the dump (indexes are). There is no off-site copy and no schedule for either half; both belong with the launch runbook. `restore:database` and `restore:media` still exist on their own — that is deliberate, an operator sometimes needs one — but a launch restore should use the pair.
 
 ## The Vue alias that unblocked the `link:` adoption (WEB-15, 2026-11-13)
 

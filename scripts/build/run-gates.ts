@@ -26,6 +26,9 @@ const DOMAIN_GATES = [
   // Backs up a seeded database, restores it and compares bytes: the launch path
   // was untested, and a restore that only counts rows proves nothing.
   'test:backup-restore',
+  // The pair: a backup is only a backup when both halves verify, so this gates the
+  // refusal of a half bundle as much as the restore itself.
+  'test:backup-bundle',
   'test:settings',
   'test:menus',
   'test:bulk',
