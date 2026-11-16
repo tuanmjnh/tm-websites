@@ -36,6 +36,11 @@ const switchLocale = async () => {
 // unprefixed URLs (Q20), so this attribute is the only signal of the active locale.
 useHead(() => ({ htmlAttrs: { lang: locale.value } }))
 
+// The site owns the title template (per-locale override, then site-wide), so every
+// page's title is rendered through it without each page having to know about it.
+const { titleTemplate: renderSiteTitle } = useSiteSeoTitle()
+useHead({ titleTemplate: (title?: string) => renderSiteTitle(title) })
+
 // The cart lives in localStorage, so the badge can only be filled after mount.
 const { count: cartCount, hydrate: hydrateCart } = useCart()
 onMounted(() => hydrateCart())
