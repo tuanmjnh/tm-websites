@@ -10,6 +10,7 @@ import type {
   AdminCatalogVariant,
 } from '@tm/flow-contracts/catalog-admin'
 import { getItemPriceRange } from '@tm/flow-utils/price'
+import { escapeHtml } from '@tm/flow-utils'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -196,7 +197,7 @@ function rowSubtitle(item: AdminCatalogItem): string {
   // Base price before any discount, so a reduced row can show what it used to
   // cost. A variable product's own basePrice is only a summary, so read the
   // variants when there are any.
-  const baseValues = item.type === 'variable' && item.variants.length
+  const baseValues = item.type === 'variable' && item.variants?.length
     ? item.variants.map(variant => variant.basePrice || 0)
     : [item.basePrice || 0]
   const baseMin = Math.min(...baseValues)
@@ -204,7 +205,7 @@ function rowSubtitle(item: AdminCatalogItem): string {
   const discounted = baseMin > min || baseMax > max
 
   const sku = item.sku.trim()
-    || (item.variants.length > 0
+    || (item.variants?.length
       ? t('admin.catalog.fields.variantCount', { count: item.variants.length })
       : t('admin.catalog.fields.noSku'))
 
@@ -218,11 +219,11 @@ function rowSubtitle(item: AdminCatalogItem): string {
     : ''
 
   return [
-    item.key,
-    sku,
-    item.barcode.trim(),
-    originalLabel ? `${priceLabel} (${originalLabel})` : priceLabel,
-    t('admin.catalog.fields.categoriesCount', { count: item.categories.length }),
+    escapeHtml(item.key),
+    escapeHtml(sku),
+    escapeHtml(item.barcode.trim()),
+    originalLabel ? `${priceLabel} <span class="line-through">${escapeHtml(originalLabel)}</span>` : priceLabel,
+    escapeHtml(t('admin.catalog.fields.categoriesCount', { count: item.categories.length })),
   ].filter(Boolean).join(' · ')
 }
 
@@ -712,7 +713,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
                 {{ t(`admin.catalog.type.${item.type}`) }}
               </UBadge>
             </div>
-            <p class="mt-1 truncate text-xs text-muted">{{ rowSubtitle(item) }}</p>
+            <p class="mt-1 truncate text-xs text-muted" v-html="rowSubtitle(item)" />
           </div>
 
           <div class="flex flex-wrap items-center gap-1">
