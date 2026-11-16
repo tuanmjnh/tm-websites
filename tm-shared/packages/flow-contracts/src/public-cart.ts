@@ -20,6 +20,7 @@ export const PUBLIC_CART_ISSUE_CODES = [
   'variant_unavailable',
   'out_of_stock',
   'price_changed',
+  'quantity_reduced',
 ] as const
 export type PublicCartIssue = (typeof PUBLIC_CART_ISSUE_CODES)[number]
 
@@ -139,14 +140,21 @@ export function buildPublicCart(
       continue
     }
 
+    const maxQuantity = variant ? variant.maxQuantity : item.maxQuantity
+    let quantity = input.quantity
+    if (maxQuantity !== undefined && quantity > maxQuantity) {
+      quantity = maxQuantity
+      issues.push('quantity_reduced')
+    }
+
     result.push({
       itemId: item.id,
       variantSku: input.variantSku ?? null,
       name: item.name,
       path: item.path,
       unitPrice,
-      quantity: input.quantity,
-      lineTotal: roundMoney(unitPrice * input.quantity),
+      quantity,
+      lineTotal: roundMoney(unitPrice * quantity),
       available: true,
       issues,
     })

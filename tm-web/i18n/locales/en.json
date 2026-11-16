@@ -120,7 +120,8 @@
       "item_unavailable": "This product is no longer in the published catalog.",
       "variant_unavailable": "The selected variant is no longer available.",
       "out_of_stock": "This product is out of stock.",
-      "price_changed": "The price was updated to the current store price."
+      "price_changed": "The price was updated to the current store price.",
+      "quantity_reduced": "The quantity was reduced to the available stock."
     }
   },
   "category": {

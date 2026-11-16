@@ -138,6 +138,15 @@ function isStocked(record: CatalogRecord): boolean {
   return Number.isFinite(stock) ? stock > 0 : true
 }
 
+/** The cart cap is the stored stock, never above the public cart ceiling. */
+function availableQuantity(record: CatalogRecord): number | undefined {
+  if (record.manageStock === false) return undefined
+  const stock = Number(record.stock ?? 0)
+  if (!Number.isFinite(stock)) return undefined
+  const whole = Math.floor(stock)
+  return whole >= 1 ? Math.min(99, whole) : undefined
+}
+
 /** A variable product is sellable while any of its active variants is stocked. */
 function resolveAvailability(record: CatalogRecord): boolean {
   if (record.type === 'variable') {
@@ -171,12 +180,15 @@ function toVariants(record: CatalogRecord): PublicCatalogVariant[] {
       .filter(Boolean)
       .join(' / ')
 
+    const maxQuantity = availableQuantity(variant)
+
     variants.push({
       sku: typeof variant.sku === 'string' && variant.sku.trim() ? variant.sku.trim() : undefined,
       ...(label ? { name: { [DEFAULT_LOCALE]: label } } : {}),
       price,
       compareAtPrice: basePrice > price ? basePrice : undefined,
       inStock: isStocked(variant),
+      ...(maxQuantity === undefined ? {} : { maxQuantity }),
     })
   }
 
@@ -296,10 +308,12 @@ export function toCatalogItemDetail(
   const seoImage = seo ? realImage(seo.image) : null
 
   const hasSeo = Object.keys(seoTitle).length > 0 || Object.keys(seoDescription).length > 0 || Boolean(seoImage)
+  const maxQuantity = record.type === 'variable' ? undefined : availableQuantity(record)
 
   return {
     ...summary,
     ...(Object.keys(description).length ? { description } : {}),
+    ...(maxQuantity === undefined ? {} : { maxQuantity }),
     sku: typeof record.sku === 'string' && record.sku.trim() ? record.sku.trim() : null,
     uom: typeof record.uom === 'string' && record.uom.trim() ? record.uom.trim() : null,
     gallery: toImages(record.gallery),

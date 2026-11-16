@@ -138,6 +138,26 @@ check('keeps an out-of-stock line visible but out of the subtotal', () => {
   assert.deepEqual(cart.issues, ['out_of_stock'])
 })
 
+check('reduces a quantity above the stock cap and still quotes the line', () => {
+  const item = makeItem({ price: 100000, maxQuantity: 3 })
+  const cart = buildPublicCart([item], [line({ quantity: 5 })], 'VND')
+  assert.equal(cart.lines[0].quantity, 3)
+  assert.equal(cart.lines[0].lineTotal, 300000)
+  assert.deepEqual(cart.lines[0].issues, ['quantity_reduced'])
+  assert.equal(cart.itemCount, 3)
+  assert.deepEqual(cart.issues, ['quantity_reduced'])
+})
+
+check('uses the variant stock cap for a variant line', () => {
+  const item = makeItem({
+    variants: [{ sku: 'AO-M', price: 120000, inStock: true, maxQuantity: 2 }],
+  })
+  const cart = buildPublicCart([item], [line({ variantSku: 'AO-M', quantity: 4 })], 'VND')
+  assert.equal(cart.lines[0].quantity, 2)
+  assert.equal(cart.lines[0].lineTotal, 240000)
+  assert.deepEqual(cart.lines[0].issues, ['quantity_reduced'])
+})
+
 check('flags a moved price and still quotes the current one', () => {
   const cart = buildPublicCart([makeItem({ price: 120000 })], [line({ expectedPrice: 100000, quantity: 2 })], 'VND')
   assert.deepEqual(cart.lines[0].issues, ['price_changed'])

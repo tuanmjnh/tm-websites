@@ -504,6 +504,7 @@ With `TM_SITE_INDEXABLE=false` the same route must answer exactly `User-agent: *
 | Same request with an unpublished/deleted id | `200` with an `item_unavailable` line, `unitPrice 0`, and that line excluded from `subtotal` |
 | Variant product with no `variantSku`, or an unknown SKU | `variant_unavailable`, `available: false` |
 | Quantity `100`, or 21 lines | `422 CART_INVALID` |
+| Quantity above the product's or variant's `maxQuantity` | The line is clamped to `maxQuantity`, carries `quantity_reduced`, and its `lineTotal` uses the clamped quantity |
 | Browser: add a product, reload `/gio-hang` | Badge and rows survive the reload; totals match the catalog price |
 | Browser: change the catalog price, reload `/gio-hang` | The new price is quoted with a one-time price notice; a second reload is quiet |
 

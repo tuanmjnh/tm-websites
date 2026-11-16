@@ -79,6 +79,8 @@ export const PublicCatalogVariantSchema = z.object({
   price: z.number().nonnegative(),
   compareAtPrice: z.number().nonnegative().optional(),
   inStock: z.boolean(),
+  /** Highest quantity the catalog will quote, when stock is managed. */
+  maxQuantity: z.number().int().min(1).max(99).optional(),
 })
 export type PublicCatalogVariant = z.infer<typeof PublicCatalogVariantSchema>
 
@@ -107,6 +109,8 @@ export type PublicCatalogItemSummary = z.infer<typeof PublicCatalogItemSummarySc
 
 export const PublicCatalogItemDetailSchema = PublicCatalogItemSummarySchema.extend({
   description: LocalizedTextSchema.optional(),
+  /** Highest quantity the catalog will quote for a simple product. */
+  maxQuantity: z.number().int().min(1).max(99).optional(),
   sku: z.string().nullable().optional(),
   uom: z.string().nullable().optional(),
   gallery: z.array(z.string()).default([]),

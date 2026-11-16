@@ -120,7 +120,8 @@
       "item_unavailable": "Sản phẩm không còn trong danh mục đang bán.",
       "variant_unavailable": "Phân loại đã chọn không còn khả dụng.",
       "out_of_stock": "Sản phẩm đang hết hàng.",
-      "price_changed": "Giá đã được cập nhật theo giá hiện tại của cửa hàng."
+      "price_changed": "Giá đã được cập nhật theo giá hiện tại của cửa hàng.",
+      "quantity_reduced": "Số lượng đã được giảm theo tồn kho hiện có."
     }
   },
   "category": {

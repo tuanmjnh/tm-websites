@@ -138,7 +138,12 @@ export const useCart = () => {
       let changed = false
       for (const line of lines.value) {
         const match = quotedById.get(cartLineKey(line))
-        if (match && match.available && match.unitPrice !== line.expectedPrice) {
+        if (!match || !match.available) continue
+        if (match.quantity !== line.quantity) {
+          line.quantity = match.quantity
+          changed = true
+        }
+        if (match.unitPrice !== line.expectedPrice) {
           line.expectedPrice = match.unitPrice
           changed = true
         }
