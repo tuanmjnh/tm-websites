@@ -580,6 +580,37 @@ try {
     assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/categories/ambiguous-cu' }), 0)
   })
 
+  await check('deleting a catalog category clears its automatic rows', async () => {
+    const doomed = await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'probe-delete-redirect',
+      title: { vi: 'Danh mục xoá redirect' },
+      slug: { vi: 'probe-delete-cu' },
+    })
+    const renamed = await updateCatalogCategory(CatalogCategory, SITE, doomed.id, {
+      revision: doomed.revision,
+      key: 'probe-delete-redirect',
+      parent: null,
+      title: { vi: 'Danh mục xoá redirect' },
+      slug: { vi: 'probe-delete-moi' },
+    }, { redirects: Redirect })
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/categories/probe-delete-cu' }), 1)
+
+    await Redirect.create({
+      siteId: SITE,
+      from: '/probe-manual-catalog',
+      to: '/categories/probe-delete-moi',
+      statusCode: 301,
+      isActive: true,
+      note: 'manual probe',
+      revision: 1,
+    })
+
+    await deleteCatalogCategory(CatalogCategory, CatalogItem, SITE, doomed.id, renamed.revision, { redirects: Redirect })
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/categories/probe-delete-cu' }), 0)
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/probe-manual-catalog' }), 1)
+    await Redirect.deleteOne({ siteId: SITE, from: '/probe-manual-catalog' })
+  })
+
   await check('a category with children cannot be deleted', async () => {
     const categories = await listCatalogCategories(CatalogCategory, CatalogItem, SITE)
     const root = categories.find(category => category.key === 'trang-suc')!

@@ -12,7 +12,10 @@ import {
   normalizeCategoryInput,
 } from '../models/category'
 import { recordContentAudit } from './contentAudit'
-import { syncContentCategorySlugRedirects } from './contentCategorySlugRedirects'
+import {
+  clearContentCategorySlugRedirects,
+  syncContentCategorySlugRedirects,
+} from './contentCategorySlugRedirects'
 import { findMenuReferences } from './menuReferences'
 import type { ContentWriteMeta } from './contentService'
 
@@ -559,6 +562,10 @@ export async function deleteCategory(
   const deleted = await model.findOneAndDelete({ _id: record._id, siteId, revision }).lean<CategoryRecord | null>()
   if (!deleted) {
     throw new CategoryServiceError(409, 'CATEGORY_REVISION_CONFLICT', 'Category was changed by someone else; reload before deleting')
+  }
+
+  if (meta?.redirects) {
+    await clearContentCategorySlugRedirects(meta.redirects, siteId, record.locales)
   }
 
   await recordContentAudit(meta?.audit, {

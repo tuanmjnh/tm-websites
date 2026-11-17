@@ -16,14 +16,14 @@ export default defineEventHandler(async (event) => {
   const query = parseInput(CatalogDeleteQuerySchema, getQuery(event), 'CATALOG_REVISION_REQUIRED', 'Thiếu phiên bản bản ghi')
 
   try {
-    const result = await withPreparedDb(event, ({ CatalogCategory, CatalogItem, Audit, Revision }) =>
+    const result = await withPreparedDb(event, ({ CatalogCategory, CatalogItem, Audit, Revision, Redirect }) =>
       deleteCatalogCategory(
         CatalogCategory,
         CatalogItem,
         siteId,
         id,
         query.revision,
-        writeMetaOf(event, user, Audit, Revision),
+        { ...writeMetaOf(event, user, Audit, Revision), redirects: Redirect },
       ))
 
     setHeader(event, 'cache-control', 'no-store')

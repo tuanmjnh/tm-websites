@@ -810,6 +810,16 @@ export async function deleteCatalogCategory(
     throw new CatalogServiceError(409, 'CATALOG_REVISION_CONFLICT', 'Catalog category was changed by someone else; reload before saving')
   }
 
+  if (meta?.redirects) {
+    await syncCatalogCategorySlugRedirects(meta.redirects, model, {
+      siteId,
+      categoryId: String(updated._id),
+      live: false,
+      before: updated.slug ?? {},
+      after: updated.slug ?? {},
+    })
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: 'catalog_category',

@@ -308,6 +308,30 @@ async function integration() {
       assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/danh-muc/probe-reuse' }), 0)
     })
 
+    await check('deleting a category clears automatic rows into and out of its landing', async () => {
+      const doomed = await createCategory(Category, SITE, category('probe-xoa', 'Probe xoá'), redirectMeta)
+      const renamed = await updateCategory(Category, SITE, doomed.id, {
+        revision: doomed.revision,
+        locales: [{ locale: 'vi', name: 'Probe xoá', slug: 'probe-xoa-moi' }],
+      }, redirectMeta)
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/danh-muc/probe-xoa' }), 1)
+
+      await Redirect.create({
+        siteId: SITE,
+        from: '/probe-manual-category',
+        to: '/danh-muc/probe-xoa-moi',
+        statusCode: 301,
+        isActive: true,
+        note: 'manual probe',
+        revision: 1,
+      })
+
+      await deleteCategory(Category, Content, SITE, doomed.id, renamed.revision, redirectMeta)
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/danh-muc/probe-xoa' }), 0)
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/probe-manual-category' }), 1)
+      await Redirect.deleteOne({ siteId: SITE, from: '/probe-manual-category' })
+    })
+
     await check('every category mutation records an audit entry', async () => {
       const entries = await Audit.find({ siteId: SITE, resourceType: 'category' }).sort({ createdAt: 1 }).lean<{ action: string, resourceKey: string, actor: { email: string } }[]>()
       assert.ok(entries.length >= 6)

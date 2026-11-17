@@ -50,7 +50,20 @@ export async function syncCatalogCategorySlugRedirects(
     after: Record<string, string>
   },
 ): Promise<SlugRedirectOutcome> {
-  if (!input.live) return { created: [], kept: [], skipped: [] }
+  // A deleted category has no landing left. Its automatic rows would only send
+  // a visitor to a 404, so the ones that lead to or from its pages go as well;
+  // a manual row is an explicit instruction and stays.
+  if (!input.live) {
+    const gonePaths = new Set([...slugPaths(input.before), ...slugPaths(input.after)])
+    if (gonePaths.size) {
+      await redirects.deleteMany({
+        siteId: input.siteId,
+        note: AUTO_CATEGORY_SLUG_REDIRECT_NOTE,
+        $or: [{ from: { $in: [...gonePaths] } }, { to: { $in: [...gonePaths] } }],
+      })
+    }
+    return { created: [], kept: [], skipped: [] }
+  }
 
   const livePaths = slugPaths(input.after)
   if (livePaths.size) {

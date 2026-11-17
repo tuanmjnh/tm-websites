@@ -38,6 +38,25 @@ function slugPaths(locales: CategoryLocale[]): Set<string> {
   return paths
 }
 
+/**
+ * Drops the automatic rows for a category that was deleted: it has no landing
+ * left, so keeping a row would answer `301` into a 404. Rows that lead to the
+ * old pages go too, while a manual row stays an explicit instruction.
+ */
+export async function clearContentCategorySlugRedirects(
+  redirects: Model<RedirectDocument>,
+  siteId: string,
+  locales: CategoryLocale[],
+): Promise<void> {
+  const paths = [...slugPaths(locales)]
+  if (!paths.length) return
+  await redirects.deleteMany({
+    siteId,
+    note: AUTO_CONTENT_CATEGORY_SLUG_REDIRECT_NOTE,
+    $or: [{ from: { $in: paths } }, { to: { $in: paths } }],
+  })
+}
+
 export async function syncContentCategorySlugRedirects(
   redirects: Model<RedirectDocument>,
   categories: Model<CategoryDocument>,

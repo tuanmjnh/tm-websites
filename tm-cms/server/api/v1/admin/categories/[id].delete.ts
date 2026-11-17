@@ -8,6 +8,7 @@ import {
 import { executeIdempotent } from '#server/utils/idempotency'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 import { parseInput } from '#server/utils/validation'
 
 /**
@@ -26,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Category, Content, Audit, Revision, IdempotencyKey, Menu }) =>
+    const executed = await withPreparedDb(event, ({ Category, Content, Audit, Revision, IdempotencyKey, Menu, Redirect }) =>
       executeIdempotent(
         {
           model: IdempotencyKey,
@@ -39,6 +40,7 @@ export default defineEventHandler(async (event) => {
           const removed = await deleteCategory(Category, Content, siteId, id, revision, {
             ...writeMetaOf(event, user, Audit, Revision),
             menus: Menu,
+            redirects: Redirect,
           })
           return {
             statusCode: 200,
@@ -51,6 +53,9 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'cache-control', 'no-store')
     if (executed.replayed) setHeader(event, 'idempotent-replay', 'true')
 
+    if (!executed.replayed) {
+      setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'category.delete'))
+    }
     return executed.value
   } catch (error) {
     return translateContentError(error)
