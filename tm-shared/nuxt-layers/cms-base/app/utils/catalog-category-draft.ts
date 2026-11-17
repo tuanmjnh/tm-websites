@@ -6,6 +6,7 @@ export interface CatalogCategoryFormDraft {
   order: number
   title: string
   titleEn: string
+  slugVi: string
   slugEn: string
   description: string
   descriptionEn: string
@@ -41,7 +42,7 @@ export function buildCatalogCategoryDraft(
     parent: draft.parent,
     order: Number(draft.order) || 0,
     title: withEditedLocales(original?.title, draft.title, draft.titleEn),
-    slug: withEditedLocales(original?.slug, draft.title, draft.slugEn),
+    slug: withEditedLocales(original?.slug, draft.slugVi || draft.title, draft.slugEn),
     description: withEditedLocales(original?.description, draft.description, draft.descriptionEn),
     thumbnail: draft.thumbnail.trim() || null,
     seo: {

@@ -53,6 +53,7 @@ try {
       order: 1,
       title: 'Trang sức mới',
       titleEn: 'New jewelry',
+      slugVi: 'trang-suc-moi',
       slugEn: 'new-jewelry',
       description: 'Mô tả mới',
       descriptionEn: 'New description',
@@ -72,7 +73,7 @@ try {
     })
 
     assert.deepEqual(payload.title, { vi: 'Trang sức mới', en: 'New jewelry', fr: 'Bijoux' })
-    assert.deepEqual(payload.slug, { vi: 'Trang sức mới', en: 'new-jewelry', fr: 'bijoux' })
+    assert.deepEqual(payload.slug, { vi: 'trang-suc-moi', en: 'new-jewelry', fr: 'bijoux' })
     assert.deepEqual(payload.description, { vi: 'Mô tả mới', en: 'New description', fr: 'Ancienne description' })
     assert.deepEqual(payload.seo, {
       title: { vi: 'SEO mới', en: 'New SEO', fr: 'Ancien SEO' },
@@ -81,13 +82,14 @@ try {
     assert.equal(payload.thumbnail, 'https://cdn.example.com/trang-suc-moi.jpg')
   })
 
-  await check('clearing the English fields removes them instead of restoring old values', () => {
+  await check('clearing English keeps the Vietnamese title and slug independent', () => {
     const payload = buildCatalogCategoryDraft({
       key: 'trang-suc',
       parent: null,
       order: 1,
-      title: 'Trang sức',
+      title: 'Trang sức đổi tên',
       titleEn: '',
+      slugVi: 'trang-suc',
       slugEn: '',
       description: 'Mô tả',
       descriptionEn: '',
@@ -106,8 +108,8 @@ try {
       },
     })
 
-    assert.deepEqual(payload.title, { vi: 'Trang sức' })
-    assert.deepEqual(payload.slug, { vi: 'Trang sức' })
+    assert.deepEqual(payload.title, { vi: 'Trang sức đổi tên' })
+    assert.deepEqual(payload.slug, { vi: 'trang-suc' })
     assert.deepEqual(payload.description, { vi: 'Mô tả' })
     assert.deepEqual(payload.seo, { title: { vi: 'SEO' }, description: { vi: 'Mô tả SEO' } })
   })
@@ -119,6 +121,7 @@ try {
       order: 1,
       title: 'Trang sức',
       titleEn: 'Jewelry',
+      slugVi: '',
       slugEn: 'jewelry',
       description: 'Mô tả',
       descriptionEn: 'Description',

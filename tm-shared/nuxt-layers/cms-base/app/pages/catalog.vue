@@ -564,6 +564,7 @@ const emptyCategoryDraft = () => ({
   key: '',
   title: '',
   titleEn: '',
+  slugVi: '',
   slugEn: '',
   parent: null as string | null,
   order: 0,
@@ -601,6 +602,7 @@ function editCategory(category: AdminCatalogCategory) {
     key: category.key,
     title: category.title.vi ?? '',
     titleEn: category.title.en ?? '',
+    slugVi: category.slug.vi ?? '',
     slugEn: category.slug.en ?? '',
     parent: category.parent ? categories.value.find(entry => entry.id === category.parent)?.key ?? null : null,
     order: category.order,
@@ -1051,17 +1053,20 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
           </div>
 
           <div class="grid gap-2 sm:grid-cols-2">
-            <UFormField :label="t('admin.catalog.fields.key')">
+            <UFormField :label="t('admin.catalog.fields.key')" class="sm:col-span-2">
               <UInput v-model="categoryDraft.key" class="w-full" :disabled="Boolean(categoryEditing)" />
-            </UFormField>
-            <UFormField :label="t('admin.catalog.categories.slugEn')">
-              <UInput v-model="categoryDraft.slugEn" class="w-full" />
             </UFormField>
             <UFormField :label="t('admin.catalog.categories.name')">
               <UInput v-model="categoryDraft.title" class="w-full" />
             </UFormField>
             <UFormField :label="t('admin.catalog.categories.nameEn')">
               <UInput v-model="categoryDraft.titleEn" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.categories.slugVi')" :hint="t('admin.catalog.categories.slugHint')">
+              <UInput v-model="categoryDraft.slugVi" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.categories.slugEn')">
+              <UInput v-model="categoryDraft.slugEn" class="w-full" />
             </UFormField>
             <UFormField :label="t('admin.catalog.categories.parent')">
               <USelect v-model="categoryDraft.parent" :items="parentItems" value-key="value" class="w-full" />
