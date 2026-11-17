@@ -726,6 +726,19 @@ async function integration() {
         locales: [{ locale: 'vi', title: 'Sản phẩm', slug: 'san-pham' }],
       }, metaR())
       assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/products' }), 0)
+
+      // The storefront also has static /about and /contact pages; a content slug
+      // with either name was never reachable there and must not redirect it.
+      for (const slug of ['about', 'contact']) {
+        const staticPage = await createContent(Content, SITE, pageDraft(`pages/reserved-${slug}`, slug), metaR())
+        await runContentEvent(Content, SITE, staticPage.id, { event: 'publish', revision: 1 }, NOW, metaR())
+        await updateContent(Content, SITE, staticPage.id, {
+          revision: 2,
+          type: 'page',
+          locales: [{ locale: 'vi', title: `Trang ${slug}`, slug: `${slug}-moi` }],
+        }, metaR())
+        assert.equal(await Redirect.countDocuments({ siteId: SITE, from: `/${slug}` }), 0)
+      }
     })
 
     await check('swapping VI and EN content slugs writes no redirect for either live path', async () => {

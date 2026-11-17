@@ -30,9 +30,11 @@ export const AUTO_SLUG_REDIRECT_NOTE = 'auto: slug changed'
  * `/products`, so renaming it must not create a row that redirects the listing.
  */
 const RESERVED_STOREFRONT_PATHS = new Set([
+  'about',
   'api',
   'bai-viet',
   'categories',
+  'contact',
   'danh-muc',
   'gio-hang',
   'products',
