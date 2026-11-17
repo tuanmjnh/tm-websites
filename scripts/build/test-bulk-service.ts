@@ -3,6 +3,7 @@ import { createContent, getContent, updateContent } from '../../tm-cms/server/se
 import { runBulkContentCommand } from '../../tm-cms/server/services/contentBulk.js'
 import { listContentAudit } from '../../tm-cms/server/services/contentAudit.js'
 import { listContentRevisions } from '../../tm-cms/server/services/contentRevisions.js'
+import { AUTO_SLUG_REDIRECT_NOTE } from '../../tm-cms/server/services/contentSlugRedirects.js'
 import { AdminContentBulkRequestSchema } from '../../tm-shared/packages/flow-contracts/src/content-admin.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
@@ -53,8 +54,9 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Content, Audit, Revision } = await prepareDatabase(connection)
+    const { Content, Audit, Revision, Redirect } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR }, revision: { model: Revision, actor: ACTOR } }
+    const metaR = { ...meta, redirects: Redirect }
 
     const first = await createContent(Content, SITE, pageDraft('pages/mot', 'mot'), meta)
     const second = await createContent(Content, SITE, pageDraft('pages/hai', 'hai'), meta)
@@ -177,6 +179,27 @@ async function integration() {
       }, meta)
       assert.equal(updated.revision, archived.revision + 1)
       assert.deepEqual(updated.tags, ['sau-bulk'])
+    })
+
+    await check('a bulk publish clears an automatic redirect under the newly live slug', async () => {
+      const page = await createContent(Content, SITE, pageDraft('pages/reuse-publish', 'bulk-reuse-cu'), meta)
+      await Redirect.create({
+        siteId: SITE,
+        from: '/bulk-reuse-cu',
+        to: '/bulk-old-target',
+        statusCode: 301,
+        isActive: true,
+        note: AUTO_SLUG_REDIRECT_NOTE,
+        revision: 1,
+      })
+
+      const result = await runBulkContentCommand(Content, SITE, {
+        action: 'publish',
+        items: [{ id: page.id, revision: page.revision }],
+      }, NOW, metaR)
+
+      assert.equal(result.succeeded, 1)
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/bulk-reuse-cu' }), 0)
     })
 
     await check('the batch cap and allowed actions are enforced by the shared schema', async () => {
