@@ -61,8 +61,9 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Category, Content, Audit, Revision, Menu } = await prepareDatabase(connection)
+    const { Category, Content, Audit, Revision, Menu, Redirect } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR }, revision: { model: Revision, actor: ACTOR } }
+    const redirectMeta = { ...meta, redirects: Redirect }
 
     const jewelry = await createCategory(Category, SITE, category('trang-suc', 'Trang sức'), meta)
     const rings = await createCategory(Category, SITE, category('nhan', 'Nhẫn', { parent: 'trang-suc', order: 2 }), meta)
@@ -252,6 +253,59 @@ async function integration() {
       const foreign = await listCategories(Category, OTHER_SITE)
       assert.equal(foreign.data.length, 0)
       await assert.rejects(() => getCategory(Category, OTHER_SITE, jewelry.id), isCategoryError(404, 'CATEGORY_NOT_FOUND'))
+    })
+
+    await check('a landing slug change leaves a 301 behind, and a VI/EN swap leaves none', async () => {
+      const renamed = await createCategory(Category, SITE, {
+        key: 'probe-landing',
+        locales: [
+          { locale: 'vi', name: 'Probe landing', slug: 'probe-landing-cu' },
+          { locale: 'en', name: 'Probe landing', slug: 'probe-landing-cu-en' },
+        ],
+      }, redirectMeta)
+
+      const updated = await updateCategory(Category, SITE, renamed.id, {
+        revision: renamed.revision,
+        locales: [
+          { locale: 'vi', name: 'Probe landing', slug: 'probe-landing-moi' },
+          { locale: 'en', name: 'Probe landing', slug: 'probe-landing-moi-en' },
+        ],
+      }, redirectMeta)
+
+      const viRow = await Redirect.findOne({ siteId: SITE, from: '/danh-muc/probe-landing-cu' }).lean<{ to: string, statusCode: number, note: string }>()
+      const enRow = await Redirect.findOne({ siteId: SITE, from: '/danh-muc/probe-landing-cu-en' }).lean<{ to: string }>()
+      assert.equal(viRow?.to, '/danh-muc/probe-landing-moi')
+      assert.equal(viRow?.statusCode, 301)
+      assert.equal(viRow?.note, 'auto: content category slug changed')
+      assert.equal(enRow?.to, '/danh-muc/probe-landing-moi-en')
+
+      await updateCategory(Category, SITE, renamed.id, {
+        revision: updated.revision,
+        locales: [
+          { locale: 'vi', name: 'Probe landing', slug: 'probe-landing-moi-en' },
+          { locale: 'en', name: 'Probe landing', slug: 'probe-landing-moi' },
+        ],
+      }, redirectMeta)
+      assert.equal(await Redirect.countDocuments({
+        siteId: SITE,
+        from: { $in: ['/danh-muc/probe-landing-moi', '/danh-muc/probe-landing-moi-en'] },
+      }), 0)
+    })
+
+    await check('a new category clears the automatic row under a reused slug', async () => {
+      const first = await createCategory(Category, SITE, category('probe-reuse', 'Probe reuse'), redirectMeta)
+      await updateCategory(Category, SITE, first.id, {
+        ...category('probe-reuse', 'Probe reuse'),
+        revision: first.revision,
+        locales: [{ locale: 'vi', name: 'Probe reuse', slug: 'probe-reuse-moi' }],
+      }, redirectMeta)
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/danh-muc/probe-reuse' }), 1)
+
+      await createCategory(Category, SITE, {
+        key: 'probe-reuse-lai',
+        locales: [{ locale: 'vi', name: 'Probe reuse again', slug: 'probe-reuse' }],
+      }, redirectMeta)
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/danh-muc/probe-reuse' }), 0)
     })
 
     await check('every category mutation records an audit entry', async () => {

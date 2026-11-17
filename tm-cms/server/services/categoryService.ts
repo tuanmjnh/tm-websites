@@ -12,6 +12,7 @@ import {
   normalizeCategoryInput,
 } from '../models/category'
 import { recordContentAudit } from './contentAudit'
+import { syncContentCategorySlugRedirects } from './contentCategorySlugRedirects'
 import { findMenuReferences } from './menuReferences'
 import type { ContentWriteMeta } from './contentService'
 
@@ -226,6 +227,17 @@ export async function createCategory(
 
   const record = created.toObject() as CategoryRecord
 
+  // A new category makes its landing paths live; an auto row left by an older
+  // category that used one of those slugs must not shadow the new page.
+  if (meta?.redirects) {
+    await syncContentCategorySlugRedirects(meta.redirects, model, {
+      siteId,
+      categoryId: String(record._id),
+      before: [],
+      after: record.locales,
+    })
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: 'category',
@@ -300,6 +312,15 @@ export async function updateCategory(
       'Category was changed by someone else; reload before saving',
       { expected: revision },
     )
+  }
+
+  if (meta?.redirects) {
+    await syncContentCategorySlugRedirects(meta.redirects, model, {
+      siteId,
+      categoryId: String(updated._id),
+      before: record.locales,
+      after: updated.locales,
+    })
   }
 
   const changedFields: string[] = []
