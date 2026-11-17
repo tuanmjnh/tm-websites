@@ -1,6 +1,7 @@
 import type { Model } from 'mongoose'
-import type { ContentLocale } from '../models/content'
+import type { ContentDocument, ContentLocale } from '../models/content'
 import type { RedirectDocument } from '../models/redirect'
+import { resolveRedirect } from './redirectService'
 import { writeSlugRedirects, type SlugRedirectOutcome } from './slugRedirects'
 
 export type { SlugRedirectOutcome } from './slugRedirects'
@@ -96,14 +97,20 @@ export function changedSlugPaths(before: ContentLocale[], after: ContentLocale[]
 }
 
 /**
- * Creates the 301 rows for a slug change on a **published** record. A draft is
- * skipped: nobody could have visited its URL, so a row would only be noise in
- * the redirect map.
+ * Reconciles the 301 rows for a slug change on a **published** record. A draft
+ * is skipped: nobody could have visited its URL, so a row would only be noise.
+ *
+ * A live record owns its short paths. An auto row under one of them is removed,
+ * so reusing a slug makes the new page reachable. A redirect is not written for
+ * an old path that another published or scheduled record still uses, and an
+ * existing manual row is never replaced.
  */
 export async function syncContentSlugRedirects(
-  model: Model<RedirectDocument>,
+  redirects: Model<RedirectDocument>,
+  contents: Model<ContentDocument>,
   input: {
     siteId: string
+    contentId: string
     published: boolean
     before: ContentLocale[]
     after: ContentLocale[]
@@ -111,11 +118,52 @@ export async function syncContentSlugRedirects(
 ): Promise<SlugRedirectOutcome> {
   if (!input.published) return { created: [], kept: [], skipped: [] }
 
+  const livePaths = new Set(
+    input.after.map(entry => contentPathForSlug(entry.slug)).filter((path): path is string => Boolean(path)),
+  )
+  if (livePaths.size) {
+    await redirects.deleteMany({
+      siteId: input.siteId,
+      from: { $in: [...livePaths] },
+      note: AUTO_SLUG_REDIRECT_NOTE,
+    })
+  }
+
   const { changes, skipped } = changedSlugPaths(input.before, input.after)
-  const outcome: SlugRedirectOutcome = await writeSlugRedirects(
-    model,
+  if (!changes.length) return { created: [], kept: [], skipped }
+
+  const oldSlugs = [...new Set(changes.map(change => change.from.slice(1)))]
+  const occupied = await contents.find({
+    siteId: input.siteId,
+    _id: { $ne: input.contentId },
+    deletedAt: null,
+    status: { $in: ['published', 'scheduled'] },
+    'locales.slug': { $in: oldSlugs },
+  }).select('locales.slug').lean<Array<{ locales?: Array<{ slug?: string }> }>>()
+  const occupiedSlugs = new Set(
+    occupied.flatMap(row => (row.locales ?? []).map(entry => entry.slug).filter(Boolean)),
+  )
+
+  const writable = []
+  for (const change of changes) {
+    const oldSlug = change.from.slice(1)
+    if (occupiedSlugs.has(oldSlug)) {
+      skipped.push(oldSlug)
+      continue
+    }
+    // A manual row may already point the new path back here; do not close a loop.
+    const resolved = await resolveRedirect(redirects, input.siteId, change.to)
+    if (resolved && resolved.statusCode !== 410 && resolved.to === change.from) {
+      skipped.push(oldSlug)
+      continue
+    }
+    writable.push(change)
+  }
+
+  const outcome = await writeSlugRedirects(
+    redirects,
     input.siteId,
-    changes,
+    writable,
     AUTO_SLUG_REDIRECT_NOTE,
   )
   outcome.skipped = skipped

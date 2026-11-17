@@ -433,8 +433,9 @@ export async function updateContent(
   const changedFields = diffContentFields(record, draft)
 
   if (meta?.redirects) {
-    await syncContentSlugRedirects(meta.redirects, {
+    await syncContentSlugRedirects(meta.redirects, model, {
       siteId,
+      contentId: String(record._id),
       published: record.status === 'published',
       before: record.locales,
       after: updated.locales,
@@ -555,6 +556,18 @@ export async function runContentEvent(
   if (iso(record.publishedAt) !== iso(updated.publishedAt)) changedFields.push('publishedAt')
   if (iso(record.deletedAt) !== iso(updated.deletedAt)) changedFields.push('deletedAt')
 
+  // Publishing a draft makes its short paths live, so an old auto row under one
+  // of them must go; the slug itself did not change in this transition.
+  if (meta?.redirects && updated.status === 'published') {
+    await syncContentSlugRedirects(meta.redirects, model, {
+      siteId,
+      contentId: String(updated._id),
+      published: true,
+      before: updated.locales,
+      after: updated.locales,
+    })
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceId: String(updated._id),
@@ -654,8 +667,9 @@ export async function restoreContentRevision(
 
   // A revert can move the slug back too, so the current URL keeps working.
   if (meta?.redirects) {
-    await syncContentSlugRedirects(meta.redirects, {
+    await syncContentSlugRedirects(meta.redirects, model, {
       siteId,
+      contentId: String(record._id),
       published: record.status === 'published',
       before: record.locales,
       after: updated.locales,

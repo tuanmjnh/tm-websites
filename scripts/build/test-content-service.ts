@@ -775,6 +775,46 @@ async function integration() {
       assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-ambiguous-cu' }), 0)
     })
 
+    await check('publishing a record that reuses an old slug removes its automatic redirect', async () => {
+      const old = await createContent(Content, SITE, pageDraft('pages/reuse-content', 'content-reuse-cu'), metaR())
+      await runContentEvent(Content, SITE, old.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      await updateContent(Content, SITE, old.id, {
+        revision: 2,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Tên mới', slug: 'content-reuse-moi' }],
+      }, metaR())
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-reuse-cu' }), 1)
+
+      const owner = await createContent(Content, SITE, pageDraft('pages/reuse-owner', 'content-reuse-cu'), metaR())
+      await runContentEvent(Content, SITE, owner.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-reuse-cu' }), 0)
+    })
+
+    await check('an old content path owned by another published record is not redirected', async () => {
+      const holder = await createContent(Content, SITE, pageDraft('pages/occupied-content', 'content-occupied-cu'), metaR())
+      await runContentEvent(Content, SITE, holder.id, { event: 'publish', revision: 1 }, NOW, metaR())
+
+      const mover = await createContent(Content, SITE, {
+        type: 'page',
+        key: 'pages/occupied-mover',
+        locales: [
+          { locale: 'vi', title: 'Đang đổi', slug: 'content-mover-a' },
+          { locale: 'en', title: 'Moving', slug: 'content-occupied-cu' },
+        ],
+      }, metaR())
+      await runContentEvent(Content, SITE, mover.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      await updateContent(Content, SITE, mover.id, {
+        revision: 2,
+        type: 'page',
+        locales: [
+          { locale: 'vi', title: 'Đang đổi', slug: 'content-mover-a' },
+          { locale: 'en', title: 'Moving', slug: 'content-occupied-new' },
+        ],
+      }, metaR())
+
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-occupied-cu' }), 0)
+    })
+
 
   } finally {
     await connection.db?.dropDatabase().catch(() => undefined)
