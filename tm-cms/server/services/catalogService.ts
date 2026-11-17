@@ -25,6 +25,10 @@ import {
 } from '../models/catalog'
 import { diffFields, recordContentAudit, type ContentAuditMeta } from './contentAudit'
 import { syncCatalogCategorySlugRedirects } from './catalogSlugRedirects'
+import {
+  isPublicCatalogItem,
+  syncCatalogItemSlugRedirects,
+} from './catalogItemSlugRedirects'
 
 /**
  * Catalog commands and admin queries. No H3 here: the API layer resolves the
@@ -450,6 +454,16 @@ export async function updateCatalogItem(
     )
   }
 
+  if (meta?.redirects) {
+    await syncCatalogItemSlugRedirects(meta.redirects, model, {
+      siteId,
+      itemId: String(updated._id),
+      live: isPublicCatalogItem(updated),
+      before: record.slug ?? {},
+      after: updated.slug ?? {},
+    })
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: 'catalog_item',
@@ -528,6 +542,18 @@ export async function runCatalogItemEvent(
 
   if (!updated) {
     throw new CatalogServiceError(409, 'CATALOG_REVISION_CONFLICT', 'Catalog item was changed by someone else; reload before saving')
+  }
+
+  // A publish makes the current paths live (clearing an older automatic row on
+  // a reused slug), while archive/delete hides the item and its rows.
+  if (meta?.redirects) {
+    await syncCatalogItemSlugRedirects(meta.redirects, model, {
+      siteId,
+      itemId: String(updated._id),
+      live: isPublicCatalogItem(updated),
+      before: record.status === 'published' ? record.slug ?? {} : updated.slug ?? {},
+      after: updated.slug ?? {},
+    })
   }
 
   await recordContentAudit(meta?.audit, {

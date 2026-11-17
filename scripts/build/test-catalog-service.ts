@@ -580,6 +580,95 @@ try {
     assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/categories/ambiguous-cu' }), 0)
   })
 
+  await check('a published product slug change leaves a 301, a draft rename leaves none', async () => {
+    const draft = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'probe-item-draft',
+      title: { vi: 'Sản phẩm nháp' },
+      slug: { vi: 'probe-item-draft-cu' },
+    })
+    await updateCatalogItem(CatalogItem, CatalogCategory, SITE, draft.id, {
+      revision: draft.revision,
+      key: 'probe-item-draft',
+      title: { vi: 'Sản phẩm nháp' },
+      slug: { vi: 'probe-item-draft-moi' },
+    }, { redirects: Redirect })
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/products/probe-item-draft-cu' }), 0)
+
+    const item = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'probe-item-redirect',
+      title: { vi: 'Sản phẩm redirect', en: 'Redirect product' },
+      slug: { vi: 'probe-item-cu', en: 'probe-item-cu-en' },
+    })
+    const published = await runCatalogItemEvent(CatalogItem, SITE, item.id, {
+      event: 'publish',
+      revision: item.revision,
+    }, { redirects: Redirect })
+    const renamed = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, item.id, {
+      revision: published.revision,
+      key: 'probe-item-redirect',
+      title: { vi: 'Sản phẩm redirect', en: 'Redirect product' },
+      slug: { vi: 'probe-item-moi', en: 'probe-item-moi-en' },
+    }, { redirects: Redirect })
+
+    const viRow = await Redirect.findOne({ siteId: SITE, from: '/products/probe-item-cu' }).lean<{ to: string, statusCode: number, note: string }>()
+    const enRow = await Redirect.findOne({ siteId: SITE, from: '/products/probe-item-cu-en' }).lean<{ to: string }>()
+    assert.equal(viRow?.to, '/products/probe-item-moi')
+    assert.equal(viRow?.statusCode, 301)
+    assert.equal(viRow?.note, 'auto: catalog item slug changed')
+    assert.equal(enRow?.to, '/products/probe-item-moi-en')
+
+    // Archiving hides the item, so its automatic rows no longer lead anywhere.
+    await runCatalogItemEvent(CatalogItem, SITE, item.id, {
+      event: 'archive',
+      revision: renamed.revision,
+    }, { redirects: Redirect })
+    assert.equal(await Redirect.countDocuments({
+      siteId: SITE,
+      $or: [
+        { from: { $in: ['/products/probe-item-cu', '/products/probe-item-cu-en'] } },
+        { to: { $in: ['/products/probe-item-moi', '/products/probe-item-moi-en'] } },
+      ],
+    }), 0)
+  })
+
+  await check('publishing a product that reuses an old slug clears its automatic row', async () => {
+    const first = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'probe-item-reuse-a',
+      title: { vi: 'Sản phẩm cũ' },
+      slug: { vi: 'probe-item-reuse-cu' },
+    })
+    const published = await runCatalogItemEvent(CatalogItem, SITE, first.id, {
+      event: 'publish',
+      revision: first.revision,
+    }, { redirects: Redirect })
+    await updateCatalogItem(CatalogItem, CatalogCategory, SITE, first.id, {
+      revision: published.revision,
+      key: 'probe-item-reuse-a',
+      title: { vi: 'Sản phẩm cũ' },
+      slug: { vi: 'probe-item-reuse-moi' },
+    }, { redirects: Redirect })
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/products/probe-item-reuse-cu' }), 1)
+
+    const second = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'probe-item-reuse-b',
+      title: { vi: 'Sản phẩm mới' },
+      slug: { vi: 'probe-item-reuse-cu' },
+    })
+    await runCatalogItemEvent(CatalogItem, SITE, second.id, {
+      event: 'publish',
+      revision: second.revision,
+    }, { redirects: Redirect })
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/products/probe-item-reuse-cu' }), 0)
+
+    for (const id of [first.id, second.id]) {
+      const current = await getCatalogItem(CatalogItem, SITE, id)
+      await runCatalogItemEvent(CatalogItem, SITE, id, {
+        event: 'archive',
+        revision: current.revision,
+      }, { redirects: Redirect })
+    }
+  })
+
   await check('deleting a catalog category clears its automatic rows', async () => {
     const doomed = await createCatalogCategory(CatalogCategory, SITE, {
       key: 'probe-delete-redirect',

@@ -627,6 +627,14 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 - Delete evidence: `test:categories` → 16 checks, `test:catalog` → 45 checks, each with a rename → manual row → delete case asserting the automatic row is removed and the manual row survives.
 - Limits: there is no 410 and no redirect for the category index or a subtree move; a manual row into a deleted landing is left as typed.
 
+### WEB-02 — product landings leave their own 301 (landed 2026-11-17)
+
+- `tm-cms/server/services/catalogItemSlugRedirects.ts` writes one active `301` per changed locale from `/products/<old>` to `/products/<new>` (note `auto: catalog item slug changed`) for a publicly visible item. A draft, archived, deleted or inactive item owns no URL: its automatic rows are removed instead. A VI/EN swap, an ambiguous old path, a path another live item owns, a manual row and a target whose chain leads back are skipped.
+- `updateCatalogItem` reconciles a rename; `runCatalogItemEvent` clears rows on the publish transition (so reusing a slug is reachable) and removes the rows into and out of the item when it is archived or deleted. `PATCH /api/v1/admin/catalog/items/:id` and `POST …/events` pass the prepared `Redirect` model; both routes already purge the storefront.
+- Evidence: `pnpm test:catalog` → 47 checks. New: a draft rename writes nothing; a published item renamed in both locales writes the two rows with their auto note and target; archiving it removes them; creating and publishing another item on the freed slug clears the old automatic row. `pnpm typecheck`, `pnpm lint` and `pnpm verify:all` (37/37) pass.
+- Evidence (live `:4005`/`:4006`, real `sen-tuan` data): create `201` (draft), publish `200`, `/products/probe-item-live-cu` `200`; PATCH to `-moi` `200` + `x-storefront-revalidate: revalidated`, old path `301` to the new one and the new path `200`, one auto row. Creating a second item on the freed slug and publishing it returned `revalidated`, made `/products/probe-item-live-cu` `200` and removed the row. Probes removed (`catalog_items` 2, 5 audit rows, 0 redirect/idempotency leftovers), both servers stopped.
+- Limits: create is draft-only, so no row exists until a publish; archive/delete removes the rows (a later restore does not recreate them); bulk price/stock updates never touch a slug, and legacy `fullPath` imports get no row.
+
 ### WEB-01 — latest content on the home page (landed 2026-11-11)
 
 - `web-base/app/pages/index.vue` renders the three newest published posts between the newest products and the category strip, using the shared `WebContentList` grid and one `useAsyncData` call to `/api/public/content?type=post&locale=<locale>&limit=3` (keyed and watched by locale). No new server code, contract or route.

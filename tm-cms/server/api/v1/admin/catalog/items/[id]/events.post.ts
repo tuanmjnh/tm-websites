@@ -16,13 +16,13 @@ export default defineEventHandler(async (event) => {
   const body = parseInput(CatalogEventSchema, await readBody(event), 'CATALOG_EVENT_INVALID', 'Sự kiện không hợp lệ')
 
   try {
-    const updated = await withPreparedDb(event, ({ CatalogItem, Audit, Revision }) =>
+    const updated = await withPreparedDb(event, ({ CatalogItem, Audit, Revision, Redirect }) =>
       runCatalogItemEvent(
         CatalogItem,
         siteId,
         id,
         body,
-        writeMetaOf(event, user, Audit, Revision),
+        { ...writeMetaOf(event, user, Audit, Revision), redirects: Redirect },
       ))
 
     setHeader(event, 'cache-control', 'no-store')
