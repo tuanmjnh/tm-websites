@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ CatalogCategory, Audit, Revision, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ CatalogCategory, Audit, Revision, IdempotencyKey, Redirect }) =>
       executeIdempotent(
         { model: IdempotencyKey, siteId, action: 'catalog.category.create', key: idempotencyKey, payload: body },
         async () => {
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
             CatalogCategory,
             siteId,
             body,
-            writeMetaOf(event, user, Audit, Revision),
+            { ...writeMetaOf(event, user, Audit, Revision), redirects: Redirect },
           )
           return {
             statusCode: 201,

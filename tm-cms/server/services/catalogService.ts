@@ -68,7 +68,7 @@ export interface CatalogItemListResult {
 
 export interface CatalogWriteMeta {
   audit?: ContentAuditMeta
-  /** Present on updates that may move a category slug. */
+  /** Present on writes that may move or reuse a category slug. */
   redirects?: Model<RedirectDocument>
 }
 
@@ -648,6 +648,16 @@ export async function createCatalogCategory(
 
   const record = created.toObject() as CatalogCategoryRecord
 
+  if (meta?.redirects) {
+    await syncCatalogCategorySlugRedirects(meta.redirects, model, {
+      siteId,
+      categoryId: String(record._id),
+      live: true,
+      before: {},
+      after: record.slug ?? {},
+    })
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: 'catalog_category',
@@ -741,8 +751,9 @@ export async function updateCatalogCategory(
   await refreshSubtree(model, siteId, updated._id)
 
   if (meta?.redirects) {
-    await syncCatalogCategorySlugRedirects(meta.redirects, {
+    await syncCatalogCategorySlugRedirects(meta.redirects, model, {
       siteId,
+      categoryId: String(record._id),
       live: record.isDeleted !== true,
       before: record.slug ?? {},
       after: updated.slug ?? {},

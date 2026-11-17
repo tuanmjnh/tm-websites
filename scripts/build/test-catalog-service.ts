@@ -456,6 +456,130 @@ try {
     assert.ok(rows.every(row => row.note === AUTO_CATEGORY_SLUG_REDIRECT_NOTE))
   })
 
+  await check('a manual redirect is kept and a repeat save does not duplicate it', async () => {
+    const from = '/categories/manual-cu'
+    await Redirect.create({
+      siteId: SITE,
+      from,
+      to: '/categories/manual-dich',
+      statusCode: 301,
+      isActive: true,
+      note: 'manual',
+      revision: 1,
+    })
+    const created = await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'manual-probe',
+      title: { vi: 'Danh mục thủ công' },
+      slug: { vi: 'manual-cu' },
+    }, { redirects: Redirect })
+    const updated = await updateCatalogCategory(CatalogCategory, SITE, created.id, {
+      revision: created.revision,
+      key: 'manual-probe',
+      parent: null,
+      title: { vi: 'Danh mục thủ công' },
+      slug: { vi: 'manual-moi' },
+    }, { redirects: Redirect })
+
+    await updateCatalogCategory(CatalogCategory, SITE, updated.id, {
+      revision: updated.revision,
+      key: 'manual-probe',
+      parent: null,
+      title: { vi: 'Danh mục thủ công đã sửa' },
+      slug: { vi: 'manual-moi' },
+    }, { redirects: Redirect })
+
+    const rows = await Redirect.find({ siteId: SITE, from }).lean<Array<{ to: string, note: string }>>()
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0]?.to, '/categories/manual-dich')
+    assert.equal(rows[0]?.note, 'manual')
+  })
+
+  await check('swapping VI and EN slugs writes no redirect for either live path', async () => {
+    const created = await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'swap-probe',
+      title: { vi: 'Danh mục hoán đổi', en: 'Swap category' },
+      slug: { vi: 'swap-a', en: 'swap-b' },
+    }, { redirects: Redirect })
+    await updateCatalogCategory(CatalogCategory, SITE, created.id, {
+      revision: created.revision,
+      key: 'swap-probe',
+      parent: null,
+      title: { vi: 'Danh mục hoán đổi', en: 'Swap category' },
+      slug: { vi: 'swap-b', en: 'swap-a' },
+    }, { redirects: Redirect })
+
+    const rows = await Redirect.find({
+      siteId: SITE,
+      from: { $in: ['/categories/swap-a', '/categories/swap-b'] },
+    })
+    assert.equal(rows.length, 0)
+  })
+
+  await check('reusing an old category slug removes its automatic redirect', async () => {
+    const created = await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'reuse-probe',
+      title: { vi: 'Danh mục dùng lại', en: 'Reuse category' },
+      slug: { vi: 'reuse-cu', en: 'reuse-old' },
+    })
+    await updateCatalogCategory(CatalogCategory, SITE, created.id, {
+      revision: created.revision,
+      key: 'reuse-probe',
+      parent: null,
+      title: { vi: 'Danh mục dùng lại', en: 'Reuse category' },
+      slug: { vi: 'reuse-moi', en: 'reuse-new' },
+    }, { redirects: Redirect })
+
+    const oldPaths = ['/categories/reuse-cu', '/categories/reuse-old']
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: { $in: oldPaths } }), 2)
+
+    await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'reuse-owner',
+      title: { vi: 'Danh mục nhận slug', en: 'Slug owner' },
+      slug: { vi: 'reuse-cu', en: 'reuse-old' },
+    }, { redirects: Redirect })
+
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: { $in: oldPaths } }), 0)
+  })
+
+  await check('an old slug owned by another live category is not redirected', async () => {
+    await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'occupied-owner',
+      title: { vi: 'Danh mục giữ slug' },
+      slug: { vi: 'occupied-cu' },
+    })
+    const mover = await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'occupied-mover',
+      title: { vi: 'Danh mục đổi slug', en: 'Moving category' },
+      slug: { vi: 'occupied-a', en: 'occupied-cu' },
+    })
+    await updateCatalogCategory(CatalogCategory, SITE, mover.id, {
+      revision: mover.revision,
+      key: 'occupied-mover',
+      parent: null,
+      title: { vi: 'Danh mục đổi slug', en: 'Moving category' },
+      slug: { vi: 'occupied-b', en: 'occupied-new' },
+    }, { redirects: Redirect })
+
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/categories/occupied-cu' }), 0)
+  })
+
+  await check('one old path with two new targets is skipped as ambiguous', async () => {
+    const created = await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'ambiguous-probe',
+      title: { vi: 'Danh mục mơ hồ', en: 'Ambiguous category' },
+      slug: { vi: 'ambiguous-cu', en: 'ambiguous-cu' },
+    })
+    await updateCatalogCategory(CatalogCategory, SITE, created.id, {
+      revision: created.revision,
+      key: 'ambiguous-probe',
+      parent: null,
+      title: { vi: 'Danh mục mơ hồ', en: 'Ambiguous category' },
+      slug: { vi: 'ambiguous-a', en: 'ambiguous-b' },
+    }, { redirects: Redirect })
+
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/categories/ambiguous-cu' }), 0)
+  })
+
   await check('a category with children cannot be deleted', async () => {
     const categories = await listCatalogCategories(CatalogCategory, CatalogItem, SITE)
     const root = categories.find(category => category.key === 'trang-suc')!
