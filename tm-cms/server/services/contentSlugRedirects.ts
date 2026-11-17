@@ -47,7 +47,6 @@ export function contentPathForSlug(slug: string): string | null {
 }
 
 interface SlugChange {
-  locale: string
   from: string
   to: string
 }
@@ -55,7 +54,10 @@ interface SlugChange {
 /** Locale slugs that differ between two versions of the same record. */
 export function changedSlugPaths(before: ContentLocale[], after: ContentLocale[]) {
   const previous = new Map(before.map(entry => [entry.locale.toLowerCase(), entry.slug]))
-  const changes: SlugChange[] = []
+  const livePaths = new Set(
+    after.map(entry => contentPathForSlug(entry.slug)).filter((path): path is string => Boolean(path)),
+  )
+  const candidates = new Map<string, { slug: string, targets: Set<string> }>()
   const skipped: string[] = []
 
   for (const entry of after) {
@@ -70,8 +72,24 @@ export function changedSlugPaths(before: ContentLocale[], after: ContentLocale[]
       skipped.push(oldSlug)
       continue
     }
-    if (!to || from === to) continue
-    changes.push({ locale: entry.locale, from, to })
+    // A swapped locale still serves this path after the save, so redirecting it
+    // would hide the page and turn the two rows into a loop.
+    if (!to || from === to || livePaths.has(from)) continue
+
+    const candidate = candidates.get(from)
+    if (candidate) candidate.targets.add(to)
+    else candidates.set(from, { slug: oldSlug, targets: new Set([to]) })
+  }
+
+  const changes: SlugChange[] = []
+  for (const [from, candidate] of candidates) {
+    const [to] = candidate.targets
+    // One old path cannot point at two different new pages.
+    if (candidate.targets.size !== 1 || !to) {
+      skipped.push(candidate.slug)
+      continue
+    }
+    changes.push({ from, to })
   }
 
   return { changes, skipped }

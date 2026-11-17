@@ -691,6 +691,7 @@ async function integration() {
       const kept = await Redirect.findOne({ siteId: SITE, from: '/ten-moi' }).lean()
       assert.equal(kept?.to, '/gioi-thieu')
       assert.equal(kept?.statusCode, 302)
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/ten-moi' }), 1)
 
       // A draft was never reachable, so renaming it writes no row.
       const draft = await createContent(Content, SITE, pageDraft('pages/nhap', 'nhap-cu'), metaR())
@@ -725,6 +726,53 @@ async function integration() {
         locales: [{ locale: 'vi', title: 'Sản phẩm', slug: 'san-pham' }],
       }, metaR())
       assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/products' }), 0)
+    })
+
+    await check('swapping VI and EN content slugs writes no redirect for either live path', async () => {
+      const page = await createContent(Content, SITE, {
+        type: 'page',
+        key: 'pages/swap-slug',
+        locales: [
+          { locale: 'vi', title: 'Hoán đổi', slug: 'content-swap-a' },
+          { locale: 'en', title: 'Swap', slug: 'content-swap-b' },
+        ],
+      }, metaR())
+      await runContentEvent(Content, SITE, page.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      await updateContent(Content, SITE, page.id, {
+        revision: 2,
+        type: 'page',
+        locales: [
+          { locale: 'vi', title: 'Hoán đổi', slug: 'content-swap-b' },
+          { locale: 'en', title: 'Swap', slug: 'content-swap-a' },
+        ],
+      }, metaR())
+
+      assert.equal(await Redirect.countDocuments({
+        siteId: SITE,
+        from: { $in: ['/content-swap-a', '/content-swap-b'] },
+      }), 0)
+    })
+
+    await check('one content path with two new targets is skipped as ambiguous', async () => {
+      const page = await createContent(Content, SITE, {
+        type: 'page',
+        key: 'pages/ambiguous-slug',
+        locales: [
+          { locale: 'vi', title: 'Mơ hồ', slug: 'content-ambiguous-cu' },
+          { locale: 'en', title: 'Ambiguous', slug: 'content-ambiguous-cu' },
+        ],
+      }, metaR())
+      await runContentEvent(Content, SITE, page.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      await updateContent(Content, SITE, page.id, {
+        revision: 2,
+        type: 'page',
+        locales: [
+          { locale: 'vi', title: 'Mơ hồ', slug: 'content-ambiguous-a' },
+          { locale: 'en', title: 'Ambiguous', slug: 'content-ambiguous-b' },
+        ],
+      }, metaR())
+
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-ambiguous-cu' }), 0)
     })
 
 
