@@ -46,34 +46,96 @@ const OTHER_SITE = 'bagpost'
 console.log('catalog service')
 
 try {
-  await check('editing a category keeps the locales the panel does not show', () => {
+  await check('editing a category updates both locales and keeps an unedited one', () => {
     const payload = buildCatalogCategoryDraft({
       key: 'trang-suc',
       parent: null,
       order: 1,
       title: 'Trang sức mới',
+      titleEn: 'New jewelry',
+      slugEn: 'new-jewelry',
       description: 'Mô tả mới',
+      descriptionEn: 'New description',
       thumbnail: ' https://cdn.example.com/trang-suc-moi.jpg ',
       seoTitle: 'SEO mới',
+      seoTitleEn: 'New SEO',
       seoDescription: 'Mô tả SEO mới',
+      seoDescriptionEn: 'New SEO description',
     }, {
-      title: { vi: 'Trang sức', en: 'Jewelry' },
-      slug: { vi: 'trang-suc', en: 'jewelry' },
-      description: { vi: 'Mô tả cũ', en: 'Old description' },
+      title: { vi: 'Trang sức', en: 'Jewelry', fr: 'Bijoux' },
+      slug: { vi: 'trang-suc', en: 'jewelry', fr: 'bijoux' },
+      description: { vi: 'Mô tả cũ', en: 'Old description', fr: 'Ancienne description' },
       seo: {
-        title: { vi: 'SEO cũ', en: 'Old SEO' },
-        description: { vi: 'Mô tả SEO cũ', en: 'Old SEO description' },
+        title: { vi: 'SEO cũ', en: 'Old SEO', fr: 'Ancien SEO' },
+        description: { vi: 'Mô tả SEO cũ', en: 'Old SEO description', fr: 'Ancienne description SEO' },
       },
     })
 
-    assert.deepEqual(payload.title, { vi: 'Trang sức mới', en: 'Jewelry' })
-    assert.deepEqual(payload.slug, { vi: 'Trang sức mới', en: 'jewelry' })
-    assert.deepEqual(payload.description, { vi: 'Mô tả mới', en: 'Old description' })
+    assert.deepEqual(payload.title, { vi: 'Trang sức mới', en: 'New jewelry', fr: 'Bijoux' })
+    assert.deepEqual(payload.slug, { vi: 'Trang sức mới', en: 'new-jewelry', fr: 'bijoux' })
+    assert.deepEqual(payload.description, { vi: 'Mô tả mới', en: 'New description', fr: 'Ancienne description' })
     assert.deepEqual(payload.seo, {
-      title: { vi: 'SEO mới', en: 'Old SEO' },
-      description: { vi: 'Mô tả SEO mới', en: 'Old SEO description' },
+      title: { vi: 'SEO mới', en: 'New SEO', fr: 'Ancien SEO' },
+      description: { vi: 'Mô tả SEO mới', en: 'New SEO description', fr: 'Ancienne description SEO' },
     })
     assert.equal(payload.thumbnail, 'https://cdn.example.com/trang-suc-moi.jpg')
+  })
+
+  await check('clearing the English fields removes them instead of restoring old values', () => {
+    const payload = buildCatalogCategoryDraft({
+      key: 'trang-suc',
+      parent: null,
+      order: 1,
+      title: 'Trang sức',
+      titleEn: '',
+      slugEn: '',
+      description: 'Mô tả',
+      descriptionEn: '',
+      thumbnail: '',
+      seoTitle: 'SEO',
+      seoTitleEn: '',
+      seoDescription: 'Mô tả SEO',
+      seoDescriptionEn: '',
+    }, {
+      title: { vi: 'Trang sức', en: 'Jewelry' },
+      slug: { vi: 'trang-suc', en: 'jewelry' },
+      description: { vi: 'Mô tả', en: 'Description' },
+      seo: {
+        title: { vi: 'SEO', en: 'SEO' },
+        description: { vi: 'Mô tả SEO', en: 'SEO description' },
+      },
+    })
+
+    assert.deepEqual(payload.title, { vi: 'Trang sức' })
+    assert.deepEqual(payload.slug, { vi: 'Trang sức' })
+    assert.deepEqual(payload.description, { vi: 'Mô tả' })
+    assert.deepEqual(payload.seo, { title: { vi: 'SEO' }, description: { vi: 'Mô tả SEO' } })
+  })
+
+  await check('creating a category carries both edited locales', () => {
+    const payload = buildCatalogCategoryDraft({
+      key: 'trang-suc',
+      parent: null,
+      order: 1,
+      title: 'Trang sức',
+      titleEn: 'Jewelry',
+      slugEn: 'jewelry',
+      description: 'Mô tả',
+      descriptionEn: 'Description',
+      thumbnail: '',
+      seoTitle: 'SEO',
+      seoTitleEn: 'SEO',
+      seoDescription: 'Mô tả SEO',
+      seoDescriptionEn: 'SEO description',
+    }, null)
+
+    assert.deepEqual(payload.title, { vi: 'Trang sức', en: 'Jewelry' })
+    assert.deepEqual(payload.slug, { vi: 'Trang sức', en: 'jewelry' })
+    assert.deepEqual(payload.description, { vi: 'Mô tả', en: 'Description' })
+    assert.deepEqual(payload.seo, {
+      title: { vi: 'SEO', en: 'SEO' },
+      description: { vi: 'Mô tả SEO', en: 'SEO description' },
+    })
   })
 
   let parentId = ''

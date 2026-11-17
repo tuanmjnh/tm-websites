@@ -943,13 +943,18 @@
       "categories": {
         "title": "Danh mục sản phẩm",
         "name": "Tên danh mục",
+        "nameEn": "Tên danh mục (EN)",
+        "slugEn": "Slug (EN)",
         "parent": "Danh mục cha",
         "noParent": "Không có (danh mục gốc)",
         "order": "Thứ tự",
         "description": "Mô tả danh mục",
+        "descriptionEn": "Mô tả danh mục (EN)",
         "image": "Ảnh danh mục (URL)",
         "seoTitle": "Tiêu đề SEO",
+        "seoTitleEn": "Tiêu đề SEO (EN)",
         "seoDescription": "Mô tả SEO",
+        "seoDescriptionEn": "Mô tả SEO (EN)",
         "add": "Thêm danh mục",
         "empty": "Chưa có danh mục sản phẩm."
       }

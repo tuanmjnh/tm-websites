@@ -941,13 +941,18 @@
       "categories": {
         "title": "Product categories",
         "name": "Category name",
+        "nameEn": "Category name (EN)",
+        "slugEn": "Slug (EN)",
         "parent": "Parent category",
         "noParent": "None (root category)",
         "order": "Order",
         "description": "Category description",
+        "descriptionEn": "Category description (EN)",
         "image": "Category image (URL)",
         "seoTitle": "SEO title",
+        "seoTitleEn": "SEO title (EN)",
         "seoDescription": "SEO description",
+        "seoDescriptionEn": "SEO description (EN)",
         "add": "Add category",
         "empty": "No product categories yet."
       }

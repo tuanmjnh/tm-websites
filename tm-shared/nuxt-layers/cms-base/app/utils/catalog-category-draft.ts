@@ -5,18 +5,33 @@ export interface CatalogCategoryFormDraft {
   parent: string | null
   order: number
   title: string
+  titleEn: string
+  slugEn: string
   description: string
+  descriptionEn: string
   thumbnail: string
   seoTitle: string
+  seoTitleEn: string
   seoDescription: string
+  seoDescriptionEn: string
 }
 
 type CatalogCategoryLocales = Pick<AdminCatalogCategory, 'title' | 'slug' | 'description' | 'seo'>
 
 /**
- * The category panel edits Vietnamese only. Rebuild the payload from the loaded
- * record so saving one field cannot drop the locales the panel does not show.
+ * The panel edits Vietnamese and English. Write those two locales explicitly so
+ * clearing one removes it, and keep any other locale the record already carries
+ * so opening the form cannot erase data it does not show.
  */
+function withEditedLocales(original: Record<string, string> | undefined, vi: string, en: string) {
+  const next = { ...original }
+  if (vi.trim()) next.vi = vi
+  else delete next.vi
+  if (en.trim()) next.en = en
+  else delete next.en
+  return next
+}
+
 export function buildCatalogCategoryDraft(
   draft: CatalogCategoryFormDraft,
   original: CatalogCategoryLocales | null,
@@ -25,13 +40,13 @@ export function buildCatalogCategoryDraft(
     key: draft.key,
     parent: draft.parent,
     order: Number(draft.order) || 0,
-    title: { ...original?.title, vi: draft.title },
-    slug: { ...original?.slug, vi: draft.title },
-    description: { ...original?.description, vi: draft.description },
+    title: withEditedLocales(original?.title, draft.title, draft.titleEn),
+    slug: withEditedLocales(original?.slug, draft.title, draft.slugEn),
+    description: withEditedLocales(original?.description, draft.description, draft.descriptionEn),
     thumbnail: draft.thumbnail.trim() || null,
     seo: {
-      title: { ...original?.seo.title, vi: draft.seoTitle },
-      description: { ...original?.seo.description, vi: draft.seoDescription },
+      title: withEditedLocales(original?.seo.title, draft.seoTitle, draft.seoTitleEn),
+      description: withEditedLocales(original?.seo.description, draft.seoDescription, draft.seoDescriptionEn),
     },
   }
 }

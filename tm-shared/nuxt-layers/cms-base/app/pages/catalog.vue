@@ -563,12 +563,17 @@ const categoryOriginal = ref<AdminCatalogCategory | null>(null)
 const emptyCategoryDraft = () => ({
   key: '',
   title: '',
+  titleEn: '',
+  slugEn: '',
   parent: null as string | null,
   order: 0,
   description: '',
+  descriptionEn: '',
   thumbnail: '',
   seoTitle: '',
+  seoTitleEn: '',
   seoDescription: '',
+  seoDescriptionEn: '',
 })
 
 const categoryDraft = ref(emptyCategoryDraft())
@@ -595,12 +600,17 @@ function editCategory(category: AdminCatalogCategory) {
   Object.assign(categoryDraft.value, {
     key: category.key,
     title: category.title.vi ?? '',
+    titleEn: category.title.en ?? '',
+    slugEn: category.slug.en ?? '',
     parent: category.parent ? categories.value.find(entry => entry.id === category.parent)?.key ?? null : null,
     order: category.order,
     description: category.description.vi ?? '',
+    descriptionEn: category.description.en ?? '',
     thumbnail: category.thumbnail ?? '',
     seoTitle: category.seo.title.vi ?? '',
+    seoTitleEn: category.seo.title.en ?? '',
     seoDescription: category.seo.description.vi ?? '',
+    seoDescriptionEn: category.seo.description.en ?? '',
   })
 }
 
@@ -1044,8 +1054,14 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
             <UFormField :label="t('admin.catalog.fields.key')">
               <UInput v-model="categoryDraft.key" class="w-full" :disabled="Boolean(categoryEditing)" />
             </UFormField>
+            <UFormField :label="t('admin.catalog.categories.slugEn')">
+              <UInput v-model="categoryDraft.slugEn" class="w-full" />
+            </UFormField>
             <UFormField :label="t('admin.catalog.categories.name')">
               <UInput v-model="categoryDraft.title" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.categories.nameEn')">
+              <UInput v-model="categoryDraft.titleEn" class="w-full" />
             </UFormField>
             <UFormField :label="t('admin.catalog.categories.parent')">
               <USelect v-model="categoryDraft.parent" :items="parentItems" value-key="value" class="w-full" />
@@ -1056,14 +1072,23 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
             <UFormField :label="t('admin.catalog.categories.description')" class="sm:col-span-2">
               <UTextarea v-model="categoryDraft.description" :rows="2" class="w-full" />
             </UFormField>
+            <UFormField :label="t('admin.catalog.categories.descriptionEn')" class="sm:col-span-2">
+              <UTextarea v-model="categoryDraft.descriptionEn" :rows="2" class="w-full" />
+            </UFormField>
             <UFormField :label="t('admin.catalog.categories.image')" class="sm:col-span-2">
               <UInput v-model="categoryDraft.thumbnail" class="w-full" placeholder="https://..." />
             </UFormField>
             <UFormField :label="t('admin.catalog.categories.seoTitle')">
               <UInput v-model="categoryDraft.seoTitle" class="w-full" />
             </UFormField>
+            <UFormField :label="t('admin.catalog.categories.seoTitleEn')">
+              <UInput v-model="categoryDraft.seoTitleEn" class="w-full" />
+            </UFormField>
             <UFormField :label="t('admin.catalog.categories.seoDescription')">
               <UInput v-model="categoryDraft.seoDescription" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.catalog.categories.seoDescriptionEn')">
+              <UInput v-model="categoryDraft.seoDescriptionEn" class="w-full" />
             </UFormField>
           </div>
 
