@@ -828,7 +828,7 @@ What was stale once the PWA work landed, and where it was fixed:
 
 Left alone on purpose: `format: text` not exercised in a browser (P3.b), the "has posts" branch of the category page, and the client-side zero-result path — unrelated to PWA and still true.
 
-Next smallest slice this audit points at: a cross-customer asset isolation check for the storefront build (`docs/v2/05` WEB-10) — the one WEB-10 criterion that is still neither verified nor explicitly deferred.
+The cross-customer asset isolation check this audit pointed at landed on 2026-11-12 as the opt-in `test:pwa-isolation` gate: 24/24 on the `sentuan` build, then 24/24 on `default` and `bagpost` in the build matrix. The WEB-10 row and `08` carry the evidence, so it is no longer a next slice.
 
 ### Gate coverage check (landed 2026-11-12)
 
