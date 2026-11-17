@@ -641,6 +641,13 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 - The content event route now runs the sync for every status change instead of only publish; the catalog item update/event routes pass the previous visibility.
 - Evidence: `test:content` 39 checks and `test:catalog` 47 checks, including draft-reuse keeps the row, publishing it clears it, and unpublish/delete removes the rows into/out of the page. Live `:4005`/`:4006`: publish → rename (`301`, `revalidated`) → unpublish (`revalidated`), both paths `404` immediately and no probe row; cleanup left no probe content, audit or idempotency document and both servers stopped. `verify:all` 37/37.
 
+### WEB-02 — the storefront follows a redirect chain (landed 2026-11-17)
+
+- `findRedirect` claimed in its comment to follow five hops but answered the first row, so a mapped path whose target had since received its own `301` cost the browser a second round trip — and two rows pointing at each other answered `301` forever (`ERR_TOO_MANY_REDIRECTS`).
+- `tm-web/server/utils/publicRedirects.ts` now walks the map (`readRow` per hop, capped at `MAX_CHAIN = 5`), keeps the first row's `301`/`302`, stops at a missing row, an inactive row or a `410`, and answers `null` when the chain returns to the requested path so the page that owns it renders. The 30-second per-database cache stores the resolved chain, and the CMS purge still clears it.
+- Evidence (live `:4005`/`:4006`, real `sen-tuan` data): `/probe-chain-x → /probe-chain-y → /gioi-thieu` answered one `301 Location: /gioi-thieu`; a pair pointing at each other (`/probe-loop-a` ⇄ `/probe-loop-b`, inserted straight into `content_redirects` because the CMS refuses to create a loop) made both paths answer `404` from the site's own error page instead of a `301` each. `/`, `/gioi-thieu`, `/products`, `/bai-viet`, `/pages/gioi-thieu`, `/api/public/site` and `/sitemap.xml` stayed `200`. Probes removed (`content` 2, `content_revisions` 8, `content_redirects` 0, `audit_logs` 1, `idempotency_keys` 0) and both servers stopped.
+- Limits: a manual row at a live record's own path still wins and can hide that page (the CMS guard keeps the automatic writer from closing it into a loop, so the page is hidden, never looped), and a chain longer than five rows still ends at an intermediate path.
+
 ### WEB-01 — latest content on the home page (landed 2026-11-11)
 
 - `web-base/app/pages/index.vue` renders the three newest published posts between the newest products and the category strip, using the shared `WebContentList` grid and one `useAsyncData` call to `/api/public/content?type=post&locale=<locale>&limit=3` (keyed and watched by locale). No new server code, contract or route.
