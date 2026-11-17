@@ -1,6 +1,9 @@
 import type { Model } from 'mongoose'
 import type { ContentLocale } from '../models/content'
 import type { RedirectDocument } from '../models/redirect'
+import { writeSlugRedirects, type SlugRedirectOutcome } from './slugRedirects'
+
+export type { SlugRedirectOutcome } from './slugRedirects'
 
 /**
  * Automatic 301s for a published record whose slug changed.
@@ -35,15 +38,6 @@ const RESERVED_STOREFRONT_PATHS = new Set([
   'tag',
   'tim-kiem',
 ])
-
-export interface SlugRedirectOutcome {
-  /** Rows that now answer a 301, as `from -> to`. */
-  created: Array<{ from: string, to: string }>
-  /** Paths that already had a row, so nothing was written. */
-  kept: string[]
-  /** Old slugs that collide with a storefront route, so no row was written. */
-  skipped: string[]
-}
 
 /** Normalized short path of one locale slug, or null when it cannot be a path. */
 export function contentPathForSlug(slug: string): string | null {
@@ -97,44 +91,15 @@ export async function syncContentSlugRedirects(
     after: ContentLocale[]
   },
 ): Promise<SlugRedirectOutcome> {
-  const outcome: SlugRedirectOutcome = { created: [], kept: [], skipped: [] }
-  if (!input.published) return outcome
+  if (!input.published) return { created: [], kept: [], skipped: [] }
 
   const { changes, skipped } = changedSlugPaths(input.before, input.after)
+  const outcome: SlugRedirectOutcome = await writeSlugRedirects(
+    model,
+    input.siteId,
+    changes,
+    AUTO_SLUG_REDIRECT_NOTE,
+  )
   outcome.skipped = skipped
-
-  for (const change of changes) {
-    let upserted = false
-    try {
-      const result = await model.updateOne(
-        { siteId: input.siteId, from: change.from },
-        {
-          $setOnInsert: {
-            siteId: input.siteId,
-            from: change.from,
-            to: change.to,
-            statusCode: 301,
-            isActive: true,
-            note: AUTO_SLUG_REDIRECT_NOTE,
-            revision: 1,
-          },
-        },
-        { upsert: true },
-      )
-      upserted = result.upsertedCount > 0
-    } catch (error) {
-      // Another writer claimed the path between the read and this upsert; the
-      // record must still save, so the row is reported as kept instead.
-      const duplicate = error as { code?: number }
-      if (duplicate?.code !== 11000) throw error
-    }
-
-    if (upserted) {
-      outcome.created.push({ from: change.from, to: change.to })
-    } else {
-      outcome.kept.push(change.from)
-    }
-  }
-
   return outcome
 }

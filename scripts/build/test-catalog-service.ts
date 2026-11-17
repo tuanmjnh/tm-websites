@@ -16,6 +16,7 @@ import {
 } from '../../tm-cms/server/services/catalogService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { AUTO_CATEGORY_SLUG_REDIRECT_NOTE } from '../../tm-cms/server/services/catalogSlugRedirects.js'
 import { buildCatalogCategoryDraft } from '../../tm-shared/nuxt-layers/cms-base/app/utils/catalog-category-draft.js'
 
 let checks = 0
@@ -38,7 +39,7 @@ function isServiceError(status: number, code: string) {
 
 const connection = await connectDatabase({ uri: 'mongodb://127.0.0.1:27017', database: 'tm_test_catalog_service' })
 await connection.dropDatabase()
-const { CatalogItem, CatalogCategory } = await prepareDatabase(connection)
+const { CatalogItem, CatalogCategory, Redirect } = await prepareDatabase(connection)
 
 const SITE = 'sentuan'
 const OTHER_SITE = 'bagpost'
@@ -430,6 +431,29 @@ try {
       slug: { vi: 'nhan' },
     })
     assert.equal(updated.fullPath.vi, '/nhan')
+  })
+
+  await check('a category slug change writes one 301 per locale', async () => {
+    const created = await createCatalogCategory(CatalogCategory, SITE, {
+      key: 'redirect-probe',
+      title: { vi: 'Danh mục đổi slug', en: 'Category slug change' },
+      slug: { vi: 'doi-slug-cu', en: 'old-category' },
+    })
+    await updateCatalogCategory(CatalogCategory, SITE, created.id, {
+      revision: created.revision,
+      key: 'redirect-probe',
+      parent: null,
+      title: { vi: 'Danh mục đổi slug', en: 'Category slug change' },
+      slug: { vi: 'doi-slug-moi', en: 'new-category' },
+    }, { redirects: Redirect })
+
+    const rows = await Redirect.find({ siteId: SITE }).sort({ from: 1 })
+      .lean<Array<{ from: string, to: string, statusCode: number, note: string }>>()
+    assert.deepEqual(rows.map(row => ({ from: row.from, to: row.to, statusCode: row.statusCode })), [
+      { from: '/categories/doi-slug-cu', to: '/categories/doi-slug-moi', statusCode: 301 },
+      { from: '/categories/old-category', to: '/categories/new-category', statusCode: 301 },
+    ])
+    assert.ok(rows.every(row => row.note === AUTO_CATEGORY_SLUG_REDIRECT_NOTE))
   })
 
   await check('a category with children cannot be deleted', async () => {

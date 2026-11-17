@@ -15,6 +15,7 @@ import type {
   CatalogItemStatus,
   CatalogItemType,
 } from '../models/catalog'
+import type { RedirectDocument } from '../models/redirect'
 import {
   buildFullPath,
   buildSearchString,
@@ -23,6 +24,7 @@ import {
   normalizeCatalogItemInput,
 } from '../models/catalog'
 import { diffFields, recordContentAudit, type ContentAuditMeta } from './contentAudit'
+import { syncCatalogCategorySlugRedirects } from './catalogSlugRedirects'
 
 /**
  * Catalog commands and admin queries. No H3 here: the API layer resolves the
@@ -66,6 +68,8 @@ export interface CatalogItemListResult {
 
 export interface CatalogWriteMeta {
   audit?: ContentAuditMeta
+  /** Present on updates that may move a category slug. */
+  redirects?: Model<RedirectDocument>
 }
 
 const STATUSES: CatalogItemStatus[] = ['draft', 'published', 'archived', 'deleted']
@@ -735,6 +739,15 @@ export async function updateCatalogCategory(
   }
 
   await refreshSubtree(model, siteId, updated._id)
+
+  if (meta?.redirects) {
+    await syncCatalogCategorySlugRedirects(meta.redirects, {
+      siteId,
+      live: record.isDeleted !== true,
+      before: record.slug ?? {},
+      after: updated.slug ?? {},
+    })
+  }
 
   await recordContentAudit(meta?.audit, {
     siteId,
