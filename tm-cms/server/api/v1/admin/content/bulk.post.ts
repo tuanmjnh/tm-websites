@@ -3,6 +3,7 @@ import { runBulkContentCommand } from '#server/services/contentBulk'
 import { translateContentError, writeMetaOf } from '#server/utils/contentApi'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 import { parseInput } from '#server/utils/validation'
 
 /**
@@ -37,6 +38,9 @@ export default defineEventHandler(async (event) => {
 
     setResponseStatus(event, 200)
     setHeader(event, 'cache-control', 'no-store')
+    if (result.succeeded > 0) {
+      setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'content.bulk'))
+    }
 
     return successResponse({
       data: result,

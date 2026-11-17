@@ -159,6 +159,46 @@ await check('an idempotent catalog replay does not purge twice', async () => {
   }
 })
 
+/**
+ * Content writes change public pages and the redirect map too, so the same
+ * purge contract applies: a rename must not leave a cached redirect behind.
+ */
+const contentWriteRoutes = [
+  'server/api/v1/admin/content/[id].patch.ts',
+  'server/api/v1/admin/content/[id]/events.post.ts',
+  'server/api/v1/admin/content/[id]/revisions/[revision]/restore.post.ts',
+  'server/api/v1/admin/content/bulk.post.ts',
+]
+
+await check('every content write route that changes public output purges the storefront', async () => {
+  for (const route of contentWriteRoutes) {
+    const source = readFileSync(resolve(cmsRoot, route), 'utf8')
+    assert.match(source, importLine, `${route} imports the purge helper`)
+    assert.match(
+      source,
+      /setRevalidateHeader\(event, await revalidateStorefrontForEvent\(event, /,
+      `${route} records the purge outcome`,
+    )
+  }
+})
+
+await check('an idempotent content replay does not purge twice', async () => {
+  for (const route of contentWriteRoutes) {
+    const source = readFileSync(resolve(cmsRoot, route), 'utf8')
+    if (!source.includes('executed.replayed')) continue
+    assert.match(
+      source,
+      /if \(!executed\.replayed\) \{\s*setRevalidateHeader/,
+      `${route} skips the purge on a replay`,
+    )
+  }
+})
+
+await check('a bulk content command with no successful row does not purge', () => {
+  const source = readFileSync(resolve(cmsRoot, 'server/api/v1/admin/content/bulk.post.ts'), 'utf8')
+  assert.match(source, /if \(result\.succeeded > 0\) \{\s*setRevalidateHeader/)
+})
+
 console.log(`\n${checks} checks`)
 if (process.exitCode) {
   console.error(`\n${checks} passed, some failed`)

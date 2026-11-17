@@ -9,6 +9,7 @@ import {
 import { executeIdempotent } from '#server/utils/idempotency'
 import { withPreparedDb } from '#server/utils/modelRegistry'
 import { resolveSiteId } from '#server/utils/site'
+import { revalidateStorefrontForEvent, setRevalidateHeader } from '#server/utils/storefrontRevalidate'
 import { parseInput } from '#server/utils/validation'
 
 /**
@@ -61,6 +62,9 @@ export default defineEventHandler(async (event) => {
     setResponseStatus(event, executed.statusCode)
     setHeader(event, 'cache-control', 'no-store')
     if (executed.replayed) setHeader(event, 'idempotent-replay', 'true')
+    if (!executed.replayed) {
+      setRevalidateHeader(event, await revalidateStorefrontForEvent(event, 'content.restore'))
+    }
 
     return executed.value
   } catch (error) {
