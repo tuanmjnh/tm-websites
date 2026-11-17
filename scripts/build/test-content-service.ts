@@ -887,6 +887,44 @@ async function integration() {
         await Redirect.deleteOne({ siteId: SITE, from: `/manual-${slug}` })
       }
     })
+    await check('a page whose window already closed gains no automatic redirect', async () => {
+      const closed = await createContent(Content, SITE, pageDraft('pages/window-closed', 'content-window-cu', {
+        unpublishAt: new Date(NOW.getTime() - 60_000),
+      }), metaR())
+      const published = await runContentEvent(Content, SITE, closed.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      // Still `published`; only the window says it is gone, and the storefront agrees.
+      assert.equal(published.status, 'published')
+
+      await updateContent(Content, SITE, closed.id, {
+        revision: 2,
+        type: 'page',
+        unpublishAt: new Date(NOW.getTime() - 60_000).toISOString(),
+        locales: [{ locale: 'vi', title: 'Đã hết hạn', slug: 'content-window-moi' }],
+      }, metaR())
+
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-window-cu' }), 0)
+    })
+
+    await check('closing the window of a live page clears its automatic redirects', async () => {
+      const live = await createContent(Content, SITE, pageDraft('pages/window-close', 'content-window-live-cu'), metaR())
+      await runContentEvent(Content, SITE, live.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      await updateContent(Content, SITE, live.id, {
+        revision: 2,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Bản sống', slug: 'content-window-live-moi' }],
+      }, metaR())
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-window-live-cu' }), 1)
+
+      await updateContent(Content, SITE, live.id, {
+        revision: 3,
+        type: 'page',
+        unpublishAt: new Date(NOW.getTime() - 60_000).toISOString(),
+        locales: [{ locale: 'vi', title: 'Bản sống', slug: 'content-window-live-moi' }],
+      }, metaR())
+
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-window-live-cu' }), 0)
+    })
+
 
   } finally {
     await connection.db?.dropDatabase().catch(() => undefined)

@@ -432,12 +432,15 @@ export async function updateContent(
 
   const changedFields = diffContentFields(record, draft)
 
+  // Visibility, not the status word: a `published` record whose window has
+  // closed is already a 404, so it must not gain or lose automatic rows as if
+  // it were live.
   if (meta?.redirects) {
     await syncContentSlugRedirects(meta.redirects, model, {
       siteId,
       contentId: String(record._id),
-      published: record.status === 'published',
-      wasPublished: record.status === 'published',
+      published: isPubliclyVisible(updated),
+      wasPublished: isPubliclyVisible(record),
       before: record.locales,
       after: updated.locales,
     })
@@ -564,8 +567,8 @@ export async function runContentEvent(
     await syncContentSlugRedirects(meta.redirects, model, {
       siteId,
       contentId: String(updated._id),
-      published: updated.status === 'published',
-      wasPublished: record.status === 'published',
+      published: isPubliclyVisible(updated),
+      wasPublished: isPubliclyVisible(record),
       before: record.locales,
       after: updated.locales,
     })
@@ -673,8 +676,8 @@ export async function restoreContentRevision(
     await syncContentSlugRedirects(meta.redirects, model, {
       siteId,
       contentId: String(record._id),
-      published: record.status === 'published',
-      wasPublished: record.status === 'published',
+      published: isPubliclyVisible(updated),
+      wasPublished: isPubliclyVisible(record),
       before: record.locales,
       after: updated.locales,
     })

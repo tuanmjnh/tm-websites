@@ -648,6 +648,13 @@ Live (`:4005`, `sen-tuan`, probe `pages/probe-attr-gold` = `{ material: 'gold', 
 - Evidence (live `:4005`/`:4006`, real `sen-tuan` data): `/probe-chain-x → /probe-chain-y → /gioi-thieu` answered one `301 Location: /gioi-thieu`; a pair pointing at each other (`/probe-loop-a` ⇄ `/probe-loop-b`, inserted straight into `content_redirects` because the CMS refuses to create a loop) made both paths answer `404` from the site's own error page instead of a `301` each. `/`, `/gioi-thieu`, `/products`, `/bai-viet`, `/pages/gioi-thieu`, `/api/public/site` and `/sitemap.xml` stayed `200`. Probes removed (`content` 2, `content_revisions` 8, `content_redirects` 0, `audit_logs` 1, `idempotency_keys` 0) and both servers stopped.
 - Limits: a manual row at a live record's own path still wins and can hide that page (the CMS guard keeps the automatic writer from closing it into a loop, so the page is hidden, never looped), and a chain longer than five rows still ends at an intermediate path.
 
+### WEB-02 — a closed publish window is not a live URL (landed 2026-11-17)
+
+- The automatic writer asked `status === 'published'`, while the storefront hides a published record as soon as `unpublishAt` passes. Renaming such a record wrote a `301` to an invisible page, and closing the window of a live page left its old URL answering `301` into a 404.
+- `updateContent`, `runContentEvent` and `restoreContentRevision` now pass `isPubliclyVisible(record)`/`isPubliclyVisible(updated)` as `wasPublished`/`published`, so the writer follows the storefront's own rule. Routes, payloads and the writer are unchanged, and the catalog item writer already works from `status`/`isActive`/`isDeleted`, which is the same idea.
+- Evidence: `pnpm test:content` → 41 checks. New: a page published with an already-expired window gains no row on rename (and still reads `published`); a live page renamed (row written) then closed through a normal update loses the row.
+- Limits: the clock alone triggers nothing, so rows stay until the record is written again; a rename after the window closed is a no-op rather than a cleanup.
+
 ### WEB-01 — latest content on the home page (landed 2026-11-11)
 
 - `web-base/app/pages/index.vue` renders the three newest published posts between the newest products and the category strip, using the shared `WebContentList` grid and one `useAsyncData` call to `/api/public/content?type=post&locale=<locale>&limit=3` (keyed and watched by locale). No new server code, contract or route.
