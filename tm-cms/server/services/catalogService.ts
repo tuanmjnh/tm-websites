@@ -459,6 +459,7 @@ export async function updateCatalogItem(
       siteId,
       itemId: String(updated._id),
       live: isPublicCatalogItem(updated),
+      wasLive: isPublicCatalogItem(record),
       before: record.slug ?? {},
       after: updated.slug ?? {},
     })
@@ -551,6 +552,7 @@ export async function runCatalogItemEvent(
       siteId,
       itemId: String(updated._id),
       live: isPublicCatalogItem(updated),
+      wasLive: isPublicCatalogItem(record),
       before: record.status === 'published' ? record.slug ?? {} : updated.slug ?? {},
       after: updated.slug ?? {},
     })

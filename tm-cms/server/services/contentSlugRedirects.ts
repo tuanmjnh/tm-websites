@@ -114,11 +114,32 @@ export async function syncContentSlugRedirects(
     siteId: string
     contentId: string
     published: boolean
+    /** True when the record was public before this write, so hiding it can clean up. */
+    wasPublished?: boolean
     before: ContentLocale[]
     after: ContentLocale[]
   },
 ): Promise<SlugRedirectOutcome> {
-  if (!input.published) return { created: [], kept: [], skipped: [] }
+  if (!input.published) {
+    // A record that was public and is now hidden has no page left; its automatic
+    // rows would only send a visitor to a 404. A draft that was never public is
+    // different: editing it must not take an older redirect away from its target.
+    if (input.wasPublished) {
+      const gonePaths = new Set(
+        [...input.before, ...input.after]
+          .map(entry => contentPathForSlug(entry.slug))
+          .filter((path): path is string => Boolean(path)),
+      )
+      if (gonePaths.size) {
+        await redirects.deleteMany({
+          siteId: input.siteId,
+          note: AUTO_SLUG_REDIRECT_NOTE,
+          $or: [{ from: { $in: [...gonePaths] } }, { to: { $in: [...gonePaths] } }],
+        })
+      }
+    }
+    return { created: [], kept: [], skipped: [] }
+  }
 
   const livePaths = new Set(
     input.after.map(entry => contentPathForSlug(entry.slug)).filter((path): path is string => Boolean(path)),

@@ -51,6 +51,8 @@ export async function syncCatalogItemSlugRedirects(
     siteId: string
     itemId: string
     live: boolean
+    /** True when the item was public before this write, so hiding it can clean up. */
+    wasLive: boolean
     before: Record<string, string>
     after: Record<string, string>
   },
@@ -62,13 +64,17 @@ export async function syncCatalogItemSlugRedirects(
   // visitor to a 404, so the ones that lead to or from its paths go as well;
   // a manual row is an explicit instruction and stays.
   if (!input.live) {
-    const gonePaths = new Set([...beforePaths, ...afterPaths])
-    if (gonePaths.size) {
-      await redirects.deleteMany({
-        siteId: input.siteId,
-        note: AUTO_CATALOG_ITEM_SLUG_REDIRECT_NOTE,
-        $or: [{ from: { $in: [...gonePaths] } }, { to: { $in: [...gonePaths] } }],
-      })
+    // Only a record that was public can leave rows behind. A draft that simply
+    // reuses a slug must not delete the redirect an older, live record owns.
+    if (input.wasLive) {
+      const gonePaths = new Set([...beforePaths, ...afterPaths])
+      if (gonePaths.size) {
+        await redirects.deleteMany({
+          siteId: input.siteId,
+          note: AUTO_CATALOG_ITEM_SLUG_REDIRECT_NOTE,
+          $or: [{ from: { $in: [...gonePaths] } }, { to: { $in: [...gonePaths] } }],
+        })
+      }
     }
     return { created: [], kept: [], skipped: [] }
   }

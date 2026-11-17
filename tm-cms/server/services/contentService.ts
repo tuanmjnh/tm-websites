@@ -437,6 +437,7 @@ export async function updateContent(
       siteId,
       contentId: String(record._id),
       published: record.status === 'published',
+      wasPublished: record.status === 'published',
       before: record.locales,
       after: updated.locales,
     })
@@ -556,14 +557,16 @@ export async function runContentEvent(
   if (iso(record.publishedAt) !== iso(updated.publishedAt)) changedFields.push('publishedAt')
   if (iso(record.deletedAt) !== iso(updated.deletedAt)) changedFields.push('deletedAt')
 
-  // Publishing a draft makes its short paths live, so an old auto row under one
-  // of them must go; the slug itself did not change in this transition.
-  if (meta?.redirects && updated.status === 'published') {
+  // Publishing makes the short paths live, so an old auto row under one of them
+  // must go; unpublishing, archiving or deleting hides the page, so the rows
+  // that lead to or from it are no longer useful. The slug did not change here.
+  if (meta?.redirects) {
     await syncContentSlugRedirects(meta.redirects, model, {
       siteId,
       contentId: String(updated._id),
-      published: true,
-      before: updated.locales,
+      published: updated.status === 'published',
+      wasPublished: record.status === 'published',
+      before: record.locales,
       after: updated.locales,
     })
   }
@@ -671,6 +674,7 @@ export async function restoreContentRevision(
       siteId,
       contentId: String(record._id),
       published: record.status === 'published',
+      wasPublished: record.status === 'published',
       before: record.locales,
       after: updated.locales,
     })

@@ -654,9 +654,17 @@ try {
       title: { vi: 'Sản phẩm mới' },
       slug: { vi: 'probe-item-reuse-cu' },
     })
+    const editedDraft = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, second.id, {
+      revision: second.revision,
+      key: 'probe-item-reuse-b',
+      title: { vi: 'Sản phẩm mới, sửa nháp' },
+      slug: { vi: 'probe-item-reuse-cu' },
+    }, { redirects: Redirect })
+    // Editing a draft that merely reuses the slug must not steal the redirect.
+    assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/products/probe-item-reuse-cu' }), 1)
     await runCatalogItemEvent(CatalogItem, SITE, second.id, {
       event: 'publish',
-      revision: second.revision,
+      revision: editedDraft.revision,
     }, { redirects: Redirect })
     assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/products/probe-item-reuse-cu' }), 0)
 

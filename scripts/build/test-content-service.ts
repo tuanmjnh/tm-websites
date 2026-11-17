@@ -828,6 +828,65 @@ async function integration() {
       assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-occupied-cu' }), 0)
     })
 
+    await check('editing a draft that reuses an old slug leaves the live redirect alone', async () => {
+      const live = await createContent(Content, SITE, pageDraft('pages/steal-live', 'content-steal-cu'), metaR())
+      await runContentEvent(Content, SITE, live.id, { event: 'publish', revision: 1 }, NOW, metaR())
+      await updateContent(Content, SITE, live.id, {
+        revision: 2,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Bản đang sống', slug: 'content-steal-moi' }],
+      }, metaR())
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-steal-cu' }), 1)
+
+      const draft = await createContent(Content, SITE, pageDraft('pages/steal-draft', 'content-steal-cu'), metaR())
+      await updateContent(Content, SITE, draft.id, {
+        revision: 1,
+        type: 'page',
+        locales: [{ locale: 'vi', title: 'Bản nháp dùng lại', slug: 'content-steal-cu' }],
+      }, metaR())
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-steal-cu' }), 1)
+
+      await runContentEvent(Content, SITE, draft.id, { event: 'publish', revision: 2 }, NOW, metaR())
+      assert.equal(await Redirect.countDocuments({ siteId: SITE, from: '/content-steal-cu' }), 0)
+    })
+
+    await check('unpublishing or deleting a page clears the automatic rows into and out of it', async () => {
+      for (const [event, key, slug] of [
+        ['unpublish', 'pages/hide-unpublish', 'content-hide-unpublish'],
+        ['delete', 'pages/hide-delete', 'content-hide-delete'],
+      ] as const) {
+        const page = await createContent(Content, SITE, pageDraft(key, `${slug}-cu`), metaR())
+        await runContentEvent(Content, SITE, page.id, { event: 'publish', revision: 1 }, NOW, metaR())
+        const renamed = await updateContent(Content, SITE, page.id, {
+          revision: 2,
+          type: 'page',
+          locales: [{ locale: 'vi', title: 'Bản sẽ ẩn', slug: `${slug}-moi` }],
+        }, metaR())
+        assert.equal(await Redirect.countDocuments({ siteId: SITE, from: `/${slug}-cu` }), 1)
+
+        await Redirect.create({
+          siteId: SITE,
+          from: `/manual-${slug}`,
+          to: `/${slug}-moi`,
+          statusCode: 301,
+          isActive: true,
+          note: 'manual probe',
+          revision: 1,
+        })
+
+        await runContentEvent(Content, SITE, page.id, { event, revision: renamed.revision }, NOW, metaR())
+        assert.equal(await Redirect.countDocuments({
+          siteId: SITE,
+          note: 'auto: slug changed',
+          $or: [
+            { from: { $in: [`/${slug}-cu`, `/${slug}-moi`] } },
+            { to: { $in: [`/${slug}-cu`, `/${slug}-moi`] } },
+          ],
+        }), 0)
+        assert.equal(await Redirect.countDocuments({ siteId: SITE, from: `/manual-${slug}` }), 1)
+        await Redirect.deleteOne({ siteId: SITE, from: `/manual-${slug}` })
+      }
+    })
 
   } finally {
     await connection.db?.dropDatabase().catch(() => undefined)
