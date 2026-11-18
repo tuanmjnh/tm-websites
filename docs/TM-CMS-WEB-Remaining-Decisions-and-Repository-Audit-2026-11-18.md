@@ -28,7 +28,8 @@
 | Product scope | CMS + catalog/content storefront; ERP modules deferred | RESOLVED |
 | AI Workspace | Không làm V2 | RESOLVED |
 | Storefront auth | Public anonymous; chỉ CMS login | RESOLVED |
-| CSRF | Strict Origin/Fetch Metadata + double-submit | RESOLVED (decision) / implementation OPEN |
+| CSRF | ADR 0002 Q8: `Origin` check + `SameSite=Lax`; no double-submit | RESOLVED — code matches |
+| Hub proxy | ADR 0002 D1: `/api/v1/auth/**` blocked, business paths proxied until migrated | RESOLVED — code matches |
 | Hub auth contract | Không có `sid`/`tenantId` claim; introspect không kiểm tra revocation; refresh không grace window | VERIFIED (source + local/live runtime) |
 | CDN/provider purge | Internal purge only; chưa có CDN adapter | RESOLVED |
 | OPS import/export/jobs | Bulk import/export/jobs deferred | RESOLVED |
@@ -200,33 +201,33 @@ If a customer portal is needed later, create a separately approved scope with a 
 
 ## 3.1. CSRF policy for cookie-authenticated CMS BFF
 
-**Decision: strict browser validation plus double-submit CSRF.**
+**Decision: `Origin` check + `SameSite=Lax`, no double-submit token** — this restates ADR 0002 Q8 (`docs/decisions/0002-owner-decisions.md`, 2026-11-09), which remains the canonical record. An earlier draft of this section proposed strict validation plus a double-submit token; that was never adopted and is withdrawn here.
 
-For state-changing browser requests (`POST`, `PUT`, `PATCH`, `DELETE`):
+For state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`), `tm-cms/server/utils/csrf.ts`:
 
-1. If `Origin` is present, require an exact normalized match against the configured allowlist for that deployment. Do not use suffix or substring matching.
-2. If `Sec-Fetch-Site` is present, reject `cross-site`. Permit only an explicitly documented same-origin/same-site policy; do not infer trust from missing headers.
-3. Require a valid double-submit CSRF token bound to the browser session (or an equivalent cryptographically bound token). The cookie carrying the session remains `HttpOnly`; the CSRF token is separately readable by the client as designed.
-4. If **both** `Origin` and `Sec-Fetch-Site` are absent on a browser-cookie-authenticated state-changing request, reject by default.
-5. Safe methods (`GET`, `HEAD`, `OPTIONS`) must not mutate state. Do not use GET for logout, publish, delete or other mutations.
-6. Trusted server-to-server routes may use a separate explicit authentication mode (App/Device credential, mTLS or equivalent) and must not accept ambient browser cookies as a substitute. Do not create a broad “missing Origin means trusted” exception.
+1. Allows `GET`, `HEAD`, `OPTIONS` without a check; no state changes on safe methods.
+2. With `Origin` present, compares `new URL(origin).host` against the request `Host` and rejects a mismatch. Absent or unparseable `Origin` is rejected.
+3. Without `Origin`, rejects any `Sec-Fetch-Site` outside `same-origin` / `none`.
+4. With **neither** header, allows the request: a browser always sends `Origin` on cross-site mutations and `Sec-Fetch-Site` otherwise, so this is a non-browser client that carries no ambient cookie. Combined with `SameSite=Lax`, a cross-site POST cannot carry the session cookie in the first place.
 
-Test matrix must cover missing headers, cross-origin Origin, `Sec-Fetch-Site: cross-site`, missing/invalid CSRF token, same-origin valid CSRF, and trusted server-to-server calls.
+This guard is applied by every cookie-authenticated mutation handler: `auth/{login,logout,refresh,totp}.post.ts`, `api/hub/[...path].ts` for body methods, and every `api/v1/admin/**` mutation route.
 
-## 3.2. Hub proxy allowlist
+Do not add a double-submit token without reopening Q8. If a future scope needs one (for example a customer portal), record a new ADR and change `csrf.ts`, its call sites and `scripts/build/test-cms-iam.ts` together — the current test asserts that a headerless non-browser request is allowed, so changing only the test wording would hide the behaviour change.
 
-**Decision: deny-by-default, explicit method + path allowlist. No broad passthrough.**
+## 3.2. Hub proxy policy
 
-- Build a route inventory from actual CMS server handlers and `@tuanmjnh/tm-hub-client` methods.
-- Allow only the methods and paths CMS actually needs.
-- Do not forward arbitrary path segments, arbitrary methods, or user-supplied Hub base URLs.
-- Do not expose Hub `/api/v1/auth/**` directly through a generic browser proxy.
-- CMS login/logout/refresh BFF handlers may call the Hub server-to-server through dedicated functions; they are not generic pass-through routes.
-- Web SSR public data access uses a separate restricted service route and identity.
-- Keep credentials server-only and strip hop-by-hop/untrusted headers before forwarding.
-- Return normalized, non-sensitive errors; never return Hub secrets or raw upstream stack traces.
+**Decision: block `/api/v1/auth/**` so token-issuing routes stay BFF-only; remaining `/api/v1/**` business paths stay proxied until each domain migrates** — this restates ADR 0002 D1. An earlier draft of this section proposed a deny-by-default method+path allowlist; that was never adopted and is withdrawn here.
 
-**Status:** NOT_YET_VERIFIED. Source review is complete (today the proxy denies only `/api/v1/auth*`, `tm-shared/packages/flow-utils/src/hub.ts`), but no authenticated session or installed test app was available. Run the §3.7.2 rows 6–7 on both local and live Hub before marking this VERIFIED; do not infer runtime behavior from source alone.
+In `tm-cms/server/api/hub/[...path].ts`:
+
+- `sanitizeHubProxyPath` rejects anything that is not a `/api/v1` path, so a user-supplied Hub base URL or an absolute URL never reaches the upstream call.
+- `isHubProxyPathDenied` (`tm-shared/packages/flow-utils/src/hub.ts`) rejects `/api/v1/auth` and its sub-paths; login/logout/refresh/totp go through the dedicated BFF handlers instead.
+- Body methods additionally run the origin guard from §3.1.
+- The request carries the server-side app credential and the caller's access token; both stay server-side, and the browser receives the upstream body only.
+
+Consequence to keep in mind: this is a broad business passthrough by design, not an allowlist. Each domain migration narrows it; until then any Hub `/api/v1` business endpoint reachable with the caller's token is reachable through the proxy.
+
+**Status:** behaviour verified against source. The runtime row in §3.7.2 needs an owner-supplied Hub test account; do not infer authenticated runtime behaviour from source alone.
 
 ## 3.3. Access-token revoke contract — verified Hub status
 
@@ -379,11 +380,11 @@ Prerequisites, none of which may be invented: a Hub app installation for the cus
 |---|---|---|---|
 | 1 | Login | `POST /api/auth/login` on the CMS with the test credentials | 200, `appId` matches the installation, no token in the response body |
 | 2 | Session read | `GET /api/auth/session` with the cookies | 200, same user/app |
-| 3 | CSRF: missing headers | same `POST` without `Origin` and without `Sec-Fetch-Site` | 403 `CSRF_REJECTED` (target policy, §3.1) |
+| 3 | CSRF: headerless client | same `POST` without `Origin` and without `Sec-Fetch-Site` | **2xx by design** (ADR 0002 Q8): a non-browser client carries no ambient cookie. This row previously expected 403 under the withdrawn double-submit draft |
 | 4 | CSRF: cross-origin | `Origin: https://evil.test` | 403 `CSRF_ORIGIN_MISMATCH` |
-| 5 | CSRF: double submit | mutation with the CSRF cookie but no `X-CSRF-Token` (and the reverse) | 403; with both matching, 2xx |
-| 6 | Proxy allowlist | a Hub path/method outside the allowlist through `/api/hub/**` | 403, no upstream call |
-| 7 | Auth paths closed | `/api/hub/api/v1/auth/refresh`, `/api/hub/api/v1/auth/sessions` | 403 `PROXY_PATH_FORBIDDEN` |
+| 5 | CSRF: cross-site fetch metadata | no `Origin`, `Sec-Fetch-Site: cross-site` | 403 (the `Sec-Fetch-Site` branch of §3.1) |
+| 6 | Proxy scope | `/api/hub/api/v1/auth/refresh` and `/api/hub/api/v1/auth/sessions` | 403 `PROXY_PATH_FORBIDDEN`, no upstream call |
+| 7 | Proxy passthrough (expected) | a non-auth Hub business path the caller's token can reach | forwarded — this is D1's intended behaviour, not a defect. Record the path so the migration list stays current |
 | 8 | Refresh | expire/delete the access cookie, then call a private route | exactly one rotation, new cookies, no sign-out; the old refresh token is now rejected |
 | 9 | Revoke | revoke the session from Hub (`DELETE /api/v1/auth/sessions?all=true`) as that user | the next refresh is 401 `SESSION_EXPIRED`; the still-valid access token is accepted until `exp` (record the elapsed time) |
 | 10 | Reuse | replay the previous refresh token | 401, and every session for that user/app is revoked (this is Hub behavior, not a CMS bug) |
@@ -481,7 +482,7 @@ No credential value is present in the supplied conversation or the inspected Git
 | Legacy snapshot | NOT PROVIDED / NOT AUTHORIZED | No migration, no fabricated legacy fixture. |
 | NPM OTP for `tm-ui` | NOT PROVIDED | Do not publish. Keep local `link:`/local development or use an already-published, verified version. |
 | Live Hub reachability | AVAILABLE: live `1.1.0` + local `:4000` healthy, 8/8 contract probes | Safe unauthenticated probes only; do not mutate tenant/session data on the live deployment. |
-| Hub test account / app installation | NOT PROVIDED | Login, revoke, refresh and proxy-allowlist checks stay BLOCKED until an owner-supplied test user and installed app exist (§3.7.2). Never invent credentials. |
+| Hub test account / app installation | NOT PROVIDED | Login, revoke, refresh and the authenticated proxy/CSRF rows stay BLOCKED until an owner-supplied test user and installed app exist (§3.7.2). Never invent credentials. |
 | Production authorization | NOT PROVIDED | P10 launch/migration remains BLOCKED. |
 
 ## 6.1. Local MongoDB
@@ -577,8 +578,8 @@ Re-verified in source on 2026-11-18. None of these is editable from `tm-websites
 | 2 | Session-aware introspection (revoked/app/tenant) | `tm-hub` | DEFERRED — verified absent; accepted window in §3.3 |
 | 3 | Tenant claim derived from the registered App | `tm-hub` | DEFERRED — no tenant claim exists; CMS keeps `TM_TENANT_ID` (§3.6 still applies) |
 | 4 | Refresh grace/idempotency for multi-instance renewals | `tm-hub` | DEFERRED — accepted risk + process-local singleflight (§3.4) |
-| 5 | Explicit method/path Hub proxy allowlist | `tm-cms` | OPEN — today only `/api/v1/auth*` is denied (`flow-utils/src/hub.ts`), every other `/api/v1` path/method is forwarded |
-| 6 | Strict CSRF from §3.1 | `tm-cms` | OPEN — `csrf.ts` checks Origin/`Sec-Fetch-Site`, allows requests with neither header, and has no double-submit token |
+| 5 | Explicit method/path Hub proxy allowlist | `tm-cms` | NOT ADOPTED — ADR 0002 D1 keeps the broad business proxy; narrow it per domain as each migrates |
+| 6 | Strict CSRF from §3.1 | `tm-cms` | NOT ADOPTED — ADR 0002 Q8 keeps `Origin` + `SameSite=Lax` without a double-submit token; code and `test-cms-iam.ts` match |
 | 7 | Exercise proxy/CSRF/revoke/refresh | `tm-cms` | READY TO RUN — runbook §3.7; needs the owner test account for the authenticated rows |
 
 ## P2 — Shared packages and CMS/Web integration readiness
@@ -630,9 +631,10 @@ The agent must not mark a phase Verified based only on typecheck or a passing bu
 ## Proxy and CSRF
 
 - Unknown Hub route/method combinations are rejected.
-- Browser mutations with missing Origin and missing Fetch Metadata are rejected unless they use an explicitly approved non-cookie server-to-server authentication mode.
-- Same-origin mutation with valid double-submit token succeeds.
-- Cross-site mutation fails.
+- Same-origin browser mutation succeeds (ADR 0002 Q8: `Origin` + `SameSite=Lax`, no double-submit token).
+- Cross-site mutation fails: a mismatched `Origin`, or `Sec-Fetch-Site: cross-site` when `Origin` is absent.
+- A headerless non-browser request is allowed by the guard and is harmless because it carries no ambient cookie; `scripts/build/test-cms-iam.ts` pins this.
+- A Hub `/api/v1/auth/**` path is refused by the proxy; other business paths are forwarded until their domain migrates (ADR 0002 D1).
 - Hub app/device credentials never appear in browser network payloads or logs.
 
 ## Packages
@@ -694,17 +696,19 @@ storefront:
 
 security:
   csrf:
-    decision: strict_origin_sec_fetch_site_double_submit
-    origin_allowlist: required
-    sec_fetch_site: reject_cross_site
-    double_submit: required_for_cookie_mutations
-    missing_origin_and_fetch_metadata: reject_browser_mutations
-    server_to_server_exception: explicit_credential_only
-    implementation_status: open_in_tm_cms
+    decision: origin_check_plus_same_site_lax
+    authority: adr_0002_q8
+    double_submit: not_used
+    origin: exact_host_match_against_request_host
+    sec_fetch_site: reject_cross_site_when_origin_absent
+    missing_origin_and_fetch_metadata: allowed_non_browser_client_carries_no_cookie
+    implementation_status: matches_tm_cms
   hub_proxy:
-    decision: deny_by_default_allowlist
-    current_state: only_api_v1_auth_denied
-    implementation_status: open_in_tm_cms
+    decision: auth_paths_blocked_business_paths_proxied
+    authority: adr_0002_d1
+    denied_prefixes: '/api/v1/auth'
+    implementation_status: matches_tm_cms
+    follow_up: narrow_per_domain_as_each_migrates
   access_token_revocation: not_immediate_within_access_token_ttl
   access_token_claims: no_sid_no_tenant_id
   hub_introspection_checks_session: false

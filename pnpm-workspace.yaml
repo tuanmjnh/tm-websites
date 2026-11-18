@@ -22,3 +22,4 @@ minimumReleaseAgeExclude:
   - nuxt@4.6.4
   - unrouting@0.3.2
   - '@tuanmjnh/tm-hub-client@1.2.0'
+  - '@tuanmjnh/tm-ui@0.2.0'

@@ -1,9 +1,9 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* Tailwind does not scan node_modules, and `@tuanmjnh/tm-ui` is linked there
-   (pnpm places the link in the layer that depends on it). */
-@source "../../../nuxt-layers/cms-base/node_modules/@tuanmjnh/tm-ui/dist";
+/* Tailwind does not scan node_modules. The registry build flattens the package,
+   so the classes live at the package root (not under a `dist/` segment). */
+@source "../../../nuxt-layers/cms-base/node_modules/@tuanmjnh/tm-ui";
 @import "./tokens.css";
 @import "./glass.css";
 @import "./bento.css";
