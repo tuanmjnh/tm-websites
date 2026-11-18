@@ -160,6 +160,8 @@ The `tm-hub` main tree has no `.github/workflows/` directory, and the Actions ru
 
   No tenant row was created by any of these calls. Refresh-reuse revocation and `ACCESS_TOKEN_REVOCATION = NOT_IMMEDIATE` were measured separately (§5.3); the two-instance refresh race remains unexercised.
 
+- **Deny-by-default allowlist measured 2026-11-18, then reverted — ADR 0002 D1 still governs.** While working the P1 backlog row, the narrowing was actually implemented (`isHubProxyPathAllowed`) and exercised end to end: through a hub-mode CMS on `:4010` with the `root@example.com` session, every path the screens call still answered 200 — `/api/v1/content`, and `/api/v1/apps/app_sentuan_cms` itself plus `users`, `roles`, `audit-logs`, `configs`, `routes`, `connections`, `mail/queue`, `mail/analytics/summary`, `notifications`; `media/folders` passed the proxy and got the Hub's own `400`. Meanwhile `/api/v1/tenants`, another app's `/api/v1/apps/app_bag_post_cms/users` and an unknown `/api/v1/apps/app_sentuan_cms/secrets` were refused `403 PROXY_PATH_NOT_ALLOWED`. It was then removed uncommitted, because D1 says business paths stay proxied **until each domain migrates**, and this section already records that a deny-by-default allowlist was withdrawn as never adopted: shipping it would have reversed an owner decision without a new ADR even though no screen broke that day. The measurements stay here as the evidence such an ADR would need.
+
 ### 5.3 Known Hub session limitations (not fixed by the dependency upgrade)
 
 The latest Hub commit changes package/dependency files only. The auth contract remains as previously audited:

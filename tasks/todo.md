@@ -114,7 +114,7 @@ Still missing in P3: category tree, richer editorial formats, media attachments,
 
 ### Still open in P1 (do not mark P1 complete)
 
-- [ ] Narrow the proxy further: replace broad business forwarding with per-module allowlisted routes as each domain migrates (P3+).
+- [ ] Narrow the proxy further: replace broad business forwarding with per-module allowlisted routes **as each domain migrates** (P3+). ADR 0002 D1 is the constraint, not a missing session: a deny-by-default allowlist was implemented and measured on 2026-11-18, then reverted because D1 keeps business paths proxied until migration (audit §5.2).
 - [ ] Coordinate refresh rotation across concurrent tabs and instances; the current BFF refreshes per request.
 - [ ] CSRF hardening beyond origin matching (double-submit or token binding), and decide the policy for clients that send neither `Origin` nor `Sec-Fetch-Site`.
 - [ ] Web portal auth BFF (no auth handlers exist in `tm-web` yet).
@@ -1133,7 +1133,7 @@ The same treatment applies to gaps that have no module page of their own:
 | Gap | Blocker | First slice when unblocked |
 | --- | --- | --- |
 | CAT-02 serial/IMEI on catalog items | inventory model above | serial numbers on the catalog item + movement link |
-| P1 proxy allowlist (broad forwarding today) | needs a live Hub session to verify each path | replace the passthrough with per-module allowlisted routes |
+| P1 proxy allowlist (broad forwarding today) | **ADR 0002 D1**, not a live session — business paths stay proxied until each domain migrates, and a deny-by-default allowlist was measured then reverted on 2026-11-18 (audit §5.2) | after a new ADR: narrow one migrated domain at a time, starting with the first Hub-backed screen that moves to a local service |
 | P1 CSRF beyond origin matching | owner decision on the no-`Origin`/no-`Sec-Fetch-Site` policy | double-submit or token binding, plus the policy tests |
 | P1 web auth BFF (`tm-web` has no auth handlers) | web login UX decision | BFF handlers + a signed-in storefront check |
 | ~~P9 per-customer browser pass~~ | done 2026-11-16 — signed in for all five customers in mock mode; two defects found and fixed | remaining: the Hub-backed screens, which need a real Hub session |
