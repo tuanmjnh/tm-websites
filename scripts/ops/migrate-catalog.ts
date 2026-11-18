@@ -3,6 +3,18 @@ import { Types } from 'mongoose'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { buildSearchString } from '../../tm-cms/server/models/catalog.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import {
+  asLegacyRecord,
+  legacyCatalogStatus,
+  legacyAttributeList,
+  legacyImageList,
+  legacyImageUrl,
+  legacyLocalized,
+  legacyNumber,
+  legacySlugMap,
+  legacyTags,
+  legacyText,
+} from '../../tm-cms/server/utils/legacyImport.js'
 
 /**
  * `pnpm migrate:catalog --site sentuan [--apply]`
@@ -22,80 +34,6 @@ function flag(name: string): string | undefined {
   return index === -1 ? undefined : process.argv[index + 1]
 }
 
-type Raw = Record<string, unknown>
-
-function asRecord(value: unknown): Raw {
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Raw) : {}
-}
-
-function text(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
-}
-
-function localized(value: unknown, max = 5000): Record<string, string> {
-  const source = asRecord(value)
-  const result: Record<string, string> = {}
-  for (const [locale, entry] of Object.entries(source)) {
-    const value = text(entry)
-    if (value) result[locale] = value.slice(0, max)
-  }
-  return result
-}
-
-/**
- * Legacy catalog tags are `{ title, slug }` documents, the same shape the
- * content importer already handles; v2 keeps the display name. Mapping them
- * through `text()` alone silently dropped every tag (230 of sen-tuan's 241
- * legacy items carried tags) and left `catalog_items.tags` empty.
- */
-function tagNames(value: unknown): string[] {
-  const seen = new Set<string>()
-  for (const entry of Array.isArray(value) ? value : []) {
-    const tag = text(entry) || text(asRecord(entry).title) || text(asRecord(entry).name)
-    if (tag) seen.add(tag.slice(0, 60))
-    if (seen.size >= 50) break
-  }
-  return [...seen]
-}
-
-function imageUrl(value: unknown): string | null {
-  if (typeof value === 'string') return value.trim() || null
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  const record = value as Raw
-  return text(record.url) || text(record.secure_url) || text(record.src) || null
-}
-
-function imageList(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-  return value.map(imageUrl).filter((entry): entry is string => Boolean(entry))
-}
-
-function number(value: unknown, fallback = 0): number {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : fallback
-}
-
-function slugMap(value: unknown): Record<string, string> {
-  const source = asRecord(value)
-  const result: Record<string, string> = {}
-  for (const [locale, entry] of Object.entries(source)) {
-    const slug = text(entry).toLowerCase()
-    if (slug) result[locale] = slug
-  }
-  return result
-}
-
-function localizedAttributes(value: unknown): { name: Record<string, string>, value: Record<string, string> }[] {
-  if (!Array.isArray(value)) return []
-  const list: { name: Record<string, string>, value: Record<string, string> }[] = []
-  for (const entry of value) {
-    const record = asRecord(entry)
-    const name = localized(record.k ?? record.key ?? record.name ?? record.title, 200)
-    const text = localized(record.v ?? record.value ?? record.label, 500)
-    if (Object.keys(name).length && Object.keys(text).length) list.push({ name, value: text })
-  }
-  return list
-}
 
 const siteId = flag('site') || process.env.TM_CUSTOMER_ID
 const uri = process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:27017'
@@ -115,8 +53,8 @@ try {
   const categoryKeyByLegacy = new Map<string, string>()
 
   for (const record of legacyCategories) {
-    const slug = slugMap(record.slug)
-    const fallback = text(asRecord(record.fullPath).vi).split('/').filter(Boolean).pop()
+    const slug = legacySlugMap(record.slug)
+    const fallback = legacyText(asLegacyRecord(record.fullPath).vi).split('/').filter(Boolean).pop()
     const key = slug.vi || fallback || `category-${String(record._id)}`
     categoryKeyByLegacy.set(String(record._id), key)
   }
@@ -166,24 +104,24 @@ try {
   const plannedCategories = legacyCategories.map((record) => {
     const legacyId = String(record._id)
     const key = uniqueKey(categoryKeyByLegacy.get(legacyId)!, legacyId, usedCategoryKeys, existingCategoryKeys)
-    const slug = slugMap(record.slug)
+    const slug = legacySlugMap(record.slug)
     if (!slug.vi && key) slug.vi = key
     return {
       legacyId,
       key,
-      title: localized(record.title, 200),
+      title: legacyLocalized(record.title, 200),
       slug,
-      fullPath: localized(record.fullPath, 500),
-      description: localized(record.description, 500),
-      thumbnail: imageUrl(record.thumbnail),
-      order: number(record.displayOrder),
+      fullPath: legacyLocalized(record.fullPath, 500),
+      description: legacyLocalized(record.description, 500),
+      thumbnail: legacyImageUrl(record.thumbnail),
+      order: legacyNumber(record.displayOrder),
       parentLegacyId: record.pid ? String(record.pid) : null,
       ancestorsLegacyIds: Array.isArray(record.ancestors)
-        ? record.ancestors.map(entry => asRecord(entry)._id).filter(Boolean).map(String)
+        ? record.ancestors.map(entry => asLegacyRecord(entry)._id).filter(Boolean).map(String)
         : [],
       legacySeo: {
-        title: localized(asRecord(record.seo).title, 200),
-        description: localized(asRecord(record.seo).description, 500),
+        title: legacyLocalized(asLegacyRecord(record.seo).title, 200),
+        description: legacyLocalized(asLegacyRecord(record.seo).description, 500),
       },
     }
   })
@@ -192,7 +130,7 @@ try {
 
   const plannedItems = legacyItems.map((record) => {
     const legacyId = String(record._id)
-    const slug = slugMap(record.slug)
+    const slug = legacySlugMap(record.slug)
     const key = uniqueKey(slug.vi || `item-${legacyId}`, legacyId, usedItemKeys, existingItemKeys)
 
     // The public URL is the default-locale slug and it is unique per site; two
@@ -204,57 +142,54 @@ try {
       if (usedItemSlugs.has(slug.vi)) slug.vi = `${slug.vi}-${legacyId.slice(-6)}`
       usedItemSlugs.add(slug.vi)
     }
-    const title = localized(record.title, 200)
+    const title = legacyLocalized(record.title, 200)
     const isActive = record.isActive !== false
-    const legacyStatus = text(record.status)
-    const status = record.isDeleted === true
-      ? 'deleted'
-      : (legacyStatus === 'published' && isActive ? 'published' : (legacyStatus === 'archived' ? 'archived' : 'draft'))
+    const status = legacyCatalogStatus(record)
 
     return {
       legacyId,
       key,
       title,
       slug,
-      shortDesc: localized(record.shortDesc, 500),
-      description: localized(record.description),
-      thumbnail: imageUrl(record.thumbnail),
-      gallery: imageList(record.gallery),
-      basePrice: number(record.basePrice),
-      salePrice: record.salePrice === undefined || record.salePrice === null ? null : number(record.salePrice),
-      sku: text(record.sku),
-      barcode: text(record.barcode),
-      uom: text(record.uom),
-      type: text(record.type) === 'variable' ? 'variable' : 'simple',
-      stock: number(record.stock),
+      shortDesc: legacyLocalized(record.shortDesc, 500),
+      description: legacyLocalized(record.description),
+      thumbnail: legacyImageUrl(record.thumbnail),
+      gallery: legacyImageList(record.gallery),
+      basePrice: legacyNumber(record.basePrice),
+      salePrice: record.salePrice === undefined || record.salePrice === null ? null : legacyNumber(record.salePrice),
+      sku: legacyText(record.sku),
+      barcode: legacyText(record.barcode),
+      uom: legacyText(record.uom),
+      type: legacyText(record.type) === 'variable' ? 'variable' : 'simple',
+      stock: legacyNumber(record.stock),
       manageStock: record.manageStock !== false,
-      tags: tagNames(record.tags),
-      attributes: localizedAttributes(record.attributes),
+      tags: legacyTags(record.tags),
+      attributes: legacyAttributeList(record.attributes),
       variants: Array.isArray(record.variants)
         ? record.variants.map((entry) => {
-            const variant = asRecord(entry)
+            const variant = asLegacyRecord(entry)
             return {
-              sku: text(variant.sku),
-              name: localized(variant.name, 200),
-              basePrice: number(variant.basePrice),
-              salePrice: variant.salePrice === undefined || variant.salePrice === null ? null : number(variant.salePrice),
-              stock: number(variant.stock),
+              sku: legacyText(variant.sku),
+              name: legacyLocalized(variant.name, 200),
+              basePrice: legacyNumber(variant.basePrice),
+              salePrice: variant.salePrice === undefined || variant.salePrice === null ? null : legacyNumber(variant.salePrice),
+              stock: legacyNumber(variant.stock),
               manageStock: variant.manageStock !== false,
               isActive: variant.isActive !== false,
-              attributes: localizedAttributes(variant.attributes),
+              attributes: legacyAttributeList(variant.attributes),
             }
           }).filter(variant => variant.sku)
         : [],
       seo: {
-        title: localized(asRecord(record.seo).title, 200),
-        description: localized(asRecord(record.seo).description, 500),
-        image: imageUrl(asRecord(record.seo).image) ?? '',
+        title: legacyLocalized(asLegacyRecord(record.seo).title, 200),
+        description: legacyLocalized(asLegacyRecord(record.seo).description, 500),
+        image: legacyImageUrl(asLegacyRecord(record.seo).image) ?? '',
       },
       status,
       isActive,
       isDeleted: record.isDeleted === true,
-      sales: number(record.sales),
-      views: number(record.views),
+      sales: legacyNumber(record.sales),
+      views: legacyNumber(record.views),
       publishedAt: record.publishedAt ? new Date(record.publishedAt as string) : null,
       categoryLegacyIds: Array.isArray(record.categories) ? record.categories.map(String) : [],
     }

@@ -43,6 +43,7 @@
     "test:backup-bundle": "tsx scripts/build/test-backup-bundle.ts",
     "test:purge-scope": "tsx scripts/build/test-purge-scope.ts",
     "test:price": "tsx scripts/build/test-price.ts",
+    "test:legacy-import": "tsx scripts/build/test-legacy-import.ts",
     "test:settings": "tsx scripts/build/test-settings-service.ts",
     "test:menus": "tsx scripts/build/test-menu-service.ts",
     "test:web-site": "tsx scripts/build/test-web-site.ts",

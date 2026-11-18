@@ -9,6 +9,18 @@ import {
   normalizeSlug,
 } from '../../tm-cms/server/models/content.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import {
+  asLegacyRecord,
+  legacyContentAttributes,
+  legacyContentStatus,
+  legacyDate,
+  legacyKeywords,
+  legacyList,
+  legacyLocalized,
+  legacyNumber,
+  legacyTags,
+  legacyText,
+} from '../../tm-cms/server/utils/legacyImport.js'
 
 /**
  * `pnpm migrate:content --site sentuan [--tenant default] [--apply]`
@@ -32,89 +44,6 @@ function flag(name: string): string | undefined {
   return index === -1 ? undefined : process.argv[index + 1]
 }
 
-type Raw = Record<string, unknown>
-type Localized = Record<string, string>
-
-function asRecord(value: unknown): Raw {
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Raw) : {}
-}
-
-function text(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
-}
-
-function localized(value: unknown, max = 5000): Localized {
-  const source = asRecord(value)
-  const result: Localized = {}
-  for (const [locale, entry] of Object.entries(source)) {
-    const candidate = text(entry)
-    if (candidate) result[locale.slice(0, 10)] = candidate.slice(0, max)
-  }
-  return result
-}
-
-function list(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : []
-}
-
-function number(value: unknown, fallback = 0): number {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : fallback
-}
-
-function date(value: unknown): Date | null {
-  if (value === null || value === undefined || value === '') return null
-  const parsed = value instanceof Date ? value : new Date(value as string | number)
-  return Number.isNaN(parsed.getTime()) ? null : parsed
-}
-
-/** Legacy keywords are free text per locale; the v2 field is a bounded list. */
-function keywords(value: unknown): string[] {
-  const seen = new Set<string>()
-  for (const entry of list(value)) {
-    const keyword = text(entry)
-    if (keyword) seen.add(keyword.slice(0, KEYWORD_MAX_LENGTH))
-    if (seen.size >= KEYWORDS_MAX_COUNT) break
-  }
-  return [...seen]
-}
-
-/** Legacy tags are `{ title, slug }` documents; v2 keeps the display name. */
-function tagNames(value: unknown): string[] {
-  const seen = new Set<string>()
-  for (const entry of list(value)) {
-    const tag = text(entry) || text(asRecord(entry).title) || text(asRecord(entry).name)
-    if (tag) seen.add(tag.slice(0, 60))
-    if (seen.size >= 50) break
-  }
-  return [...seen]
-}
-
-/**
- * The extras that have no v2 column. They are prefixed so an editor can tell
- * migration bookkeeping from authored metadata, and so CNT-02 can filter them.
- */
-function legacyAttributes(record: Raw): Record<string, string | number | boolean> {
-  const attributes: Record<string, string | number | boolean> = {}
-  const format = text(record.format)
-  if (format && format !== 'standard') attributes['legacy.format'] = format.slice(0, ATTRIBUTE_VALUE_MAX_LENGTH)
-  const template = text(record.template)
-  if (template) attributes['legacy.template'] = template.slice(0, ATTRIBUTE_VALUE_MAX_LENGTH)
-  const thumbnail = text(record.thumbnail)
-  if (thumbnail) attributes['legacy.thumbnail'] = thumbnail.slice(0, ATTRIBUTE_VALUE_MAX_LENGTH)
-  const parent = text(record.parent)
-  if (parent) attributes['legacy.parent'] = parent.slice(0, ATTRIBUTE_VALUE_MAX_LENGTH)
-  const sort = number(record.sort)
-  if (sort) attributes['legacy.sort'] = sort
-  const display = asRecord(record.display)
-  if (display.showOnHome === true) attributes['legacy.showOnHome'] = true
-  const priority = number(display.priority)
-  if (priority) attributes['legacy.priority'] = priority
-  const views = number(record.views)
-  if (views) attributes['legacy.views'] = views
-  return attributes
-}
-
 const siteId = flag('site') || process.env.TM_CUSTOMER_ID
 const tenant = flag('tenant') || 'default'
 const uri = process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:27017'
@@ -136,7 +65,7 @@ try {
   const usedCategoryKeys = new Set<string>()
   for (const record of legacyCategories) {
     const legacyId = String(record._id)
-    const slug = localized(record.slug, 120)
+    const slug = legacyLocalized(record.slug, 120)
     const base = normalizeSlug(slug.vi || slug.en || `category-${legacyId}`) || `category-${legacyId}`
     let key = base
     if (usedCategoryKeys.has(key)) key = `${base}-${legacyId.slice(-6)}`
@@ -146,8 +75,8 @@ try {
 
   const plannedCategories = legacyCategories.map((record) => {
     const legacyId = String(record._id)
-    const slug = localized(record.slug, 120)
-    const title = localized(record.title, 120)
+    const slug = legacyLocalized(record.slug, 120)
+    const title = legacyLocalized(record.title, 120)
     const locales = ['vi', 'en']
       .map(locale => ({ locale, name: title[locale] || '', slug: normalizeSlug(slug[locale] || title[locale]) }))
       .filter(entry => entry.name && entry.slug)
@@ -156,7 +85,7 @@ try {
       legacyId,
       key: categoryKeyByLegacy.get(legacyId)!,
       parent: parentLegacyId ? categoryKeyByLegacy.get(parentLegacyId) ?? null : null,
-      order: Math.max(0, Math.min(9999, number(record.sort))),
+      order: Math.max(0, Math.min(9999, legacyNumber(record.sort))),
       locales: locales.map(entry => ({ ...entry, name: entry.name.slice(0, 120) })),
     }
   })
@@ -182,16 +111,16 @@ try {
 
   const plannedContents = legacyContents.map((record) => {
     const legacyId = String(record._id)
-    const slug = localized(record.slug, 120)
-    const title = localized(record.title, 200)
-    const body = localized(record.content)
-    const excerpt = localized(record.excerpt, 500)
-    const seo = asRecord(record.seo)
-    const seoTitle = localized(seo.title, 200)
-    const seoDescription = localized(seo.description, 500)
-    const seoImage = text(seo.image).slice(0, 500)
-    const seoKeywords = asRecord(seo.keywords)
-    const type = text(record.type) === 'page' ? 'page' : 'post'
+    const slug = legacyLocalized(record.slug, 120)
+    const title = legacyLocalized(record.title, 200)
+    const body = legacyLocalized(record.content)
+    const excerpt = legacyLocalized(record.excerpt, 500)
+    const seo = asLegacyRecord(record.seo)
+    const seoTitle = legacyLocalized(seo.title, 200)
+    const seoDescription = legacyLocalized(seo.description, 500)
+    const seoImage = legacyText(seo.image).slice(0, 500)
+    const seoKeywords = asLegacyRecord(seo.keywords)
+    const type = legacyText(record.type) === 'page' ? 'page' : 'post'
     const prefix = type === 'page' ? 'pages' : 'posts'
 
     const locales = ['vi', 'en']
@@ -204,7 +133,7 @@ try {
           excerpt: excerpt[locale] || '',
           body: body[locale] || '',
           format: 'html' as const,
-          keywords: keywords(seoKeywords[locale]),
+          keywords: legacyKeywords(seoKeywords[locale]),
           seo: {
             title: seoTitle[locale] || '',
             description: seoDescription[locale] || '',
@@ -233,12 +162,10 @@ try {
       usedContentSlugs.add(`${entry.locale}:${entry.slug}`)
     }
 
-    if (list(record.gallery).length) droppedGallery.push(key)
-    if (list(record.media).length) droppedMedia.push(key)
+    if (legacyList(record.gallery).length) droppedGallery.push(key)
+    if (legacyList(record.media).length) droppedMedia.push(key)
 
-    const status = record.isDeleted === true
-      ? 'deleted'
-      : (['published', 'draft', 'archived'].includes(text(record.status)) ? text(record.status) : 'draft')
+    const status = legacyContentStatus(record)
 
     return {
       legacyId,
@@ -246,19 +173,19 @@ try {
       type,
       status,
       locales,
-      categories: list(record.categories)
+      categories: legacyList(record.categories)
         .map(entry => categoryKeyByLegacy.get(String(entry)))
         .filter((entry): entry is string => Boolean(entry)),
-      tags: tagNames(record.tags),
+      tags: legacyTags(record.tags),
       media: [] as string[],
-      attributes: legacyAttributes(record),
+      attributes: legacyContentAttributes(record),
       publishAt: null,
       unpublishAt: null,
-      publishedAt: date(record.publishedAt),
-      deletedAt: status === 'deleted' ? date(record.deletedAt) ?? date(record.updatedAt) : null,
-      createdAt: date(record.createdAt),
-      updatedAt: date(record.updatedAt),
-      legacyFormat: text(record.format),
+      publishedAt: legacyDate(record.publishedAt),
+      deletedAt: status === 'deleted' ? legacyDate(record.deletedAt) ?? legacyDate(record.updatedAt) : null,
+      createdAt: legacyDate(record.createdAt),
+      updatedAt: legacyDate(record.updatedAt),
+      legacyFormat: legacyText(record.format),
     }
   })
 
@@ -302,7 +229,7 @@ try {
   }
   const unresolvedCategories = new Set<string>()
   for (const record of legacyContents) {
-    for (const entry of list(record.categories)) {
+    for (const entry of legacyList(record.categories)) {
       if (!categoryKeyByLegacy.has(String(entry))) unresolvedCategories.add(String(entry))
     }
   }

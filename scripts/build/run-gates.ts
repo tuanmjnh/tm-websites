@@ -67,6 +67,9 @@ const STATIC_GATES = [
   'test:purge-scope',
   // Pure price rules shared by the storefront and the CMS list: no build or database.
   'test:price',
+  // The legacy importers' field rules: pure, no build or database. A wrong rule
+  // there does not fail, it writes less data, which is how every tag was lost.
+  'test:legacy-import',
   // Reads the storefront's page files and its hand-written links; no build or
   // database needed, so it belongs in the default run.
   'test:web-routes',
