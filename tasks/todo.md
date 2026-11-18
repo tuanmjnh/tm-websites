@@ -1101,6 +1101,21 @@ Each item is sized for one session, needs no new decision or credential, and car
 
 **Audit reason verified end to end (2026-11-16, queue item 11).** Slice 5 closed with an honest gap in `08`: "no CMS screen asks for a reason yet". That gap was later closed in code — `AuditReasonModal` for single actions, `AuditReasonField` inside the edit forms, on all eight write screens — but three documents still said otherwise, so the next session would have rebuilt what already worked. The claim was tested instead of assumed: on `sentuan` a probe category was created and then deleted through the dialogs, each with its own note; both `audit_logs` rows carry the note and `/audit` renders it quoted above the actor. Probe and its two audit rows removed afterwards. `08` now carries the step table, `05` no longer lists the reason as a gap, and the remaining honest gap is narrower: import/export and background jobs write no audit rows, and no automated test covers the page→header wiring.
 
+## Remaining after the 2026-11-18 platform/Hub audit — ordered by what each one needs
+
+The audit queue above is empty: everything that needed neither a decision nor a credential has landed. What is left is grouped by its unlock, so an automated session takes the first row whose unlock it already has and stops at the first it does not.
+
+| # | Slice | Unlock | Done when |
+| --- | --- | --- | --- |
+| A1 | Apply `tm-hub/supabase/migrations/20261118000000_revoke_anon_access.sql` | owner runs it (DB write) | migration applied, Hub suites re-run, any PostgREST caller that breaks is identified. Premise re-checked 2026-11-18: no JWT in `.output/public`, health masks every key |
+| A2 | Tenant delete cascade **with children** | a disposable database (never the shared production one) | a probe tenant with seeded sites, media rows, configs and a linked app is deleted and every child row is gone; counts match `describeTenantDeletion` |
+| A3 | Cross-instance refresh race | two CMS processes sharing one refresh token | measured: one instance wins, the other is signed out and the reason is recorded as the accepted limitation (P1) |
+| A4 | P2 two-tenant isolation drill | a disposable second database | no request input can widen a tenant's database binding; audit rows carry actor, resource, reason and request identity |
+| A5 | P3/P4 phase gates (content, media, catalog) | owner confirms which legacy formats and catalog fields are still required | every exit criterion in `05-feature-parity.md` has dated evidence, or a written deferral |
+| A6 | P10 migration and launch | production Mongo URI, legacy snapshot, Vercel/domain access, explicit authorization | dry-run reconciliation report against the real snapshot, then an authorized cutover |
+
+A1–A2 are the shortest path to calling tenant administration production-ready; A5 is the largest remaining product gap and cannot be scoped honestly before the format question is answered.
+
 ## Module backlog — every module that is still incomplete
 
 A module counts as done when its parity row's exit gate is met, not when its page exists. This table is the tracking list for the five CMS modules whose pages are still `pending`, plus the gaps that sit behind them. **Rule for an automated session:** take the first row whose blocker is `none`; never start a row by inventing the data model it is waiting for, and record the evidence here when a row lands.
