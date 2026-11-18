@@ -64,7 +64,9 @@ Acceptance:
 - `pnpm typecheck`, `pnpm lint`, `pnpm verify:all`, CMS build and Web build pass.
 - Browser check confirms the status badges render and CSS tokens/styles are present.
 
-**Applied 2026-11-18:** `cms-base` now declares `@tuanmjnh/tm-ui: ^0.2.0` and resolves it from the registry; the `link:` is gone and `pnpm-lock.yaml` no longer mentions `tm-platform`. The generated globals plugin was replaced with the package's own template, which registers all 30 primitives (the hand-kept list had 6). Tailwind's `@source` now points at the flattened registry package root, and the Vite `fs.allow` / `vue` alias that existed only for the sibling link were removed. `pnpm typecheck` and `pnpm verify:all` pass locally and on CI (37/37) — see §10. The browser check in the acceptance list has **not** been run yet.
+**Applied 2026-11-18:** `cms-base` now declares `@tuanmjnh/tm-ui: ^0.2.0` and resolves it from the registry; the `link:` is gone and `pnpm-lock.yaml` no longer mentions `tm-platform`. The generated globals plugin was replaced with the package's own template, which registers all 30 primitives (the hand-kept list had 6). Tailwind's `@source` now points at the flattened registry package root, and the Vite `fs.allow` / `vue` alias that existed only for the sibling link were removed. `pnpm typecheck` and `pnpm verify:all` pass locally and on CI (37/37) — see §10.
+
+**Browser check run 2026-11-18** on `2e8fd0b` with `TM_AUTH_MODE=mock` on `:4005`: `/orders` (the `ModulePendingPage` that mounts `ModuleStatusBadges`) renders both badges as real elements — a `span` carrying `bg-success/10 text-success ring ring-inset ring-success/25 rounded-[4px]` with computed `border-radius: 4px`, `padding: 2px 4px` and a resolved `oklch` background — and **no element matched `/^u[a-z]/`**, so nothing fell through to a dead custom element. This is a mock-session UI check only; it does not replace the authenticated Hub pass.
 
 ### 3.2 `tm-platform`: make package test discovery deterministic
 
@@ -248,8 +250,8 @@ The same gates were run locally before the commits (`pnpm typecheck` exit 0 and 
 **Correction to this audit's own reasoning:** §3.2 attributed the CI failure to the package test scripts and recommended rewriting them. That was wrong. The scripts are correct and pass unchanged; the workflow ran Node 20, where `node --test <glob>` does not expand. Anyone acting on the original §3.2 text would have changed nine files for no effect.
 
 **Still open** (do not read the table above as completion):
-- The §3.1 acceptance browser check — confirm `StatusBadge` renders as a real Nuxt UI primitive, not an empty `<ubadge>`.
-- The tenant archive/hard-delete flow has not been exercised in a browser, and the hard-delete path has never run against a real tenant — treat it as untested until someone does it on a disposable record.
+- ~~The §3.1 acceptance browser check~~ **Done 2026-11-18** (§3.1): no `u*` custom elements, badge classes and tokens resolve. Keep this as UI evidence only — it ran with a mock session.
+- The tenant archive/hard-delete flow has not been exercised in a browser, and the hard-delete path has never run against a real tenant — treat it as untested until someone does it on a disposable record. **Blocker found 2026-11-18:** the local Hub dev server on `:4000` is healthy but its `.env` points at the production Supabase project (`gnqvrmaucavzzpgednc.supabase.co`) and the production Mongo URIs, so it is not a sandbox — archiving or deleting anything there mutates production rows. Any such test needs a Hub account plus a disposable tenant, and must not run against `tenant_sentuan`.
 - `supabase/migrations/20261118000000_revoke_anon_access.sql` is written but **not applied**. Before applying, re-confirm no browser bundle holds a publishable key for that project; after applying, re-run the app suites because a caller that relied on PostgREST with a non-service key would now fail.
 - The authenticated proxy/CSRF runtime rows — blocked on an owner-supplied Hub test account, not on code (§5.1, §5.2).
 
