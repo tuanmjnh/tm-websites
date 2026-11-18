@@ -202,7 +202,9 @@ check('both importers import the shared rules instead of declaring their own', (
     )
     const local = source.match(/^function (text|tagNames|imageUrl|imageList|localized|number|asRecord|slugMap|keywords|date|list)\b/gm)
     assert.equal(local, null, `${file} still declares its own copy: ${local?.join(', ')}`)
-    assert.doesNotMatch(source, /legacy\.thumbnail/, `${file} builds its own legacy.thumbnail instead of the shared rule`)
+    // Reading the attribute (a coverage counter) is fine; writing it outside the
+    // shared rule is what dropped the `{ url }` thumbnails.
+    assert.doesNotMatch(source, /['"]legacy\.thumbnail['"]\s*:/, `${file} builds its own legacy.thumbnail instead of the shared rule`)
   }
 })
 

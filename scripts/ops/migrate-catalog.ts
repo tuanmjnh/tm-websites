@@ -211,8 +211,25 @@ try {
     }
   })
 
+  // What actually came through, field by field. A mapper that drops a field looks
+  // exactly like clean data in the totals: `tags` was 0 of 241 items for a day
+  // because nothing printed that number.
+  const coverage = {
+    tags: plannedItems.filter(item => item.tags.length).length,
+    thumbnail: plannedItems.filter(item => item.thumbnail).length,
+    gallery: plannedItems.filter(item => item.gallery.length).length,
+    variants: plannedItems.filter(item => item.variants.length).length,
+    attributes: plannedItems.filter(item => item.attributes.length).length,
+    sku: plannedItems.filter(item => item.sku).length,
+    barcode: plannedItems.filter(item => item.barcode).length,
+    salePrice: plannedItems.filter(item => item.salePrice !== null).length,
+    categories: plannedItems.filter(item => item.categoryLegacyIds.length).length,
+    categoryThumbnail: plannedCategories.filter(category => category.thumbnail).length,
+  }
+
   console.log(`catalog migration site=${siteId} db=${database} apply=${apply}`)
   console.log(`  categories ${plannedCategories.length}, items ${plannedItems.length}`)
+  console.log(`  field coverage ${JSON.stringify(coverage)}`)
   if (categorySlugConflicts.length) {
     console.log(`  category slug conflicts resolved ${categorySlugConflicts.length}`)
     for (const conflict of categorySlugConflicts.slice(0, 10)) console.log(`    ${conflict}`)

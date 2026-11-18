@@ -261,8 +261,21 @@ try {
     }
   }
 
+  // What actually came through, field by field. The totals cannot show a dropped
+  // field: every legacy tag was missing and the report still looked healthy.
+  const coverage = {
+    thumbnail: plannedContents.filter(content => content.attributes['legacy.thumbnail']).length,
+    template: plannedContents.filter(content => content.attributes['legacy.template']).length,
+    keywords: plannedContents.filter(content => content.locales.some(entry => entry.keywords.length)).length,
+    body: plannedContents.filter(content => content.locales.some(entry => entry.body)).length,
+    excerpt: plannedContents.filter(content => content.locales.some(entry => entry.excerpt)).length,
+    seoImage: plannedContents.filter(content => content.locales.some(entry => entry.seo.image)).length,
+    bothLocales: plannedContents.filter(content => content.locales.length > 1).length,
+  }
+
   console.log(`content migration site=${siteId} db=${database} tenant=${tenant} apply=${apply}`)
   console.log(`  categories ${plannedCategories.length}, contents ${plannedContents.length}, locales ${localeCount}`)
+  console.log(`  field coverage ${JSON.stringify(coverage)}`)
   console.log(`  types ${JSON.stringify(byType)}`)
   console.log(`  legacy formats ${JSON.stringify(byFormat)} -> body format html`)
   console.log(`  statuses ${JSON.stringify(byStatus)}`)

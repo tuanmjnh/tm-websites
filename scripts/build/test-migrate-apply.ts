@@ -233,6 +233,18 @@ async function main() {
       assert.equal(dryCatalog.code, 0, dryCatalog.output)
       assert.match(dryCatalog.output, /categories 3, items 3/)
     })
+    await check('the catalog report counts what came through, field by field', () => {
+      assert.match(
+        dryCatalog.output,
+        /field coverage \{"tags":1,"thumbnail":1,"gallery":1,"variants":1,"attributes":1,"sku":1,"barcode":0,"salePrice":2,"categories":1,"categoryThumbnail":0\}/,
+      )
+    })
+    await check('the content report counts what came through, field by field', () => {
+      assert.match(
+        dryContent.output,
+        /field coverage \{"thumbnail":1,"template":1,"keywords":1,"body":4,"excerpt":1,"seoImage":1,"bothLocales":1\}/,
+      )
+    })
 
     console.log('\n   Content apply')
 

@@ -302,9 +302,11 @@ curl -s 'http://localhost:4006/api/public/content/gioi-thieu'
 curl -s http://localhost:4006/sitemap.xml | grep -c '<loc>'
 ```
 
-Expected: the dry run prints the legacy category/content/locale counts, the legacy
-formats, the status buckets, which lists it cannot carry, and writes nothing (no
-collections, no indexes, no `tm_migrations` rows). `--apply` writes one `categories`
+Expected: the dry run prints the legacy category/content/locale counts, a
+`field coverage {…}` line (how many planned records carry a thumbnail, template,
+keywords, body, excerpt, SEO image and both locales), the legacy formats, the status
+buckets, which lists it cannot carry, and writes nothing (no collections, no indexes,
+no `tm_migrations` rows). `--apply` writes one `categories`
 doc per legacy content category and one `content` doc per legacy record, with keys
 like `pages/gioi-thieu` and `posts/<slug>`, `format: html`, both locales, the legacy
 SEO title/description/image and keywords, the mapped category keys and tag names.
@@ -313,6 +315,87 @@ records whose legacy template was kept, a second `--apply` changes no count and 
 revision, and the storefront serves the imported page and lists the imported posts.
 Restoring this database into an older CMS is not supported: `content` is the v2
 collection, and `contents` stays untouched for rollback.
+
+### Legacy import runbook (P10, 2026-11-18)
+
+Both importers (`migrate:content`, `migrate:catalog`) are the same shape: read the
+legacy collections raw, plan in memory, write nothing without `--apply`, and upsert
+by the migrated identity (`(siteId, key)` for content and its categories,
+`(siteId, legacyId)` for catalog). This is the order an operator runs them in.
+
+**1. Where the legacy data lives.** The legacy collections sit in the database named
+after the customer, not in the `app_*_cms` database the CMS uses:
+`TM_MONGO_DB=sen-tuan` / `bag-post` holds `contents`, `content_categories`, `items`,
+`item_categories`, `menus`; `TM_MONGO_DB=app_sentuan_cms` / `app_bag_post_cms` is the
+v2 side. Pointing `TM_MONGO_DB` at the v2 database plans **0 records and reports no
+error** — that is the single easiest way to believe a migration is done when nothing
+happened.
+
+**2. Back up the v2 side first.** `pnpm backup:all --site <id>` (database + media) and
+keep the manifest; the import never deletes anything, so a restore is only needed if
+something else went wrong.
+
+**3. Dry run both, in this order.**
+
+```sh
+TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:content --site sentuan
+TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:catalog --site sentuan
+```
+
+Read the report before applying:
+
+| Line | What it means |
+| --- | --- |
+| `categories N, contents M, locales L` / `categories N, items M` | what the plan will write |
+| `field coverage {…}` | how many planned records actually carry each field. **Compare it with the legacy data**: a field the mappers read but that reports 0 everywhere is either absent in the source or being dropped silently — that is how all 241 `tags` were lost for a day in 2026-11-18 |
+| `with tags N, with categories N`, `legacy formats {…}`, `statuses {…}` | the content-side buckets |
+| `invalid records N` | records with no locale that has both a title and a slug; they are skipped, never half-written |
+| `slug conflicts resolved N`, `category slug conflicts resolved N` | a slug already owned (by the CMS or by another legacy record) was suffixed with the legacy id tail; the record keeps its own URL instead of one being overwritten |
+| `legacy gallery lists not carried (N)`, `legacy media embeds not carried (N)` | deliberate: v2 `media` holds ids, not URLs |
+| `nothing was written; rerun with --apply` | the dry run created no collection, index or `tm_migrations` row |
+
+**4. Apply, then apply again.**
+
+```sh
+TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:content --site sentuan --apply
+TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:catalog --site sentuan --apply
+```
+
+A second `--apply` writes the same counts, keeps `revision` and `createdAt` of rows an
+editor has already touched, and keeps the key/slug a migrated row already has. Writes
+are per row, not in a transaction: if one fails, the rows before it stay and the
+command exits non-zero — fix the cause and run it again, it resumes. The legacy
+collections are never modified, so `contents`/`items` remain the rollback copy.
+
+**5. Verify from the v2 side.** The admin list reports the migrated counts
+(`meta.counts`), a migrated record opens in the CMS drawer with both locales, the
+storefront serves `/gioi-thieu` and lists the posts, and `/sitemap.xml` counts match
+the published rows. `pnpm test:migrate-apply` proves the mechanics of this whole
+section on a disposable fixture — including that a dry run writes nothing and that a
+second apply changes no revision — but it does not replace running it against the real
+snapshot, which needs the owner's authorization.
+
+**Numbers recorded 2026-11-18 on the local legacy copies:**
+
+```text
+sen-tuan content  categories 6, contents 8, locales 16
+                 field coverage {"thumbnail":8,"template":8,"keywords":8,"body":8,"excerpt":8,"seoImage":8,"bothLocales":8}
+bag-post content categories 12, contents 18, locales 25
+                 field coverage {"thumbnail":18,"template":18,"keywords":9,"body":16,"excerpt":15,"seoImage":16,"bothLocales":7}
+sen-tuan catalog categories 67, items 241
+                 field coverage {"tags":230,"thumbnail":224,"gallery":224,"variants":223,"attributes":0,"sku":241,"barcode":0,"salePrice":138,"categories":241,"categoryThumbnail":66}
+```
+
+`bag-post`'s `thumbnail: 18` is the whole collection: 7 of those records store
+`{ url }` instead of a string and were being dropped before the shared rule landed.
+`sen-tuan`'s `attributes: 0` is the source (legacy `attributes` is null), not a
+mapper gap — the A5 inventory records the same for `barcode`.
+
+**Known traps, both fixed and gated on 2026-11-18:** a duplicated category slug used
+to abort `--apply` half-way with `E11000` (now suffixed, and reported), and
+`migrate:catalog` used to run its migrations before planning, so even a dry run wrote
+collections, indexes and `tm_migrations` rows to the customer database (planning now
+reads raw and prepares only with `--apply`).
 
 ### Revision diff and restore smoke (P3.c)
 
