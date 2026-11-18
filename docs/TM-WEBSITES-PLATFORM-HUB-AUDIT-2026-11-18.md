@@ -142,6 +142,23 @@ The `tm-hub` main tree has no `.github/workflows/` directory, and the Actions ru
 - **What the code does:** `sanitizeHubProxyPath` rejects non-`/api/v1` paths (so no user-supplied Hub URL), `isHubProxyPathDenied` rejects `/api/v1/auth` and children, body methods also run the origin guard, then the request forwards.
 - **Resolution:** the newer note's "deny-by-default method+path allowlist" was withdrawn as never adopted; §3.2, the matrix rows, the acceptance list and the queue rows were rewritten to describe D1 and to record that the broad passthrough is intended, with a note to keep the per-domain migration list current.
 - **Accepted residual:** until each domain migrates, any Hub `/api/v1` business endpoint the caller's token can reach is reachable through the proxy. That is D1's explicit trade-off, not a defect.
+- **Refresh rotation measured 2026-11-18** (same CMS/Hub pair): `POST /api/auth/refresh` with the original `tm_refresh_token` → 200 with a new pair; replaying the same original token → **401 `SESSION_EXPIRED`**, so reuse detection fires; the *old* access cookie still returned 200 from `/api/auth/session` afterwards, which is exactly `NOT_IMMEDIATE` — revoking a refresh session does not invalidate an already-issued access JWT. This is the documented behaviour, now observed rather than assumed.
+- **Runtime verified 2026-11-18** — CMS on `:4005` with `TM_AUTH_MODE=hub` against the local Hub on `:4000`, session from the seeded `root@example.com` (`tenant_sentuan` / `app_sentuan_cms`, `permissions: ['*']`):
+
+  | Row | Request | Result |
+  |---|---|---|
+  | login | `POST /api/auth/login` (Hub mode) | 200, Hub-issued tokens in HttpOnly cookies |
+  | session | `GET /api/auth/session` | 200 with the Hub-verified user |
+  | D1 allow | `GET /api/hub/api/v1/tenants` | 200 (business passthrough) |
+  | D1 deny | `GET /api/hub/api/v1/auth/me` | 403 `PROXY_PATH_FORBIDDEN` |
+  | Q8 origin mismatch | `POST /api/hub/api/v1/tenants` + `Origin: https://evil.example` | 403 |
+  | Q8 fetch metadata | same, `Sec-Fetch-Site: cross-site`, no `Origin` | 403 |
+  | Q8 no headers | same, neither header (non-browser client) | forwarded — Hub answered 400 validation, nothing written |
+  | Q8 same origin | same, `Origin: http://localhost:4005` | forwarded — 400 validation |
+  | Q8 BFF | `POST /api/auth/logout` + foreign `Origin` | 403 |
+  | logout | `POST /api/auth/logout` same-origin, then `GET /api/auth/session` | 200, then 401 |
+
+  No tenant row was created by any of these calls. Refresh-reuse revocation and `ACCESS_TOKEN_REVOCATION = NOT_IMMEDIATE` were measured separately (§5.3); the two-instance refresh race remains unexercised.
 
 ### 5.3 Known Hub session limitations (not fixed by the dependency upgrade)
 
@@ -256,5 +273,5 @@ The same gates were run locally before the commits (`pnpm typecheck` exit 0 and 
 - ~~The permanent-delete dialog is unverified in a browser~~ **Verified read-only 2026-11-18** (§5.4): it opens, the impact counts are real, and submission is gated on typing the exact tenant id. It was **not** submitted, so the cascade and the `?confirm=` rejection are still unexercised at runtime. The archive action was not executed either.
 - **Blocker for any mutating tenant test:** the local Hub dev server on `:4000` is healthy but its `.env` points at the production Supabase project (`gnqvrmaucavzzpgednc.supabase.co`) and the production Mongo URIs, so it is not a sandbox — archiving or deleting anything there mutates production rows. A disposable tenant is required, and nothing may run against `tenant_sentuan`.
 - `supabase/migrations/20261118000000_revoke_anon_access.sql` is written but **not applied**. Before applying, re-confirm no browser bundle holds a publishable key for that project; after applying, re-run the app suites because a caller that relied on PostgREST with a non-service key would now fail.
-- The authenticated proxy/CSRF runtime rows — the Hub test account now exists and authenticates (seeded `root@example.com`, password in `tm-hub/scripts/seed/shared.ts`; `is_super_admin`, `root` role in the Hub app, `permissions: ['*']`), so this is no longer blocked on access. The CMS proxy/CSRF rows themselves have not been run.
+- ~~The authenticated proxy/CSRF runtime rows~~ **Run 2026-11-18** against the local Hub with the seeded root account; every row matched ADR 0002 (table in §5.2). Refresh reuse returns 401 `SESSION_EXPIRED` while the old access token still works, confirming `NOT_IMMEDIATE`. Still unexercised: the cross-instance refresh race (§5.3) — it needs two CMS instances sharing one refresh token, not a disposable tenant.
 
