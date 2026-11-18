@@ -3,13 +3,13 @@
 **Audit date:** 2026-11-18  
 **Scope:** Read-only review of the default branches, manifests, key integration files, owner-decision docs and latest GitHub Actions runs. No source files were changed, committed, published or deployed during this audit.
 
-> **Status update (2026-11-18, after the audit):** §3.1, §3.2, §3.3 and the three tenant-admin items in §5.4 have been fixed and verified locally. See §10 for the measured results and for the one correction this update makes to the audit's own diagnosis. §5.1, §5.2, §5.3 and the remaining §5.4 items are still open.
+> **Status update (2026-11-18, after the audit):** §3.1, §3.2, §3.3 and the §5.4 tenant-admin items have been fixed, committed and pushed; CI is green on all three repositories, and §5.1/§5.2 are closed against ADR 0002. See §10 for the run IDs and for the one correction this update makes to the audit's own diagnosis. Still open: the two browser checks, applying the RLS revoke migration, and the authenticated Hub rows (§10).
 
 ## 1. Executive summary
 
 The architecture is substantially in place: `tm-websites` contains separate `tm-cms` SPA and `tm-web` SSR applications, shared Nuxt layers, customer composition, CMS domain APIs and public storefront readers. `tm-platform` provides shared packages and `tm-hub` remains the central identity/control plane.
 
-**The immediate blocker was repository reproducibility, not missing features:** the latest CI run failed in both `tm-websites` and `tm-platform`. Both are fixed locally (§10) but neither is pushed, so the next CI run is the real proof. After that, reconcile security decisions that have drifted between documents and finish the P1–P4/P9 exit criteria for the agreed V2 scope.
+**The immediate blocker was repository reproducibility, not missing features:** the CI runs that failed in `tm-websites` and `tm-platform` are now green on the pushed fixes (§10), and the security decisions that had drifted between documents are reconciled in §5. What is left is the V2 phase gates (P2–P4, P9) plus the verification items §10 still lists as open.
 
 Do not reopen the previously deferred features listed in §7.
 
@@ -17,13 +17,15 @@ Do not reopen the previously deferred features listed in §7.
 
 | Repository | Branch | Revision inspected | Relevant finding |
 |---|---|---|---|
-| `tuanmjnh/tm-websites` | `main` | `8f10708331c3a7c7b6f1db3900e1fec71b860270` | Latest commit adds `tm-cms` and integrates `@tuanmjnh/tm-hub-client` 1.2.0; the `tm-ui` local link remains. |
-| `tuanmjnh/tm-platform` | `main` | `981e23d737eba62194fd7d095f3a897434d9a6ee` | Zod 4 validator changes and `tm-ui` 0.2.0 package updates; typecheck/build pass in CI, test step fails. |
-| `tuanmjnh/tm-hub` | `main` | `f0c6f1d8c183fbc46e361947f2bd57ad0fa884e1` | Latest commit is dependency/workspace alignment; no auth or tenant-service code changes in that commit. |
+| `tuanmjnh/tm-websites` | `main` | `2e8fd0b5011620462a445ce42398b0ea20a13a06` | Registry `@tuanmjnh/tm-ui` 0.2.0 adopted with the package's 30-primitive globals plugin, root package renamed `tm-websites`, and this audit recorded. Quality Gates 37/37 on CI. |
+| `tuanmjnh/tm-platform` | `main` | `5d18a04405325c8ff73e82b236563960e5b4a1fc` | CI workflow runs Node 24 / pnpm 12; `pnpm test` green with a non-zero count in every package. |
+| `tuanmjnh/tm-hub` | `main` | `147cf56c7ab1dc7742bc8fd46a34a899af70de74` | Tenant administration page, the §5.4 hardening services/routes, `tests/tenant-admin-hardening.test.ts` and the first CI workflow. |
+
+All three revisions equal `origin/main` as reported by `git ls-remote`.
 
 ## 3. P0 — Fix the two failing CI pipelines
 
-> **Both fixed locally on 2026-11-18 — see §10 for the evidence.** The diagnoses below are kept as written; §3.2's recommended fix was wrong and §10 explains why.
+> **Both fixed 2026-11-18, committed and pushed, and green on CI — see §10 for the run IDs.** The diagnoses below are kept as written; §3.2's recommended fix was wrong and §10 explains why.
 
 ### 3.1 `tm-websites`: remove the CI-breaking cross-repository link
 
@@ -62,7 +64,7 @@ Acceptance:
 - `pnpm typecheck`, `pnpm lint`, `pnpm verify:all`, CMS build and Web build pass.
 - Browser check confirms the status badges render and CSS tokens/styles are present.
 
-**Applied 2026-11-18:** `cms-base` now declares `@tuanmjnh/tm-ui: ^0.2.0` and resolves it from the registry; the `link:` is gone and `pnpm-lock.yaml` no longer mentions `tm-platform`. The generated globals plugin was replaced with the package's own template, which registers all 30 primitives (the hand-kept list had 6). Tailwind's `@source` now points at the flattened registry package root, and the Vite `fs.allow` / `vue` alias that existed only for the sibling link were removed. `pnpm typecheck` and `pnpm verify:all` pass — see §10. The browser check in the acceptance list has **not** been run yet.
+**Applied 2026-11-18:** `cms-base` now declares `@tuanmjnh/tm-ui: ^0.2.0` and resolves it from the registry; the `link:` is gone and `pnpm-lock.yaml` no longer mentions `tm-platform`. The generated globals plugin was replaced with the package's own template, which registers all 30 primitives (the hand-kept list had 6). Tailwind's `@source` now points at the flattened registry package root, and the Vite `fs.allow` / `vue` alias that existed only for the sibling link were removed. `pnpm typecheck` and `pnpm verify:all` pass locally and on CI (37/37) — see §10. The browser check in the acceptance list has **not** been run yet.
 
 ### 3.2 `tm-platform`: make package test discovery deterministic
 
@@ -119,7 +121,7 @@ The `tm-hub` main tree has no `.github/workflows/` directory, and the Actions ru
 
 - ~~The current `tm-websites` audit note says `tm-ui` is deferred/not adopted…~~ **Corrected 2026-11-18:** the CMS layer now consumes registry `@tuanmjnh/tm-ui@0.2.0` (no `link:`), so the note in `TM-CMS-WEB-Remaining-Decisions-and-Repository-Audit-2026-11-18.md` §7.4 ("no publish, no version bump, no adoption into tm-cms") describes a superseded decision. `tm-web` still does not use `tm-ui`, so the SSR constraint there is unchanged and still real.
 - `tasks/todo.md` and the CI log differ on gate count: the current `verify:all` runner has 37 gates, while older task notes still refer to 36. Update the count after the clean run.
-- The root `tm-websites/package.json` is named `tm-platform`; rename it to `tm-websites` in a separate housekeeping change so workspace logs and tooling are not misleading. **Still open.**
+- The root `tm-websites/package.json` named itself `tm-platform`. **Done 2026-11-18:** it is now `"name": "tm-websites"`.
 
 ## 5. P1 — Security and identity contract: reconcile before further expansion
 
@@ -206,9 +208,9 @@ Keep these deferred for this V2 delivery:
 
 ## 8. Recommended execution order
 
-1. ~~**P0.1:** Switch `tm-cms` `tm-ui` dependency from sibling `link:` to registry `@tuanmjnh/tm-ui@0.2.0`~~ **Done locally 2026-11-18** (§10). Remaining: the browser render check and a clean-clone CI run.
+1. ~~**P0.1:** Switch `tm-cms` `tm-ui` dependency from sibling `link:` to registry `@tuanmjnh/tm-ui@0.2.0`~~ **Done 2026-11-18** and green on CI (§10). Remaining: the browser render check.
 2. ~~**P0.2:** Fix all `tm-platform` package test scripts~~ **Done locally 2026-11-18** — but the fix was the workflow's Node version, not the scripts (§10).
-3. **P0.3:** ~~Add `tm-hub` CI~~ **done locally**; the Hub tenant API secret DTO / database binding / origin defaults are fixed and pinned by tests, and tenant deletion now archives by default with a guarded permanent path. Still open before tenant administration reaches production: apply the RLS revoke migration (§5.4) and exercise the delete flow in a browser.
+3. **P0.3:** ~~Add `tm-hub` CI~~ **done 2026-11-18, CI green**; the Hub tenant API secret DTO / database binding / origin defaults are fixed and pinned by tests, and tenant deletion now archives by default with a guarded permanent path. Still open before tenant administration reaches production: apply the RLS revoke migration (§5.4) and exercise the delete flow in a browser.
 4. ~~**P1:** Reconcile CSRF and proxy policy documents with the actual owner-approved behaviour, then make tests and code agree.~~ **Closed 2026-11-18** (see §5.1, §5.2): ADR 0002 is authoritative and the newer note was corrected to it; no code changed.
 5. **P2–P4:** Close tenant isolation, content and catalog phase gates within the approved V2 scope.
 6. **P9:** Run all enabled customer builds and the Hub-backed CMS verification with a dedicated test account.
@@ -222,7 +224,15 @@ Keep these deferred for this V2 delivery:
 
 ## 10. Status update — what was actually fixed (2026-11-18)
 
-All changes are **local and uncommitted** at the time of writing. Nothing was pushed, published or deployed, so no CI run has yet confirmed them; the local gates below are the evidence that exists.
+All changes below are committed and pushed on `main`, and the CI runs on those commits are green:
+
+| Repository | CI run | Result |
+|---|---|---|
+| `tm-websites` | Quality Gates [`44245249725`](https://github.com/tuanmjnh/tm-websites/actions/runs/44245249725) | success — `typecheck` (12.3s) and `37/37 gates passed in 32.2s` |
+| `tm-platform` | CI [`44245218328`](https://github.com/tuanmjnh/tm-platform/actions/runs/44245218328) | success — every package reports tests (`tm-cut-core` 927, `tm-ai-client` 16, `tm-hub-client` 28, `tm-mongo` 12, `tm-core` 8, `tm-ui` 7, `tm-validators` 2, `tm-utils` 2, `tm-types` 1), no "Could not find" |
+| `tm-hub` | CI [`44245872570`](https://github.com/tuanmjnh/tm-hub/actions/runs/44245872570) | success — `tests 273 / pass 273 / fail 0` |
+
+The same gates were run locally before the commits (`pnpm typecheck` exit 0 and `pnpm verify:all` 37/37 in 102.7s; `pnpm test` exit 0 in `tm-platform`; 273/273 in `tm-hub`), so the CI result is the clean-environment confirmation rather than the only evidence.
 
 | Item | Change | Evidence |
 |---|---|---|
@@ -239,8 +249,7 @@ All changes are **local and uncommitted** at the time of writing. Nothing was pu
 
 **Still open** (do not read the table above as completion):
 - The §3.1 acceptance browser check — confirm `StatusBadge` renders as a real Nuxt UI primitive, not an empty `<ubadge>`.
-- A clean-clone CI run for `tm-websites`, `tm-platform` and `tm-hub`; until those are pushed, local green is not CI green.
 - The tenant archive/hard-delete flow has not been exercised in a browser, and the hard-delete path has never run against a real tenant — treat it as untested until someone does it on a disposable record.
 - `supabase/migrations/20261118000000_revoke_anon_access.sql` is written but **not applied**. Before applying, re-confirm no browser bundle holds a publishable key for that project; after applying, re-run the app suites because a caller that relied on PostgREST with a non-service key would now fail.
 - The authenticated proxy/CSRF runtime rows — blocked on an owner-supplied Hub test account, not on code (§5.1, §5.2).
-- The root `tm-websites/package.json` still names itself `tm-platform` (§4.2).
+
