@@ -1,9 +1,9 @@
 import type { H3Event } from 'h3'
 import type { LoginRequest, UserSession } from '@tm/flow-contracts'
-import type { HubResponse } from 'tm-hub-client'
+import type { HubResponse } from '@tuanmjnh/tm-hub-client'
 import { UserSessionSchema } from '@tm/flow-contracts'
 import { getErrorStatus, getHubErrorCode } from '@tm/flow-utils/hub'
-import { HubClient } from 'tm-hub-client'
+import { HubClient } from '@tuanmjnh/tm-hub-client'
 
 export interface HubTokens {
   accessToken: string
