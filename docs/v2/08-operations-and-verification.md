@@ -353,6 +353,7 @@ Read the report before applying:
 | `slug conflicts resolved N`, `category slug conflicts resolved N` | a slug already owned (by the CMS or by another legacy record) was suffixed with the legacy id tail; the record keeps its own URL instead of one being overwritten |
 | `legacy gallery lists not carried (N)`, `legacy media embeds not carried (N)` | deliberate: v2 `media` holds ids, not URLs |
 | `legacy tenants {…}` | how many legacy records sit under each tenant, counted across the collections the importer reads; `(none)` marks a record with no `tenantId` |
+| `legacy item fields not carried {…}` / `legacy category fields not carried {…}` | catalog-only: legacy fields that hold a value but have no column in the v2 schema, counted. Read it before deciding the import is complete — v2 has no inventory columns (`minStock`, `reserved`, `hasImei`, `supplierPrices`, `lastImportPrice`), no merchandising columns (`sort`, `display`, `options`, `shipping`) and no audit trail (`history`), so those stay behind by decision, not by accident |
 | `⚠️  found no legacy … in <db>` | the database has none of the legacy collections — almost always `TM_MONGO_DB` pointing at the `app_*_cms` side |
 | `⚠️  no record matches --tenant <id>` | the collections exist but nothing is under that tenant; the line above names the tenants that are |
 | `nothing was written; rerun with --apply` | the dry run created no collection, index or `tm_migrations` row |
@@ -398,6 +399,21 @@ sen-tuan catalog categories 67, items 241
 `{ url }` instead of a string and were being dropped before the shared rule landed.
 `sen-tuan`'s `attributes: 0` is the source (legacy `attributes` is null), not a
 mapper gap — the A5 inventory records the same for `barcode`.
+
+The catalog report's not-carried lists on `sen-tuan` (2026-11-18):
+
+```text
+legacy item fields not carried {"lastImportPrice":241,"reserved":241,"minStock":241,"hasImei":241,"sort":241,"display":241,"shipping":241,"fullPath":241,"options":223,"history":85,"supplierPrices":9}
+legacy category fields not carried {"sort":67,"searchString":67,"banner":66,"gallery":66,"history":66,"tags":60}
+```
+
+All of it is a schema decision, not a mapper gap: inventory (`minStock`, `reserved`,
+`hasImei`), supplier cost (`supplierPrices`, `lastImportPrice`) and merchandising
+(`sort`, `display`, `options`, `shipping`) wait on P5/P6, `history` is the legacy
+audit trail which v2 keeps in revisions, `fullPath` is derivable from the migrated
+tree, and category `banner`/`gallery`/`tags` have no v2 column. `deletedAt` and
+`isDeleted` are carried for both items and categories — a soft-deleted legacy
+category used to be revived as live.
 
 **Known traps, both fixed and gated on 2026-11-18:** a duplicated category slug used
 to abort `--apply` half-way with `E11000` (now suffixed, and reported), and

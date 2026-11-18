@@ -154,7 +154,13 @@ function catalogFixture() {
 
   const categories = [
     { _id: ids.category, slug: LEGACY_CATEGORY_SLUG, title: { vi: 'Trang sức' }, displayOrder: 1 },
-    { _id: ids.duplicateCategory, slug: DUPLICATE_CATEGORY_SLUG, title: { vi: 'Trùng slug' } },
+    {
+      _id: ids.duplicateCategory,
+      slug: DUPLICATE_CATEGORY_SLUG,
+      title: { vi: 'Trùng slug' },
+      isDeleted: true,
+      deletedAt: new Date('2026-04-05T06:07:08.000Z'),
+    },
     { _id: ids.childCategory, pid: ids.category, slug: { vi: 'nhan' }, title: { vi: 'Nhẫn' }, displayOrder: 2 },
   ]
 
@@ -171,6 +177,8 @@ function catalogFixture() {
       sku: 'SKU-1',
       type: 'simple',
       stock: 5,
+      minStock: 3,
+      supplierPrices: [{ supplier: 'sup-1', price: 70 }],
       status: 'published',
       isActive: true,
       categories: [ids.category],
@@ -199,6 +207,7 @@ function catalogFixture() {
       basePrice: 10,
       status: 'archived',
       isDeleted: true,
+      deletedAt: new Date('2026-03-04T05:06:07.000Z'),
     },
     {
       // Another tenant's row must never reach this site.
@@ -247,6 +256,11 @@ async function main() {
     await check('a catalog dry run exits 0 and reports the planned counts', () => {
       assert.equal(dryCatalog.code, 0, dryCatalog.output)
       assert.match(dryCatalog.output, /categories 3, items 3/)
+    })
+    await check('the catalog report names the legacy fields that have no column', () => {
+      assert.match(dryCatalog.output, /"supplierPrices":1/)
+      assert.match(dryCatalog.output, /"minStock":1/)
+      assert.match(dryCatalog.output, /legacy category fields not carried \{\}/)
     })
     await check('the catalog report counts the legacy tenants, including untagged rows', () => {
       assert.match(dryCatalog.output, /legacy tenants \{.*"\(none\)":6.*"other-tenant":1.*\}/)
@@ -421,10 +435,17 @@ async function main() {
     await check("another tenant's catalog record is not imported", () => {
       assert.equal(items.some(row => row.slug?.vi === 'nhan-tenant-khac'), false)
     })
-    await check('a soft-deleted catalog record is written as deleted', () => {
+    await check('a soft-deleted catalog record is written as deleted, with its date', () => {
       const deleted = items.find(row => row.slug?.vi === 'nhan-da-xoa')
       assert.equal(deleted?.status, 'deleted')
       assert.equal(deleted?.isDeleted, true)
+      assert.equal(deleted?.deletedAt?.toISOString(), '2026-03-04T05:06:07.000Z')
+    })
+    await check('a soft-deleted legacy category is not revived as live', async () => {
+      const rows = await db.collection('catalog_categories').find({ siteId: SITE }).toArray()
+      const duplicate = rows.find(row => String(row.key).startsWith('trang-suc-'))
+      assert.equal(duplicate?.isDeleted, true)
+      assert.equal(duplicate?.deletedAt?.toISOString(), '2026-04-05T06:07:08.000Z')
     })
     await check('a duplicate legacy item slug gets its own URL', () => {
       assert.equal(variable?.slug.vi, `nhan-bac-${catalog.ids.duplicateSlug.slice(-6)}`)

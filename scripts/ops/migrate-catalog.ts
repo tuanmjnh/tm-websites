@@ -7,6 +7,7 @@ import {
   asLegacyRecord,
   legacyCatalogStatus,
   legacyAttributeList,
+  legacyDate,
   legacyImageList,
   legacyImageUrl,
   legacyLocalized,
@@ -35,6 +36,36 @@ function flag(name: string): string | undefined {
   return index === -1 ? undefined : process.argv[index + 1]
 }
 
+
+/** Legacy keys the importer maps (or that mongoose owns). Everything else is reported. */
+const CARRIED_ITEM_FIELDS = new Set([
+  '_id', '__v', 'tenantId', 'title', 'slug', 'shortDesc', 'description', 'thumbnail', 'gallery',
+  'basePrice', 'salePrice', 'sku', 'barcode', 'uom', 'type', 'stock', 'manageStock', 'tags',
+  'attributes', 'variants', 'seo', 'status', 'isActive', 'isDeleted', 'deletedAt', 'publishedAt',
+  'sales', 'views', 'categories', 'searchString', 'createdAt', 'updatedAt',
+])
+
+const CARRIED_CATEGORY_FIELDS = new Set([
+  '_id', '__v', 'tenantId', 'title', 'slug', 'fullPath', 'description', 'thumbnail', 'displayOrder',
+  'pid', 'ancestors', 'seo', 'createdAt', 'updatedAt', 'isDeleted', 'deletedAt',
+])
+
+type Raw = Record<string, unknown>
+
+/** Counts the legacy fields that carry a value but have no column in the plan. */
+function uncarriedFields(records: Raw[], carried: Set<string>): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const record of records) {
+    for (const [field, value] of Object.entries(record)) {
+      if (carried.has(field) || field.startsWith('$')) continue
+      const empty = value === null || value === undefined || value === ''
+        || (Array.isArray(value) && value.length === 0)
+      if (empty) continue
+      counts[field] = (counts[field] ?? 0) + 1
+    }
+  }
+  return Object.fromEntries(Object.entries(counts).sort((a, b) => b[1] - a[1]))
+}
 
 const siteId = flag('site') || process.env.TM_CUSTOMER_ID
 // Same rule as the content importer: one legacy tenant per run. Catalog records
@@ -139,6 +170,12 @@ try {
       thumbnail: legacyImageUrl(record.thumbnail),
       order: legacyNumber(record.displayOrder),
       parentLegacyId: record.pid ? String(record.pid) : null,
+      // A soft-deleted legacy category used to be revived as a live one, because
+      // the write forced `isDeleted: false`.
+      isDeleted: record.isDeleted === true,
+      deletedAt: record.isDeleted === true
+        ? legacyDate(record.deletedAt) ?? legacyDate(record.updatedAt) ?? legacyDate(record.createdAt)
+        : null,
       ancestorsLegacyIds: Array.isArray(record.ancestors)
         ? record.ancestors.map(entry => asLegacyRecord(entry)._id).filter(Boolean).map(String)
         : [],
@@ -211,6 +248,11 @@ try {
       status,
       isActive,
       isDeleted: record.isDeleted === true,
+      // A soft-deleted legacy row carries when it was deleted; the model has the
+      // column, so losing it would only make the CMS show a deletion without a date.
+      deletedAt: record.isDeleted === true
+        ? legacyDate(record.deletedAt) ?? legacyDate(record.updatedAt) ?? legacyDate(record.createdAt)
+        : null,
       sales: legacyNumber(record.sales),
       views: legacyNumber(record.views),
       publishedAt: record.publishedAt ? new Date(record.publishedAt as string) : null,
@@ -238,6 +280,11 @@ try {
   console.log(`  categories ${plannedCategories.length}, items ${plannedItems.length}`)
   console.log(`  field coverage ${JSON.stringify(coverage)}`)
   console.log(`  legacy tenants ${JSON.stringify(legacyTenants)}`)
+  // Which legacy fields the plan does not carry, counted. The v2 schema decides
+  // this (inventory fields wait on P5), but the reader is entitled to know that
+  // `supplierPrices` or `minStock` exists in the source and did not land.
+  console.log(`  legacy item fields not carried ${JSON.stringify(uncarriedFields(legacyItems, CARRIED_ITEM_FIELDS))}`)
+  console.log(`  legacy category fields not carried ${JSON.stringify(uncarriedFields(legacyCategories, CARRIED_CATEGORY_FIELDS))}`)
   if (!Object.keys(legacyTenants).length) {
     console.log(`  ⚠️  found no legacy items/item_categories in ${database}; the legacy collections live in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`)
   } else if (!legacyItems.length && !legacyCategories.length) {
@@ -274,7 +321,8 @@ try {
             description: planned.description,
             thumbnail: planned.thumbnail,
             seo: planned.legacySeo,
-            isDeleted: false,
+            isDeleted: planned.isDeleted,
+            deletedAt: planned.deletedAt,
             legacyId: planned.legacyId,
           },
           $setOnInsert: { siteId, revision: 1 },
@@ -316,6 +364,7 @@ try {
             status: planned.status,
             isActive: planned.isActive,
             isDeleted: planned.isDeleted,
+            deletedAt: planned.deletedAt,
             publishedAt: planned.publishedAt,
             sales: planned.sales,
             views: planned.views,
