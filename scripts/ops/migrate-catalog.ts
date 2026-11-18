@@ -42,6 +42,22 @@ function localized(value: unknown, max = 5000): Record<string, string> {
   return result
 }
 
+/**
+ * Legacy catalog tags are `{ title, slug }` documents, the same shape the
+ * content importer already handles; v2 keeps the display name. Mapping them
+ * through `text()` alone silently dropped every tag (230 of sen-tuan's 241
+ * legacy items carried tags) and left `catalog_items.tags` empty.
+ */
+function tagNames(value: unknown): string[] {
+  const seen = new Set<string>()
+  for (const entry of Array.isArray(value) ? value : []) {
+    const tag = text(entry) || text(asRecord(entry).title) || text(asRecord(entry).name)
+    if (tag) seen.add(tag.slice(0, 60))
+    if (seen.size >= 50) break
+  }
+  return [...seen]
+}
+
 function imageUrl(value: unknown): string | null {
   if (typeof value === 'string') return value.trim() || null
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
@@ -212,9 +228,7 @@ try {
       type: text(record.type) === 'variable' ? 'variable' : 'simple',
       stock: number(record.stock),
       manageStock: record.manageStock !== false,
-      tags: Array.isArray(record.tags)
-        ? [...new Set(record.tags.map(text).filter(Boolean))]
-        : [],
+      tags: tagNames(record.tags),
       attributes: localizedAttributes(record.attributes),
       variants: Array.isArray(record.variants)
         ? record.variants.map((entry) => {
