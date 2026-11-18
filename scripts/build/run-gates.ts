@@ -20,6 +20,9 @@ const DOMAIN_GATES = [
   'test:content',
   'test:categories',
   'test:catalog',
+  // The importers' --apply half: upserts, key/slug collisions and revision
+  // preservation, driven through the real CLIs on a disposable fixture.
+  'test:migrate-apply',
   'test:media',
   'test:audit',
   'test:audit-write',

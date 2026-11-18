@@ -35,6 +35,7 @@
     "test:content": "tsx scripts/build/test-content-model.ts && tsx scripts/build/test-content-service.ts",
     "test:categories": "tsx scripts/build/test-category-service.ts",
     "test:catalog": "tsx scripts/build/test-catalog-service.ts",
+    "test:migrate-apply": "tsx scripts/build/test-migrate-apply.ts",
     "test:media": "tsx scripts/build/test-media-service.ts",
     "test:audit": "tsx scripts/build/test-audit-service.ts",
     "test:audit-write": "tsx scripts/build/test-audit-write.ts",

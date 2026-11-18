@@ -45,7 +45,9 @@ if (!database) throw new Error('Set TM_MONGO_DB to the customer database name')
 
 const connection = await connectDatabase({ uri, database })
 try {
-  const { CatalogItem, CatalogCategory } = await prepareDatabase(connection)
+  // Planning reads the target collections raw, and the models are prepared only
+  // with `--apply`: `prepareDatabase` creates indexes and writes migration rows,
+  // which a dry run must not do to a customer database.
   const legacyCategories = await connection.collection('item_categories').find({}).toArray()
   const legacyItems = await connection.collection('items').find({}).toArray()
 
@@ -68,17 +70,19 @@ try {
   // A re-run must keep the key a row already has, otherwise a rename between
   // runs would look like a new record and collide with the old one.
   const existingCategoryKeys = new Map<string, string>()
-  for (const row of await CatalogCategory.find({ siteId, legacyId: { $ne: null } }, 'legacyId key').lean()) {
-    if (row.legacyId) existingCategoryKeys.set(String(row.legacyId), row.key)
+  // Every stored category owns its (default-locale) slug, not only a migrated one.
+  const categorySlugOwners = new Map<string, string>()
+  for (const row of await connection.collection('catalog_categories').find({ siteId }, { projection: { legacyId: 1, key: 1, slug: 1 } }).toArray()) {
+    if (row.legacyId) existingCategoryKeys.set(String(row.legacyId), row.key as string)
+    const slug = (row.slug as Record<string, string> | undefined)?.vi
+    if (slug) categorySlugOwners.set(slug, row.key as string)
   }
   const existingItemKeys = new Map<string, string>()
   const existingItemSlugs = new Map<string, string>()
-  for (const row of await CatalogItem.find({ siteId, legacyId: { $ne: null } }, 'legacyId key slug').lean()) {
-    if (row.legacyId) {
-      existingItemKeys.set(String(row.legacyId), row.key)
-      const slug = (row.slug as Record<string, string> | undefined)?.vi
-      if (slug) existingItemSlugs.set(String(row.legacyId), slug)
-    }
+  for (const row of await connection.collection('catalog_items').find({ siteId, legacyId: { $ne: null } }, { projection: { legacyId: 1, key: 1, slug: 1 } }).toArray()) {
+    existingItemKeys.set(String(row.legacyId), row.key as string)
+    const slug = (row.slug as Record<string, string> | undefined)?.vi
+    if (slug) existingItemSlugs.set(String(row.legacyId), slug)
   }
   // Keys already stored belong to a migrated row; reserve them before planning so
   // a second legacy document with the same slug cannot take the same key.
@@ -101,11 +105,23 @@ try {
     return suffixed
   }
 
+  // `(siteId, slug.vi)` is unique for a category, and two legacy categories (or an
+  // editor's own category) can hold the same slug: keeping both made `--apply` die
+  // halfway with E11000, after rows had already been written.
+  const categorySlugConflicts: string[] = []
+
   const plannedCategories = legacyCategories.map((record) => {
     const legacyId = String(record._id)
     const key = uniqueKey(categoryKeyByLegacy.get(legacyId)!, legacyId, usedCategoryKeys, existingCategoryKeys)
     const slug = legacySlugMap(record.slug)
     if (!slug.vi && key) slug.vi = key
+    const owner = categorySlugOwners.get(slug.vi)
+    if (owner !== undefined && owner !== key) {
+      const original = slug.vi
+      slug.vi = `${original}-${legacyId.slice(-6)}`
+      categorySlugConflicts.push(`${key}: ${original} was taken by ${owner}, stored as ${slug.vi}`)
+    }
+    categorySlugOwners.set(slug.vi, key)
     return {
       legacyId,
       key,
@@ -197,10 +213,15 @@ try {
 
   console.log(`catalog migration site=${siteId} db=${database} apply=${apply}`)
   console.log(`  categories ${plannedCategories.length}, items ${plannedItems.length}`)
+  if (categorySlugConflicts.length) {
+    console.log(`  category slug conflicts resolved ${categorySlugConflicts.length}`)
+    for (const conflict of categorySlugConflicts.slice(0, 10)) console.log(`    ${conflict}`)
+  }
 
   if (!apply) {
     console.log('  nothing was written; rerun with --apply')
   } else {
+    const { CatalogItem, CatalogCategory } = await prepareDatabase(connection)
     for (const planned of plannedCategories) {
       const parent = planned.parentLegacyId ? categoryIdByLegacy.get(planned.parentLegacyId) ?? null : null
       const ancestors = planned.ancestorsLegacyIds

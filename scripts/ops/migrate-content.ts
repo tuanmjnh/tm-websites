@@ -73,17 +73,44 @@ try {
     categoryKeyByLegacy.set(legacyId, key)
   }
 
+  // A category's `(locale, slug)` is unique per site (the `category_indexes`
+  // index enforces it), and two legacy categories can share a slug: keeping both
+  // made `--apply` die halfway through with E11000 after some rows were already
+  // written. A duplicate — one inside the legacy data, or a slug an editor already
+  // owns — is suffixed with the legacy id tail instead, exactly like a content slug.
+  const usedCategorySlugs = new Map<string, string>()
+  for (const row of await connection.collection('categories').find({ siteId }, { projection: { key: 1, 'locales.locale': 1, 'locales.slug': 1 } }).toArray()) {
+    for (const entry of (row.locales as { locale: string, slug: string }[] | undefined) ?? []) {
+      usedCategorySlugs.set(`${entry.locale.toLowerCase()}:${entry.slug}`, row.key as string)
+    }
+  }
+
+  const categoryConflicts: string[] = []
+
   const plannedCategories = legacyCategories.map((record) => {
     const legacyId = String(record._id)
     const slug = legacyLocalized(record.slug, 120)
     const title = legacyLocalized(record.title, 120)
+    const key = categoryKeyByLegacy.get(legacyId)!
     const locales = ['vi', 'en']
       .map(locale => ({ locale, name: title[locale] || '', slug: normalizeSlug(slug[locale] || title[locale]) }))
       .filter(entry => entry.name && entry.slug)
+
+    for (const entry of locales) {
+      const slugKey = `${entry.locale}:${entry.slug}`
+      const owner = usedCategorySlugs.get(slugKey)
+      if (owner !== undefined && owner !== key) {
+        const original = entry.slug
+        entry.slug = `${original}-${legacyId.slice(-6)}`
+        categoryConflicts.push(`${key}: ${slugKey} was taken by ${owner}, stored as ${entry.slug}`)
+      }
+      usedCategorySlugs.set(`${entry.locale}:${entry.slug}`, key)
+    }
+
     const parentLegacyId = record.pid ? String(record.pid) : null
     return {
       legacyId,
-      key: categoryKeyByLegacy.get(legacyId)!,
+      key,
       parent: parentLegacyId ? categoryKeyByLegacy.get(parentLegacyId) ?? null : null,
       order: Math.max(0, Math.min(9999, legacyNumber(record.sort))),
       locales: locales.map(entry => ({ ...entry, name: entry.name.slice(0, 120) })),
@@ -243,6 +270,10 @@ try {
   if (unresolvedCategories.size) console.log(`  unresolved category ids ${unresolvedCategories.size}`)
   if (droppedGallery.length) console.log(`  legacy gallery lists not carried (${droppedGallery.length}): ${droppedGallery.slice(0, 5).join(', ')}${droppedGallery.length > 5 ? ', …' : ''}`)
   if (droppedMedia.length) console.log(`  legacy media embeds not carried (${droppedMedia.length}): ${droppedMedia.slice(0, 5).join(', ')}${droppedMedia.length > 5 ? ', …' : ''}`)
+  if (categoryConflicts.length) {
+    console.log(`  category slug conflicts resolved ${categoryConflicts.length}`)
+    for (const conflict of categoryConflicts.slice(0, 10)) console.log(`    ${conflict}`)
+  }
   if (conflicts.length) {
     console.log(`  slug conflicts resolved ${conflicts.length}`)
     for (const conflict of conflicts.slice(0, 10)) console.log(`    ${conflict}`)
