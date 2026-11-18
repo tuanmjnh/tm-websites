@@ -19,6 +19,7 @@ import {
   legacyLocalized,
   legacyNumber,
   legacyTags,
+  legacyTenantBuckets,
   legacyText,
 } from '../../tm-cms/server/utils/legacyImport.js'
 
@@ -58,6 +59,10 @@ try {
   const tenantFilter = { tenantId: tenant }
   const legacyCategories = await connection.collection('content_categories').find(tenantFilter).toArray()
   const legacyContents = await connection.collection('contents').find(tenantFilter).toArray()
+  // Counted without the tenant filter: a database whose records sit under another
+  // tenant plans nothing and looks healthy, which is the easiest migration to
+  // mistake for a finished one.
+  const legacyTenants = await legacyTenantBuckets(connection, ['contents', 'content_categories'])
 
   // Legacy category ids become the v2 immutable keys, so a content record keeps
   // pointing at the same category after the import.
@@ -276,6 +281,12 @@ try {
   console.log(`content migration site=${siteId} db=${database} tenant=${tenant} apply=${apply}`)
   console.log(`  categories ${plannedCategories.length}, contents ${plannedContents.length}, locales ${localeCount}`)
   console.log(`  field coverage ${JSON.stringify(coverage)}`)
+  console.log(`  legacy tenants ${JSON.stringify(legacyTenants)}`)
+  if (!Object.keys(legacyTenants).length) {
+    console.log(`  ⚠️  found no legacy contents/content_categories in ${database}; the legacy collections live in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`)
+  } else if (!legacyContents.length && !legacyCategories.length) {
+    console.log(`  ⚠️  no record matches --tenant ${tenant}; this database holds ${JSON.stringify(legacyTenants)}`)
+  }
   console.log(`  types ${JSON.stringify(byType)}`)
   console.log(`  legacy formats ${JSON.stringify(byFormat)} -> body format html`)
   console.log(`  statuses ${JSON.stringify(byStatus)}`)

@@ -352,7 +352,15 @@ Read the report before applying:
 | `invalid records N` | records with no locale that has both a title and a slug; they are skipped, never half-written |
 | `slug conflicts resolved N`, `category slug conflicts resolved N` | a slug already owned (by the CMS or by another legacy record) was suffixed with the legacy id tail; the record keeps its own URL instead of one being overwritten |
 | `legacy gallery lists not carried (N)`, `legacy media embeds not carried (N)` | deliberate: v2 `media` holds ids, not URLs |
+| `legacy tenants {…}` | how many legacy records sit under each tenant, counted across the collections the importer reads; `(none)` marks a record with no `tenantId` |
+| `⚠️  found no legacy … in <db>` | the database has none of the legacy collections — almost always `TM_MONGO_DB` pointing at the `app_*_cms` side |
+| `⚠️  no record matches --tenant <id>` | the collections exist but nothing is under that tenant; the line above names the tenants that are |
 | `nothing was written; rerun with --apply` | the dry run created no collection, index or `tm_migrations` row |
+
+Both importers take `--tenant` (default `default`) and import **one** legacy tenant per
+run. Catalog records written before tenancy carry no `tenantId`; those are read too and
+shown as `(none)` in `legacy tenants`, so a mixed database is visible instead of
+quietly narrowed.
 
 **4. Apply, then apply again.**
 

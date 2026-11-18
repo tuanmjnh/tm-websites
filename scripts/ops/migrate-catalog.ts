@@ -13,6 +13,7 @@ import {
   legacyNumber,
   legacySlugMap,
   legacyTags,
+  legacyTenantBuckets,
   legacyText,
 } from '../../tm-cms/server/utils/legacyImport.js'
 
@@ -36,6 +37,10 @@ function flag(name: string): string | undefined {
 
 
 const siteId = flag('site') || process.env.TM_CUSTOMER_ID
+// Same rule as the content importer: one legacy tenant per run. Catalog records
+// written before tenancy carry no `tenantId`, so those are read too and counted
+// in the report instead of being skipped silently.
+const tenant = flag('tenant') || 'default'
 const uri = process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:27017'
 const database = process.env.TM_MONGO_DB
 const apply = process.argv.includes('--apply')
@@ -48,8 +53,10 @@ try {
   // Planning reads the target collections raw, and the models are prepared only
   // with `--apply`: `prepareDatabase` creates indexes and writes migration rows,
   // which a dry run must not do to a customer database.
-  const legacyCategories = await connection.collection('item_categories').find({}).toArray()
-  const legacyItems = await connection.collection('items').find({}).toArray()
+  const tenantMatcher = { $or: [{ tenantId: tenant }, { tenantId: { $exists: false } }] }
+  const legacyCategories = await connection.collection('item_categories').find(tenantMatcher).toArray()
+  const legacyItems = await connection.collection('items').find(tenantMatcher).toArray()
+  const legacyTenants = await legacyTenantBuckets(connection, ['items', 'item_categories'])
 
   const categoryIdByLegacy = new Map<string, Types.ObjectId>()
   const categoryKeyByLegacy = new Map<string, string>()
@@ -227,9 +234,15 @@ try {
     categoryThumbnail: plannedCategories.filter(category => category.thumbnail).length,
   }
 
-  console.log(`catalog migration site=${siteId} db=${database} apply=${apply}`)
+  console.log(`catalog migration site=${siteId} db=${database} tenant=${tenant} apply=${apply}`)
   console.log(`  categories ${plannedCategories.length}, items ${plannedItems.length}`)
   console.log(`  field coverage ${JSON.stringify(coverage)}`)
+  console.log(`  legacy tenants ${JSON.stringify(legacyTenants)}`)
+  if (!Object.keys(legacyTenants).length) {
+    console.log(`  ⚠️  found no legacy items/item_categories in ${database}; the legacy collections live in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`)
+  } else if (!legacyItems.length && !legacyCategories.length) {
+    console.log(`  ⚠️  no record matches --tenant ${tenant}; this database holds ${JSON.stringify(legacyTenants)}`)
+  }
   if (categorySlugConflicts.length) {
     console.log(`  category slug conflicts resolved ${categorySlugConflicts.length}`)
     for (const conflict of categorySlugConflicts.slice(0, 10)) console.log(`    ${conflict}`)

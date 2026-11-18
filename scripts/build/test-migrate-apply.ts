@@ -35,13 +35,18 @@ const URI = process.env.TM_TEST_MONGO_URI || process.env.TM_MONGO_URI || 'mongod
 const DATABASE = 'tm_import_gate'
 const SITE = 'import-fixture'
 
-function run(script: 'migrate:content' | 'migrate:catalog', apply: boolean) {
-  const command = `pnpm -s ${script} --site ${SITE}${apply ? ' --apply' : ''}`
+function run(
+  script: 'migrate:content' | 'migrate:catalog',
+  apply: boolean,
+  options: { database?: string, args?: string[] } = {},
+) {
+  const extra = (options.args ?? []).join(' ')
+  const command = `pnpm -s ${script} --site ${SITE}${apply ? ' --apply' : ''}${extra ? ` ${extra}` : ''}`
   const result = spawnSync(command, {
     cwd: process.cwd(),
     shell: true,
     encoding: 'utf-8',
-    env: { ...process.env, TM_MONGO_URI: URI, TM_MONGO_DB: DATABASE, TM_CUSTOMER_ID: SITE },
+    env: { ...process.env, TM_MONGO_URI: URI, TM_MONGO_DB: options.database || DATABASE, TM_CUSTOMER_ID: SITE },
   })
   return { code: result.status ?? 1, output: `${result.stdout || ''}${result.stderr || ''}` }
 }
@@ -144,6 +149,7 @@ function catalogFixture() {
     item: '00000000000000000000f001',
     duplicateSlug: '00000000000000000000f002',
     deleted: '00000000000000000000f003',
+    otherTenant: '00000000000000000000f004',
   }
 
   const categories = [
@@ -194,6 +200,15 @@ function catalogFixture() {
       status: 'archived',
       isDeleted: true,
     },
+    {
+      // Another tenant's row must never reach this site.
+      _id: ids.otherTenant,
+      tenantId: 'other-tenant',
+      slug: { vi: 'nhan-tenant-khac' },
+      title: { vi: 'Nhẫn của tenant khác' },
+      basePrice: 20,
+      status: 'published',
+    },
   ]
 
   return { ids, categories, items }
@@ -233,11 +248,31 @@ async function main() {
       assert.equal(dryCatalog.code, 0, dryCatalog.output)
       assert.match(dryCatalog.output, /categories 3, items 3/)
     })
+    await check('the catalog report counts the legacy tenants, including untagged rows', () => {
+      assert.match(dryCatalog.output, /legacy tenants \{.*"\(none\)":6.*"other-tenant":1.*\}/)
+    })
     await check('the catalog report counts what came through, field by field', () => {
       assert.match(
         dryCatalog.output,
         /field coverage \{"tags":1,"thumbnail":1,"gallery":1,"variants":1,"attributes":1,"sku":1,"barcode":0,"salePrice":2,"categories":1,"categoryThumbnail":0\}/,
       )
+    })
+    await check('the content report names the legacy tenants it found', () => {
+      assert.match(dryContent.output, /legacy tenants \{"default":8\}/)
+    })
+    await check('a dry run against the v2 database warns instead of planning nothing quietly', async () => {
+      const emptyDatabase = `${DATABASE}_empty`
+      const content = run('migrate:content', false, { database: emptyDatabase })
+      const catalog = run('migrate:catalog', false, { database: emptyDatabase })
+      assert.equal(content.code, 0, content.output)
+      assert.match(content.output, /found no legacy contents\/content_categories in tm_import_gate_empty/)
+      assert.match(catalog.output, /found no legacy items\/item_categories in tm_import_gate_empty/)
+      await connectDatabase({ uri: URI, database: emptyDatabase }).then(connection => connection.db?.dropDatabase())
+    })
+    await check('an unknown --tenant names the tenants the database does hold', async () => {
+      const mismatch = run('migrate:content', false, { args: ['--tenant', 'khong-co'] })
+      assert.equal(mismatch.code, 0, mismatch.output)
+      assert.match(mismatch.output, /no record matches --tenant khong-co; this database holds \{"default":8\}/)
     })
     await check('the content report counts what came through, field by field', () => {
       assert.match(
@@ -382,6 +417,9 @@ async function main() {
       assert.equal(variable?.variants[0].sku, 'V-1')
       assert.equal(variable?.status, 'draft')
       assert.equal(variable?.isActive, false)
+    })
+    await check("another tenant's catalog record is not imported", () => {
+      assert.equal(items.some(row => row.slug?.vi === 'nhan-tenant-khac'), false)
     })
     await check('a soft-deleted catalog record is written as deleted', () => {
       const deleted = items.find(row => row.slug?.vi === 'nhan-da-xoa')

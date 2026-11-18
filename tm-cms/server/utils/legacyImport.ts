@@ -1,3 +1,4 @@
+import type { Connection } from 'mongoose'
 import {
   ATTRIBUTE_VALUE_MAX_LENGTH,
   KEYWORD_MAX_LENGTH,
@@ -20,6 +21,28 @@ import {
  */
 
 export type LegacyRaw = Record<string, unknown>
+
+/**
+ * Which legacy tenants a database holds, counted across the collections the
+ * importers read. An import filters on `--tenant`, so a database whose records
+ * sit under another tenant — or under none at all — plans nothing while looking
+ * perfectly healthy. `(none)` marks a record with no `tenantId` field.
+ */
+export async function legacyTenantBuckets(connection: Connection, collections: string[]): Promise<Record<string, number>> {
+  const buckets: Record<string, number> = {}
+  for (const name of collections) {
+    const exists = await connection.db!.listCollections({ name }, { nameOnly: true }).toArray()
+    if (!exists.length) continue
+    const rows = await connection.collection(name)
+      .aggregate([{ $group: { _id: '$tenantId', n: { $sum: 1 } } }])
+      .toArray()
+    for (const row of rows) {
+      const key = row._id === null || row._id === undefined ? '(none)' : String(row._id)
+      buckets[key] = (buckets[key] ?? 0) + Number(row.n)
+    }
+  }
+  return buckets
+}
 
 /** Legacy documents are read raw (`strict: false`); anything else is empty. */
 export function asLegacyRecord(value: unknown): LegacyRaw {
