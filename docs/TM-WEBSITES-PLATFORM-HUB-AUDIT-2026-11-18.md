@@ -268,7 +268,7 @@ The same gates were run locally before the commits (`pnpm typecheck` exit 0 and 
 | §5.4 origins | `allowedOrigins` required, `['*']` default removed | same spec |
 | §5.4 delete | archive is the default action; permanent delete = impact preview + typed id + `?confirm=` | same spec (2 cases); route and page |
 | §5.4 modal | Hub `app/components/base/ResponsiveModal.vue` binds `open` through `defineModel` instead of forwarding a `false` `model-value` that overrode tm-ui's `modelValue ?? open` | browser (`root@example.com`, local `:4000`): create-tenant, tenant-detail and permanent-delete dialogs open; delete confirm stays disabled until the exact tenant id is typed |
-| §5.4 RLS | migration drops the 38 `anon, authenticated` policies and revokes grants | `supabase/migrations/20261118000000_revoke_anon_access.sql` — **not applied**, owner runs it |
+| §5.4 RLS | migration drops the 38 `anon, authenticated` policies and revokes grants | `supabase/migrations/20261118000000_revoke_anon_access.sql` — **applied in `tm-hub`; A1 closed by the owner 2026-11-19.** Do not re-run it or change the permissions again |
 
 **Correction to this audit's own reasoning:** §3.2 attributed the CI failure to the package test scripts and recommended rewriting them. That was wrong. The scripts are correct and pass unchanged; the workflow ran Node 20, where `node --test <glob>` does not expand. Anyone acting on the original §3.2 text would have changed nine files for no effect.
 
