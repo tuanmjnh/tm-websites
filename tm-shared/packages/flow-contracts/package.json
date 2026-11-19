@@ -20,7 +20,8 @@
     "./tag-admin": "./src/tag-admin.ts",
     "./site-public": "./src/site-public.ts",
     "./public-content": "./src/public-content.ts",
-    "./redirect-admin": "./src/redirect-admin.ts"
+    "./redirect-admin": "./src/redirect-admin.ts",
+    "./customer-admin": "./src/customer-admin.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"

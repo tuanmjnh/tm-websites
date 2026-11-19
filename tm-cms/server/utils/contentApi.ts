@@ -10,6 +10,15 @@ import { MenuServiceError } from '#server/services/menuService'
 import { ContentServiceError } from '#server/services/contentService'
 import { TagServiceError } from '#server/services/tagService'
 import { CatalogServiceError } from '#server/services/catalogService'
+import { CustomerServiceError } from '#server/services/customerService'
+import { CustomerSegmentServiceError } from '#server/services/customerSegmentService'
+import { OrderServiceError } from '#server/services/orderService'
+import { QuotationServiceError } from '#server/services/quotationService'
+import { WarehouseServiceError } from '#server/services/warehouseService'
+import { InventoryServiceError } from '#server/services/inventoryService'
+import { InventoryTransactionServiceError } from '#server/services/inventoryTransactionService'
+import { SupplierServiceError } from '#server/services/supplierService'
+import { PurchaseOrderServiceError } from '#server/services/purchaseOrderService'
 import { RedirectServiceError } from '#server/services/redirectService'
 import { MediaStorageError } from './mediaStorage'
 import { AdminTagRenameRequestSchema } from '@tm/flow-contracts/tag-admin'
@@ -97,6 +106,25 @@ export const CatalogDeleteQuerySchema = z.object({
   revision: z.coerce.number().int().min(1),
 })
 
+/** CRM list filters; `segment` is the segment id the editor selected. */
+export const CustomerListQuerySchema = z.object({
+  q: z.string().trim().max(80).optional(),
+  segment: z.string().trim().max(64).optional(),
+  includeDeleted: z.enum(['true', 'false']).optional(),
+  cursor: z.string().max(64).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+})
+
+/** CRM writes keep the free-form body the service validates, like the other editors. */
+export const CustomerBodySchema = z.record(z.string(), z.unknown())
+
+export const CustomerSegmentBodySchema = z.record(z.string(), z.unknown())
+
+/** Soft delete and restore both carry the revision the editor saw. */
+export const CustomerDeleteQuerySchema = z.object({
+  revision: z.coerce.number().int().min(1),
+})
+
 export const ContentEventSchema = z.object({
   event: z.enum(['publish', 'schedule', 'unpublish', 'archive', 'restore', 'delete']),
   revision: z.number().int().min(1),
@@ -144,6 +172,33 @@ export function translateContentError(error: unknown): never {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof RedirectServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof CustomerServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof CustomerSegmentServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof OrderServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof QuotationServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof WarehouseServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof InventoryServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof InventoryTransactionServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof SupplierServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof PurchaseOrderServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof MediaServiceError) {

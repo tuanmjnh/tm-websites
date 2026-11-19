@@ -9,6 +9,15 @@ import type { SiteSettingsDocument } from '../models/settings'
 import type { MenuDocument } from '../models/menu'
 import type { ContentRevisionDocument } from '../models/revision'
 import type { CatalogCategoryDocument, CatalogItemDocument } from '../models/catalog'
+import type { CustomerDocument } from '../models/customer'
+import type { CustomerSegmentDocument } from '../models/customerSegment'
+import type { OrderDocument } from '../models/order'
+import type { QuotationDocument } from '../models/quotation'
+import type { WarehouseDocument } from '../models/warehouse'
+import type { InventoryDocument } from '../models/inventory'
+import type { InventoryTransactionDocument } from '../models/inventoryTransaction'
+import type { SupplierDocument } from '../models/supplier'
+import type { PurchaseOrderDocument } from '../models/purchaseOrder'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -19,6 +28,15 @@ import { siteSettingsModel, syncSettingsIndexes } from '../models/settings'
 import { menuModel, syncMenuIndexes } from '../models/menu'
 import { contentRevisionModel, syncContentRevisionIndexes } from '../models/revision'
 import { catalogCategoryModel, catalogItemModel, syncCatalogIndexes } from '../models/catalog'
+import { customerModel, syncCustomerIndexes } from '../models/customer'
+import { customerSegmentModel, syncCustomerSegmentIndexes } from '../models/customerSegment'
+import { orderModel, syncOrderIndexes } from '../models/order'
+import { quotationModel, syncQuotationIndexes } from '../models/quotation'
+import { warehouseModel, syncWarehouseIndexes } from '../models/warehouse'
+import { inventoryModel, syncInventoryIndexes } from '../models/inventory'
+import { inventoryTransactionModel, syncInventoryTransactionIndexes } from '../models/inventoryTransaction'
+import { supplierModel, syncSupplierIndexes } from '../models/supplier'
+import { purchaseOrderModel, syncPurchaseOrderIndexes } from '../models/purchaseOrder'
 import { redirectModel, syncRedirectIndexes } from '../models/redirect'
 import { MIGRATIONS, applyMigrations } from '../models/migrations'
 import { withCustomerDb } from './database'
@@ -41,6 +59,15 @@ export interface PreparedModels {
   CatalogItem: Model<CatalogItemDocument>
   CatalogCategory: Model<CatalogCategoryDocument>
   Redirect: Model<RedirectDocument>
+  Customer: Model<CustomerDocument>
+  CustomerSegment: Model<CustomerSegmentDocument>
+  Order: Model<OrderDocument>
+  Quotation: Model<QuotationDocument>
+  Warehouse: Model<WarehouseDocument>
+  Inventory: Model<InventoryDocument>
+  InventoryTransaction: Model<InventoryTransactionDocument>
+  Supplier: Model<SupplierDocument>
+  PurchaseOrder: Model<PurchaseOrderDocument>
 }
 
 const preparation = new WeakMap<Connection, Promise<PreparedModels>>()
@@ -59,6 +86,15 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncMenuIndexes(connection)
   await syncCatalogIndexes(connection)
   await syncRedirectIndexes(connection)
+  await syncCustomerIndexes(connection)
+  await syncCustomerSegmentIndexes(connection)
+  await syncOrderIndexes(connection)
+  await syncQuotationIndexes(connection)
+  await syncWarehouseIndexes(connection)
+  await syncInventoryIndexes(connection)
+  await syncInventoryTransactionIndexes(connection)
+  await syncSupplierIndexes(connection)
+  await syncPurchaseOrderIndexes(connection)
 
   if (migrations.applied.length > 0) {
     console.info(`[tm-db] applied migrations: ${migrations.applied.join(', ')}`)
@@ -76,6 +112,15 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     CatalogItem: catalogItemModel(connection),
     CatalogCategory: catalogCategoryModel(connection),
     Redirect: redirectModel(connection),
+    Customer: customerModel(connection),
+    CustomerSegment: customerSegmentModel(connection),
+    Order: orderModel(connection),
+    Quotation: quotationModel(connection),
+    Warehouse: warehouseModel(connection),
+    Inventory: inventoryModel(connection),
+    InventoryTransaction: inventoryTransactionModel(connection),
+    Supplier: supplierModel(connection),
+    PurchaseOrder: purchaseOrderModel(connection),
   }
 }
 

@@ -36,6 +36,7 @@ const WRITE_PAGES: PageExpectation[] = [
   { page: 'redirects', composable: 'useRedirects' },
   { page: 'tags', composable: 'useTagAdmin' },
   { page: 'configs', composable: 'useSettingsAdmin' },
+  { page: 'customers', composable: 'useCrmAdmin' },
 ]
 
 const errors: string[] = []

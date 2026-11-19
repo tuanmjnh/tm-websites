@@ -16,6 +16,15 @@ export const AUDIT_RESOURCE_TYPES = [
   'catalog_item',
   'catalog_category',
   'redirect',
+  'customer',
+  'customer_segment',
+  'order',
+  'quotation',
+  'warehouse',
+  'inventory',
+  'inventory_transaction',
+  'supplier',
+  'purchase_order',
 ] as const
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number]
 

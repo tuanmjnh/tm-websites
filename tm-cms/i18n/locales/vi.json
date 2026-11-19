@@ -18,7 +18,8 @@
     "actions": "Thao tác",
     "edit": "Sửa",
     "auditReason": "Lý do / ghi chú",
-    "auditReasonPlaceholder": "Ghi chú ngắn về thay đổi này (không bắt buộc)"
+    "auditReasonPlaceholder": "Ghi chú ngắn về thay đổi này (không bắt buộc)",
+    "close": "Đóng"
   },
   "auth": {
     "loginDescription": "Dùng tài khoản được cấp bởi TM Hub để truy cập bảng quản trị.",
@@ -82,7 +83,8 @@
     "categories": "Danh mục",
     "menus": "Menu điều hướng",
     "tags": "Thẻ nội dung",
-    "redirects": "Chuyển hướng"
+    "redirects": "Chuyển hướng",
+    "customers": "Khách hàng"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -263,7 +265,9 @@
         "menu": "Menu",
         "catalog_item": "Sản phẩm",
         "catalog_category": "Danh mục sản phẩm",
-        "redirect": "Chuyển hướng"
+        "redirect": "Chuyển hướng",
+        "customer": "Khách hàng",
+        "customer_segment": "Nhóm khách hàng"
       },
       "actions": {
         "create": "Tạo",
@@ -823,7 +827,7 @@
       "listTitle": "Nhà cung cấp",
       "listDescription": "Các tích hợp từ registry hỗ trợ media, lưu trữ và OAuth",
       "noEntries": "Không có định nghĩa nhà cung cấp nào"
-    },
+    },
     "catalog": {
       "bulk": {
         "title": "Cập nhật giá và tồn kho",
@@ -1037,6 +1041,113 @@
         "loop": "Chuyển hướng này sẽ tạo vòng lặp.",
         "notFound": "Không tìm thấy chuyển hướng.",
         "revisionConflict": "Chuyển hướng đã bị thay đổi ở phiên khác, hãy tải lại."
+      }
+    },
+    "customers": {
+      "title": "Khách hàng",
+      "description": "Hồ sơ khách hàng của website: liên hệ, địa chỉ, nhóm và điểm tích luỹ. Đăng nhập và phân quyền vẫn do Hub quản lý.",
+      "create": "Thêm khách hàng",
+      "createTitle": "Thêm khách hàng",
+      "editTitle": "Sửa khách hàng",
+      "manageSegments": "Nhóm khách hàng",
+      "searchPlaceholder": "Tìm theo tên, email, điện thoại, mã...",
+      "allSegments": "Tất cả nhóm",
+      "noSegment": "Chưa xếp nhóm",
+      "unknownSegment": "Nhóm không còn tồn tại",
+      "includeDeleted": "Hiện cả hồ sơ đã ẩn",
+      "summary": "{all} hồ sơ · {inactive} tạm ngưng · {deleted} đã ẩn",
+      "empty": "Chưa có khách hàng nào.",
+      "noMatch": "Không có khách hàng nào khớp bộ lọc.",
+      "permissionDenied": "Tài khoản này không đọc được dữ liệu khách hàng.",
+      "loadMore": "Tải thêm",
+      "badgeHidden": "Đã ẩn",
+      "badgeInactive": "Tạm ngưng",
+      "orders": "đơn",
+      "points": "{points} điểm",
+      "codePlaceholder": "Để trống để hệ thống tự sinh",
+      "subjectPlaceholder": "Mã người dùng Hub",
+      "revision": "Phiên bản {revision}",
+      "created": "Đã thêm khách hàng",
+      "updated": "Đã lưu khách hàng",
+      "hidden": "Đã ẩn khách hàng",
+      "restored": "Đã khôi phục khách hàng",
+      "hide": "Ẩn hồ sơ",
+      "restore": "Khôi phục",
+      "hideTitle": "Ẩn hồ sơ khách hàng",
+      "hideHint": "Ẩn hồ sơ của {name}?",
+      "hideGuard": "Hồ sơ không bị xoá khỏi cơ sở dữ liệu: lịch sử đơn hàng và nhật ký vẫn giữ nguyên, và có thể khôi phục lại.",
+      "restoreTitle": "Khôi phục hồ sơ khách hàng",
+      "restoreHint": "Hiện lại hồ sơ của {name}?",
+      "fields": {
+        "code": "Mã khách hàng",
+        "subjectId": "Người dùng Hub",
+        "fullName": "Họ tên",
+        "email": "Email",
+        "phone": "Điện thoại",
+        "segment": "Nhóm khách hàng",
+        "loyaltyPoints": "Điểm tích luỹ",
+        "note": "Ghi chú nội bộ",
+        "active": "Đang hoạt động"
+      },
+      "addresses": {
+        "title": "Địa chỉ",
+        "add": "Thêm địa chỉ",
+        "empty": "Chưa có địa chỉ nào.",
+        "fullName": "Người nhận",
+        "phone": "Điện thoại",
+        "street": "Đường / số nhà",
+        "ward": "Phường / xã",
+        "district": "Quận / huyện",
+        "city": "Tỉnh / thành phố",
+        "country": "Quốc gia",
+        "default": "Địa chỉ mặc định"
+      },
+      "errors": {
+        "subjectRequired": "Cần mã người dùng Hub để liên kết hồ sơ.",
+        "subjectExists": "Người dùng Hub này đã có hồ sơ khách hàng trong website.",
+        "subjectImmutable": "Không thể đổi liên kết sang người dùng Hub khác.",
+        "codeExists": "Mã khách hàng này đã được dùng.",
+        "invalid": "Dữ liệu khách hàng không hợp lệ.",
+        "revisionRequired": "Thiếu phiên bản hiện tại, hãy tải lại.",
+        "conflict": "Hồ sơ đã bị thay đổi ở phiên khác, hãy tải lại.",
+        "segmentMissing": "Nhóm khách hàng không tồn tại trong website này.",
+        "segmentDeleted": "Nhóm khách hàng đã bị ẩn, hãy khôi phục trước.",
+        "notFound": "Không tìm thấy khách hàng."
+      }
+    },
+    "customerSegments": {
+      "title": "Nhóm khách hàng",
+      "description": "Phân loại khách hàng để lọc và báo cáo. Giảm giá và miễn phí vận chuyển hiện chỉ là thuộc tính lưu trữ, chưa áp vào đơn hàng.",
+      "create": "Thêm nhóm",
+      "createTitle": "Thêm nhóm khách hàng",
+      "editTitle": "Sửa nhóm khách hàng",
+      "empty": "Chưa có nhóm khách hàng nào.",
+      "freeShippingBadge": "Miễn phí vận chuyển",
+      "badgeHidden": "Đã ẩn",
+      "summary": "Thứ tự {sort} · giảm {discount}% · từ {minSpent}đ / {minOrders} đơn",
+      "codePlaceholder": "Để trống để suy ra từ tên",
+      "autoJoinHint": "Điều kiện tự động chỉ được lưu lại; hệ thống chưa tự xếp khách vào nhóm.",
+      "created": "Đã thêm nhóm khách hàng",
+      "updated": "Đã lưu nhóm khách hàng",
+      "hidden": "Đã ẩn nhóm khách hàng",
+      "restored": "Đã khôi phục nhóm khách hàng",
+      "fields": {
+        "code": "Mã nhóm",
+        "title": "Tên nhóm",
+        "description": "Mô tả",
+        "sort": "Thứ tự",
+        "discount": "Giảm giá mặc định (%)",
+        "minSpent": "Chi tiêu tối thiểu",
+        "minOrders": "Số đơn tối thiểu",
+        "freeShipping": "Miễn phí vận chuyển",
+        "active": "Đang dùng"
+      },
+      "errors": {
+        "titleRequired": "Cần nhập tên nhóm.",
+        "codeExists": "Mã nhóm này đã được dùng.",
+        "invalid": "Dữ liệu nhóm khách hàng không hợp lệ.",
+        "conflict": "Nhóm đã bị thay đổi ở phiên khác, hãy tải lại.",
+        "inUse": "Vẫn còn khách hàng thuộc nhóm này, hãy chuyển họ sang nhóm khác trước."
       }
     }
   },
