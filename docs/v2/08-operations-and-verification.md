@@ -356,6 +356,7 @@ Read the report before applying:
 | `invalid records N` | records with no locale that has both a title and a slug; they are skipped, never half-written |
 | `slug conflicts resolved N`, `category slug conflicts resolved N` | a slug already owned (by the CMS or by another legacy record) was suffixed with the legacy id tail; the record keeps its own URL instead of one being overwritten |
 | `legacy gallery lists not carried (N)`, `legacy media embeds not carried (N)` | deliberate: v2 `media` holds ids, not URLs |
+| `not fully migrated N: no body A, gallery not carried B, media not carried C` | how many **writable** records lost their body, gallery or media list; each one carries `legacy.incomplete` (plus `legacy.gallerySkipped` / `legacy.mediaSkipped` counts) so it stays findable through the admin attribute filter |
 | `legacy tenants {…}` | how many legacy records sit under each tenant, counted across the collections the importer reads; `(none)` marks a record with no `tenantId` |
 | `legacy item fields not carried {…}` / `legacy category fields not carried {…}` | catalog-only: legacy fields that hold a value but have no column in the v2 schema, counted. Read it before deciding the import is complete — v2 has no inventory columns (`minStock`, `reserved`, `hasImei`, `supplierPrices`, `lastImportPrice`), no merchandising columns (`sort`, `display`, `options`, `shipping`) and no audit trail (`history`), so those stay behind by decision, not by accident |
 | `planned N, skipped {…}` (redirects) | legacy URL paths that become a 301 to the migrated product or category, and why the rest were left alone: no published v2 row, a path a page already owns, two legacy rows claiming one path, an existing row |
@@ -364,6 +365,7 @@ Read the report before applying:
 | `not carried N [keys]` (settings) | every other legacy key, by name. Keys whose name looks like a credential are **excluded from this list and reported separately as names only** |
 | `⚠️  N legacy keys hold credentials in plaintext` (settings) | names of credential keys found in `system_configs`; nothing is imported and values are never printed. Measured on the local copies 2026-11-18: 18 such keys, including JWT and revalidate secrets, a Google client secret, a Firebase private key, a VAPID private key, a Cloudinary API secret and MongoDB URIs with a password in them — **rotate them before launch**, they have been sitting in a customer database in plaintext |
 | `✅/❌ content`, `catalog items`, … (`check:migration`) | read-only parity: each domain's legacy count against the v2 count, with `❌` when v2 holds fewer rows than the source. `ℹ️ redirects` is informational because a nested path may be deliberately unredirected |
+| `ℹ️ not fully migrated N content row(s) carry legacy.incomplete` (`check:migration`) | rows that are counted as migrated but were marked incomplete by the importer. `✅ parity` does not mean every migrated record has its body, gallery and media embeds |
 | `verified N/N …` | after an apply, the command re-reads the database for exactly the keys/legacy ids/redirect paths the plan expected. A write loop can stop half-way (the 2026-11-18 `E11000` did) and still print a healthy count; a mismatch prints a warning, **exits non-zero** and means: read the first error, rerun (the import is resumable) |
 | `⚠️  found no legacy … collections in <db>` | the database has none of the legacy collections — almost always `TM_MONGO_DB` pointing at the `app_*_cms` side |
 | `⚠️  the legacy … collections exist in <db> but hold no documents` | the database is the right one and empty: a customer with no store (`bag-post` has 0 `items`). Unlike the line above, this is a fact about the copy, not a configuration mistake |
@@ -410,6 +412,11 @@ It refuses a `TM_MONGO_DB` named like a v2 app database (`app_<customer>_cms`) b
 running anything, since that is the mistake that plans zero rows and reports no error.
 A rehearsal is the same command against a copy: point `TM_MONGO_URI` at it. It writes into `content_redirects`, the
 map the storefront follows before routing, and never replaces a row a human typed.
+
+**Only databases whose name and current state have been confirmed (J3, 2026-11-19).**
+The owner authorized the apply on the local customer copies. Any other target needs the
+exact `TM_MONGO_DB` and a fresh dry run read first; a rehearsal against an unnamed or
+unverified database is not a rehearsal.
 
 A second `--apply` writes the same counts, keeps `revision` and `createdAt` of rows an
 editor has already touched, and keeps the key/slug a migrated row already has. Writes
@@ -474,11 +481,62 @@ tree, and category `banner`/`gallery`/`tags` have no v2 column. `deletedAt` and
 `isDeleted` are carried for both items and categories — a soft-deleted legacy
 category used to be revived as live.
 
+### Legacy import decisions (J1, J2, 2026-11-19)
+
+Owner answers that fix what the import may guess. Both keep the current behaviour and
+add bookkeeping instead of a new renderer or a new redirect rule.
+
+- **J1 — legacy formats, gallery and media stay data, not renderers.** The migrated body
+  is the legacy HTML text and `legacy.format` keeps the original template name
+  (`gallery`, `video`, `audio`, `quote`, `link`); v2 has no renderer for those and this
+  slice does not add one. A gallery or media URL is never converted into a media id
+  without a valid mapping. A writable record that has no body, or whose gallery/media
+  list was not carried, is marked on the row: `legacy.incomplete` = comma-separated
+  `no-body`, `gallery`, `media` (stable order), plus `legacy.gallerySkipped` and
+  `legacy.mediaSkipped` counts when they apply. The dry run prints
+  `not fully migrated N: no body A, gallery not carried B, media not carried C`, and
+  `check:migration` prints `ℹ️ not fully migrated N content row(s)…`, so a `✅ parity`
+  verdict is not read as "nothing left to finish". The rows are findable through the
+  admin attribute filter (CNT-02): `?attributeKey=legacy.incomplete`. Measured on the
+  local copies 2026-11-19: `bag-post` re-applied to 7 of 18 marked records (`no body 2`,
+  `gallery 5`), self-check `verified 12/12 categories, 18/18 contents`, parity still ✅
+  and `check:migration` reports `ℹ️ not fully migrated 7 content row(s)`; `sen-tuan` has
+  none (8 bodies, no gallery/media lists).
+- **J2 — no single-segment category redirect.** A legacy category path `/<slug>` is not
+  mapped to `/categories/<slug>`: the root URL can belong to content (its short URL),
+  so the existing skip stays and `migrate:redirects` keeps reporting those paths under
+  `category paths not planned N`. A manual row is written only after each legacy URL is
+  compared with the published content slugs and no conflict is found; the command never
+  generates one.
+
 **Known traps, both fixed and gated on 2026-11-18:** a duplicated category slug used
 to abort `--apply` half-way with `E11000` (now suffixed, and reported), and
 `migrate:catalog` used to run its migrations before planning, so even a dry run wrote
 collections, indexes and `tm_migrations` rows to the customer database (planning now
 reads raw and prepares only with `--apply`).
+
+### Legacy credential rotation (J4, before launch)
+
+Owner answer J4: every plaintext credential in legacy `system_configs` is rotated before
+launch, in this order — a new credential is live **before** the old one is revoked, and no
+value passes through this repository, a chat, a log or a commit.
+
+1. **Inventory names, not values.** `pnpm migrate:settings --site <id>` (dry run) lists
+   `⚠️ N legacy keys hold credentials in plaintext …` by key name, and `not carried N [keys]`
+   for the rest. Run it per customer copy (`sen-tuan`, `bag-post`). The command never
+   prints a value; do not add a mode that does.
+2. **Map every key to its consumer.** Owner-side inventory: Hub connection registry and
+   app installations, Vercel project environment variables, the storefront revalidate
+   secret (`TM_REVALIDATE_SECRET`), Google/Firebase/VAPID/mail integrations. A key with
+   no live consumer is revoked, not rotated.
+3. **Create the new credential at the provider** and write it into the consumer's secret
+   store (Vercel env or Hub connection), then deploy or restart that consumer.
+4. **Verify the consumer with the new value** — sign-in, refresh, a revalidate call, an
+   upload, a push — before touching the old credential.
+5. **Revoke the old credential at the provider**, then confirm the consumer still works.
+6. **Do not delete the legacy `system_configs` row as part of the migration.** The
+   collection is the rollback copy and the import never reads those values; removing the
+   rows is a separate, owner-approved cleanup after step 5.
 
 ### Revision diff and restore smoke (P3.c)
 

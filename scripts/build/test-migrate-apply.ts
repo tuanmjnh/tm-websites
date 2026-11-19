@@ -310,6 +310,7 @@ async function main() {
       assert.match(dryContent.output, /invalid records 1/)
       assert.match(dryContent.output, /legacy gallery lists not carried \(1\)/)
       assert.match(dryContent.output, /legacy media embeds not carried \(1\)/)
+      assert.match(dryContent.output, /not fully migrated 1: no body 0, gallery not carried 1, media not carried 1/)
     })
     await check('a dry run creates no target collection', async () => {
       const names = (await db.listCollections({}, { nameOnly: true }).toArray()).map(entry => entry.name)
@@ -435,6 +436,13 @@ async function main() {
       assert.equal(page?.attributes['legacy.showOnHome'], true)
       assert.equal(page?.attributes['legacy.priority'], 2)
       assert.equal(page?.attributes['legacy.views'], 9)
+    })
+    await check('a record that loses its gallery or media list is marked as not fully migrated', () => {
+      assert.equal(page?.attributes['legacy.incomplete'], 'gallery,media')
+      assert.equal(page?.attributes['legacy.gallerySkipped'], 1)
+      assert.equal(page?.attributes['legacy.mediaSkipped'], 1)
+      const complete = applied.find(row => row.locales?.[0]?.title === 'Bài bị trùng slug')
+      assert.equal(complete?.attributes?.['legacy.incomplete'], undefined)
     })
     await check('both locales, keywords and publication dates are carried', () => {
       assert.deepEqual(page?.locales.map((entry: { locale: string }) => entry.locale), ['vi', 'en'])
@@ -687,6 +695,7 @@ async function main() {
       assert.match(parity.output, /✅ content categories\s+legacy\s+3\s+v2\s+3/)
       assert.match(parity.output, /✅ catalog items\s+legacy\s+5\s+v2\s+5/)
       assert.match(parity.output, /✅ settings\s+company identity present/)
+      assert.match(parity.output, /not fully migrated\s+1 content row\(s\) carry legacy\.incomplete/)
       assert.match(parity.output, /parity: every migrated domain holds at least what the source does/)
     })
     await check('the parity report never reads a legacy value', () => {

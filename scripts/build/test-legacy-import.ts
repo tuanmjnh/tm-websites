@@ -6,6 +6,7 @@ import {
   legacyAttributeList,
   legacyCatalogStatus,
   legacyContentAttributes,
+  legacyContentCompleteness,
   legacyContentStatus,
   legacyDate,
   legacyImageList,
@@ -189,6 +190,18 @@ check('legacyCatalogStatus: published needs isActive, archived is kept', () => {
   assert.equal(legacyCatalogStatus({ status: 'archived', isActive: false }), 'archived')
   assert.equal(legacyCatalogStatus({ status: 'weird' }), 'draft')
   assert.equal(legacyCatalogStatus({ status: 'published', isDeleted: true }), 'deleted')
+})
+
+check('legacyContentCompleteness marks a record v2 cannot carry whole (J1)', () => {
+  assert.deepEqual(legacyContentCompleteness({}), { bodyMissing: true, gallery: 0, media: 0, reasons: ['no-body'] })
+  assert.deepEqual(
+    legacyContentCompleteness({ content: { vi: '<p>x</p>' }, gallery: ['a', 'b'], media: ['m'] }),
+    { bodyMissing: false, gallery: 2, media: 1, reasons: ['gallery', 'media'] },
+  )
+  assert.deepEqual(
+    legacyContentCompleteness({ content: { vi: '<p>x</p>' }, gallery: [], media: [] }),
+    { bodyMissing: false, gallery: 0, media: 0, reasons: [] },
+  )
 })
 
 check('both importers import the shared rules instead of declaring their own', () => {

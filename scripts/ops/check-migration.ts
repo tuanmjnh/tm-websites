@@ -79,6 +79,18 @@ try {
     console.log(`     (${legacyContents.length - usableContents.length} legacy content records have no locale with both a title and a slug; the importer skips them by rule)`)
   }
   console.log(`     v2 published: ${v2ContentPublished}`)
+  // J1: a migrated row that lost its body, gallery or media embeds carries
+  // `legacy.incomplete`. It is still migrated — parity counts it — but the
+  // operator should not read the verdict as "nothing left to finish".
+  const incompleteContent = await connection.collection('content').countDocuments({
+    siteId,
+    // `$type` rather than `$ne: null`: a row with no `attributes` field at all is
+    // "missing", and missing compares successfully against null.
+    $expr: { $eq: [{ $type: { $getField: { field: 'legacy.incomplete', input: '$attributes' } } }, 'string'] },
+  })
+  if (incompleteContent) {
+    console.log(`  ℹ️  not fully migrated    ${incompleteContent} content row(s) carry legacy.incomplete (no body, or a gallery/media list v2 does not render)`)
+  }
 
   // Catalog: matched on the migrated identity, so an editor-created product does not
   // make a lost row look present.

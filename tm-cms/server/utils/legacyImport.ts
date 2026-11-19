@@ -205,6 +205,33 @@ export function legacyContentAttributes(record: LegacyRaw): Record<string, strin
   return attributes
 }
 
+/**
+ * Owner decision J1 (2026-11-19): the migrated body stays the legacy HTML text and
+ * `legacy.format` keeps the original template name. v2 has no renderer for
+ * `gallery`, `video`, `audio`, `quote` or `link`, and a gallery/media URL is never
+ * turned into a media id without a mapping, so a record that loses one of those
+ * lists — or has no body at all — is not a complete migration.
+ *
+ * This returns the reasons the importer stores on the record (`legacy.incomplete`),
+ * so an incomplete row stays findable through the admin list instead of reading as
+ * a finished one.
+ */
+export function legacyContentCompleteness(record: LegacyRaw): {
+  bodyMissing: boolean
+  gallery: number
+  media: number
+  reasons: string[]
+} {
+  const gallery = legacyList(record.gallery).length
+  const media = legacyList(record.media).length
+  const bodyMissing = !Object.keys(legacyLocalized(record.content)).length
+  const reasons: string[] = []
+  if (bodyMissing) reasons.push('no-body')
+  if (gallery) reasons.push('gallery')
+  if (media) reasons.push('media')
+  return { bodyMissing, gallery, media, reasons }
+}
+
 const CONTENT_STATUSES = ['published', 'draft', 'archived'] as const
 
 /** A soft-deleted record wins; an unknown status is a draft, never published. */
