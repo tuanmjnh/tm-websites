@@ -365,7 +365,8 @@ Read the report before applying:
 | `⚠️  N legacy keys hold credentials in plaintext` (settings) | names of credential keys found in `system_configs`; nothing is imported and values are never printed. Measured on the local copies 2026-11-18: 18 such keys, including JWT and revalidate secrets, a Google client secret, a Firebase private key, a VAPID private key, a Cloudinary API secret and MongoDB URIs with a password in them — **rotate them before launch**, they have been sitting in a customer database in plaintext |
 | `✅/❌ content`, `catalog items`, … (`check:migration`) | read-only parity: each domain's legacy count against the v2 count, with `❌` when v2 holds fewer rows than the source. `ℹ️ redirects` is informational because a nested path may be deliberately unredirected |
 | `verified N/N …` | after an apply, the command re-reads the database for exactly the keys/legacy ids/redirect paths the plan expected. A write loop can stop half-way (the 2026-11-18 `E11000` did) and still print a healthy count; a mismatch prints a warning, **exits non-zero** and means: read the first error, rerun (the import is resumable) |
-| `⚠️  found no legacy … in <db>` | the database has none of the legacy collections — almost always `TM_MONGO_DB` pointing at the `app_*_cms` side |
+| `⚠️  found no legacy … collections in <db>` | the database has none of the legacy collections — almost always `TM_MONGO_DB` pointing at the `app_*_cms` side |
+| `⚠️  the legacy … collections exist in <db> but hold no documents` | the database is the right one and empty: a customer with no store (`bag-post` has 0 `items`). Unlike the line above, this is a fact about the copy, not a configuration mistake |
 | `⚠️  no record matches --tenant <id>` | the collections exist but nothing is under that tenant; the line above names the tenants that are |
 | `nothing was written; rerun with --apply` | the dry run created no collection, index or `tm_migrations` row |
 

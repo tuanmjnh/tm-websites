@@ -1,6 +1,8 @@
 import { connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { syncSettingsIndexes, SETTINGS_LOCALES } from '../../tm-cms/server/models/settings.js'
 import {
+  legacyCollectionState,
+  legacyEmptyDatabaseWarning,
   legacyTenantBuckets,
   legacyText,
 } from '../../tm-cms/server/utils/legacyImport.js'
@@ -76,6 +78,7 @@ try {
   const tenantMatcher = { $or: [{ tenantId: tenant }, { tenantId: { $exists: false } }] }
   const configs = await connection.collection('system_configs').find(tenantMatcher).toArray()
   const legacyTenants = await legacyTenantBuckets(connection, ['system_configs'])
+  const legacyState = await legacyCollectionState(connection, ['system_configs'])
 
   const byKey = new Map<string, Record<string, unknown>>()
   for (const row of configs) {
@@ -123,7 +126,7 @@ try {
     console.log(`      ${secretKeys.join(', ')}`)
   }
   if (!Object.keys(legacyTenants).length) {
-    console.log(`  ⚠️  found no legacy system_configs in ${database}; the legacy collections live in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`)
+    console.log(`  ⚠️  ${legacyEmptyDatabaseWarning(legacyState, database, 'system_configs')}`)
   }
 
   if (!apply) {

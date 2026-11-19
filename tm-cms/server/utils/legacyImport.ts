@@ -44,6 +44,46 @@ export async function legacyTenantBuckets(connection: Connection, collections: s
   return buckets
 }
 
+/**
+ * Where the legacy collections the importers read actually are: absent, present but
+ * empty, or holding records. Those first two look identical to a count, and only one
+ * of them means "check `TM_MONGO_DB`": `bag-post` has `items` and `item_categories`
+ * that hold no documents because the customer never sold anything, and the report
+ * used to tell an operator to point the import at another database.
+ */
+export async function legacyCollectionState(
+  connection: Connection,
+  collections: string[],
+): Promise<{ missing: string[], empty: string[], present: string[] }> {
+  const state: { missing: string[], empty: string[], present: string[] } = { missing: [], empty: [], present: [] }
+  for (const name of collections) {
+    const exists = await connection.db!.listCollections({ name }, { nameOnly: true }).toArray()
+    if (!exists.length) {
+      state.missing.push(name)
+      continue
+    }
+    const count = await connection.collection(name).estimatedDocumentCount()
+    if (count === 0) state.empty.push(name)
+    else state.present.push(name)
+  }
+  return state
+}
+
+/**
+ * The line a report prints when it found nothing to import, phrased for the actual
+ * cause instead of always blaming the database name.
+ */
+export function legacyEmptyDatabaseWarning(
+  state: { missing: string[], empty: string[], present: string[] },
+  database: string,
+  names: string,
+): string {
+  if (state.missing.length) {
+    return `found no legacy ${names} collections in ${database}; the legacy data lives in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`
+  }
+  return `the legacy ${names} collections exist in ${database} but hold no documents; this copy has nothing to import`
+}
+
 /** Legacy documents are read raw (`strict: false`); anything else is empty. */
 export function asLegacyRecord(value: unknown): LegacyRaw {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as LegacyRaw) : {}

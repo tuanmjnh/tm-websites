@@ -15,6 +15,8 @@ import {
   legacyContentStatus,
   legacyDate,
   legacyKeywords,
+  legacyEmptyDatabaseWarning,
+  legacyCollectionState,
   legacyList,
   legacyLocalized,
   legacyNumber,
@@ -63,6 +65,7 @@ try {
   // tenant plans nothing and looks healthy, which is the easiest migration to
   // mistake for a finished one.
   const legacyTenants = await legacyTenantBuckets(connection, ['contents', 'content_categories'])
+  const legacyState = await legacyCollectionState(connection, ['contents', 'content_categories'])
 
   // Legacy category ids become the v2 immutable keys, so a content record keeps
   // pointing at the same category after the import.
@@ -283,7 +286,7 @@ try {
   console.log(`  field coverage ${JSON.stringify(coverage)}`)
   console.log(`  legacy tenants ${JSON.stringify(legacyTenants)}`)
   if (!Object.keys(legacyTenants).length) {
-    console.log(`  ⚠️  found no legacy contents/content_categories in ${database}; the legacy collections live in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`)
+    console.log(`  ⚠️  ${legacyEmptyDatabaseWarning(legacyState, database as string, 'contents/content_categories')}`)
   } else if (!legacyContents.length && !legacyCategories.length) {
     console.log(`  ⚠️  no record matches --tenant ${tenant}; this database holds ${JSON.stringify(legacyTenants)}`)
   }

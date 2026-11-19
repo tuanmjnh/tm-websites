@@ -7,7 +7,9 @@ import {
   asLegacyRecord,
   legacyCatalogStatus,
   legacyAttributeList,
+  legacyCollectionState,
   legacyDate,
+  legacyEmptyDatabaseWarning,
   legacyImageList,
   legacyImageUrl,
   legacyLocalized,
@@ -88,6 +90,7 @@ try {
   const legacyCategories = await connection.collection('item_categories').find(tenantMatcher).toArray()
   const legacyItems = await connection.collection('items').find(tenantMatcher).toArray()
   const legacyTenants = await legacyTenantBuckets(connection, ['items', 'item_categories'])
+  const legacyState = await legacyCollectionState(connection, ['items', 'item_categories'])
 
   const categoryIdByLegacy = new Map<string, Types.ObjectId>()
   const categoryKeyByLegacy = new Map<string, string>()
@@ -286,7 +289,7 @@ try {
   console.log(`  legacy item fields not carried ${JSON.stringify(uncarriedFields(legacyItems, CARRIED_ITEM_FIELDS))}`)
   console.log(`  legacy category fields not carried ${JSON.stringify(uncarriedFields(legacyCategories, CARRIED_CATEGORY_FIELDS))}`)
   if (!Object.keys(legacyTenants).length) {
-    console.log(`  ⚠️  found no legacy items/item_categories in ${database}; the legacy collections live in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`)
+    console.log(`  ⚠️  ${legacyEmptyDatabaseWarning(legacyState, database as string, 'items/item_categories')}`)
   } else if (!legacyItems.length && !legacyCategories.length) {
     console.log(`  ⚠️  no record matches --tenant ${tenant}; this database holds ${JSON.stringify(legacyTenants)}`)
   }

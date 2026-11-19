@@ -1,5 +1,11 @@
 import { connectDatabase } from '../../tm-cms/server/utils/database.js'
-import { legacyLocalized, legacyTenantBuckets, legacyText } from '../../tm-cms/server/utils/legacyImport.js'
+import {
+  legacyCollectionState,
+  legacyEmptyDatabaseWarning,
+  legacyLocalized,
+  legacyTenantBuckets,
+  legacyText,
+} from '../../tm-cms/server/utils/legacyImport.js'
 import { legacyCatalogStatus } from '../../tm-cms/server/utils/legacyImport.js'
 
 /**
@@ -41,14 +47,14 @@ function compare(domain: string, legacy: number, v2: number): void {
 
 try {
   const tenantMatcher = { $or: [{ tenantId: tenant }, { tenantId: { $exists: false } }] }
-  const legacyTenants = await legacyTenantBuckets(connection, [
-    'contents', 'content_categories', 'items', 'item_categories', 'system_configs', 'menus',
-  ])
+  const legacyCollections = ['contents', 'content_categories', 'items', 'item_categories', 'system_configs', 'menus']
+  const legacyTenants = await legacyTenantBuckets(connection, legacyCollections)
+  const legacyState = await legacyCollectionState(connection, legacyCollections)
 
   console.log(`migration parity site=${siteId} db=${database} tenant=${tenant}`)
   console.log(`  legacy tenants ${JSON.stringify(legacyTenants)}`)
   if (!Object.keys(legacyTenants).length) {
-    console.log(`  ⚠️  found no legacy collections in ${database}; the legacy data lives in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`)
+    console.log(`  ⚠️  ${legacyEmptyDatabaseWarning(legacyState, database, 'collections')}`)
   }
 
   // Content: a legacy record the importer cannot use is still counted on the legacy

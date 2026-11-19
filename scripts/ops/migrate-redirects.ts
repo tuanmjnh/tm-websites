@@ -1,6 +1,8 @@
 import { connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { syncRedirectIndexes } from '../../tm-cms/server/models/redirect.js'
 import {
+  legacyCollectionState,
+  legacyEmptyDatabaseWarning,
   legacyLocalized,
   legacyTenantBuckets,
   legacyText,
@@ -58,6 +60,7 @@ try {
   const legacyItems = await connection.collection('items').find(tenantMatcher).toArray()
   const legacyCategories = await connection.collection('item_categories').find(tenantMatcher).toArray()
   const legacyTenants = await legacyTenantBuckets(connection, ['items', 'item_categories'])
+  const legacyState = await legacyCollectionState(connection, ['items', 'item_categories'])
 
   // The target is the migrated row the CMS serves, not a slug rebuilt from the
   // legacy document: the importer may have suffixed a duplicated slug.
@@ -178,7 +181,7 @@ try {
   for (const example of examples) console.log(`    ${example}`)
 
   if (!Object.keys(legacyTenants).length) {
-    console.log(`  ⚠️  found no legacy items/item_categories in ${database}; the legacy collections live in the customer-named database (e.g. TM_MONGO_DB=sen-tuan), not in the app_*_cms one`)
+    console.log(`  ⚠️  ${legacyEmptyDatabaseWarning(legacyState, database, 'items/item_categories')}`)
   }
 
   if (!apply) {
