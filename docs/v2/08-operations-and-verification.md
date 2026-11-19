@@ -1286,6 +1286,28 @@ Read the registry before each run. At this baseline: CMS supports default, sentu
 
 Run each customer build in isolated output/workspace directories or serially; concurrent builds of the same host overwrite `.nuxt`/`.output`. Validate branding, titles, manifests/icons, public runtime identity and absence of another customer's assets. Test CMS-only customers and a minimal custom website. A missing MongoDB binding is not a successful catalog connection.
 
+## Local stabilization run (2026-11-19)
+
+One pass, on the local machine (Node 24.22.2, pnpm 12.15.0, MongoDB on `127.0.0.1:27017`), no production write and no deploy. This is the evidence behind the [delivery roadmap](07-delivery-roadmap.md) status note of the same date.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Every gate | `TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=tm-ci-gates TM_SITE_ID=sentuan pnpm verify:all` | **39/39, exit 0** in 152.5s; log `.devlogs/gates.log` |
+| Import apply | `pnpm test:migrate-apply` | 52/52, exit 0 |
+| Build matrix | `TM_CUSTOMER_ID=sentuan pnpm test:build-matrix` | **8/8 targets in 329s** (validate 8 ok, builds 8 ok / 319s, PWA isolation 3 ok at 24/24, manifests 5 ok) |
+| Host builds | `pnpm build:cms`, `pnpm build:web` | exit 0, 30.1 MB and 32.9 MB |
+| Parity | `check:migration` on `sen-tuan` and `bag-post` | both exit 0 (numbers below) |
+
+**Why CI had failed and what changed.** Quality Gates run [44448243864](https://github.com/tuanmjnh/tm-websites/actions/runs/44448243864) failed only `test:migrate-apply`. The catalog importer builds its report maps from Mongo aggregation results, whose order is not guaranteed, so CI printed `legacy tenants {"other-tenant":1,"(none)":8}` while the assertion required `(none)` first. The four report assertions now parse the JSON line (`reportJson`) and compare keys and values with `deepEqual`; no assertion was removed or loosened, and the importer is unchanged. Green after the fix: run [44459824144](https://github.com/tuanmjnh/tm-websites/actions/runs/44459824144) → **39/39 gates**, including `test:migrate-apply` (20.1s).
+
+**Parity on the migrated local copies.** `sen-tuan`/`sentuan`: content 8 legacy / 9 v2, content categories 6/6, catalog items 241/241, catalog categories 67/67, 288 redirect rows, settings identity present, published 229/229. `bag-post`/`bagpost`: content 18/18, categories 12/12, `ℹ️ not fully migrated 7 content row(s)`, no catalog rows, settings identity present. Both end with `parity: every migrated domain holds at least what the source does`.
+
+**Storefront** (`tm-web` dev on `:4006`, `sentuan`): `/`, `/products`, `/products/bo-hn-bo`, `/categories`, `/categories/chan-ga-goi-dem`, `/bai-viet`, `/danh-muc`, `/gio-hang`, `/tim-kiem`, `/tag/noi-that`, `/posts/noi-that-ben-vung-danh-thuc-ve-dep-tu-nhien-cho-to-am`, `/about`, `/contact`, `/sitemap.xml`, `/robots.txt` all 200 with rendered content and images; the migrated legacy path `/chan-ga-goi-dem-thuong/chan-ga-goi-dem-thuong-goi-nam/goi-gia-re` → **301 `/products/goi-gia-re`**; console clean, no failed request.
+
+**Authenticated CMS** (local `tm-hub` `:4000`, `tm-cms` `:4005` bound to `TM_MONGO_DB=sen-tuan`, Hub login as `sentuan-root@example.com`): Control Center 2 members / 2 roles / 7 modules; `/content` 9 records (8 published, 1 draft, migrated pages and the legacy post); `/catalog` 241 items / 229 published; `/categories` 6; `/settings` tenant plus the live Hub app record and the signed-in session; `/media` empty-library state. Ten admin APIs answered 200 `success: true` (content, catalog items/categories, content categories, media, redirects 288, tags 2, settings, menus 0, audit). Content CRUD measured for real: create → 201 draft rev 1, read → rev 1, patch → 200 rev 2 with the edited title, `events {event:'delete'}` → 200 rev 3 status `deleted`; the probe, its 3 revisions and 2 idempotency keys were then removed from the local DB, leaving 9 content rows. Console clean on reload.
+
+**Limits of this pass.** Without `TM_MONGO_URI`/`TM_MONGO_DB` every CMS domain page correctly answers `503 DATABASE_NOT_CONFIGURED` — that was the only 503 seen (before the server was bound to the local DB). Media upload/transform was not exercised (0 media rows locally) and the media URL is still CMS-host only, so public delivery across hosts remains blocked. Menus are empty for this customer. One live-Hub observation, not changed: the `app_sentuan_cms` app record still carries `allowed_origins: ["*"]`, which audit §E disallows for a customer production app. A3, A5 and A6 were not started.
+
 ## Required test layers
 
 | Layer | Required evidence |
