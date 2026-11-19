@@ -150,18 +150,34 @@ function catalogFixture() {
     duplicateSlug: '00000000000000000000f002',
     deleted: '00000000000000000000f003',
     otherTenant: '00000000000000000000f004',
+    duplicatePath: '00000000000000000000f005',
+    redirectItem: '00000000000000000000f006',
   }
 
   const categories = [
-    { _id: ids.category, slug: LEGACY_CATEGORY_SLUG, title: { vi: 'Trang sức' }, displayOrder: 1 },
+    {
+      _id: ids.category,
+      slug: LEGACY_CATEGORY_SLUG,
+      title: { vi: 'Trang sức' },
+      displayOrder: 1,
+      fullPath: { vi: 'trang-suc', en: 'jewelry' },
+    },
     {
       _id: ids.duplicateCategory,
       slug: DUPLICATE_CATEGORY_SLUG,
       title: { vi: 'Trùng slug' },
       isDeleted: true,
       deletedAt: new Date('2026-04-05T06:07:08.000Z'),
+      fullPath: { vi: 'trang-suc' },
     },
-    { _id: ids.childCategory, pid: ids.category, slug: { vi: 'nhan' }, title: { vi: 'Nhẫn' }, displayOrder: 2 },
+    {
+      _id: ids.childCategory,
+      pid: ids.category,
+      slug: { vi: 'nhan' },
+      title: { vi: 'Nhẫn' },
+      displayOrder: 2,
+      fullPath: { vi: 'trang-suc/nhan' },
+    },
   ]
 
   const items = [
@@ -185,6 +201,17 @@ function catalogFixture() {
       tags: [{ title: 'furniture', slug: 'furniture' }, 'interior'],
       attributes: [{ k: { vi: 'Chất liệu' }, v: { vi: 'Bạc' } }],
       seo: { image: { url: 'https://cdn.example/seo.png' } },
+      fullPath: { vi: 'trang-suc/nhan-bac', en: 'jewelry/silver-ring' },
+    },
+    {
+      // Same legacy URL as the item above, different v2 slug: ambiguous, so neither
+      // path may be redirected.
+      _id: ids.duplicatePath,
+      slug: { vi: 'nhan-bac-ba' },
+      title: { vi: 'Nhẫn trùng đường dẫn' },
+      basePrice: 30,
+      status: 'published',
+      fullPath: { vi: 'trang-suc/nhan-bac' },
     },
     {
       _id: ids.duplicateSlug,
@@ -199,6 +226,7 @@ function catalogFixture() {
         { sku: 'V-1', basePrice: 50, salePrice: null, stock: 2 },
         { basePrice: 60, stock: 1 },
       ],
+      fullPath: { vi: 'trang-suc/nhan-bac-hai' },
     },
     {
       _id: ids.deleted,
@@ -208,6 +236,16 @@ function catalogFixture() {
       status: 'archived',
       isDeleted: true,
       deletedAt: new Date('2026-03-04T05:06:07.000Z'),
+      fullPath: { vi: 'trang-suc/nhan-da-xoa' },
+    },
+    {
+      // Published, with a legacy nested URL of its own: the only unambiguous redirect.
+      _id: ids.redirectItem,
+      slug: { vi: 'nhan-le' },
+      title: { vi: 'Nhẫn lẻ' },
+      basePrice: 5,
+      status: 'published',
+      fullPath: { vi: 'trang-suc/nhan-le' },
     },
     {
       // Another tenant's row must never reach this site.
@@ -255,7 +293,7 @@ async function main() {
     })
     await check('a catalog dry run exits 0 and reports the planned counts', () => {
       assert.equal(dryCatalog.code, 0, dryCatalog.output)
-      assert.match(dryCatalog.output, /categories 3, items 3/)
+      assert.match(dryCatalog.output, /categories 3, items 5/)
     })
     await check('the catalog report names the legacy fields that have no column', () => {
       assert.match(dryCatalog.output, /"supplierPrices":1/)
@@ -263,7 +301,7 @@ async function main() {
       assert.match(dryCatalog.output, /legacy category fields not carried \{\}/)
     })
     await check('the catalog report counts the legacy tenants, including untagged rows', () => {
-      assert.match(dryCatalog.output, /legacy tenants \{.*"\(none\)":6.*"other-tenant":1.*\}/)
+      assert.match(dryCatalog.output, /legacy tenants \{.*"\(none\)":8.*"other-tenant":1.*\}/)
     })
     await check('the catalog report counts what came through, field by field', () => {
       assert.match(
@@ -405,8 +443,8 @@ async function main() {
 
     await check('the catalog apply exits 0 and writes every item', () => {
       assert.equal(applyCatalog.code, 0, applyCatalog.output)
-      assert.match(applyCatalog.output, /wrote 3 categories and 3 items/)
-      assert.equal(items.length, 3)
+      assert.match(applyCatalog.output, /wrote 3 categories and 5 items/)
+      assert.equal(items.length, 5)
     })
     await check('catalog tags, images and gallery are mapped, unusable gallery entries dropped', () => {
       assert.deepEqual(item?.tags, ['furniture', 'interior'])
@@ -461,6 +499,54 @@ async function main() {
       assert.equal(rows.length, items.length)
       assert.equal(rows.find(row => row.sku === 'SKU-1')?.revision, 1)
       assert.equal(rows.find(row => row.type === 'variable')?.slug.vi, variable?.slug.vi)
+    })
+
+    console.log('\n   Legacy URL redirects')
+
+    const dryRedirects = run('migrate:redirects', false)
+
+    await check('the redirect dry run plans only the unambiguous legacy product path', () => {
+      assert.equal(dryRedirects.code, 0, dryRedirects.output)
+      assert.match(dryRedirects.output, /planned 2, skipped \{/)
+      assert.match(dryRedirects.output, /"two legacy rows claim the same path":1/)
+      assert.match(dryRedirects.output, /no published v2 row \(run migrate:catalog --apply first, or the record is not published\)":2/)
+      assert.match(dryRedirects.output, /category paths not planned 2/)
+      assert.match(dryRedirects.output, /\/trang-suc\/nhan-le -> \/products\/nhan-le/)
+      assert.match(dryRedirects.output, /\/trang-suc\/nhan -> \/categories\/nhan/)
+    })
+    await check('a redirect dry run writes no row', async () => {
+      const rows = await db.collection('content_redirects').find({ siteId: SITE }).toArray()
+      assert.equal(rows.length, 0)
+    })
+
+    const applyRedirects = run('migrate:redirects', true)
+
+    await check('the redirect apply writes a 301 from the legacy path to the v2 product URL', async () => {
+      assert.equal(applyRedirects.code, 0, applyRedirects.output)
+      assert.match(applyRedirects.output, /wrote 2 redirects, kept 0 existing rows/)
+      assert.match(applyRedirects.output, /planned detail: 2 paths \(1 products, 1 categories\)/)
+      const rows = await db.collection('content_redirects').find({ siteId: SITE }).toArray()
+      assert.equal(rows.length, 2)
+      const item = rows.find(row => row.from === '/trang-suc/nhan-le')
+      assert.equal(item?.to, '/products/nhan-le')
+      assert.equal(item?.statusCode, 301)
+      assert.equal(item?.isActive, true)
+      assert.equal(item?.note, 'legacy import')
+      assert.equal(item?.revision, 1)
+      const category = rows.find(row => row.from === '/trang-suc/nhan')
+      assert.equal(category?.to, '/categories/nhan')
+    })
+    await check('a path a human mapped is never replaced by the importer', async () => {
+      await db.collection('content_redirects').updateOne(
+        { siteId: SITE, from: '/trang-suc/nhan-le' },
+        { $set: { to: '/manual-target', revision: 5 } },
+      )
+      const again = run('migrate:redirects', true)
+      assert.equal(again.code, 0, again.output)
+      assert.match(again.output, /planned 0, skipped \{.*"already has a redirect row":2/)
+      const row = await db.collection('content_redirects').findOne({ siteId: SITE, from: '/trang-suc/nhan-le' })
+      assert.equal(row?.to, '/manual-target')
+      assert.equal(row?.revision, 5)
     })
   } finally {
     await db.dropDatabase().catch(() => undefined)
