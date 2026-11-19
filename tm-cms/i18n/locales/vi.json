@@ -267,7 +267,15 @@
         "catalog_category": "Danh mục sản phẩm",
         "redirect": "Chuyển hướng",
         "customer": "Khách hàng",
-        "customer_segment": "Nhóm khách hàng"
+        "customer_segment": "Nhóm khách hàng",
+        "order": "Đơn hàng",
+        "quotation": "Báo giá",
+        "warehouse": "Kho",
+        "inventory": "Tồn kho",
+        "inventory_transaction": "Giao dịch kho",
+        "supplier": "Nhà cung cấp",
+        "purchase_order": "Đơn mua",
+        "payment": "Thanh toán"
       },
       "actions": {
         "create": "Tạo",

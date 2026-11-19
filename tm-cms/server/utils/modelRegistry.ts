@@ -18,6 +18,7 @@ import type { InventoryDocument } from '../models/inventory'
 import type { InventoryTransactionDocument } from '../models/inventoryTransaction'
 import type { SupplierDocument } from '../models/supplier'
 import type { PurchaseOrderDocument } from '../models/purchaseOrder'
+import type { PaymentDocument } from '../models/payment'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -37,6 +38,7 @@ import { inventoryModel, syncInventoryIndexes } from '../models/inventory'
 import { inventoryTransactionModel, syncInventoryTransactionIndexes } from '../models/inventoryTransaction'
 import { supplierModel, syncSupplierIndexes } from '../models/supplier'
 import { purchaseOrderModel, syncPurchaseOrderIndexes } from '../models/purchaseOrder'
+import { paymentModel, syncPaymentIndexes } from '../models/payment'
 import { redirectModel, syncRedirectIndexes } from '../models/redirect'
 import { MIGRATIONS, applyMigrations } from '../models/migrations'
 import { withCustomerDb } from './database'
@@ -68,6 +70,7 @@ export interface PreparedModels {
   InventoryTransaction: Model<InventoryTransactionDocument>
   Supplier: Model<SupplierDocument>
   PurchaseOrder: Model<PurchaseOrderDocument>
+  Payment: Model<PaymentDocument>
 }
 
 const preparation = new WeakMap<Connection, Promise<PreparedModels>>()
@@ -95,6 +98,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncInventoryTransactionIndexes(connection)
   await syncSupplierIndexes(connection)
   await syncPurchaseOrderIndexes(connection)
+  await syncPaymentIndexes(connection)
 
   if (migrations.applied.length > 0) {
     console.info(`[tm-db] applied migrations: ${migrations.applied.join(', ')}`)
@@ -121,6 +125,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     InventoryTransaction: inventoryTransactionModel(connection),
     Supplier: supplierModel(connection),
     PurchaseOrder: purchaseOrderModel(connection),
+    Payment: paymentModel(connection),
   }
 }
 

@@ -17,6 +17,7 @@ import { QuotationServiceError } from '#server/services/quotationService'
 import { WarehouseServiceError } from '#server/services/warehouseService'
 import { InventoryServiceError } from '#server/services/inventoryService'
 import { InventoryTransactionServiceError } from '#server/services/inventoryTransactionService'
+import { PaymentServiceError } from '#server/services/paymentService'
 import { SupplierServiceError } from '#server/services/supplierService'
 import { PurchaseOrderServiceError } from '#server/services/purchaseOrderService'
 import { RedirectServiceError } from '#server/services/redirectService'
@@ -193,6 +194,9 @@ export function translateContentError(error: unknown): never {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof InventoryTransactionServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof PaymentServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof SupplierServiceError) {

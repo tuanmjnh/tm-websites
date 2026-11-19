@@ -265,7 +265,15 @@
         "catalog_category": "Product categories",
         "redirect": "Redirects",
         "customer": "Customers",
-        "customer_segment": "Customer segments"
+        "customer_segment": "Customer segments",
+        "order": "Orders",
+        "quotation": "Quotations",
+        "warehouse": "Warehouses",
+        "inventory": "Inventory",
+        "inventory_transaction": "Stock movements",
+        "supplier": "Suppliers",
+        "purchase_order": "Purchase orders",
+        "payment": "Payments"
       },
       "actions": {
         "create": "Create",

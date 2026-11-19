@@ -25,6 +25,7 @@ const DOMAIN_GATES = [
   'test:inventory',
   'test:procurement',
   'test:inventory-transactions',
+  'test:finance',
   // The importers' --apply half: upserts, key/slug collisions and revision
   // preservation, driven through the real CLIs on a disposable fixture.
   'test:migrate-apply',
