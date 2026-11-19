@@ -283,6 +283,7 @@
         "attendance": "Attendance",
         "salary_config": "Salary configs",
         "payroll": "Payroll",
+        "stocktake": "Stocktake",
         "shift_template": "Shift template",
         "shift_assignment": "Shift assignment"
       },

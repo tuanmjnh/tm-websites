@@ -60,6 +60,8 @@ import { staffProfileModel, syncStaffProfileIndexes } from '../models/staffProfi
 import { attendanceModel, syncAttendanceIndexes } from '../models/attendance'
 import { salaryConfigModel, syncSalaryConfigIndexes } from '../models/salaryConfig'
 import { payrollModel, syncPayrollIndexes } from '../models/payroll'
+import type { StocktakeDocument } from '../models/stocktake'
+import { stocktakeModel, syncStocktakeIndexes } from '../models/stocktake'
 import type { ShiftTemplateDocument } from '../models/shiftTemplate'
 import type { ShiftAssignmentDocument } from '../models/shiftAssignment'
 import { shiftTemplateModel, syncShiftTemplateIndexes } from '../models/shiftTemplate'
@@ -105,6 +107,7 @@ export interface PreparedModels {
   Attendance: Model<AttendanceDocument>
   SalaryConfig: Model<SalaryConfigDocument>
   Payroll: Model<PayrollDocument>
+  Stocktake: Model<StocktakeDocument>
   ShiftTemplate: Model<ShiftTemplateDocument>
   ShiftAssignment: Model<ShiftAssignmentDocument>
 }
@@ -144,6 +147,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncAttendanceIndexes(connection)
   await syncSalaryConfigIndexes(connection)
   await syncPayrollIndexes(connection)
+  await syncStocktakeIndexes(connection)
   await syncShiftTemplateIndexes(connection)
   await syncShiftAssignmentIndexes(connection)
 
@@ -182,6 +186,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     Attendance: attendanceModel(connection),
     SalaryConfig: salaryConfigModel(connection),
     Payroll: payrollModel(connection),
+    Stocktake: stocktakeModel(connection),
     ShiftTemplate: shiftTemplateModel(connection),
     ShiftAssignment: shiftAssignmentModel(connection),
   }

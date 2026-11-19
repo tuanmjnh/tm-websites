@@ -23,6 +23,7 @@ import { NotificationServiceError } from '#server/services/notificationService'
 import { MailServiceError } from '#server/services/mailService'
 import { HrServiceError } from '#server/services/staffService'
 import { FinanceReportError } from '#server/services/financeReportService'
+import { StocktakeServiceError } from '#server/services/stocktakeService'
 import { SupplierServiceError } from '#server/services/supplierService'
 import { PurchaseOrderServiceError } from '#server/services/purchaseOrderService'
 import { RedirectServiceError } from '#server/services/redirectService'
@@ -217,6 +218,9 @@ export function translateContentError(error: unknown): never {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof FinanceReportError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof StocktakeServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof SupplierServiceError) {

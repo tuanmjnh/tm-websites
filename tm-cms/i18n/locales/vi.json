@@ -285,6 +285,7 @@
         "attendance": "Chấm công",
         "salary_config": "Cấu hình lương",
         "payroll": "Bảng lương",
+        "stocktake": "Kiểm kê kho",
         "shift_template": "Ca làm việc",
         "shift_assignment": "Phân ca"
       },

@@ -19,6 +19,7 @@ export const INVENTORY_REFERENCE_MODELS = [
   'PurchaseOrder',
   'Order',
   'InventoryTransfer',
+  'Stocktake',
   'InventoryAdjustment',
   'Other',
   'None',
