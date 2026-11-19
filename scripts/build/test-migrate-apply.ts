@@ -31,6 +31,22 @@ async function check(name: string, fn: () => void | Promise<void>) {
   }
 }
 
+/**
+ * Reads a report line such as `  legacy tenants {"default":8}` as an object.
+ *
+ * The importers build these maps from Mongo aggregation results, whose order is
+ * not guaranteed: CI printed `{"other-tenant":1,"(none)":8}` where this machine
+ * printed `{"(none)":8,"other-tenant":1}`. Comparing parsed keys and values
+ * keeps the assertion about the counts instead of the print order.
+ */
+function reportJson(output: string, label: string): Record<string, unknown> {
+  const line = output.split(/\r?\n/).find(entry => entry.trim().startsWith(`${label} `))
+  assert.ok(line, `the report has no "${label}" line:\n${output}`)
+  const start = line!.indexOf('{')
+  assert.ok(start >= 0, `the "${label}" line carries no JSON object: ${line}`)
+  return JSON.parse(line!.slice(start)) as Record<string, unknown>
+}
+
 const URI = process.env.TM_TEST_MONGO_URI || process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:27017'
 const DATABASE = 'tm_import_gate'
 const SITE = 'import-fixture'
@@ -323,21 +339,30 @@ async function main() {
       assert.match(dryCatalog.output, /categories 3, items 5/)
     })
     await check('the catalog report names the legacy fields that have no column', () => {
-      assert.match(dryCatalog.output, /"supplierPrices":1/)
-      assert.match(dryCatalog.output, /"minStock":1/)
-      assert.match(dryCatalog.output, /legacy category fields not carried \{\}/)
+      const notCarried = reportJson(dryCatalog.output, 'legacy item fields not carried')
+      assert.equal(notCarried.supplierPrices, 1, 'supplierPrices has no v2 column')
+      assert.equal(notCarried.minStock, 1, 'minStock has no v2 column')
+      assert.deepEqual(reportJson(dryCatalog.output, 'legacy category fields not carried'), {})
     })
     await check('the catalog report counts the legacy tenants, including untagged rows', () => {
-      assert.match(dryCatalog.output, /legacy tenants \{.*"\(none\)":8.*"other-tenant":1.*\}/)
+      assert.deepEqual(reportJson(dryCatalog.output, 'legacy tenants'), { '(none)': 8, 'other-tenant': 1 })
     })
     await check('the catalog report counts what came through, field by field', () => {
-      assert.match(
-        dryCatalog.output,
-        /field coverage \{"tags":1,"thumbnail":1,"gallery":1,"variants":1,"attributes":1,"sku":1,"barcode":0,"salePrice":2,"categories":1,"categoryThumbnail":0\}/,
-      )
+      assert.deepEqual(reportJson(dryCatalog.output, 'field coverage'), {
+        tags: 1,
+        thumbnail: 1,
+        gallery: 1,
+        variants: 1,
+        attributes: 1,
+        sku: 1,
+        barcode: 0,
+        salePrice: 2,
+        categories: 1,
+        categoryThumbnail: 0,
+      })
     })
     await check('the content report names the legacy tenants it found', () => {
-      assert.match(dryContent.output, /legacy tenants \{"default":8\}/)
+      assert.deepEqual(reportJson(dryContent.output, 'legacy tenants'), { default: 8 })
     })
     await check('a dry run against the v2 database warns instead of planning nothing quietly', async () => {
       const emptyDatabase = `${DATABASE}_empty`
@@ -369,10 +394,15 @@ async function main() {
       assert.match(mismatch.output, /no record matches --tenant khong-co; this database holds \{"default":8\}/)
     })
     await check('the content report counts what came through, field by field', () => {
-      assert.match(
-        dryContent.output,
-        /field coverage \{"thumbnail":1,"template":1,"keywords":1,"body":4,"excerpt":1,"seoImage":1,"bothLocales":1\}/,
-      )
+      assert.deepEqual(reportJson(dryContent.output, 'field coverage'), {
+        thumbnail: 1,
+        template: 1,
+        keywords: 1,
+        body: 4,
+        excerpt: 1,
+        seoImage: 1,
+        bothLocales: 1,
+      })
     })
 
     console.log('\n   Content apply')
