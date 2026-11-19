@@ -342,6 +342,8 @@ TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:content --site sentuan
 TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:catalog --site sentuan
 # third, and only after the two above: it redirects to the rows they wrote
 TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:redirects --site sentuan
+# independent of the rest: site identity and module switches
+TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:settings --site sentuan
 ```
 
 Read the report before applying:
@@ -358,6 +360,9 @@ Read the report before applying:
 | `legacy item fields not carried {…}` / `legacy category fields not carried {…}` | catalog-only: legacy fields that hold a value but have no column in the v2 schema, counted. Read it before deciding the import is complete — v2 has no inventory columns (`minStock`, `reserved`, `hasImei`, `supplierPrices`, `lastImportPrice`), no merchandising columns (`sort`, `display`, `options`, `shipping`) and no audit trail (`history`), so those stay behind by decision, not by accident |
 | `planned N, skipped {…}` (redirects) | legacy URL paths that become a 301 to the migrated product or category, and why the rest were left alone: no published v2 row, a path a page already owns, two legacy rows claiming one path, an existing row |
 | `category paths not planned N` (redirects) | legacy category paths that are one segment: `/<slug>` is also the content short URL, so redirecting one would shadow a page — these need a decision, not a guess |
+| `mapped N [keys]` / `mapped fields {…}` (settings) | the four legacy keys this command may write (`site_name`, `site_description`, `content_locales`, `enabled_modules`) and what they become |
+| `not carried N [keys]` (settings) | every other legacy key, by name. Keys whose name looks like a credential are **excluded from this list and reported separately as names only** |
+| `⚠️  N legacy keys hold credentials in plaintext` (settings) | names of credential keys found in `system_configs`; nothing is imported and values are never printed. Measured on the local copies 2026-11-18: 18 such keys, including JWT and revalidate secrets, a Google client secret, a Firebase private key, a VAPID private key, a Cloudinary API secret and MongoDB URIs with a password in them — **rotate them before launch**, they have been sitting in a customer database in plaintext |
 | `⚠️  found no legacy … in <db>` | the database has none of the legacy collections — almost always `TM_MONGO_DB` pointing at the `app_*_cms` side |
 | `⚠️  no record matches --tenant <id>` | the collections exist but nothing is under that tenant; the line above names the tenants that are |
 | `nothing was written; rerun with --apply` | the dry run created no collection, index or `tm_migrations` row |
@@ -373,6 +378,11 @@ quietly narrowed.
 TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:content --site sentuan --apply
 TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm migrate:catalog --site sentuan --apply
 ```
+
+`migrate:settings` is independent of the others: it writes one `settings` document per
+site the first time and then keeps whatever an editor has since changed (`$setOnInsert`
+only). Its allowlist is deliberately narrow because the same legacy collection holds
+credentials — see the report row below.
 
 `migrate:redirects` runs **after** the catalog apply in the same order, because it
 resolves every target from the v2 row that apply wrote (a record that never reached

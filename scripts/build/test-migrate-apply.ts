@@ -271,6 +271,16 @@ async function main() {
     await db.dropDatabase()
     await db.collection('content_categories').insertMany(content.categories)
     await db.collection('contents').insertMany(content.contents)
+    await db.collection('system_configs').insertMany([
+      { key: 'site_name', isPublic: true, type: 'string', value: 'Fixture Store' },
+      { key: 'site_description', isPublic: true, type: 'string', value: 'Fixture description' },
+      { key: 'content_locales', isPublic: true, type: 'json', value: '["vi","en"]' },
+      { key: 'enabled_modules', isPublic: true, type: 'json', value: '["posts","products","cart"]' },
+      { key: 'maintenance_mode', isPublic: true, type: 'boolean', value: true },
+      // The legacy collection holds plaintext credentials; none may reach the site.
+      { key: 'jwt_secret', isPublic: false, type: 'string', value: 'DO-NOT-IMPORT-marker-1' },
+      { key: 'cloudinary_api_secret', isPublic: false, type: 'string', value: 'DO-NOT-IMPORT-marker-2' },
+    ])
     await db.collection('item_categories').insertMany(catalog.categories)
     await db.collection('items').insertMany(catalog.items)
 
@@ -536,6 +546,54 @@ async function main() {
       const category = rows.find(row => row.from === '/trang-suc/nhan')
       assert.equal(category?.to, '/categories/nhan')
     })
+    console.log('\n   Legacy site settings')
+
+    const drySettings = run('migrate:settings', false)
+
+    await check('the settings dry run maps only the allowlisted keys', () => {
+      assert.equal(drySettings.code, 0, drySettings.output)
+      assert.match(drySettings.output, /mapped 4 \["site_name","site_description","content_locales","enabled_modules"\]/)
+      assert.match(drySettings.output, /"locales.enabled":\["vi","en"\]/)
+      assert.match(drySettings.output, /"modules":\{"content":true,"catalog":true\}/)
+      assert.match(drySettings.output, /legacy modules without a v2 switch \["cart"\]/)
+      assert.match(drySettings.output, /not carried 1 \["maintenance_mode"\]/)
+    })
+    await check('the settings report names the credential keys and never prints a value', () => {
+      assert.match(drySettings.output, /2 legacy keys hold credentials in plaintext and are NOT imported/)
+      assert.match(drySettings.output, /cloudinary_api_secret, jwt_secret/)
+      assert.equal(drySettings.output.includes('DO-NOT-IMPORT-marker'), false)
+    })
+    await check('a settings dry run writes no document', async () => {
+      assert.equal(await db.collection('settings').countDocuments({ siteId: SITE }), 0)
+    })
+
+    const applySettings = run('migrate:settings', true)
+
+    await check('the settings apply writes one document without any legacy secret', async () => {
+      assert.equal(applySettings.code, 0, applySettings.output)
+      assert.match(applySettings.output, /wrote the settings document/)
+      const doc = await db.collection('settings').findOne({ siteId: SITE })
+      assert.equal(doc?.company?.name, 'Fixture Store')
+      assert.equal(doc?.company?.names?.vi, 'Fixture Store')
+      assert.equal(doc?.seo?.defaultDescription, 'Fixture description')
+      assert.deepEqual(doc?.locales?.enabled, ['vi', 'en'])
+      assert.equal(doc?.modules?.content, true)
+      assert.equal(doc?.modules?.catalog, true)
+      assert.equal(JSON.stringify(doc).includes('DO-NOT-IMPORT-marker'), false)
+    })
+    await check('a rerun never overwrites a settings document an editor owns', async () => {
+      await db.collection('settings').updateOne(
+        { siteId: SITE },
+        { $set: { 'company.name': 'Edited name', revision: 7 } },
+      )
+      const again = run('migrate:settings', true)
+      assert.equal(again.code, 0, again.output)
+      assert.match(again.output, /kept the existing settings document/)
+      const doc = await db.collection('settings').findOne({ siteId: SITE })
+      assert.equal(doc?.company?.name, 'Edited name')
+      assert.equal(doc?.revision, 7)
+    })
+
     await check('a path a human mapped is never replaced by the importer', async () => {
       await db.collection('content_redirects').updateOne(
         { siteId: SITE, from: '/trang-suc/nhan-le' },
