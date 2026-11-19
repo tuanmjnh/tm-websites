@@ -276,7 +276,9 @@
         "supplier": "Nhà cung cấp",
         "purchase_order": "Đơn mua",
         "payment": "Thanh toán",
-        "inventory_transfer": "Chuyển kho"
+        "inventory_transfer": "Chuyển kho",
+        "notification": "Thông báo",
+        "notification_subscription": "Đăng ký thông báo"
       },
       "actions": {
         "create": "Tạo",

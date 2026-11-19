@@ -274,7 +274,9 @@
         "supplier": "Suppliers",
         "purchase_order": "Purchase orders",
         "payment": "Payments",
-        "inventory_transfer": "Stock transfers"
+        "inventory_transfer": "Stock transfers",
+        "notification": "Notifications",
+        "notification_subscription": "Notification subscriptions"
       },
       "actions": {
         "create": "Create",

@@ -27,6 +27,8 @@ export const AUDIT_RESOURCE_TYPES = [
   'purchase_order',
   'payment',
   'inventory_transfer',
+  'notification',
+  'notification_subscription',
 ] as const
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number]
 

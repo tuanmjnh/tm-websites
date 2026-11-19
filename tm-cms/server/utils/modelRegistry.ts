@@ -20,6 +20,8 @@ import type { SupplierDocument } from '../models/supplier'
 import type { PurchaseOrderDocument } from '../models/purchaseOrder'
 import type { PaymentDocument } from '../models/payment'
 import type { InventoryTransferDocument } from '../models/inventoryTransfer'
+import type { NotificationDocument } from '../models/notification'
+import type { NotificationSubscriptionDocument } from '../models/notificationSubscription'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -41,6 +43,11 @@ import { supplierModel, syncSupplierIndexes } from '../models/supplier'
 import { purchaseOrderModel, syncPurchaseOrderIndexes } from '../models/purchaseOrder'
 import { paymentModel, syncPaymentIndexes } from '../models/payment'
 import { inventoryTransferModel, syncInventoryTransferIndexes } from '../models/inventoryTransfer'
+import { notificationModel, syncNotificationIndexes } from '../models/notification'
+import {
+  notificationSubscriptionModel,
+  syncNotificationSubscriptionIndexes,
+} from '../models/notificationSubscription'
 import { redirectModel, syncRedirectIndexes } from '../models/redirect'
 import { MIGRATIONS, applyMigrations } from '../models/migrations'
 import { withCustomerDb } from './database'
@@ -74,6 +81,8 @@ export interface PreparedModels {
   PurchaseOrder: Model<PurchaseOrderDocument>
   Payment: Model<PaymentDocument>
   InventoryTransfer: Model<InventoryTransferDocument>
+  Notification: Model<NotificationDocument>
+  NotificationSubscription: Model<NotificationSubscriptionDocument>
 }
 
 const preparation = new WeakMap<Connection, Promise<PreparedModels>>()
@@ -103,6 +112,8 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncPurchaseOrderIndexes(connection)
   await syncPaymentIndexes(connection)
   await syncInventoryTransferIndexes(connection)
+  await syncNotificationIndexes(connection)
+  await syncNotificationSubscriptionIndexes(connection)
 
   if (migrations.applied.length > 0) {
     console.info(`[tm-db] applied migrations: ${migrations.applied.join(', ')}`)
@@ -131,6 +142,8 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     PurchaseOrder: purchaseOrderModel(connection),
     Payment: paymentModel(connection),
     InventoryTransfer: inventoryTransferModel(connection),
+    Notification: notificationModel(connection),
+    NotificationSubscription: notificationSubscriptionModel(connection),
   }
 }
 
