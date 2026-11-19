@@ -36,12 +36,28 @@ const DATABASE = 'tm_import_gate'
 const SITE = 'import-fixture'
 
 function run(
-  script: 'migrate:content' | 'migrate:catalog',
+  script: 'migrate:content' | 'migrate:catalog' | 'migrate:redirects' | 'migrate:settings' | 'check:migration',
   apply: boolean,
   options: { database?: string, args?: string[] } = {},
 ) {
   const extra = (options.args ?? []).join(' ')
   const command = `pnpm -s ${script} --site ${SITE}${apply ? ' --apply' : ''}${extra ? ` ${extra}` : ''}`
+  const result = spawnSync(command, {
+    cwd: process.cwd(),
+    shell: true,
+    encoding: 'utf-8',
+    env: { ...process.env, TM_MONGO_URI: URI, TM_MONGO_DB: options.database || DATABASE, TM_CUSTOMER_ID: SITE },
+  })
+  return { code: result.status ?? 1, output: `${result.stdout || ''}${result.stderr || ''}` }
+}
+
+/** `pnpm rehearse` drives the five documented steps as separate processes. */
+function rehearse(
+  apply: boolean,
+  options: { database?: string, args?: string[] } = {},
+) {
+  const extra = (options.args ?? []).join(' ')
+  const command = `pnpm -s rehearse --site ${SITE}${apply ? ' --apply' : ''}${extra ? ` ${extra}` : ''}`
   const result = spawnSync(command, {
     cwd: process.cwd(),
     shell: true,
@@ -609,6 +625,43 @@ async function main() {
       assert.equal(row?.to, '/manual-target')
       assert.equal(row?.revision, 5)
     })
+    console.log('\n   Rehearsal runner')
+
+    const dryRehearsal = rehearse(false)
+
+    await check('a rehearsal dry run drives the four steps in the documented order', () => {
+      assert.equal(dryRehearsal.code, 0, dryRehearsal.output)
+      const content = dryRehearsal.output.indexOf('▶ 1/4 migrate:content')
+      const catalogStep = dryRehearsal.output.indexOf('▶ 2/4 migrate:catalog')
+      const redirects = dryRehearsal.output.indexOf('▶ 3/4 migrate:redirects')
+      const settings = dryRehearsal.output.indexOf('▶ 4/4 migrate:settings')
+      assert.ok(content >= 0 && content < catalogStep && catalogStep < redirects && redirects < settings, dryRehearsal.output)
+      assert.match(dryRehearsal.output, /nothing was written; rerun with --apply/)
+      assert.equal(dryRehearsal.output.includes('check:migration'), false, 'parity is meaningless before an apply')
+    })
+    await check('a rehearsal dry run writes nothing', async () => {
+      const doc = await db.collection('settings').findOne({ siteId: SITE })
+      assert.equal(doc?.company?.name, 'Edited name')
+      assert.equal(doc?.revision, 7)
+      assert.equal(await db.collection('content_redirects').countDocuments({ siteId: SITE }), 2)
+    })
+    await check('a rehearsal refuses a v2 app database instead of planning zero rows', () => {
+      const wrong = rehearse(false, { database: 'app_sentuan_cms' })
+      assert.equal(wrong.code, 1, wrong.output)
+      assert.match(wrong.output, /looks like a v2 app database/)
+      assert.equal(wrong.output.includes('▶'), false, 'nothing may run')
+    })
+
+    const applyRehearsal = rehearse(true)
+
+    await check('a rehearsal apply ends with the parity report for every domain', () => {
+      assert.equal(applyRehearsal.code, 0, applyRehearsal.output)
+      assert.match(applyRehearsal.output, /▶ 5\/5 check:migration/)
+      assert.match(applyRehearsal.output, /✅ content\s+legacy\s+4\s+v2\s+5/)
+      assert.match(applyRehearsal.output, /✅ catalog items\s+legacy\s+5\s+v2\s+5/)
+      assert.match(applyRehearsal.output, /✅ rehearsal complete: every writer ran, and parity holds/)
+    })
+
     console.log('\n   Migration parity report')
 
     const parity = run('check:migration', false)

@@ -388,7 +388,26 @@ credentials — see the report row below.
 
 `migrate:redirects` runs **after** the catalog apply in the same order, because it
 resolves every target from the v2 row that apply wrote (a record that never reached
-`catalog_items` is reported, never guessed). It writes into `content_redirects`, the
+`catalog_items` is reported, never guessed).
+
+**One command for the whole sequence.** `pnpm rehearse` runs the same five steps in
+this order and stops at the first failure instead of running the steps that depend on
+it, because a hand-typed sequence gets the order wrong in a way that does not fail —
+it simply writes fewer redirects.
+
+```sh
+# what would be written; four dry runs, no parity (nothing has been written yet)
+TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm rehearse --site sentuan
+# the real pass: four applies, then check:migration, in one run
+TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm rehearse --site sentuan --apply
+```
+
+It adds no migration logic of its own: every count, warning and `verified N/N` line is
+the owning command's output, printed under a `▶ n/5 <command>` header, and the run ends
+with a one-line summary per step and the parity verdict. `--tenant` is passed through.
+It refuses a `TM_MONGO_DB` named like a v2 app database (`app_<customer>_cms`) before
+running anything, since that is the mistake that plans zero rows and reports no error.
+A rehearsal is the same command against a copy: point `TM_MONGO_URI` at it. It writes into `content_redirects`, the
 map the storefront follows before routing, and never replaces a row a human typed.
 
 A second `--apply` writes the same counts, keeps `revision` and `createdAt` of rows an
@@ -402,6 +421,9 @@ collections are never modified, so `contents`/`items` remain the rollback copy.
 ```sh
 TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm check:migration --site sentuan
 ```
+
+(`pnpm rehearse --apply` includes this step, so an operator running the rehearsal does
+not have to remember it.)
 
 `check:migration` is read-only and compares each domain with the legacy source:
 content and content categories against the records the importer can use, catalog
