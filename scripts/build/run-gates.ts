@@ -31,6 +31,7 @@ const DOMAIN_GATES = [
   'test:mail',
   'test:hr',
   'test:finance-reports',
+  'test:mail-analytics',
   'test:hr-shifts',
   'test:stocktake',
   // The importers' --apply half: upserts, key/slug collisions and revision
