@@ -30,6 +30,7 @@ const DOMAIN_GATES = [
   'test:notifications',
   'test:mail',
   'test:hr',
+  'test:finance-reports',
   // The importers' --apply half: upserts, key/slug collisions and revision
   // preservation, driven through the real CLIs on a disposable fixture.
   'test:migrate-apply',
