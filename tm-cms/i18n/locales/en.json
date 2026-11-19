@@ -278,7 +278,11 @@
         "notification": "Notifications",
         "notification_subscription": "Notification subscriptions",
         "mail_template": "Mail templates",
-        "mail_delivery": "Mail deliveries"
+        "mail_delivery": "Mail deliveries",
+        "staff_profile": "Staff profiles",
+        "attendance": "Attendance",
+        "salary_config": "Salary configs",
+        "payroll": "Payroll"
       },
       "actions": {
         "create": "Create",
@@ -289,7 +293,10 @@
         "archive": "Archive",
         "restore": "Restore",
         "delete": "Delete",
-        "revert": "Revert"
+        "revert": "Revert",
+        "approve": "Approve",
+        "pay": "Pay",
+        "cancel": "Cancel"
       },
       "errors": {
         "forbidden": "This account cannot read the audit trail.",

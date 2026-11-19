@@ -31,6 +31,10 @@ export const AUDIT_RESOURCE_TYPES = [
   'notification_subscription',
   'mail_template',
   'mail_delivery',
+  'staff_profile',
+  'attendance',
+  'salary_config',
+  'payroll',
 ] as const
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number]
 
@@ -52,6 +56,10 @@ export const AUDIT_ACTIONS = [
   'delete',
   // Restoring an earlier content snapshot: a content change, not a status event.
   'revert',
+  // Money and approval transitions, so a payroll trail reads in its own terms.
+  'approve',
+  'pay',
+  'cancel',
 ] as const
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
 

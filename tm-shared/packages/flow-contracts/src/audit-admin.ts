@@ -34,6 +34,10 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'notification_subscription',
   'mail_template',
   'mail_delivery',
+  'staff_profile',
+  'attendance',
+  'salary_config',
+  'payroll',
 ] as const
 export type AdminAuditResourceType = (typeof ADMIN_AUDIT_RESOURCE_TYPES)[number]
 
@@ -47,6 +51,9 @@ export const ADMIN_AUDIT_ACTIONS = [
   'restore',
   'delete',
   'revert',
+  'approve',
+  'pay',
+  'cancel',
 ] as const
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number]
 

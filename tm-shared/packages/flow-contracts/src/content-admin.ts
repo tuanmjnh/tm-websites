@@ -96,6 +96,11 @@ export const ADMIN_CONTENT_AUDIT_ACTIONS = [
   'restore',
   'delete',
   'revert',
+  // Approval and payment transitions (payroll); content records never use them,
+  // but both admin lists read from one audit collection and share this shape.
+  'approve',
+  'pay',
+  'cancel',
 ] as const
 export type AdminContentAuditAction = (typeof ADMIN_CONTENT_AUDIT_ACTIONS)[number]
 

@@ -280,7 +280,11 @@
         "notification": "Thông báo",
         "notification_subscription": "Đăng ký thông báo",
         "mail_template": "Mẫu thư",
-        "mail_delivery": "Thư đã gửi"
+        "mail_delivery": "Thư đã gửi",
+        "staff_profile": "Hồ sơ nhân sự",
+        "attendance": "Chấm công",
+        "salary_config": "Cấu hình lương",
+        "payroll": "Bảng lương"
       },
       "actions": {
         "create": "Tạo",
@@ -291,7 +295,10 @@
         "archive": "Lưu trữ",
         "restore": "Khôi phục",
         "delete": "Xoá",
-        "revert": "Quay lại bản cũ"
+        "revert": "Quay lại bản cũ",
+        "approve": "Duyệt",
+        "pay": "Chi trả",
+        "cancel": "Huỷ"
       },
       "errors": {
         "forbidden": "Tài khoản không có quyền đọc nhật ký thao tác.",

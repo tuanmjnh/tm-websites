@@ -52,6 +52,14 @@ import {
 } from '../models/notificationSubscription'
 import { mailTemplateModel, syncMailTemplateIndexes } from '../models/mailTemplate'
 import { mailDeliveryModel, syncMailDeliveryIndexes } from '../models/mailDelivery'
+import type { StaffProfileDocument } from '../models/staffProfile'
+import type { AttendanceDocument } from '../models/attendance'
+import type { SalaryConfigDocument } from '../models/salaryConfig'
+import type { PayrollDocument } from '../models/payroll'
+import { staffProfileModel, syncStaffProfileIndexes } from '../models/staffProfile'
+import { attendanceModel, syncAttendanceIndexes } from '../models/attendance'
+import { salaryConfigModel, syncSalaryConfigIndexes } from '../models/salaryConfig'
+import { payrollModel, syncPayrollIndexes } from '../models/payroll'
 import { redirectModel, syncRedirectIndexes } from '../models/redirect'
 import { MIGRATIONS, applyMigrations } from '../models/migrations'
 import { withCustomerDb } from './database'
@@ -89,6 +97,10 @@ export interface PreparedModels {
   NotificationSubscription: Model<NotificationSubscriptionDocument>
   MailTemplate: Model<MailTemplateDocument>
   MailDelivery: Model<MailDeliveryDocument>
+  StaffProfile: Model<StaffProfileDocument>
+  Attendance: Model<AttendanceDocument>
+  SalaryConfig: Model<SalaryConfigDocument>
+  Payroll: Model<PayrollDocument>
 }
 
 const preparation = new WeakMap<Connection, Promise<PreparedModels>>()
@@ -122,6 +134,10 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncNotificationSubscriptionIndexes(connection)
   await syncMailTemplateIndexes(connection)
   await syncMailDeliveryIndexes(connection)
+  await syncStaffProfileIndexes(connection)
+  await syncAttendanceIndexes(connection)
+  await syncSalaryConfigIndexes(connection)
+  await syncPayrollIndexes(connection)
 
   if (migrations.applied.length > 0) {
     console.info(`[tm-db] applied migrations: ${migrations.applied.join(', ')}`)
@@ -154,6 +170,10 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     NotificationSubscription: notificationSubscriptionModel(connection),
     MailTemplate: mailTemplateModel(connection),
     MailDelivery: mailDeliveryModel(connection),
+    StaffProfile: staffProfileModel(connection),
+    Attendance: attendanceModel(connection),
+    SalaryConfig: salaryConfigModel(connection),
+    Payroll: payrollModel(connection),
   }
 }
 
