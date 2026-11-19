@@ -62,6 +62,7 @@
     "migrate:redirects": "tsx scripts/ops/migrate-redirects.ts",
     "migrate:settings": "tsx scripts/ops/migrate-settings.ts",
     "check:migration": "tsx scripts/ops/check-migration.ts",
+    "migration:mapping": "tsx scripts/ops/migration-mapping.ts",
     "rehearse": "tsx scripts/ops/rehearse.ts",
     "migrate:content": "tsx scripts/ops/migrate-content.ts",
     "test:bulk": "tsx scripts/build/test-bulk-service.ts",

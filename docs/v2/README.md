@@ -20,6 +20,7 @@ The user-selected boundary is fixed: **Nuxt 4 layers + Nuxt UI 4; TM Hub and tm-
 | [10 — Documentation verification](10-documentation-verification.md) | Evidence and limitations of this documentation reset |
 | [11 — Target module layout](11-target-module-layout.md) | Planned package/folder/API/test conventions per domain |
 | [12 — Legacy domain specs](12-legacy-domain-specs.md) | Extracted routes, models, enums, invariants and known defects from both legacy projects |
+| [13 — Migration mapping matrix](13-migration-mapping.md) | Field-level legacy → v2 mapping counts and verdicts produced by `pnpm migration:mapping` |
 | [ADR 0001](../decisions/0001-rebuild-ownership.md) | User-selected ownership decision and consequences |
 | [Source inventory](source-inventory.json) | File-path inventory for legacy and target modules; not behavior verification |
 | [Legacy feature paths](legacy-feature-paths.json) | Path-only list of legacy pages/APIs/models/services (635 CMS, 219 website files) |

@@ -229,7 +229,9 @@ function catalogFixture() {
       supplierPrices: [{ supplier: 'sup-1', price: 70 }],
       status: 'published',
       isActive: true,
-      categories: [ids.category],
+      // The second id belongs to no legacy category: the local `sen-tuan` copy has
+      // two such rows, and the importer used to drop the link without a word.
+      categories: [ids.category, '00000000000000000000dead'],
       tags: [{ title: 'furniture', slug: 'furniture' }, 'interior'],
       attributes: [{ k: { vi: 'Chất liệu' }, v: { vi: 'Bạc' } }],
       seo: { image: { url: 'https://cdn.example/seo.png' } },
@@ -337,6 +339,10 @@ async function main() {
     await check('a catalog dry run exits 0 and reports the planned counts', () => {
       assert.equal(dryCatalog.code, 0, dryCatalog.output)
       assert.match(dryCatalog.output, /categories 3, items 5/)
+    })
+    await check('the catalog report names an item category the source copy does not hold', () => {
+      assert.match(dryCatalog.output, /unresolved item category references 1/)
+      assert.match(dryCatalog.output, /nhan-bac: category 00000000000000000000dead does not exist in item_categories/)
     })
     await check('the catalog report names the legacy fields that have no column', () => {
       const notCarried = reportJson(dryCatalog.output, 'legacy item fields not carried')
