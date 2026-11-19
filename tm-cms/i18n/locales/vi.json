@@ -284,7 +284,9 @@
         "staff_profile": "Hồ sơ nhân sự",
         "attendance": "Chấm công",
         "salary_config": "Cấu hình lương",
-        "payroll": "Bảng lương"
+        "payroll": "Bảng lương",
+        "shift_template": "Ca làm việc",
+        "shift_assignment": "Phân ca"
       },
       "actions": {
         "create": "Tạo",

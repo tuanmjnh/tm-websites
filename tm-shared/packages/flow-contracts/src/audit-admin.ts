@@ -38,6 +38,8 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'attendance',
   'salary_config',
   'payroll',
+  'shift_template',
+  'shift_assignment',
 ] as const
 export type AdminAuditResourceType = (typeof ADMIN_AUDIT_RESOURCE_TYPES)[number]
 

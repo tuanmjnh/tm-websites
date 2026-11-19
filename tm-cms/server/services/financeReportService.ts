@@ -3,6 +3,15 @@ import type { Model } from 'mongoose'
 import type { OrderDocument } from '../models/order'
 import type { PaymentDocument } from '../models/payment'
 import type { PurchaseOrderDocument } from '../models/purchaseOrder'
+import {
+  CUSTOMER_DAY_MS,
+  CUSTOMER_TIME_ZONE,
+  isCalendarDate,
+  localDayOf,
+  localDayStartUtc,
+} from '../utils/customerTime'
+
+export { localDayOf, localDayStartUtc }
 
 /**
  * Finance reports (FIN-02), computed from the documents that already exist.
@@ -17,10 +26,8 @@ import type { PurchaseOrderDocument } from '../models/purchaseOrder'
  * is the 30th in UTC.
  */
 
-export const REPORT_TIME_ZONE = 'Asia/Ho_Chi_Minh'
-/** Vietnam has had no DST since 1975, so a fixed offset is exact, not an approximation. */
-const REPORT_UTC_OFFSET_MINUTES = 7 * 60
-const DAY_MS = 24 * 60 * 60 * 1000
+export const REPORT_TIME_ZONE = CUSTOMER_TIME_ZONE
+const DAY_MS = CUSTOMER_DAY_MS
 const MAX_RANGE_DAYS = 366
 const DEFAULT_LEDGER_LIMIT = 50
 const MAX_LEDGER_LIMIT = 200
@@ -63,26 +70,7 @@ export interface ReportModels {
   PurchaseOrder: Model<PurchaseOrderDocument>
 }
 
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
-
-export function isReportDate(value: unknown): value is string {
-  if (typeof value !== 'string' || !DATE_PATTERN.test(value)) return false
-  const [year, month, day] = value.split('-').map(Number)
-  const date = new Date(Date.UTC(year!, month! - 1, day))
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month! - 1 && date.getUTCDate() === day
-}
-
-/** Local midnight of a calendar day as a UTC instant. */
-export function localDayStartUtc(day: string): Date {
-  const [year, month, date] = day.split('-').map(Number)
-  return new Date(Date.UTC(year!, month! - 1, date, 0, 0, 0, 0) - REPORT_UTC_OFFSET_MINUTES * 60_000)
-}
-
-/** The local calendar day a UTC instant falls on. */
-export function localDayOf(instant: Date): string {
-  const shifted = new Date(instant.getTime() + REPORT_UTC_OFFSET_MINUTES * 60_000)
-  return shifted.toISOString().slice(0, 10)
-}
+export const isReportDate = isCalendarDate
 
 export function resolveRange(from: unknown, to: unknown, now: Date = new Date()): ResolvedRange {
   if (!isReportDate(from) || !isReportDate(to)) {

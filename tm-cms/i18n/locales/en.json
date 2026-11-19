@@ -282,7 +282,9 @@
         "staff_profile": "Staff profiles",
         "attendance": "Attendance",
         "salary_config": "Salary configs",
-        "payroll": "Payroll"
+        "payroll": "Payroll",
+        "shift_template": "Shift template",
+        "shift_assignment": "Shift assignment"
       },
       "actions": {
         "create": "Create",

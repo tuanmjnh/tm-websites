@@ -45,6 +45,7 @@
     "test:mail": "tsx scripts/build/test-mail-service.ts",
     "test:hr": "tsx scripts/build/test-hr-service.ts",
     "test:finance-reports": "tsx scripts/build/test-finance-reports.ts",
+    "test:hr-shifts": "tsx scripts/build/test-hr-shifts.ts",
     "test:catalog": "tsx scripts/build/test-catalog-service.ts",
     "test:migrate-apply": "tsx scripts/build/test-migrate-apply.ts",
     "test:media": "tsx scripts/build/test-media-service.ts",
