@@ -363,6 +363,7 @@ Read the report before applying:
 | `mapped N [keys]` / `mapped fields {…}` (settings) | the four legacy keys this command may write (`site_name`, `site_description`, `content_locales`, `enabled_modules`) and what they become |
 | `not carried N [keys]` (settings) | every other legacy key, by name. Keys whose name looks like a credential are **excluded from this list and reported separately as names only** |
 | `⚠️  N legacy keys hold credentials in plaintext` (settings) | names of credential keys found in `system_configs`; nothing is imported and values are never printed. Measured on the local copies 2026-11-18: 18 such keys, including JWT and revalidate secrets, a Google client secret, a Firebase private key, a VAPID private key, a Cloudinary API secret and MongoDB URIs with a password in them — **rotate them before launch**, they have been sitting in a customer database in plaintext |
+| `✅/❌ content`, `catalog items`, … (`check:migration`) | read-only parity: each domain's legacy count against the v2 count, with `❌` when v2 holds fewer rows than the source. `ℹ️ redirects` is informational because a nested path may be deliberately unredirected |
 | `verified N/N …` | after an apply, the command re-reads the database for exactly the keys/legacy ids/redirect paths the plan expected. A write loop can stop half-way (the 2026-11-18 `E11000` did) and still print a healthy count; a mismatch prints a warning, **exits non-zero** and means: read the first error, rerun (the import is resumable) |
 | `⚠️  found no legacy … in <db>` | the database has none of the legacy collections — almost always `TM_MONGO_DB` pointing at the `app_*_cms` side |
 | `⚠️  no record matches --tenant <id>` | the collections exist but nothing is under that tenant; the line above names the tenants that are |
@@ -396,7 +397,22 @@ are per row, not in a transaction: if one fails, the rows before it stay and the
 command exits non-zero — fix the cause and run it again, it resumes. The legacy
 collections are never modified, so `contents`/`items` remain the rollback copy.
 
-**5. Verify from the v2 side.** The admin list reports the migrated counts
+**5. Check parity, then verify from the v2 side.**
+
+```sh
+TM_MONGO_URI=… TM_MONGO_DB=sen-tuan pnpm check:migration --site sentuan
+```
+
+`check:migration` is read-only and compares each domain with the legacy source:
+content and content categories against the records the importer can use, catalog
+items and categories against rows carrying a `legacyId`, published counts, nested
+legacy paths against 301 rows, and whether the settings document carries a company
+identity. **v2 may hold more than the source** (an editor has written records since);
+holding fewer is a data-loss signal: that line prints `❌`, the command exits non-zero,
+and it is the right thing to run in a rehearsal and again before cutover. It never
+reads a legacy value, only key names and counts.
+
+The admin list reports the migrated counts
 (`meta.counts`), a migrated record opens in the CMS drawer with both locales, the
 storefront serves `/gioi-thieu` and lists the posts, and `/sitemap.xml` counts match
 the published rows. `pnpm test:migrate-apply` proves the mechanics of this whole

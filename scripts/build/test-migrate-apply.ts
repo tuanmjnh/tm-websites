@@ -609,6 +609,29 @@ async function main() {
       assert.equal(row?.to, '/manual-target')
       assert.equal(row?.revision, 5)
     })
+    console.log('\n   Migration parity report')
+
+    const parity = run('check:migration', false)
+
+    await check('the parity report compares each migrated domain with the legacy source', () => {
+      assert.equal(parity.code, 0, parity.output)
+      assert.match(parity.output, /✅ content\s+legacy\s+4\s+v2\s+5/)
+      assert.match(parity.output, /✅ content categories\s+legacy\s+3\s+v2\s+3/)
+      assert.match(parity.output, /✅ catalog items\s+legacy\s+5\s+v2\s+5/)
+      assert.match(parity.output, /✅ settings\s+company identity present/)
+      assert.match(parity.output, /parity: every migrated domain holds at least what the source does/)
+    })
+    await check('the parity report never reads a legacy value', () => {
+      assert.equal(parity.output.includes('DO-NOT-IMPORT-marker'), false)
+      assert.equal(parity.output.includes('Fixture Store'), false)
+    })
+    await check('the parity report fails when the database holds fewer rows than the source', async () => {
+      await db.collection('catalog_items').deleteOne({ siteId: SITE, legacyId: catalog.ids.item })
+      const broken = run('check:migration', false)
+      assert.equal(broken.code, 1, broken.output)
+      assert.match(broken.output, /❌ catalog items/)
+      assert.match(broken.output, /fewer rows than the source/)
+    })
   } finally {
     await db.dropDatabase().catch(() => undefined)
     await closeDatabaseConnections()

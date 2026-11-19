@@ -122,3 +122,14 @@ Mỗi câu đã chốt theo **mặc định ghi ở bảng gốc**, và quyết 
 | Vercel token + domain từng customer | Deploy, CI, môi trường từng khách | Build và dev server local |
 | Snapshot dữ liệu legacy | Migration dry-run, bật 3 khách còn lại với dữ liệu thật | Chỉ dữ liệu tạo mới |
 | — | — | — |
+
+## J. Ba quyết định + một việc bảo mật (2026-11-18, sau khi xong tooling P10)
+
+Chỉ cần trả lời ngắn; mỗi mục đã có khuyến nghị để mặc định nếu bạn không phản hồi.
+
+| # | Câu hỏi | Bằng chứng đã có | Khuyến nghị |
+| --- | --- | --- | --- |
+| J1 (A5) | `gallery`/`video`/`audio`/`quote`/`link` của legacy phải **render** ở V2, hay chỉ giữ `legacy.format` để tra cứu? | Legacy local chỉ có `standard` (và 1 `gallery` ở `bag-post`); snapshot thật được ghi nhận 22/123 record phi chuẩn. Importer đã mang `legacy.format` + gallery/media list được báo là "không mang" (media v2 là id, không phải URL) | Giữ `legacy.format`, **không** render 5 format đó; chúng là trang legacy đã có nội dung HTML trong body nên vẫn đọc được |
+| J2 | URL category legacy một segment (`/<slug>`) có 301 sang `/categories/<slug>` không? | `sen-tuan`: 6 path như vậy; `/<slug>` cũng là URL content nên ghi mù sẽ che trang | **Không** redirect; nếu cần thì chỉ redirect sau khi đối chiếu danh sách 6 path với URL legacy thật |
+| J3 | Có cho phép **apply migration content** trên bản local/khách (không phải production) để `check:migration` xanh? | `check:migration`: content `sen-tuan` 8 record dùng được / 2 row v2 / 0 category; `bag-post` 18 / 0; catalog đã khớp 241/67 | Đồng ý apply trên bản local trước, rồi mới bàn snapshot thật |
+| J4 (bảo mật) | Rotate credential đang nằm plaintext trong legacy `system_configs` trước khi launch? | 18 key ở bản local: JWT/refresh/revalidate secret, Google client secret, Firebase private key, VAPID private key, Cloudinary API secret, 2 Mongo URI có username/password, một giá trị password-reset. `migrate:settings` không import và không in giá trị nào | Có — rotate toàn bộ, và đừng copy collection này sang môi trường mới |
