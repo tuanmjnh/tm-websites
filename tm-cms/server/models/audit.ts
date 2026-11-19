@@ -29,6 +29,8 @@ export const AUDIT_RESOURCE_TYPES = [
   'inventory_transfer',
   'notification',
   'notification_subscription',
+  'mail_template',
+  'mail_delivery',
 ] as const
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number]
 

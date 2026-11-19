@@ -276,7 +276,9 @@
         "payment": "Payments",
         "inventory_transfer": "Stock transfers",
         "notification": "Notifications",
-        "notification_subscription": "Notification subscriptions"
+        "notification_subscription": "Notification subscriptions",
+        "mail_template": "Mail templates",
+        "mail_delivery": "Mail deliveries"
       },
       "actions": {
         "create": "Create",

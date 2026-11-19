@@ -278,7 +278,9 @@
         "payment": "Thanh toán",
         "inventory_transfer": "Chuyển kho",
         "notification": "Thông báo",
-        "notification_subscription": "Đăng ký thông báo"
+        "notification_subscription": "Đăng ký thông báo",
+        "mail_template": "Mẫu thư",
+        "mail_delivery": "Thư đã gửi"
       },
       "actions": {
         "create": "Tạo",

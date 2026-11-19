@@ -22,6 +22,8 @@ import type { PaymentDocument } from '../models/payment'
 import type { InventoryTransferDocument } from '../models/inventoryTransfer'
 import type { NotificationDocument } from '../models/notification'
 import type { NotificationSubscriptionDocument } from '../models/notificationSubscription'
+import type { MailTemplateDocument } from '../models/mailTemplate'
+import type { MailDeliveryDocument } from '../models/mailDelivery'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -48,6 +50,8 @@ import {
   notificationSubscriptionModel,
   syncNotificationSubscriptionIndexes,
 } from '../models/notificationSubscription'
+import { mailTemplateModel, syncMailTemplateIndexes } from '../models/mailTemplate'
+import { mailDeliveryModel, syncMailDeliveryIndexes } from '../models/mailDelivery'
 import { redirectModel, syncRedirectIndexes } from '../models/redirect'
 import { MIGRATIONS, applyMigrations } from '../models/migrations'
 import { withCustomerDb } from './database'
@@ -83,6 +87,8 @@ export interface PreparedModels {
   InventoryTransfer: Model<InventoryTransferDocument>
   Notification: Model<NotificationDocument>
   NotificationSubscription: Model<NotificationSubscriptionDocument>
+  MailTemplate: Model<MailTemplateDocument>
+  MailDelivery: Model<MailDeliveryDocument>
 }
 
 const preparation = new WeakMap<Connection, Promise<PreparedModels>>()
@@ -114,6 +120,8 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncInventoryTransferIndexes(connection)
   await syncNotificationIndexes(connection)
   await syncNotificationSubscriptionIndexes(connection)
+  await syncMailTemplateIndexes(connection)
+  await syncMailDeliveryIndexes(connection)
 
   if (migrations.applied.length > 0) {
     console.info(`[tm-db] applied migrations: ${migrations.applied.join(', ')}`)
@@ -144,6 +152,8 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     InventoryTransfer: inventoryTransferModel(connection),
     Notification: notificationModel(connection),
     NotificationSubscription: notificationSubscriptionModel(connection),
+    MailTemplate: mailTemplateModel(connection),
+    MailDelivery: mailDeliveryModel(connection),
   }
 }
 
