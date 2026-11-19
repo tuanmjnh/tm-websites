@@ -275,7 +275,8 @@
         "inventory_transaction": "Giao dịch kho",
         "supplier": "Nhà cung cấp",
         "purchase_order": "Đơn mua",
-        "payment": "Thanh toán"
+        "payment": "Thanh toán",
+        "inventory_transfer": "Chuyển kho"
       },
       "actions": {
         "create": "Tạo",

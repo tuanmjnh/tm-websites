@@ -19,6 +19,7 @@ import type { InventoryTransactionDocument } from '../models/inventoryTransactio
 import type { SupplierDocument } from '../models/supplier'
 import type { PurchaseOrderDocument } from '../models/purchaseOrder'
 import type { PaymentDocument } from '../models/payment'
+import type { InventoryTransferDocument } from '../models/inventoryTransfer'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -39,6 +40,7 @@ import { inventoryTransactionModel, syncInventoryTransactionIndexes } from '../m
 import { supplierModel, syncSupplierIndexes } from '../models/supplier'
 import { purchaseOrderModel, syncPurchaseOrderIndexes } from '../models/purchaseOrder'
 import { paymentModel, syncPaymentIndexes } from '../models/payment'
+import { inventoryTransferModel, syncInventoryTransferIndexes } from '../models/inventoryTransfer'
 import { redirectModel, syncRedirectIndexes } from '../models/redirect'
 import { MIGRATIONS, applyMigrations } from '../models/migrations'
 import { withCustomerDb } from './database'
@@ -71,6 +73,7 @@ export interface PreparedModels {
   Supplier: Model<SupplierDocument>
   PurchaseOrder: Model<PurchaseOrderDocument>
   Payment: Model<PaymentDocument>
+  InventoryTransfer: Model<InventoryTransferDocument>
 }
 
 const preparation = new WeakMap<Connection, Promise<PreparedModels>>()
@@ -99,6 +102,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncSupplierIndexes(connection)
   await syncPurchaseOrderIndexes(connection)
   await syncPaymentIndexes(connection)
+  await syncInventoryTransferIndexes(connection)
 
   if (migrations.applied.length > 0) {
     console.info(`[tm-db] applied migrations: ${migrations.applied.join(', ')}`)
@@ -126,6 +130,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     Supplier: supplierModel(connection),
     PurchaseOrder: purchaseOrderModel(connection),
     Payment: paymentModel(connection),
+    InventoryTransfer: inventoryTransferModel(connection),
   }
 }
 

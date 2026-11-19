@@ -29,6 +29,7 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'supplier',
   'purchase_order',
   'payment',
+  'inventory_transfer',
 ] as const
 export type AdminAuditResourceType = (typeof ADMIN_AUDIT_RESOURCE_TYPES)[number]
 

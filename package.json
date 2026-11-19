@@ -40,6 +40,7 @@
     "test:procurement": "tsx scripts/build/test-procurement-service.ts",
     "test:inventory-transactions": "tsx scripts/build/test-inventory-transaction-service.ts",
     "test:finance": "tsx scripts/build/test-finance-service.ts",
+    "test:inventory-transfers": "tsx scripts/build/test-inventory-transfer-service.ts",
     "test:catalog": "tsx scripts/build/test-catalog-service.ts",
     "test:migrate-apply": "tsx scripts/build/test-migrate-apply.ts",
     "test:media": "tsx scripts/build/test-media-service.ts",

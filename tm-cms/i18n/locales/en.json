@@ -273,7 +273,8 @@
         "inventory_transaction": "Stock movements",
         "supplier": "Suppliers",
         "purchase_order": "Purchase orders",
-        "payment": "Payments"
+        "payment": "Payments",
+        "inventory_transfer": "Stock transfers"
       },
       "actions": {
         "create": "Create",
