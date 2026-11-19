@@ -367,6 +367,7 @@ async function main() {
     await check('the content apply exits 0 and writes every usable record', () => {
       assert.equal(applyContent.code, 0, applyContent.output)
       assert.match(applyContent.output, /wrote 3 categories and 4 contents/)
+      assert.match(applyContent.output, /verified 3\/3 categories, 4\/4 contents/)
       assert.equal(applied.length, 5, 'four migrated records plus the one the CMS already owned')
     })
     await check('a migrated record gets revision 1 and schema version 1', () => {
@@ -454,6 +455,7 @@ async function main() {
     await check('the catalog apply exits 0 and writes every item', () => {
       assert.equal(applyCatalog.code, 0, applyCatalog.output)
       assert.match(applyCatalog.output, /wrote 3 categories and 5 items/)
+      assert.match(applyCatalog.output, /verified 3\/3 categories, 5\/5 items/)
       assert.equal(items.length, 5)
     })
     await check('catalog tags, images and gallery are mapped, unusable gallery entries dropped', () => {
@@ -534,6 +536,7 @@ async function main() {
     await check('the redirect apply writes a 301 from the legacy path to the v2 product URL', async () => {
       assert.equal(applyRedirects.code, 0, applyRedirects.output)
       assert.match(applyRedirects.output, /wrote 2 redirects, kept 0 existing rows/)
+      assert.match(applyRedirects.output, /verified 2\/2 redirects/)
       assert.match(applyRedirects.output, /planned detail: 2 paths \(1 products, 1 categories\)/)
       const rows = await db.collection('content_redirects').find({ siteId: SITE }).toArray()
       assert.equal(rows.length, 2)

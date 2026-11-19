@@ -208,7 +208,17 @@ try {
       if (result.upsertedCount > 0) wrote++
       else kept++
     }
+    // The loop can stop half-way; re-read what the plan expects before reporting success.
+    const expectedFrom = planned.map(entry => entry.from)
+    const found = expectedFrom.length
+      ? await connection.collection('content_redirects').countDocuments({ siteId, from: { $in: expectedFrom }, statusCode: 301 })
+      : 0
     console.log(`  wrote ${wrote} redirects, kept ${kept} existing rows`)
+    console.log(`  verified ${found}/${expectedFrom.length} redirects`)
+    if (found !== expectedFrom.length) {
+      console.log('  ⚠️  the database does not hold every planned redirect; rerun the command and read the first error above')
+      process.exitCode = 1
+    }
   }
 } finally {
   await connection.close()

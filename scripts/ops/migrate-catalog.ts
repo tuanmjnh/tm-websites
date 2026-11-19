@@ -384,7 +384,23 @@ try {
       written++
     }
 
+    // A write loop can stop half-way and still print a healthy line. Re-read what the
+    // plan expects and fail the command when the database does not hold it.
+    const expectedLegacyIds = plannedItems.map(planned => planned.legacyId)
+    const expectedCategoryIds = plannedCategories.map(planned => planned.legacyId)
+    const foundItems = expectedLegacyIds.length
+      ? await connection.collection('catalog_items').countDocuments({ siteId, legacyId: { $in: expectedLegacyIds } })
+      : 0
+    const foundCategories = expectedCategoryIds.length
+      ? await connection.collection('catalog_categories').countDocuments({ siteId, legacyId: { $in: expectedCategoryIds } })
+      : 0
+
     console.log(`  wrote ${categoryIdByLegacy.size} categories and ${written} items`)
+    console.log(`  verified ${foundCategories}/${expectedCategoryIds.length} categories, ${foundItems}/${expectedLegacyIds.length} items`)
+    if (foundItems !== expectedLegacyIds.length || foundCategories !== expectedCategoryIds.length) {
+      console.log('  ⚠️  the database does not hold every planned record; rerun the command and read the first error above')
+      process.exitCode = 1
+    }
     console.log('  legacy collections were not modified; storefront now reads the new collections')
   }
 } finally {

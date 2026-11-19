@@ -364,7 +364,24 @@ try {
       written++
     }
 
+    // A write loop can stop half-way and still print a healthy line: the 2026-11-18
+    // E11000 aborted a run after some rows existed. Re-read what the plan expects,
+    // and fail the command when the database does not hold it.
+    const expectedCategories = plannedCategories.map(planned => planned.key)
+    const expectedContents = plannedContents.filter(planned => planned.locales.length).map(planned => planned.key)
+    const foundCategories = expectedCategories.length
+      ? await connection.collection('categories').countDocuments({ siteId, key: { $in: expectedCategories } })
+      : 0
+    const foundContents = expectedContents.length
+      ? await connection.collection('content').countDocuments({ siteId, key: { $in: expectedContents } })
+      : 0
+
     console.log(`  wrote ${writtenCategories.size} categories and ${written} contents`)
+    console.log(`  verified ${foundCategories}/${expectedCategories.length} categories, ${foundContents}/${expectedContents.length} contents`)
+    if (foundCategories !== expectedCategories.length || foundContents !== expectedContents.length) {
+      console.log('  ⚠️  the database does not hold every planned record; rerun the command and read the first error above')
+      process.exitCode = 1
+    }
     console.log('  legacy collections were not modified; no audit entries or revision snapshots were written')
   }
 } finally {
