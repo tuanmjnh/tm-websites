@@ -257,6 +257,62 @@ export async function scrapSerialNumber(
   return toAdmin(updated)
 }
 
+export async function moveSerialNumber(
+  model: Model<SerialNumberDocument>,
+  siteId: string,
+  id: string,
+  warehouseId: string,
+  revision: number,
+  meta?: { audit?: ContentAuditMeta },
+): Promise<SerialNumberAdmin> {
+  const record = await model.findOne({ _id: objectId(id, 'SERIAL_NUMBER_ID_INVALID'), siteId }).lean<SerialRecord>()
+  if (!record) throw new SerialNumberServiceError(404, 'SERIAL_NUMBER_NOT_FOUND', 'Serial number not found')
+  if (record.revision !== revision) throw new SerialNumberServiceError(409, 'SERIAL_NUMBER_REVISION_CONFLICT', 'Revision mismatch')
+  if (record.isDeleted) throw new SerialNumberServiceError(409, 'SERIAL_NUMBER_DELETED', 'Serial number is deleted')
+  if (record.status !== 'in_stock') throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_NOT_IN_STOCK', 'Serial is not in stock')
+  const targetWarehouse = warehouseId.trim()
+  if (!targetWarehouse) throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_WAREHOUSE_REQUIRED', 'A target warehouse is required')
+  if (targetWarehouse === (record.warehouseId ?? '')) {
+    throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_SAME_WAREHOUSE', 'Serial is already in that warehouse')
+  }
+
+  const updated = await model.findOneAndUpdate(
+    { _id: record._id, siteId, revision },
+    { $set: { warehouseId: targetWarehouse }, $inc: { revision: 1 } },
+    { returnDocument: 'after' },
+  ).lean<SerialRecord>()
+  if (!updated) throw new SerialNumberServiceError(409, 'SERIAL_NUMBER_REVISION_CONFLICT', 'Serial number changed; retry')
+
+  await recordContentAudit(meta?.audit, {
+    siteId,
+    resourceType: RESOURCE,
+    resourceId: String(updated._id),
+    resourceKey: updated.serial,
+    action: 'update',
+    revision: updated.revision,
+    fromStatus: record.status,
+    toStatus: updated.status,
+    changedFields: ['warehouseId'],
+  })
+  return toAdmin(updated)
+}
+
+export async function moveSerialNumbers(
+  model: Model<SerialNumberDocument>,
+  siteId: string,
+  ids: string[],
+  warehouseId: string,
+  meta?: { audit?: ContentAuditMeta },
+): Promise<SerialNumberAdmin[]> {
+  const results: SerialNumberAdmin[] = []
+  for (const id of ids) {
+    const record = await model.findOne({ _id: objectId(id, 'SERIAL_NUMBER_ID_INVALID'), siteId }).lean<SerialRecord>()
+    if (!record) throw new SerialNumberServiceError(404, 'SERIAL_NUMBER_NOT_FOUND', 'Serial number not found')
+    results.push(await moveSerialNumber(model, siteId, id, warehouseId, record.revision, meta))
+  }
+  return results
+}
+
 export async function softDeleteSerialNumber(
   model: Model<SerialNumberDocument>,
   siteId: string,

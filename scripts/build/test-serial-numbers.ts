@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { registerSerialNumbers, getSerialNumber, listSerialNumbers, markSerialSold, markSerialReturned, scrapSerialNumber, softDeleteSerialNumber, SerialNumberServiceError } from '../../tm-cms/server/services/serialNumberService.js'
+import { registerSerialNumbers, getSerialNumber, listSerialNumbers, markSerialSold, markSerialReturned, scrapSerialNumber, softDeleteSerialNumber, moveSerialNumber, moveSerialNumbers, SerialNumberServiceError } from '../../tm-cms/server/services/serialNumberService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 
@@ -106,6 +106,41 @@ async function run() {
       const scrapped = await scrapSerialNumber(SerialNumber, SITE, second.id, second.revision, meta)
       assert.equal(scrapped.status, 'scrapped')
       assert.ok(scrapped.scrappedAt)
+    })
+
+    const [movable] = await registerSerialNumbers(SerialNumber, SITE, SITE, [
+      { serial: 'IMEI-003', itemId: 'item-tee', variantId: null, warehouseId: 'wh-1' },
+    ], meta)
+
+    await check('moving a serial changes its warehouse', async () => {
+      const moved = await moveSerialNumber(SerialNumber, SITE, movable!.id, 'wh-2', movable!.revision, meta)
+      assert.equal(moved.warehouseId, 'wh-2')
+    })
+
+    await check('a serial cannot move to the same warehouse', async () => {
+      const current = await getSerialNumber(SerialNumber, SITE, movable!.id)
+      await assert.rejects(
+        () => moveSerialNumber(SerialNumber, SITE, movable!.id, 'wh-2', current.revision, meta),
+        isSerialError(422, 'SERIAL_NUMBER_SAME_WAREHOUSE'),
+      )
+    })
+
+    await check('a non-stock serial cannot be moved', async () => {
+      const current = await getSerialNumber(SerialNumber, SITE, first!.id)
+      await assert.rejects(
+        () => moveSerialNumber(SerialNumber, SITE, first!.id, 'wh-9', current.revision, meta),
+        isSerialError(422, 'SERIAL_NUMBER_NOT_IN_STOCK'),
+      )
+    })
+
+    await check('batch move returns every serial', async () => {
+      const [a, b] = await registerSerialNumbers(SerialNumber, SITE, SITE, [
+        { serial: 'IMEI-004', itemId: 'item-tee', variantId: null, warehouseId: 'wh-1' },
+        { serial: 'IMEI-005', itemId: 'item-tee', variantId: null, warehouseId: 'wh-1' },
+      ], meta)
+      const moved = await moveSerialNumbers(SerialNumber, SITE, [a!.id, b!.id], 'wh-3', meta)
+      assert.equal(moved.length, 2)
+      assert.ok(moved.every(item => item.warehouseId === 'wh-3'))
     })
 
     await check('soft delete and restore keep the revision moving', async () => {
