@@ -1196,7 +1196,7 @@ The same treatment applies to gaps that have no module page of their own:
 
 Recorded in [ADR 0002](../docs/decisions/0002-owner-decisions.md) so they are not re-opened as gaps:
 
-- **WEB-06 checkout** — no payment provider and no order storage (Q17). The cart and its server-side re-quote remain the end of the flow.
+- **WEB-06 checkout** — the narrow public command now lands on `POST /api/public/checkout` (server re-quote, `CHECKOUT_CART_CHANGED`, idempotent by `Idempotency-Key`, order + audit written, existing profile linked). Still open: a checkout UI, shipping-fee/tax calculation, a payment provider, anti-abuse (Turnstile/rate limit) and stock reservation rather than validation.
 - **WEB-07 forms** — no delivery target (Q18), so there is no stub that would swallow submissions.
 - **Media in the public projection, logo URL, OG images** — no public media origin (Q19/Q13).
 - **Locale-prefixed URLs and `hreflang`** — storefront keeps `no_prefix` (Q20).

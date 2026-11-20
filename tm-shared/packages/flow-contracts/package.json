@@ -11,6 +11,7 @@
     "./catalog": "./src/catalog.ts",
     "./catalog-admin": "./src/catalog-admin.ts",
     "./public-cart": "./src/public-cart.ts",
+    "./public-checkout": "./src/public-checkout.ts",
     "./hub-admin": "./src/hub-admin.ts",
     "./category-admin": "./src/category-admin.ts",
     "./content-admin": "./src/content-admin.ts",
