@@ -9,6 +9,8 @@ import {
   listPayments,
   recordPayment,
   voidPayment,
+  reconcilePayment,
+  unreconcilePayment,
 } from '../../tm-cms/server/services/paymentService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
@@ -293,9 +295,37 @@ async function integration() {
       )
     })
 
+    await check('a posted payment can be reconciled and unreconciled', async () => {
+      const order = await createOrder(Order, Customer, SITE, {
+        customerId: customer.id,
+        status: 'processing',
+        items: [{ itemName: 'R', price: 10000, quantity: 1 }],
+      }, meta)
+      const payment = await recordPayment(Payment, targets, SITE, {
+        direction: 'receivable',
+        referenceModel: 'Order',
+        referenceId: order.id,
+        amount: 10000,
+      }, meta)
+      const reconciled = await reconcilePayment(Payment, SITE, payment.id, 'BANK-STMT-001', meta)
+      assert.equal(reconciled.reconciliationRef, 'BANK-STMT-001')
+      assert.ok(reconciled.reconciledAt)
+      await assert.rejects(
+        () => reconcilePayment(Payment, SITE, payment.id, 'X', meta),
+        isPaymentError(409, 'PAYMENT_ALREADY_RECONCILED'),
+      )
+      const unreconciled = await unreconcilePayment(Payment, SITE, payment.id, meta)
+      assert.equal(unreconciled.reconciledAt, null)
+      assert.equal(unreconciled.reconciliationRef, '')
+      await assert.rejects(
+        () => unreconcilePayment(Payment, SITE, payment.id, meta),
+        isPaymentError(409, 'PAYMENT_NOT_RECONCILED'),
+      )
+    })
+
     await check('every payment mutation records an audit entry', async () => {
       const entries = await Audit.find({ siteId: SITE, resourceType: 'payment' }).lean<{ action: string, toStatus: string | null }[]>()
-      assert.equal(entries.filter(entry => entry.action === 'create').length, 4)
+      assert.equal(entries.filter(entry => entry.action === 'create').length, 5)
       assert.ok(entries.filter(entry => entry.toStatus === 'voided').length >= 2)
     })
   } finally {

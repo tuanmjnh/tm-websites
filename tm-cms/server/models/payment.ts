@@ -81,6 +81,8 @@ export interface PaymentDocument {
   voidedAt: Date | null
   voidedBy: string | null
   voidReason: string
+  reconciledAt: Date | null
+  reconciliationRef: string
   revision: number
   schemaVersion: number
   createdAt: Date
@@ -141,6 +143,8 @@ const PaymentMongooseSchema = new Schema<PaymentDocument>(
     voidedAt: { type: Date, default: null },
     voidedBy: { type: String, default: null },
     voidReason: { type: String, default: '' },
+    reconciledAt: { type: Date, default: null },
+    reconciliationRef: { type: String, default: '' },
     revision: { type: Number, default: 1, required: true },
     schemaVersion: { type: Number, default: PAYMENT_SCHEMA_VERSION, required: true },
   },

@@ -50,6 +50,8 @@ export interface PaymentAdmin {
   performerId: string | null
   voidedAt: string | null
   voidReason: string
+  reconciledAt: string | null
+  reconciliationRef: string
   revision: number
   createdAt: string | null
   updatedAt: string | null
@@ -158,6 +160,8 @@ export function toAdminPayment(record: PaymentRecord): PaymentAdmin {
     performerId: record.performerId ?? null,
     voidedAt: iso(record.voidedAt),
     voidReason: record.voidReason ?? '',
+    reconciledAt: iso(record.reconciledAt),
+    reconciliationRef: record.reconciliationRef ?? '',
     revision: record.revision,
     createdAt: iso(record.createdAt),
     updatedAt: iso(record.updatedAt),
@@ -622,4 +626,88 @@ export function translatePaymentInvariant(error: unknown): never {
     throw new PaymentServiceError(422, error.code, error.message)
   }
   throw error
+}
+
+export async function reconcilePayment(
+  model: Model<PaymentDocument>,
+  siteId: string,
+  id: string,
+  reconciliationRef: string,
+  meta?: { audit?: ContentAuditMeta },
+): Promise<PaymentAdmin> {
+  const ref = String(reconciliationRef ?? '').trim().slice(0, 80)
+  if (!ref) {
+    throw new PaymentServiceError(422, 'PAYMENT_RECONCILIATION_REF_REQUIRED', 'A reconciliation reference is required')
+  }
+  if (!Types.ObjectId.isValid(id)) {
+    throw new PaymentServiceError(422, 'PAYMENT_ID_INVALID', 'Payment id is not valid')
+  }
+  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<PaymentRecord>()
+  if (!record) throw new PaymentServiceError(404, 'PAYMENT_NOT_FOUND', 'Payment not found')
+  if (record.state !== 'posted') {
+    throw new PaymentServiceError(409, 'PAYMENT_NOT_POSTED', 'Only posted payments can be reconciled')
+  }
+  if (record.reconciledAt) {
+    throw new PaymentServiceError(409, 'PAYMENT_ALREADY_RECONCILED', 'Payment is already reconciled')
+  }
+
+  const updated = await model.findOneAndUpdate(
+    { _id: record._id, siteId, reconciledAt: null },
+    { $set: { reconciledAt: new Date(), reconciliationRef: ref }, $inc: { revision: 1 } },
+    { returnDocument: 'after' },
+  ).lean<PaymentRecord>()
+
+  if (!updated) throw new PaymentServiceError(409, 'PAYMENT_RECONCILIATION_CONFLICT', 'Payment changed; retry')
+
+  await recordContentAudit(meta?.audit, {
+    siteId,
+    resourceType: RESOURCE,
+    resourceId: String(updated._id),
+    resourceKey: updated.code,
+    action: 'update',
+    revision: updated.revision,
+    fromStatus: 'posted',
+    toStatus: 'posted',
+    changedFields: ['reconciledAt', 'reconciliationRef'],
+  })
+
+  return toAdminPayment(updated)
+}
+
+export async function unreconcilePayment(
+  model: Model<PaymentDocument>,
+  siteId: string,
+  id: string,
+  meta?: { audit?: ContentAuditMeta },
+): Promise<PaymentAdmin> {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new PaymentServiceError(422, 'PAYMENT_ID_INVALID', 'Payment id is not valid')
+  }
+  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<PaymentRecord>()
+  if (!record) throw new PaymentServiceError(404, 'PAYMENT_NOT_FOUND', 'Payment not found')
+  if (!record.reconciledAt) {
+    throw new PaymentServiceError(409, 'PAYMENT_NOT_RECONCILED', 'Payment is not reconciled')
+  }
+
+  const updated = await model.findOneAndUpdate(
+    { _id: record._id, siteId },
+    { $set: { reconciledAt: null, reconciliationRef: '' }, $inc: { revision: 1 } },
+    { returnDocument: 'after' },
+  ).lean<PaymentRecord>()
+
+  if (!updated) throw new PaymentServiceError(409, 'PAYMENT_RECONCILIATION_CONFLICT', 'Payment changed; retry')
+
+  await recordContentAudit(meta?.audit, {
+    siteId,
+    resourceType: RESOURCE,
+    resourceId: String(updated._id),
+    resourceKey: updated.code,
+    action: 'update',
+    revision: updated.revision,
+    fromStatus: 'posted',
+    toStatus: 'posted',
+    changedFields: ['reconciledAt', 'reconciliationRef'],
+  })
+
+  return toAdminPayment(updated)
 }
