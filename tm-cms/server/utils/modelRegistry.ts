@@ -25,6 +25,7 @@ import type { NotificationSubscriptionDocument } from '../models/notificationSub
 import type { MailTemplateDocument } from '../models/mailTemplate'
 import type { MailDeliveryDocument } from '../models/mailDelivery'
 import type { NewsletterSubscriptionDocument } from '../models/newsletterSubscription'
+import type { ContactMessageDocument } from '../models/contactMessage'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -54,6 +55,7 @@ import {
 import { mailTemplateModel, syncMailTemplateIndexes } from '../models/mailTemplate'
 import { mailDeliveryModel, syncMailDeliveryIndexes } from '../models/mailDelivery'
 import { newsletterSubscriptionModel, syncNewsletterSubscriptionIndexes } from '../models/newsletterSubscription'
+import { contactMessageModel, syncContactMessageIndexes } from '../models/contactMessage'
 import type { StaffProfileDocument } from '../models/staffProfile'
 import type { AttendanceDocument } from '../models/attendance'
 import type { SalaryConfigDocument } from '../models/salaryConfig'
@@ -106,6 +108,7 @@ export interface PreparedModels {
   MailTemplate: Model<MailTemplateDocument>
   MailDelivery: Model<MailDeliveryDocument>
   NewsletterSubscription: Model<NewsletterSubscriptionDocument>
+  ContactMessage: Model<ContactMessageDocument>
   StaffProfile: Model<StaffProfileDocument>
   Attendance: Model<AttendanceDocument>
   SalaryConfig: Model<SalaryConfigDocument>
@@ -147,6 +150,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncMailTemplateIndexes(connection)
   await syncMailDeliveryIndexes(connection)
   await syncNewsletterSubscriptionIndexes(connection)
+  await syncContactMessageIndexes(connection)
   await syncStaffProfileIndexes(connection)
   await syncAttendanceIndexes(connection)
   await syncSalaryConfigIndexes(connection)
@@ -187,6 +191,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     MailTemplate: mailTemplateModel(connection),
     MailDelivery: mailDeliveryModel(connection),
     NewsletterSubscription: newsletterSubscriptionModel(connection),
+    ContactMessage: contactMessageModel(connection),
     StaffProfile: staffProfileModel(connection),
     Attendance: attendanceModel(connection),
     SalaryConfig: salaryConfigModel(connection),

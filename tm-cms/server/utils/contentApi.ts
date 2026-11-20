@@ -27,6 +27,7 @@ import { StocktakeServiceError } from '#server/services/stocktakeService'
 import { MailAnalyticsError } from '#server/services/mailAnalyticsService'
 import { SupplierPriceError } from '#server/services/supplierPriceService'
 import { NewsletterServiceError } from '#server/services/newsletterService'
+import { ContactMessageServiceError } from '#server/services/contactMessageService'
 import { SupplierServiceError } from '#server/services/supplierService'
 import { PurchaseOrderServiceError } from '#server/services/purchaseOrderService'
 import { RedirectServiceError } from '#server/services/redirectService'
@@ -233,6 +234,9 @@ export function translateContentError(error: unknown): never {
     return errorResponse(error.statusCode, error.code, error.message)
   }
   if (error instanceof NewsletterServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof ContactMessageServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof SupplierServiceError) {
