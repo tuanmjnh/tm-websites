@@ -9,6 +9,8 @@ import {
   type PurchaseOrderItem,
   normalizePurchaseOrderInput,
 } from '../models/purchaseOrder'
+import type { SerialNumberDocument } from '../models/serialNumber'
+import { registerSerialNumbers, SerialNumberServiceError } from './serialNumberService'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 import { recordInventoryTransaction } from './inventoryTransactionService'
 
@@ -476,6 +478,12 @@ export interface PurchaseOrderReceiptLine {
   receivedQuantity: number
   rejectedQuantity?: number
   note?: string
+  /**
+   * Serial/IMEI numbers registered for the *delta* received on this line. When
+   * provided, the count must equal the received delta and each serial is
+   * registered as `in_stock` against this purchase order and warehouse.
+   */
+  serials?: string[]
 }
 
 function receiptKey(itemId: string | null, variantId: string | null): string {
@@ -497,7 +505,7 @@ export async function receivePurchaseOrder(
   siteId: string,
   id: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> },
 ): Promise<PurchaseOrderAdmin> {
   const body = (input ?? {}) as Record<string, unknown>
   const revision = Number(body.revision)
@@ -526,7 +534,7 @@ export async function receivePurchaseOrder(
     rejectedQuantity: item.rejectedQuantity ?? 0,
     note: item.note ?? '',
   }))
-  const movements: { item: PurchaseOrderItem; quantity: number }[] = []
+  const movements: { item: PurchaseOrderItem; quantity: number; serials?: string[] }[] = []
 
   for (const raw of lines) {
     const key = receiptKey(raw.itemId ?? null, raw.variantId ?? null)
@@ -557,7 +565,22 @@ export async function receivePurchaseOrder(
     entry.receivedQuantity = received
     entry.rejectedQuantity = rejected
     if (raw.note !== undefined) entry.note = String(raw.note).trim().slice(0, 500)
-    if (delta > 0) movements.push({ item: entry, quantity: delta })
+
+    let serials: string[] | undefined
+    if (raw.serials !== undefined) {
+      if (!Array.isArray(raw.serials)) {
+        throw new PurchaseOrderServiceError(422, 'PURCHASE_ORDER_RECEIPT_INVALID', 'Serials must be an array of strings', { key })
+      }
+      serials = raw.serials.map(value => String(value).trim()).filter(Boolean)
+    }
+    if (serials && serials.length > 0 && delta <= 0) {
+      throw new PurchaseOrderServiceError(409, 'PURCHASE_ORDER_RECEIPT_SERIAL_COUNT_MISMATCH', 'Serials can only be registered for a received delta', { key, delta, serials: serials.length })
+    }
+    if (serials && serials.length > 0 && serials.length !== delta) {
+      throw new PurchaseOrderServiceError(409, 'PURCHASE_ORDER_RECEIPT_SERIAL_COUNT_MISMATCH', 'The number of serials must equal the received delta', { key, delta, serials: serials.length })
+    }
+
+    if (delta > 0) movements.push({ item: entry, quantity: delta, serials })
   }
 
   const fullyHandled = nextItems.every(item => (item.receivedQuantity ?? 0) + (item.rejectedQuantity ?? 0) >= item.quantity)
@@ -569,6 +592,9 @@ export async function receivePurchaseOrder(
 
   // Stock first: an inventory write that fails must not leave the order claiming stock.
   for (const movement of movements) {
+    if (movement.serials && movement.serials.length > 0 && (!inventoryModel || !transactionModel)) {
+      throw new PurchaseOrderServiceError(422, 'PURCHASE_ORDER_RECEIPT_TARGET_MISSING', 'A received line needs the order warehouse and a catalog item before stock can move', { sku: movement.item.sku })
+    }
     if (!inventoryModel || !transactionModel) continue
     const { item } = movement
     if (!record.warehouseId || !item.itemId) {
@@ -587,7 +613,34 @@ export async function receivePurchaseOrder(
         referenceCode: record.code,
         reason: `Nhận hàng ${record.code}`,
       }, meta)
+
+      if (movement.serials && movement.serials.length > 0) {
+        const serialModel = meta?.serialNumberModel
+        if (!serialModel) {
+          throw new PurchaseOrderServiceError(422, 'PURCHASE_ORDER_RECEIPT_SERIAL_UNSUPPORTED', 'Serial registration is not available for this receipt')
+        }
+        try {
+          await registerSerialNumbers(serialModel, siteId, siteId, movement.serials.map(serial => ({
+            serial,
+            itemId: item.itemId as string,
+            variantId: item.variantId ?? null,
+            warehouseId: record.warehouseId,
+            purchaseOrderId: String(record._id),
+            note: `Nhận hàng ${record.code}`,
+          })), { audit: meta?.audit })
+        } catch (error) {
+          if (error instanceof SerialNumberServiceError) {
+            throw new PurchaseOrderServiceError(error.statusCode, 'PURCHASE_ORDER_RECEIPT_SERIAL_FAILED', 'Serial numbers could not be registered for a received line', {
+              sku: item.sku,
+              cause: error.code,
+              details: error.details,
+            })
+          }
+          throw error
+        }
+      }
     } catch (error) {
+      if (error instanceof PurchaseOrderServiceError) throw error
       throw new PurchaseOrderServiceError(422, 'PURCHASE_ORDER_RECEIPT_STOCK_FAILED', 'Stock could not be moved for a received line', {
         sku: item.sku,
         cause: (error as Error).message,

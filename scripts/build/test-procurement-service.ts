@@ -22,6 +22,7 @@ import { createWarehouse, listWarehouses } from '../../tm-cms/server/services/wa
 import { createInventory, getInventory } from '../../tm-cms/server/services/inventoryService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { getSerialNumber, listSerialNumbers } from '../../tm-cms/server/services/serialNumberService.js'
 
 let checks = 0
 let notRun = 0
@@ -66,7 +67,7 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Supplier, PurchaseOrder, Warehouse, Inventory, InventoryTransaction, Audit } = await prepareDatabase(connection)
+    const { Supplier, PurchaseOrder, Warehouse, Inventory, InventoryTransaction, Audit, SerialNumber } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR } }
 
     const firstSupplier = await createSupplier(Supplier, SITE, {
@@ -346,6 +347,59 @@ async function integration() {
           lines: [{ itemId: 'item-bulk', variantId: null, receivedQuantity: 5 }],
         }, meta),
         isPurchaseOrderError(409, 'PURCHASE_ORDER_LOCKED'),
+      )
+    })
+
+    // Serial registration from a receipt
+    await createWarehouse(Warehouse, SITE, { code: 'WH-SER', title: 'Kho serial', status: 'active' }, meta)
+    const serialWarehouse = (await listWarehouses(Warehouse, SITE)).data.find(w => w.code === 'WH-SER')!
+    const serialBalance = await createInventory(Inventory, Warehouse, SITE, {
+      itemId: 'item-serial',
+      variantId: null,
+      warehouseId: serialWarehouse.id,
+      sku: 'SER-01',
+      quantityOnHand: 0,
+    }, meta)
+
+    const serialPo = await createPurchaseOrder(PurchaseOrder, Supplier, SITE, {
+      code: 'PO-SER',
+      supplierId: firstSupplier.id,
+      warehouseId: serialWarehouse.id,
+      status: 'ordered',
+      items: [{ itemId: 'item-serial', variantId: null, itemName: 'Hàng serial', sku: 'SER-01', quantity: 2, unitCost: 100000 }],
+    }, meta)
+
+    const serialMeta = { audit: meta.audit, serialNumberModel: SerialNumber }
+
+    await check('a receipt registers serials against the purchase order', async () => {
+      const received = await receivePurchaseOrder(PurchaseOrder, Inventory, InventoryTransaction, SITE, serialPo.id, {
+        revision: serialPo.revision,
+        lines: [{ itemId: 'item-serial', variantId: null, receivedQuantity: 2, serials: ['SN-001', 'SN-002'] }],
+      }, serialMeta)
+      assert.equal(received.status, 'received')
+      const all = await listSerialNumbers(SerialNumber, SITE)
+      const registered = all.data.filter(s => s.purchaseOrderId === serialPo.id)
+      assert.equal(registered.length, 2)
+      assert.ok(registered.every(s => s.status === 'in_stock'))
+      const stock = await getInventory(Inventory, SITE, serialBalance.id)
+      assert.equal(stock.quantityOnHand, 2)
+    })
+
+    await check('a serial count mismatch is rejected', async () => {
+      // need a fresh PO
+      const po2 = await createPurchaseOrder(PurchaseOrder, Supplier, SITE, {
+        code: 'PO-SER2',
+        supplierId: firstSupplier.id,
+        warehouseId: serialWarehouse.id,
+        status: 'ordered',
+        items: [{ itemId: 'item-serial', variantId: null, itemName: 'Hàng serial', sku: 'SER-01', quantity: 2, unitCost: 100000 }],
+      }, meta)
+      await assert.rejects(
+        () => receivePurchaseOrder(PurchaseOrder, Inventory, InventoryTransaction, SITE, po2.id, {
+          revision: po2.revision,
+          lines: [{ itemId: 'item-serial', variantId: null, receivedQuantity: 2, serials: ['SN-001'] }],
+        }, serialMeta),
+        isPurchaseOrderError(409, 'PURCHASE_ORDER_RECEIPT_SERIAL_COUNT_MISMATCH'),
       )
     })
 
