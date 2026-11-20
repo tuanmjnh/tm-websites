@@ -608,6 +608,7 @@ export async function receivePurchaseOrder(
         type: 'import',
         quantityChange: movement.quantity,
         unitCost: item.unitCost ?? 0,
+        imeiCodes: movement.serials ?? [],
         referenceModel: 'PurchaseOrder',
         referenceId: String(record._id),
         referenceCode: record.code,

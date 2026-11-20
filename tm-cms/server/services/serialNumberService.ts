@@ -313,6 +313,92 @@ export async function moveSerialNumbers(
   return results
 }
 
+export async function syncSerialsForTransaction(
+  model: Model<SerialNumberDocument>,
+  siteId: string,
+  type: string,
+  serialStrings: string[],
+  context: { warehouseId: string; targetWarehouseId?: string; orderId?: string },
+  meta?: { audit?: ContentAuditMeta },
+): Promise<SerialNumberAdmin[]> {
+  const normalized = serialStrings.map(s => s.trim()).filter(Boolean)
+  if (normalized.length === 0) return []
+
+  const records = await model.find({ siteId, serial: { $in: normalized }, isDeleted: { $ne: true } }).lean<SerialRecord[]>()
+  if (records.length !== normalized.length) {
+    const found = new Set(records.map(r => r.serial))
+    const missing = normalized.filter(s => !found.has(s))
+    throw new SerialNumberServiceError(404, 'SERIAL_NUMBER_NOT_FOUND', 'Serial number not found', { missing })
+  }
+
+  const results: SerialNumberAdmin[] = []
+  for (const record of records) {
+    switch (type) {
+      case 'export':
+      case 'return_out': {
+        if (record.status !== 'in_stock') {
+          throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_NOT_IN_STOCK', `Serial ${record.serial} is not in stock`)
+        }
+        const sold = await markSerialSold(model, siteId, String(record._id), context.orderId ?? '', record.revision, meta)
+        results.push(sold)
+        break
+      }
+      case 'return_in': {
+        if (record.status !== 'sold') {
+          throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_NOT_SOLD', `Serial ${record.serial} is not sold`)
+        }
+        const returned = await markSerialReturned(model, siteId, String(record._id), record.revision, meta)
+        results.push(returned)
+        break
+      }
+      case 'transfer_out': {
+        if (record.status !== 'in_stock') {
+          throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_NOT_IN_STOCK', `Serial ${record.serial} is not in stock`)
+        }
+        if (!context.targetWarehouseId) {
+          throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_WAREHOUSE_REQUIRED', 'A target warehouse is required for transfer')
+        }
+        const moved = await moveSerialNumber(model, siteId, String(record._id), context.targetWarehouseId, record.revision, meta)
+        results.push(moved)
+        break
+      }
+      case 'adjustment_dec': {
+        if (record.status !== 'in_stock') {
+          throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_NOT_IN_STOCK', `Serial ${record.serial} is not in stock`)
+        }
+        const scrapped = await scrapSerialNumber(model, siteId, String(record._id), record.revision, meta)
+        results.push(scrapped)
+        break
+      }
+      default:
+        // For import, adjustment_inc, transfer_in, etc., just validate existence;
+        // serials should already be registered or will be registered separately.
+        results.push({
+          id: String(record._id),
+          siteId: record.siteId,
+          serial: record.serial,
+          itemId: record.itemId,
+          variantId: record.variantId,
+          warehouseId: record.warehouseId,
+          status: record.status,
+          purchaseOrderId: record.purchaseOrderId,
+          orderId: record.orderId,
+          note: record.note,
+          receivedAt: record.receivedAt,
+          soldAt: record.soldAt,
+          returnedAt: record.returnedAt,
+          scrappedAt: record.scrappedAt,
+          revision: record.revision,
+          isDeleted: record.isDeleted,
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+        })
+        break
+    }
+  }
+  return results
+}
+
 export async function softDeleteSerialNumber(
   model: Model<SerialNumberDocument>,
   siteId: string,

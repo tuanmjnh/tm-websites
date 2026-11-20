@@ -3,6 +3,8 @@ import type { Model } from 'mongoose'
 import type { InventoryDocument } from '../models/inventory'
 import { INVENTORY_REFERENCE_MODELS, INVENTORY_TRANSACTION_TYPES, type InventoryTransactionDocument, type InventoryTransactionType } from '../models/inventoryTransaction'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
+import { syncSerialsForTransaction, SerialNumberServiceError } from './serialNumberService'
+import type { SerialNumberDocument } from '../models/serialNumber'
 
 export class InventoryTransactionServiceError extends Error {
   statusCode: number
@@ -281,6 +283,29 @@ export async function recordInventoryTransaction(
   })
 
   const record = transaction.toObject() as InventoryTransactionRecord
+
+  // Serial/IMEI integration: when the transaction carries serials and a serial
+  // model is available, sync the serial status/warehouse with the movement.
+  const serialModel = (meta as { serialNumberModel?: unknown } | undefined)?.serialNumberModel
+  const imeiCodes = Array.isArray(source.imeiCodes) ? source.imeiCodes.map(String) : []
+  // Serial sync only applies to movement types where the serials already exist
+  // in the database (export, transfer, return, adjustment). For 'import', the
+  // caller registers the serials separately after the stock write.
+  const syncableTypes = new Set(['export', 'return_out', 'return_in', 'transfer_out', 'transfer_in', 'adjustment_dec'])
+  if (serialModel && imeiCodes.length > 0 && syncableTypes.has(type)) {
+    try {
+      await syncSerialsForTransaction(serialModel as Model<SerialNumberDocument>, siteId, type, imeiCodes, {
+        warehouseId: inventory.warehouseId,
+        targetWarehouseId: typeof source.targetWarehouseId === 'string' ? source.targetWarehouseId : undefined,
+        orderId: typeof source.orderId === 'string' ? source.orderId : undefined,
+      }, { audit: meta?.audit })
+    } catch (error) {
+      if (error instanceof SerialNumberServiceError) {
+        throw new InventoryTransactionServiceError(error.statusCode, `SERIAL_${error.code}`, error.message, error.details)
+      }
+      throw error
+    }
+  }
 
   await recordContentAudit(meta?.audit, {
     siteId,
