@@ -38,6 +38,7 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'serial_number',
   'notification',
   'notification_subscription',
+  'push_subscription',
   'mail_template',
   'mail_delivery',
   'staff_profile',

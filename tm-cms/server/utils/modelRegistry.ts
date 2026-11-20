@@ -29,6 +29,7 @@ import type { ContactMessageDocument } from '../models/contactMessage'
 import type { ShipmentDocument } from '../models/shipment'
 import type { OrderReturnDocument } from '../models/orderReturn'
 import type { SerialNumberDocument } from '../models/serialNumber'
+import type { PushSubscriptionDocument } from '../models/pushSubscription'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -62,6 +63,7 @@ import { contactMessageModel, syncContactMessageIndexes } from '../models/contac
 import { shipmentModel, syncShipmentIndexes } from '../models/shipment'
 import { orderReturnModel, syncOrderReturnIndexes } from '../models/orderReturn'
 import { serialNumberModel, syncSerialNumberIndexes } from '../models/serialNumber'
+import { pushSubscriptionModel, syncPushSubscriptionIndexes } from '../models/pushSubscription'
 import type { StaffProfileDocument } from '../models/staffProfile'
 import type { AttendanceDocument } from '../models/attendance'
 import type { SalaryConfigDocument } from '../models/salaryConfig'
@@ -118,6 +120,7 @@ export interface PreparedModels {
   Shipment: Model<ShipmentDocument>
   OrderReturn: Model<OrderReturnDocument>
   SerialNumber: Model<SerialNumberDocument>
+  PushSubscription: Model<PushSubscriptionDocument>
   StaffProfile: Model<StaffProfileDocument>
   Attendance: Model<AttendanceDocument>
   SalaryConfig: Model<SalaryConfigDocument>
@@ -163,6 +166,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncShipmentIndexes(connection)
   await syncOrderReturnIndexes(connection)
   await syncSerialNumberIndexes(connection)
+  await syncPushSubscriptionIndexes(connection)
   await syncStaffProfileIndexes(connection)
   await syncAttendanceIndexes(connection)
   await syncSalaryConfigIndexes(connection)
@@ -207,6 +211,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     Shipment: shipmentModel(connection),
     OrderReturn: orderReturnModel(connection),
     SerialNumber: serialNumberModel(connection),
+    PushSubscription: pushSubscriptionModel(connection),
     StaffProfile: staffProfileModel(connection),
     Attendance: attendanceModel(connection),
     SalaryConfig: salaryConfigModel(connection),
