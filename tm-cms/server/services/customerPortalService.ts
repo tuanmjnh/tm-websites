@@ -16,6 +16,17 @@ export class CustomerPortalServiceError extends Error {
   }
 }
 
+export interface PortalOrderSummary {
+  id: string
+  code: string
+  status: string
+  totalAmount: number
+}
+
+function toOrderSummary(row: OrderDocument & { _id: Types.ObjectId }): PortalOrderSummary {
+  return { id: String(row._id), code: row.code, status: row.status, totalAmount: row.totalAmount }
+}
+
 export interface PortalCustomer {
   id: string
   code: string
@@ -48,7 +59,7 @@ export async function listOrdersForSubject(
   siteId: string,
   subjectId: string,
   params: { cursor?: string, limit?: number } = {},
-): Promise<{ customerId: string, data: { id: string, code: string, status: string, totalAmount: number }[], nextCursor: string | null, hasMore: boolean }> {
+): Promise<{ customerId: string, data: PortalOrderSummary[], nextCursor: string | null, hasMore: boolean }> {
   const customer = await resolveCustomerBySubject(customerModel, siteId, subjectId)
   const limit = Math.min(Math.max(Math.trunc(params.limit ?? 20), 1), 100)
   const filter: Record<string, unknown> = { siteId, customerId: new Types.ObjectId(customer.id), isDeleted: { $ne: true } }
@@ -58,7 +69,7 @@ export async function listOrdersForSubject(
   const page = hasMore ? rows.slice(0, limit) : rows
   return {
     customerId: customer.id,
-    data: page.map(row => ({ id: String(row._id), code: row.code, status: row.status, totalAmount: row.totalAmount })),
+    data: page.map(toOrderSummary),
     nextCursor: hasMore ? String(page[page.length - 1]!._id) : null,
     hasMore,
   }
@@ -70,10 +81,10 @@ export async function getOrderForSubject(
   siteId: string,
   subjectId: string,
   orderId: string,
-): Promise<{ id: string, code: string, status: string, totalAmount: number }> {
+): Promise<PortalOrderSummary> {
   const customer = await resolveCustomerBySubject(customerModel, siteId, subjectId)
   if (!Types.ObjectId.isValid(orderId)) throw new CustomerPortalServiceError(422, 'PORTAL_ORDER_ID_INVALID', 'Order id is not valid')
   const row = await orderModel.findOne({ _id: new Types.ObjectId(orderId), siteId, customerId: new Types.ObjectId(customer.id) }).lean<OrderDocument & { _id: Types.ObjectId } | null>()
   if (!row) throw new CustomerPortalServiceError(404, 'PORTAL_ORDER_NOT_FOUND', 'Order not found for this account')
-  return { id: String(row._id), code: row.code, status: row.status, totalAmount: row.totalAmount }
+  return toOrderSummary(row)
 }

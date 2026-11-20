@@ -4,6 +4,7 @@ import {
   JobEnqueueSchema,
   type JobDocument,
   type JobEnqueueInput,
+  type JobStatus,
   JOB_STATUSES,
 } from '../models/job'
 
@@ -20,7 +21,7 @@ export class JobServiceError extends Error {
   }
 }
 
-type Record = JobDocument & { _id: Types.ObjectId }
+type StoredJob = JobDocument & { _id: Types.ObjectId }
 
 export interface JobAdmin {
   id: string
@@ -43,7 +44,7 @@ function iso(value: Date | null | undefined): string | null {
   return value ? new Date(value).toISOString() : null
 }
 
-function toAdmin(record: Record): JobAdmin {
+function toAdmin(record: StoredJob): JobAdmin {
   return {
     id: String(record._id),
     siteId: record.siteId,
@@ -66,7 +67,6 @@ function normalizeEnqueue(input: unknown): JobEnqueueInput {
   try {
     return JobEnqueueSchema.parse(input)
   } catch (error) {
-    if (error instanceof JobServiceError) throw error
     if (error instanceof Error && error.name === 'ZodError') {
       throw new JobServiceError(422, 'JOB_PAYLOAD_INVALID', 'Job payload is invalid')
     }
@@ -93,7 +93,7 @@ export async function enqueueJob(
     error: '',
     result: null,
   })
-  return toAdmin(created.toObject() as Record)
+  return toAdmin(created.toObject() as StoredJob)
 }
 
 export async function claimJob(
@@ -114,7 +114,7 @@ export async function claimJob(
     filter,
     { $set: { status: 'running', lockedAt: now, lockedBy: workerId }, $inc: { attempts: 1 } },
     { returnDocument: 'after', sort: { runAt: 1, createdAt: 1 } },
-  ).lean<Record | null>()
+  ).lean<StoredJob | null>()
 
   if (!updated) return null
   return toAdmin(updated)
@@ -136,7 +136,7 @@ export async function completeJob(
     filter,
     { $set: { status: 'done', result: result ?? null, lockedAt: null, lockedBy: null, error: '' } },
     { returnDocument: 'after' },
-  ).lean<Record | null>()
+  ).lean<StoredJob | null>()
   if (!updated) throw new JobServiceError(409, 'JOB_NOT_RUNNING', 'Job is not running or not owned by this worker')
   return toAdmin(updated)
 }
@@ -152,7 +152,7 @@ export async function failJob(
   if (!Types.ObjectId.isValid(id)) {
     throw new JobServiceError(422, 'JOB_ID_INVALID', 'Job id is not valid')
   }
-  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<Record | null>()
+  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<StoredJob | null>()
   if (!record) throw new JobServiceError(404, 'JOB_NOT_FOUND', 'Job not found')
 
   const willRetry = record.attempts < record.maxAttempts
@@ -164,7 +164,7 @@ export async function failJob(
     { _id: record._id, siteId, status: 'running', ...(workerId ? { lockedBy: workerId } : {}) },
     { $set: update },
     { returnDocument: 'after' },
-  ).lean<Record | null>()
+  ).lean<StoredJob | null>()
   if (!updated) throw new JobServiceError(409, 'JOB_NOT_RUNNING', 'Job is not running or not owned by this worker')
   return toAdmin(updated)
 }
@@ -177,7 +177,7 @@ export async function cancelJob(
   if (!Types.ObjectId.isValid(id)) {
     throw new JobServiceError(422, 'JOB_ID_INVALID', 'Job id is not valid')
   }
-  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<Record | null>()
+  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<StoredJob | null>()
   if (!record) throw new JobServiceError(404, 'JOB_NOT_FOUND', 'Job not found')
   if (record.status === 'done' || record.status === 'failed') {
     throw new JobServiceError(409, 'JOB_TERMINAL', 'Job is already finished')
@@ -186,7 +186,7 @@ export async function cancelJob(
     { _id: record._id, siteId },
     { $set: { status: 'cancelled', lockedAt: null, lockedBy: null } },
     { returnDocument: 'after' },
-  ).lean<Record | null>()
+  ).lean<StoredJob | null>()
   if (!updated) throw new JobServiceError(409, 'JOB_CANCEL_CONFLICT', 'Job changed; retry')
   return toAdmin(updated)
 }
@@ -201,7 +201,7 @@ export async function listJobs(
   if (params.status && JOB_STATUSES.includes(params.status as JobStatus)) filter.status = params.status
   if (params.type) filter.type = params.type
   if (params.cursor && Types.ObjectId.isValid(params.cursor)) filter._id = { $lt: new Types.ObjectId(params.cursor) }
-  const rows = await model.find(filter).sort({ _id: -1 }).limit(limit + 1).lean<Record[]>()
+  const rows = await model.find(filter).sort({ _id: -1 }).limit(limit + 1).lean<StoredJob[]>()
   const hasMore = rows.length > limit
   const page = hasMore ? rows.slice(0, limit) : rows
   return {

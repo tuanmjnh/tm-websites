@@ -279,21 +279,20 @@ interface AllocationInput {
   amount: number
 }
 
-function readAllocations(body: Record<string, unknown>, fallback: AllocationInput): AllocationInput[] {
-  const raw = body.allocations
-  if (!Array.isArray(raw) || raw.length === 0) return [fallback]
-  const parsed: AllocationInput[] = []
-  for (const entry of raw) {
+const MAX_ALLOCATIONS = 50
+
+function readAllocations(entries: unknown[]): AllocationInput[] {
+  if (entries.length > MAX_ALLOCATIONS) {
+    throw new PaymentServiceError(422, 'PAYMENT_TOO_MANY_ALLOCATIONS', `A payment may cover at most ${MAX_ALLOCATIONS} documents`)
+  }
+  return entries.map((entry) => {
     const record = readBody(entry)
-    const referenceModel = readEnum(record.referenceModel, PAYMENT_REFERENCES, 'PAYMENT_REFERENCE_MODEL_INVALID', 'Reference model')
-    const referenceId = String(record.referenceId ?? '')
-    const amount = readAmount(record.amount)
-    parsed.push({ referenceModel, referenceId, amount })
-  }
-  if (parsed.length > 50) {
-    throw new PaymentServiceError(422, 'PAYMENT_TOO_MANY_ALLOCATIONS', 'A payment may cover at most 50 documents')
-  }
-  return parsed
+    return {
+      referenceModel: readEnum(record.referenceModel, PAYMENT_REFERENCES, 'PAYMENT_REFERENCE_MODEL_INVALID', 'Reference model'),
+      referenceId: String(record.referenceId ?? ''),
+      amount: readAmount(record.amount),
+    }
+  })
 }
 
 export async function recordPayment(
@@ -309,34 +308,19 @@ export async function recordPayment(
     ? 'cash'
     : readEnum(body.method, PAYMENT_METHODS, 'PAYMENT_METHOD_INVALID', 'Payment method')
 
-  const primaryReferenceModel = (typeof body.referenceModel === 'string' && PAYMENT_REFERENCES.includes(body.referenceModel as PaymentReference))
-    ? (body.referenceModel as PaymentReference)
-    : null
-  const primaryReferenceId = String(body.referenceId ?? '')
-  const primaryAmount = body.amount === undefined ? 0 : Number(body.amount)
-
-  const fallback: AllocationInput = {
-    referenceModel: primaryReferenceModel ?? 'Order',
-    referenceId: primaryReferenceId,
-    amount: Number.isFinite(primaryAmount) && primaryAmount > 0 ? round(primaryAmount) : 0,
-  }
   // When allocations are supplied they carry their own amounts; the top-level
   // amount/referenceModel/referenceId are then optional and ignored.
-  const hasAllocations = Array.isArray(body.allocations) && (body.allocations as unknown[]).length > 0
-  if (!hasAllocations) {
-    if (!primaryReferenceModel) {
-      throw new PaymentServiceError(422, 'PAYMENT_REFERENCE_MODEL_INVALID', 'Reference model is not one of Order, PurchaseOrder')
-    }
-    if (!fallback.referenceId) {
-      throw new PaymentServiceError(422, 'PAYMENT_REFERENCE_ID_INVALID', 'Reference id is required')
-    }
-    if (fallback.amount <= 0) {
-      // fall back to readAmount for a clear error
-      readAmount(body.amount)
-    }
+  const rawAllocations = Array.isArray(body.allocations) ? body.allocations : []
+  const allocations = rawAllocations.length > 0
+    ? readAllocations(rawAllocations)
+    : [{
+        referenceModel: readEnum(body.referenceModel, PAYMENT_REFERENCES, 'PAYMENT_REFERENCE_MODEL_INVALID', 'Reference model'),
+        referenceId: String(body.referenceId ?? ''),
+        amount: readAmount(body.amount),
+      }]
+  if (!allocations[0]!.referenceId) {
+    throw new PaymentServiceError(422, 'PAYMENT_REFERENCE_ID_INVALID', 'Reference id is required')
   }
-
-  const allocations = readAllocations(body, fallback)
 
   // Every document in one payment must belong to the same direction, otherwise
   // a single payment would mix money in and money out.

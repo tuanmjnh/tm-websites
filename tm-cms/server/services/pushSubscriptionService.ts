@@ -1,11 +1,10 @@
 import type { Types, Model } from 'mongoose'
-import type {
-  PushSubscriptionDocument,
-  PushSubscriptionInput,
+import {
+  PushSubscriptionInputSchema,
+  type PushSubscriptionDocument,
+  type PushSubscriptionInput,
 } from '../models/pushSubscription'
-import { PushSubscriptionInputSchema } from '../models/pushSubscription'
-import type { ContentAuditMeta } from './contentAudit'
-import { recordContentAudit } from './contentAudit'
+import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 
 export class PushSubscriptionServiceError extends Error {
   statusCode: number
@@ -22,7 +21,7 @@ export class PushSubscriptionServiceError extends Error {
 
 const RESOURCE = 'push_subscription' as const
 
-type Record = PushSubscriptionDocument & { _id: Types.ObjectId }
+type StoredPushSubscription = PushSubscriptionDocument & { _id: Types.ObjectId }
 
 export interface PushSubscriptionAdmin {
   id: string
@@ -40,7 +39,7 @@ function iso(value: Date | null | undefined): string | null {
   return value ? new Date(value).toISOString() : null
 }
 
-function toAdmin(record: Record): PushSubscriptionAdmin {
+function toAdmin(record: StoredPushSubscription): PushSubscriptionAdmin {
   return {
     id: String(record._id),
     siteId: record.siteId,
@@ -58,7 +57,6 @@ function normalizeInput(input: unknown): PushSubscriptionInput {
   try {
     return PushSubscriptionInputSchema.parse(input)
   } catch (error) {
-    if (error instanceof PushSubscriptionServiceError) throw error
     if (error instanceof Error && error.name === 'ZodError') {
       throw new PushSubscriptionServiceError(422, 'PUSH_SUBSCRIPTION_PAYLOAD_INVALID', 'Push subscription payload is invalid')
     }
@@ -77,7 +75,7 @@ export async function subscribePushSubscription(
 
   const existing = await model
     .findOne({ siteId, endpoint: draft.endpoint })
-    .lean<Record | null>()
+    .lean<StoredPushSubscription | null>()
 
   if (existing && existing.recipientId !== recipientId) {
     throw new PushSubscriptionServiceError(409, 'PUSH_SUBSCRIPTION_OWNED_BY_OTHER', 'This endpoint is already registered to another recipient')
@@ -97,7 +95,7 @@ export async function subscribePushSubscription(
       },
       { upsert: true, returnDocument: 'after' },
     )
-    .lean<Record | null>()
+    .lean<StoredPushSubscription | null>()
 
   if (!updated) {
     throw new PushSubscriptionServiceError(500, 'PUSH_SUBSCRIPTION_STORE_FAILED', 'Could not store the push subscription')
@@ -132,7 +130,7 @@ export async function unsubscribePushSubscription(
 
   const existing = await model
     .findOne({ siteId, endpoint: trimmed, recipientId })
-    .lean<Record | null>()
+    .lean<StoredPushSubscription | null>()
 
   if (!existing) {
     return { removed: false }
@@ -163,6 +161,6 @@ export async function listPushSubscriptions(
   const rows = await model
     .find({ siteId, recipientId })
     .sort({ createdAt: -1 })
-    .lean<Record[]>()
+    .lean<StoredPushSubscription[]>()
   return rows.map(toAdmin)
 }

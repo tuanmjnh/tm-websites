@@ -4,6 +4,8 @@ import {
   TaskCreateSchema,
   type TaskDocument,
   type TaskCreateInput,
+  type TaskPriority,
+  type TaskStatus,
   TASK_STATUSES,
   TASK_PRIORITIES,
 } from '../models/task'
@@ -24,7 +26,7 @@ export class TaskServiceError extends Error {
 
 const RESOURCE = 'task' as const
 
-type Record = TaskDocument & { _id: Types.ObjectId }
+type StoredTask = TaskDocument & { _id: Types.ObjectId }
 
 export interface TaskAdmin {
   id: string
@@ -46,7 +48,7 @@ function iso(value: Date | null | undefined): string | null {
   return value ? new Date(value).toISOString() : null
 }
 
-function toAdmin(record: Record): TaskAdmin {
+function toAdmin(record: StoredTask): TaskAdmin {
   return {
     id: String(record._id),
     siteId: record.siteId,
@@ -68,7 +70,6 @@ function normalizeCreate(input: unknown): TaskCreateInput {
   try {
     return TaskCreateSchema.parse(input)
   } catch (error) {
-    if (error instanceof TaskServiceError) throw error
     if (error instanceof Error && error.name === 'ZodError') {
       throw new TaskServiceError(422, 'TASK_PAYLOAD_INVALID', 'Task payload is invalid')
     }
@@ -96,7 +97,7 @@ export async function createTask(
     deletedAt: null,
     revision: 1,
   })
-  const record = created.toObject() as Record
+  const record = created.toObject() as StoredTask
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: RESOURCE,
@@ -120,7 +121,7 @@ export async function getTask(
   if (!Types.ObjectId.isValid(id)) throw new TaskServiceError(422, 'TASK_ID_INVALID', 'Task id is not valid')
   const filter: Record<string, unknown> = { _id: new Types.ObjectId(id), siteId }
   if (!includeDeleted) filter.isDeleted = { $ne: true }
-  const record = await model.findOne(filter).lean<Record | null>()
+  const record = await model.findOne(filter).lean<StoredTask | null>()
   if (!record) throw new TaskServiceError(404, 'TASK_NOT_FOUND', 'Task not found')
   return toAdmin(record)
 }
@@ -136,7 +137,7 @@ export async function listTasks(
   if (params.assigneeId) filter.assigneeId = params.assigneeId
   if (params.status && TASK_STATUSES.includes(params.status as TaskStatus)) filter.status = params.status
   if (params.cursor && Types.ObjectId.isValid(params.cursor)) filter._id = { $lt: new Types.ObjectId(params.cursor) }
-  const rows = await model.find(filter).sort({ _id: -1 }).limit(limit + 1).lean<Record[]>()
+  const rows = await model.find(filter).sort({ _id: -1 }).limit(limit + 1).lean<StoredTask[]>()
   const hasMore = rows.length > limit
   const page = hasMore ? rows.slice(0, limit) : rows
   return { data: page.map(toAdmin), nextCursor: hasMore ? String(page[page.length - 1]!._id) : null, hasMore }
@@ -155,7 +156,7 @@ export async function updateTask(
   if (!Number.isInteger(revision) || revision < 1) {
     throw new TaskServiceError(422, 'TASK_REVISION_REQUIRED', 'An integer revision is required')
   }
-  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId, isDeleted: { $ne: true } }).lean<Record | null>()
+  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId, isDeleted: { $ne: true } }).lean<StoredTask | null>()
   if (!record) throw new TaskServiceError(404, 'TASK_NOT_FOUND', 'Task not found')
   if (record.revision !== revision) {
     throw new TaskServiceError(409, 'TASK_REVISION_CONFLICT', 'Task was changed by someone else; reload before saving')
@@ -185,7 +186,7 @@ export async function updateTask(
     { _id: record._id, siteId, revision },
     { $set: patch, $inc: { revision: 1 } },
     { returnDocument: 'after' },
-  ).lean<Record | null>()
+  ).lean<StoredTask | null>()
   if (!updated) throw new TaskServiceError(409, 'TASK_REVISION_CONFLICT', 'Task was changed by someone else; reload before saving')
 
   await recordContentAudit(meta?.audit, {
@@ -210,14 +211,14 @@ export async function softDeleteTask(
   meta?: { audit?: ContentAuditMeta },
 ): Promise<TaskAdmin> {
   if (!Types.ObjectId.isValid(id)) throw new TaskServiceError(422, 'TASK_ID_INVALID', 'Task id is not valid')
-  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<Record | null>()
+  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<StoredTask | null>()
   if (!record) throw new TaskServiceError(404, 'TASK_NOT_FOUND', 'Task not found')
   if (record.revision !== revision) throw new TaskServiceError(409, 'TASK_REVISION_CONFLICT', 'Task was changed by someone else; reload before saving')
   const updated = await model.findOneAndUpdate(
     { _id: record._id, siteId, revision },
     { $set: { isDeleted: true, deletedAt: new Date() }, $inc: { revision: 1 } },
     { returnDocument: 'after' },
-  ).lean<Record | null>()
+  ).lean<StoredTask | null>()
   if (!updated) throw new TaskServiceError(409, 'TASK_REVISION_CONFLICT', 'Task was changed by someone else; reload before saving')
   await recordContentAudit(meta?.audit, {
     siteId,
@@ -241,14 +242,14 @@ export async function restoreTask(
   meta?: { audit?: ContentAuditMeta },
 ): Promise<TaskAdmin> {
   if (!Types.ObjectId.isValid(id)) throw new TaskServiceError(422, 'TASK_ID_INVALID', 'Task id is not valid')
-  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<Record | null>()
+  const record = await model.findOne({ _id: new Types.ObjectId(id), siteId }).lean<StoredTask | null>()
   if (!record) throw new TaskServiceError(404, 'TASK_NOT_FOUND', 'Task not found')
   if (record.revision !== revision) throw new TaskServiceError(409, 'TASK_REVISION_CONFLICT', 'Task was changed by someone else; reload before saving')
   const updated = await model.findOneAndUpdate(
     { _id: record._id, siteId, revision },
     { $set: { isDeleted: false, deletedAt: null }, $inc: { revision: 1 } },
     { returnDocument: 'after' },
-  ).lean<Record | null>()
+  ).lean<StoredTask | null>()
   if (!updated) throw new TaskServiceError(409, 'TASK_REVISION_CONFLICT', 'Task was changed by someone else; reload before saving')
   await recordContentAudit(meta?.audit, {
     siteId,
