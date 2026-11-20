@@ -16,6 +16,8 @@ export const ShipmentItemSchema = z.object({
   itemName: z.string().trim().min(1).max(300),
   sku: z.string().trim().max(120).default(''),
   quantity: z.number().int().min(1).max(999999),
+  /** Optional IMEI/serial numbers shipped with this line. */
+  serials: z.array(z.string().trim().min(1).max(120)).max(1000).default([]),
 })
 
 export type ShipmentItem = z.infer<typeof ShipmentItemSchema>
