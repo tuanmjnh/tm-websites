@@ -46,6 +46,7 @@
     "test:hr": "tsx scripts/build/test-hr-service.ts",
     "test:finance-reports": "tsx scripts/build/test-finance-reports.ts",
     "test:mail-analytics": "tsx scripts/build/test-mail-analytics.ts",
+    "test:supplier-prices": "tsx scripts/build/test-supplier-prices.ts",
     "test:hr-shifts": "tsx scripts/build/test-hr-shifts.ts",
     "test:stocktake": "tsx scripts/build/test-stocktake-service.ts",
     "test:catalog": "tsx scripts/build/test-catalog-service.ts",

@@ -25,6 +25,7 @@ import { HrServiceError } from '#server/services/staffService'
 import { FinanceReportError } from '#server/services/financeReportService'
 import { StocktakeServiceError } from '#server/services/stocktakeService'
 import { MailAnalyticsError } from '#server/services/mailAnalyticsService'
+import { SupplierPriceError } from '#server/services/supplierPriceService'
 import { SupplierServiceError } from '#server/services/supplierService'
 import { PurchaseOrderServiceError } from '#server/services/purchaseOrderService'
 import { RedirectServiceError } from '#server/services/redirectService'
@@ -225,6 +226,9 @@ export function translateContentError(error: unknown): never {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof MailAnalyticsError) {
+    return errorResponse(error.statusCode, error.code, error.message)
+  }
+  if (error instanceof SupplierPriceError) {
     return errorResponse(error.statusCode, error.code, error.message)
   }
   if (error instanceof SupplierServiceError) {
