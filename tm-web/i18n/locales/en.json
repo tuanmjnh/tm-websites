@@ -309,6 +309,21 @@
     "address": "Address",
     "social": "Social",
     "emptyTitle": "No contact details yet",
-    "emptyHint": "An administrator can add an email, phone number and address in the website settings."
+    "emptyHint": "An administrator can add an email, phone number and address in the website settings.",
+    "form": {
+      "title": "Send the store a message",
+      "name": "Full name",
+      "email": "Email",
+      "phone": "Phone (optional)",
+      "subject": "Subject (optional)",
+      "message": "Message",
+      "submit": "Send message",
+      "sending": "Sending…",
+      "invalidField": "This value is not valid.",
+      "failed": "The message could not be sent. Please try again.",
+      "sentTitle": "Your message was received",
+      "sentHint": "The store will reply through the email or phone number you left.",
+      "sendAnother": "Send another message"
+    }
   }
 }

@@ -309,6 +309,21 @@
     "address": "Địa chỉ",
     "social": "Mạng xã hội",
     "emptyTitle": "Chưa có thông tin liên hệ",
-    "emptyHint": "Quản trị viên có thể thêm email, số điện thoại và địa chỉ trong phần cài đặt của website."
+    "emptyHint": "Quản trị viên có thể thêm email, số điện thoại và địa chỉ trong phần cài đặt của website.",
+    "form": {
+      "title": "Gửi tin nhắn cho cửa hàng",
+      "name": "Họ và tên",
+      "email": "Email",
+      "phone": "Số điện thoại (không bắt buộc)",
+      "subject": "Chủ đề (không bắt buộc)",
+      "message": "Nội dung",
+      "submit": "Gửi tin nhắn",
+      "sending": "Đang gửi…",
+      "invalidField": "Thông tin này chưa hợp lệ.",
+      "failed": "Chưa gửi được tin nhắn. Vui lòng thử lại.",
+      "sentTitle": "Đã nhận tin nhắn của bạn",
+      "sentHint": "Cửa hàng sẽ phản hồi qua email hoặc số điện thoại bạn đã để lại.",
+      "sendAnother": "Gửi tin nhắn khác"
+    }
   }
 }
