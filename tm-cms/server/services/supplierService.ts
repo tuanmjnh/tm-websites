@@ -362,3 +362,129 @@ export async function restoreSupplier(
 
   return toAdminSupplier(restored)
 }
+
+export interface SupplierImportRowResult {
+  row: number
+  code: string | null
+  status: 'created' | 'updated' | 'failed'
+  id: string | null
+  codeError: string | null
+  message: string | null
+}
+
+export interface SupplierImportResult {
+  total: number
+  created: number
+  updated: number
+  failed: number
+  results: SupplierImportRowResult[]
+}
+
+const IMPORT_MAX_ROWS = 500
+
+export async function importSuppliers(
+  model: Model<SupplierDocument>,
+  siteId: string,
+  rows: unknown[],
+  meta?: { audit?: ContentAuditMeta },
+): Promise<SupplierImportResult> {
+  if (!Array.isArray(rows)) {
+    throw new SupplierServiceError(422, 'SUPPLIER_IMPORT_INVALID', 'Import rows must be an array')
+  }
+  if (rows.length === 0) {
+    throw new SupplierServiceError(422, 'SUPPLIER_IMPORT_EMPTY', 'Import requires at least one row')
+  }
+  if (rows.length > IMPORT_MAX_ROWS) {
+    throw new SupplierServiceError(422, 'SUPPLIER_IMPORT_TOO_LARGE', `Import is limited to ${IMPORT_MAX_ROWS} rows`, { limit: IMPORT_MAX_ROWS })
+  }
+
+  const results: SupplierImportRowResult[] = []
+  let created = 0
+  let updated = 0
+  let failed = 0
+
+  for (const [index, row] of rows.entries()) {
+    const rowNumber = index + 1
+    let code: string | null = null
+    try {
+      let draft
+      try {
+        draft = normalizeSupplierInput({ ...(row as Record<string, unknown>), siteId })
+      } catch (error) {
+        translateInvariant(error)
+        throw error
+      }
+      code = draft.code
+
+      const existing = await model.findOne({ siteId, code: draft.code }).lean<SupplierRecord>()
+
+      if (existing) {
+        const updatedRecord = await model.findOneAndUpdate(
+          { _id: existing._id, siteId },
+          {
+            $set: {
+              title: draft.title,
+              email: draft.email,
+              phone: draft.phone,
+              status: draft.status,
+              rating: draft.rating,
+              itemsSupplied: draft.itemsSupplied,
+              avatar: draft.avatar,
+              note: draft.note,
+            },
+            $inc: { revision: 1 },
+          },
+          { returnDocument: 'after' },
+        ).lean<SupplierRecord>()
+
+        if (!updatedRecord) throw new SupplierServiceError(409, 'SUPPLIER_IMPORT_CONFLICT', 'Supplier changed during import')
+
+        await recordContentAudit(meta?.audit, {
+          siteId,
+          resourceType: RESOURCE,
+          resourceId: String(updatedRecord._id),
+          resourceKey: updatedRecord.code,
+          action: 'update',
+          revision: updatedRecord.revision,
+          fromStatus: existing.status,
+          toStatus: updatedRecord.status,
+          changedFields: ['title', 'status', 'email', 'phone'],
+        })
+
+        results.push({ row: rowNumber, code, status: 'updated', id: String(updatedRecord._id), codeError: null, message: null })
+        updated += 1
+      } else {
+        const createdRecord = await model.create({ ...draft, siteId, revision: 1 })
+        const record = createdRecord.toObject() as SupplierRecord
+
+        await recordContentAudit(meta?.audit, {
+          siteId,
+          resourceType: RESOURCE,
+          resourceId: String(record._id),
+          resourceKey: record.code,
+          action: 'create',
+          revision: record.revision,
+          fromStatus: null,
+          toStatus: record.status,
+          changedFields: ['code', 'title', 'status', 'email', 'phone'],
+        })
+
+        results.push({ row: rowNumber, code, status: 'created', id: String(record._id), codeError: null, message: null })
+        created += 1
+      }
+    } catch (error) {
+      failed += 1
+      const serviceError = error instanceof SupplierServiceError ? error : null
+      results.push({
+        row: rowNumber,
+        code,
+        status: 'failed',
+        id: null,
+        codeError: serviceError?.code ?? 'SUPPLIER_IMPORT_FAILED',
+        message: serviceError?.message ?? 'Import failed',
+      })
+    }
+  }
+
+  return { total: rows.length, created, updated, failed, results }
+}

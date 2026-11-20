@@ -502,3 +502,142 @@ export async function countCustomersInSegment(
     customerSegmentId: new Types.ObjectId(segmentId),
   })
 }
+
+export interface CustomerImportRowResult {
+  row: number
+  code: string | null
+  status: 'created' | 'updated' | 'failed'
+  id: string | null
+  codeError: string | null
+  message: string | null
+}
+
+export interface CustomerImportResult {
+  total: number
+  created: number
+  updated: number
+  failed: number
+  results: CustomerImportRowResult[]
+}
+
+const IMPORT_MAX_ROWS = 500
+
+export async function importCustomers(
+  model: Model<CustomerDocument>,
+  segmentModel: Model<CustomerSegmentDocument>,
+  siteId: string,
+  rows: unknown[],
+  meta?: { audit?: ContentAuditMeta },
+): Promise<CustomerImportResult> {
+  if (!Array.isArray(rows)) {
+    throw new CustomerServiceError(422, 'CUSTOMER_IMPORT_INVALID', 'Import rows must be an array')
+  }
+  if (rows.length === 0) {
+    throw new CustomerServiceError(422, 'CUSTOMER_IMPORT_EMPTY', 'Import requires at least one row')
+  }
+  if (rows.length > IMPORT_MAX_ROWS) {
+    throw new CustomerServiceError(422, 'CUSTOMER_IMPORT_TOO_LARGE', `Import is limited to ${IMPORT_MAX_ROWS} rows`, { limit: IMPORT_MAX_ROWS })
+  }
+
+  const results: CustomerImportRowResult[] = []
+  let created = 0
+  let updated = 0
+  let failed = 0
+
+  for (const [index, row] of rows.entries()) {
+    const rowNumber = index + 1
+    let code: string | null = null
+    try {
+      let draft
+      try {
+        draft = normalizeCustomerInput({ ...(row as Record<string, unknown>), siteId })
+      } catch (error) {
+        translateInvariant(error)
+        throw error
+      }
+      code = draft.code || null
+
+      await assertSegmentAllowed(segmentModel, siteId, draft.customerSegmentId)
+
+      const existing = code ? await model.findOne({ siteId, code: draft.code }).lean<CustomerRecord>() : null
+
+      if (existing) {
+        if (draft.subjectId !== existing.subjectId) {
+          throw new CustomerServiceError(422, 'CUSTOMER_SUBJECT_IMMUTABLE', 'A customer cannot be relinked to another Hub subject')
+        }
+
+        const updatedRecord = await model.findOneAndUpdate(
+          { _id: existing._id, siteId },
+          {
+            $set: {
+              code: draft.code,
+              email: draft.email,
+              fullName: draft.fullName,
+              phone: draft.phone,
+              addresses: draft.addresses,
+              customerSegmentId: draft.customerSegmentId ? new Types.ObjectId(draft.customerSegmentId) : null,
+              loyaltyPoints: draft.loyaltyPoints,
+              note: draft.note,
+              isActive: draft.isActive,
+            },
+            $inc: { revision: 1 },
+          },
+          { returnDocument: 'after' },
+        ).lean<CustomerRecord>()
+
+        if (!updatedRecord) throw new CustomerServiceError(409, 'CUSTOMER_IMPORT_CONFLICT', 'Customer changed during import')
+
+        await recordContentAudit(meta?.audit, {
+          siteId,
+          resourceType: RESOURCE,
+          resourceId: String(updatedRecord._id),
+          resourceKey: updatedRecord.code,
+          action: 'update',
+          revision: updatedRecord.revision,
+          fromStatus: null,
+          toStatus: null,
+          changedFields: ['email', 'fullName', 'phone', 'addresses', 'customerSegmentId'],
+        })
+
+        results.push({ row: rowNumber, code: updatedRecord.code, status: 'updated', id: String(updatedRecord._id), codeError: null, message: null })
+        updated += 1
+      } else {
+        const createdRecord = await model.create({
+          ...draft,
+          siteId,
+          customerSegmentId: draft.customerSegmentId ? new Types.ObjectId(draft.customerSegmentId) : null,
+          revision: 1,
+        })
+        const record = createdRecord.toObject() as CustomerRecord
+
+        await recordContentAudit(meta?.audit, {
+          siteId,
+          resourceType: RESOURCE,
+          resourceId: String(record._id),
+          resourceKey: record.code,
+          action: 'create',
+          revision: record.revision,
+          fromStatus: null,
+          toStatus: null,
+          changedFields: ['code', 'subjectId', 'email', 'fullName', 'phone', 'addresses', 'customerSegmentId'],
+        })
+
+        results.push({ row: rowNumber, code: record.code, status: 'created', id: String(record._id), codeError: null, message: null })
+        created += 1
+      }
+    } catch (error) {
+      failed += 1
+      const serviceError = error instanceof CustomerServiceError ? error : null
+      results.push({
+        row: rowNumber,
+        code,
+        status: 'failed',
+        id: null,
+        codeError: serviceError?.code ?? 'CUSTOMER_IMPORT_FAILED',
+        message: serviceError?.message ?? 'Import failed',
+      })
+    }
+  }
+
+  return { total: rows.length, created, updated, failed, results }
+}

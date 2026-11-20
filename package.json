@@ -54,6 +54,8 @@
     "test:serial-numbers": "tsx scripts/build/test-serial-numbers.ts",
     "test:hr-self-service": "tsx scripts/build/test-hr-self-service.ts",
     "test:catalog-import": "tsx scripts/build/test-catalog-import.ts",
+    "test:supplier-import": "tsx scripts/build/test-supplier-import.ts",
+    "test:customer-import": "tsx scripts/build/test-customer-import.ts",
     "test:hr-shifts": "tsx scripts/build/test-hr-shifts.ts",
     "test:stocktake": "tsx scripts/build/test-stocktake-service.ts",
     "test:catalog": "tsx scripts/build/test-catalog-service.ts",
