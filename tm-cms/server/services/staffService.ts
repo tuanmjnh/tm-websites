@@ -289,6 +289,17 @@ export async function listStaff(
   }
 }
 
+export async function getStaffBySubject(
+  model: Model<StaffProfileDocument>,
+  siteId: string,
+  subjectId: string,
+): Promise<StaffAdmin | null> {
+  const record = await model
+    .findOne({ siteId, subjectId, isDeleted: { $ne: true } })
+    .lean<StaffRecord | null>()
+  return record ? toAdminStaff(record) : null
+}
+
 export async function getStaff(
   model: Model<StaffProfileDocument>,
   siteId: string,
