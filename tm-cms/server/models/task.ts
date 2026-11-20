@@ -25,7 +25,7 @@ export const TaskCreateSchema = z.object({
   description: z.string().trim().max(4000).default(''),
   assigneeId: z.string().regex(RECIPIENT_PATTERN),
   priority: z.enum(TASK_PRIORITIES).default('medium'),
-  dueAt: z.date().nullable().default(null),
+  dueAt: z.union([z.null(), z.coerce.date()]).default(null),
 })
 
 export type TaskCreateInput = z.infer<typeof TaskCreateSchema>

@@ -20,7 +20,7 @@ const TYPE_PATTERN = /^[a-z][a-z0-9_.-]{0,63}$/
 export const JobEnqueueSchema = z.object({
   type: z.string().regex(TYPE_PATTERN),
   payload: z.record(z.string(), z.unknown()).default({}),
-  runAt: z.date().optional(),
+  runAt: z.coerce.date().optional(),
   maxAttempts: z.number().int().min(1).max(10).default(3),
 })
 

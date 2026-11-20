@@ -128,7 +128,7 @@ export interface PreparedModels {
   SerialNumber: Model<SerialNumberDocument>
   PushSubscription: Model<PushSubscriptionDocument>
   Job: Model<JobDocument>
-    Task: Model<TaskDocument>
+  Task: Model<TaskDocument>
   Payable: Model<PayableDocument>
   StaffProfile: Model<StaffProfileDocument>
   Attendance: Model<AttendanceDocument>
@@ -177,7 +177,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncSerialNumberIndexes(connection)
   await syncPushSubscriptionIndexes(connection)
   await syncJobIndexes(connection)
-    await syncTaskIndexes(connection)
+  await syncTaskIndexes(connection)
   await syncPayableIndexes(connection)
   await syncStaffProfileIndexes(connection)
   await syncAttendanceIndexes(connection)
@@ -225,7 +225,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     SerialNumber: serialNumberModel(connection),
     PushSubscription: pushSubscriptionModel(connection),
     Job: jobModel(connection),
-        Task: taskModel(connection),
+    Task: taskModel(connection),
     Payable: payableModel(connection),
     StaffProfile: staffProfileModel(connection),
     Attendance: attendanceModel(connection),

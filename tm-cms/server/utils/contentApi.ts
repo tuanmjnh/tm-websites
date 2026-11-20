@@ -34,6 +34,11 @@ import { SerialNumberServiceError } from '#server/services/serialNumberService'
 import { SupplierServiceError } from '#server/services/supplierService'
 import { PurchaseOrderServiceError } from '#server/services/purchaseOrderService'
 import { RedirectServiceError } from '#server/services/redirectService'
+import { TaskServiceError } from '#server/services/taskService'
+import { JobServiceError } from '#server/services/jobService'
+import { PayableServiceError } from '#server/services/payableService'
+import { PushSubscriptionServiceError } from '#server/services/pushSubscriptionService'
+import { CustomerPortalServiceError } from '#server/services/customerPortalService'
 import { MediaStorageError } from './mediaStorage'
 import { AdminTagRenameRequestSchema } from '@tm/flow-contracts/tag-admin'
 import { ATTRIBUTE_KEY_PATTERN, ATTRIBUTE_VALUE_MAX_LENGTH } from '#server/models/content'
@@ -262,6 +267,21 @@ export function translateContentError(error: unknown): never {
   }
   if (error instanceof MediaStorageError) {
     return errorResponse(error.statusCode, error.code, error.message)
+  }
+  if (error instanceof TaskServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof JobServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof PayableServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof PushSubscriptionServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof CustomerPortalServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof IdempotencyError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
