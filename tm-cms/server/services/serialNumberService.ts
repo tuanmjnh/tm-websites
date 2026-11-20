@@ -225,6 +225,43 @@ export async function markSerialReturned(
   return toAdmin(updated)
 }
 
+export async function revertSerialSale(
+  model: Model<SerialNumberDocument>,
+  siteId: string,
+  id: string,
+  revision: number,
+  meta?: { audit?: ContentAuditMeta },
+): Promise<SerialNumberAdmin> {
+  const record = await model.findOne({ _id: objectId(id, 'SERIAL_NUMBER_ID_INVALID'), siteId }).lean<SerialRecord>()
+  if (!record) throw new SerialNumberServiceError(404, 'SERIAL_NUMBER_NOT_FOUND', 'Serial number not found')
+  if (record.revision !== revision) throw new SerialNumberServiceError(409, 'SERIAL_NUMBER_REVISION_CONFLICT', 'Revision mismatch')
+  if (record.isDeleted) throw new SerialNumberServiceError(409, 'SERIAL_NUMBER_DELETED', 'Serial number is deleted')
+  if (record.status !== 'sold') {
+    // Already reverted or never sold: nothing to do, but report current state.
+    return toAdmin(record)
+  }
+
+  const updated = await model.findOneAndUpdate(
+    { _id: record._id, siteId, revision },
+    { $set: { status: 'in_stock', orderId: null, soldAt: null }, $inc: { revision: 1 } },
+    { returnDocument: 'after' },
+  ).lean<SerialRecord>()
+  if (!updated) throw new SerialNumberServiceError(409, 'SERIAL_NUMBER_REVISION_CONFLICT', 'Serial number changed; retry')
+
+  await recordContentAudit(meta?.audit, {
+    siteId,
+    resourceType: RESOURCE,
+    resourceId: String(updated._id),
+    resourceKey: updated.serial,
+    action: 'update',
+    revision: updated.revision,
+    fromStatus: record.status,
+    toStatus: updated.status,
+    changedFields: ['status', 'orderId'],
+  })
+  return toAdmin(updated)
+}
+
 export async function scrapSerialNumber(
   model: Model<SerialNumberDocument>,
   siteId: string,

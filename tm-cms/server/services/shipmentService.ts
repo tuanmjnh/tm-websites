@@ -13,6 +13,7 @@ import {
 } from '../models/shipment'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 import { recordInventoryTransaction } from './inventoryTransactionService'
+import { revertSerialSale } from './serialNumberService'
 
 export class ShipmentServiceError extends Error {
   statusCode: number
@@ -147,28 +148,34 @@ async function recordShipmentStockMovement(
       .findOne({ siteId: params.siteId, itemId: line.itemId, variantId: line.variantId ?? null, warehouseId: params.warehouseId, isDeleted: { $ne: true } })
       .lean<InventoryDocument & { _id: Types.ObjectId }>()
     if (!balance) continue
-    try {
-      await recordInventoryTransaction(
-        params.inventoryModel,
-        params.transactionModel,
-        params.siteId,
-        {
-          inventoryId: String(balance._id),
-          type,
-          quantityChange: sign * line.quantity,
-          unitCost: 0,
-          imeiCodes: line.serials ?? [],
-          orderId: params.orderId,
-          referenceId: params.shipmentId,
-          referenceCode: params.shipmentCode,
-          referenceModel: 'Shipment',
-          reason: `Shipment ${params.shipmentCode} (${params.direction}) for order ${params.orderCode}`,
-        },
-        { audit: params.audit, serialNumberModel: params.serialNumberModel ?? undefined },
-      )
-    } catch {
-      // Best-effort: a failed movement for one line must not abort the shipment
-      // state change; the ledger can be reconciled manually.
+    await recordInventoryTransaction(
+      params.inventoryModel,
+      params.transactionModel,
+      params.siteId,
+      {
+        inventoryId: String(balance._id),
+        type,
+        quantityChange: sign * line.quantity,
+        unitCost: 0,
+        imeiCodes: line.serials ?? [],
+        orderId: params.orderId,
+        referenceId: params.shipmentId,
+        referenceCode: params.shipmentCode,
+        referenceModel: 'Shipment',
+        reason: `Shipment ${params.shipmentCode} (${params.direction}) for order ${params.orderCode}`,
+      },
+      { audit: params.audit, serialNumberModel: params.serialNumberModel ?? undefined },
+    )
+    // On a reversal (cancel/delete), revert any serials that were marked sold
+    // when the shipment shipped, so they return to in_stock.
+    if (params.direction === 'import' && params.serialNumberModel && (line.serials?.length ?? 0) > 0) {
+      for (const serialStr of line.serials ?? []) {
+        const serialRecord = await params.serialNumberModel
+          .findOne({ siteId: params.siteId, serial: serialStr, isDeleted: { $ne: true } })
+          .lean<{ _id: Types.ObjectId; revision: number }>()
+        if (!serialRecord) continue
+        await revertSerialSale(params.serialNumberModel, params.siteId, String(serialRecord._id), serialRecord.revision, { audit: params.audit })
+      }
     }
   }
 }

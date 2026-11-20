@@ -91,6 +91,9 @@ async function run() {
       const txs = await InventoryTransaction.find({ siteId: SITE, referenceModel: 'Shipment' }).lean()
       assert.equal(txs.length, 2)
       assert.ok(txs.some(t => t.type === 'import'))
+
+      const serial = await SerialNumber.findOne({ siteId: SITE, serial: 'SHIP-S1' }).lean()
+      assert.equal(serial?.status, 'in_stock')
     })
 
     // Fresh balance/serial for return + delete paths
@@ -153,6 +156,9 @@ async function run() {
 
       const invAfter = await Inventory.findOne({ siteId: SITE, itemId: 'item-tee', warehouseId: 'wh-1' }).lean()
       assert.equal(invAfter?.quantityOnHand, 10)
+
+      const serial = await SerialNumber.findOne({ siteId: SITE, serial: 'SHIP-S3' }).lean()
+      assert.equal(serial?.status, 'in_stock')
     })
 
     await check('shipment without tracked balance still succeeds (best-effort)', async () => {
