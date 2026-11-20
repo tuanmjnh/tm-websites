@@ -132,6 +132,7 @@ async function recordShipmentStockMovement(
     warehouseId: string
     shipmentId: string
     shipmentCode: string
+    orderId: string
     orderCode: string
     direction: 'export' | 'import' | 'return_in'
     items: ShipmentDocument['items']
@@ -157,6 +158,7 @@ async function recordShipmentStockMovement(
           quantityChange: sign * line.quantity,
           unitCost: 0,
           imeiCodes: line.serials ?? [],
+          orderId: params.orderId,
           referenceId: params.shipmentId,
           referenceCode: params.shipmentCode,
           referenceModel: 'Shipment',
@@ -253,6 +255,7 @@ export async function createShipment(
       warehouseId: order.warehouseId,
       shipmentId: String(record._id),
       shipmentCode: record.code,
+      orderId: String(order._id),
       orderCode: order.code,
       direction: 'export',
       items: draft.items,
@@ -339,6 +342,7 @@ export async function updateShipment(
           warehouseId: order.warehouseId,
           shipmentId: String(updated._id),
           shipmentCode: updated.code,
+          orderId: String(order._id),
           orderCode: order.code,
           direction: 'export',
           items: updated.items,
@@ -353,6 +357,7 @@ export async function updateShipment(
           warehouseId: order.warehouseId,
           shipmentId: String(updated._id),
           shipmentCode: updated.code,
+          orderId: String(order._id),
           orderCode: order.code,
           direction: updated.status === 'returned' ? 'return_in' : 'import',
           items: updated.items,
@@ -418,6 +423,7 @@ export async function softDeleteShipment(
         warehouseId: order.warehouseId,
         shipmentId: String(record._id),
         shipmentCode: record.code,
+        orderId: String(order._id),
         orderCode: order.code,
         direction: 'import',
         items: record.items,

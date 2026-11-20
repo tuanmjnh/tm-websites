@@ -36,6 +36,7 @@ const DOMAIN_GATES = [
   'test:newsletter',
   'test:contact-messages',
   'test:shipments',
+  'test:shipment-movements',
   'test:order-returns',
   'test:serial-numbers',
   'test:serial-sync',
