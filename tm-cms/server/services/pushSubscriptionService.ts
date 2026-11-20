@@ -166,13 +166,3 @@ export async function listPushSubscriptions(
     .lean<Record[]>()
   return rows.map(toAdmin)
 }
-
-export async function countPushSubscriptions(
-  model: Model<PushSubscriptionDocument>,
-  siteId: string,
-  recipientId?: string,
-): Promise<number> {
-  const filter: Record<string, unknown> = { siteId }
-  if (recipientId) filter.recipientId = recipientId
-  return model.countDocuments(filter)
-}
