@@ -30,6 +30,7 @@ import type { ShipmentDocument } from '../models/shipment'
 import type { OrderReturnDocument } from '../models/orderReturn'
 import type { SerialNumberDocument } from '../models/serialNumber'
 import type { PushSubscriptionDocument } from '../models/pushSubscription'
+import type { JobDocument } from '../models/job'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -64,6 +65,7 @@ import { shipmentModel, syncShipmentIndexes } from '../models/shipment'
 import { orderReturnModel, syncOrderReturnIndexes } from '../models/orderReturn'
 import { serialNumberModel, syncSerialNumberIndexes } from '../models/serialNumber'
 import { pushSubscriptionModel, syncPushSubscriptionIndexes } from '../models/pushSubscription'
+import { jobModel, syncJobIndexes } from '../models/job'
 import type { StaffProfileDocument } from '../models/staffProfile'
 import type { AttendanceDocument } from '../models/attendance'
 import type { SalaryConfigDocument } from '../models/salaryConfig'
@@ -121,6 +123,7 @@ export interface PreparedModels {
   OrderReturn: Model<OrderReturnDocument>
   SerialNumber: Model<SerialNumberDocument>
   PushSubscription: Model<PushSubscriptionDocument>
+  Job: Model<JobDocument>
   StaffProfile: Model<StaffProfileDocument>
   Attendance: Model<AttendanceDocument>
   SalaryConfig: Model<SalaryConfigDocument>
@@ -167,6 +170,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncOrderReturnIndexes(connection)
   await syncSerialNumberIndexes(connection)
   await syncPushSubscriptionIndexes(connection)
+  await syncJobIndexes(connection)
   await syncStaffProfileIndexes(connection)
   await syncAttendanceIndexes(connection)
   await syncSalaryConfigIndexes(connection)
@@ -212,6 +216,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     OrderReturn: orderReturnModel(connection),
     SerialNumber: serialNumberModel(connection),
     PushSubscription: pushSubscriptionModel(connection),
+    Job: jobModel(connection),
     StaffProfile: staffProfileModel(connection),
     Attendance: attendanceModel(connection),
     SalaryConfig: salaryConfigModel(connection),
