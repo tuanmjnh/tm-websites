@@ -135,10 +135,17 @@ const changeQuantity = (key: string, value: unknown) => {
           <dt class="text-sm text-muted">{{ t('cart.subtotal') }}</dt>
           <dd class="text-lg font-bold text-highlighted">{{ formatCatalogPrice(subtotal, currency, locale) }}</dd>
         </dl>
-        <p class="max-w-sm text-right text-xs text-muted">{{ t('cart.checkoutSoon') }}</p>
+        <p class="max-w-sm text-right text-xs text-muted">{{ t('cart.checkoutHint') }}</p>
         <div class="flex flex-wrap justify-end gap-2">
           <UButton to="/products" color="neutral" variant="soft" size="md" :label="t('cart.continueShopping')" />
-          <UButton to="/tim-kiem" color="primary" variant="ghost" size="md" :label="t('nav.search')" />
+          <UButton
+            to="/thanh-toan"
+            color="primary"
+            size="md"
+            icon="i-lucide-credit-card"
+            :disabled="!rows.some(row => row.available)"
+            :label="t('cart.checkout')"
+          />
         </div>
       </div>
     </template>
