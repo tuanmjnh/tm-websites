@@ -18,6 +18,8 @@ export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPES)[numb
 export const INVENTORY_REFERENCE_MODELS = [
   'PurchaseOrder',
   'Order',
+  'Shipment',
+  'OrderReturn',
   'InventoryTransfer',
   'Stocktake',
   'InventoryAdjustment',

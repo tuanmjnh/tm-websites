@@ -14,6 +14,7 @@ const ShipmentItemBodySchema = z.object({
   itemName: z.string().trim().min(1).max(300),
   sku: z.string().trim().max(120).optional(),
   quantity: z.coerce.number().int().min(1).max(999999),
+  serials: z.array(z.string().trim().min(1).max(120)).max(1000).optional(),
 })
 
 const ShipmentCreateBodySchema = z.object({
@@ -38,10 +39,11 @@ export default defineEventHandler(async (event) => {
   const input = parseInput(ShipmentCreateBodySchema, body, 'SHIPMENT_PAYLOAD_INVALID', 'Dữ liệu vận đơn không hợp lệ')
 
   try {
-    const result = await withPreparedDb(event, ({ Shipment, Order, Audit }) =>
+    const result = await withPreparedDb(event, ({ Shipment, Order, Audit, Inventory, InventoryTransaction, SerialNumber }) =>
       createShipment(Shipment, Order, siteId, input, {
         audit: auditMetaOf(event, user, Audit),
-      }))
+        serialNumberModel: SerialNumber,
+      }, Inventory, InventoryTransaction))
 
     setHeader(event, 'cache-control', 'no-store')
     return successResponse({ data: result, message: 'Đã tạo vận đơn' })

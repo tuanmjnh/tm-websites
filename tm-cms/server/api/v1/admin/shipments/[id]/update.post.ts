@@ -28,10 +28,11 @@ export default defineEventHandler(async (event) => {
   const input = parseInput(ShipmentUpdateBodySchema, body, 'SHIPMENT_UPDATE_INVALID', 'Dữ liệu cập nhật không hợp lệ')
 
   try {
-    const result = await withPreparedDb(event, ({ Shipment, Audit }) =>
+    const result = await withPreparedDb(event, ({ Shipment, Audit, Order, Inventory, InventoryTransaction, SerialNumber }) =>
       updateShipment(Shipment, siteId, id, input, {
         audit: auditMetaOf(event, user, Audit),
-      }))
+        serialNumberModel: SerialNumber,
+      }, Inventory, InventoryTransaction, Order))
 
     setHeader(event, 'cache-control', 'no-store')
     return successResponse({ data: result, message: 'Đã cập nhật vận đơn' })

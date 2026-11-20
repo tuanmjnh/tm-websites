@@ -1,6 +1,9 @@
 import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
 import type { OrderDocument } from '../models/order'
+import type { InventoryDocument } from '../models/inventory'
+import type { InventoryTransactionDocument } from '../models/inventoryTransaction'
+import type { SerialNumberDocument } from '../models/serialNumber'
 import {
   ShipmentInvariantError,
   type ShipmentStatus,
@@ -9,6 +12,7 @@ import {
   SHIPMENT_STATUSES,
 } from '../models/shipment'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
+import { recordInventoryTransaction } from './inventoryTransactionService'
 
 export class ShipmentServiceError extends Error {
   statusCode: number
@@ -108,12 +112,73 @@ export async function listShipments(
   return { data, nextCursor, hasMore, counts: { ...counts, deleted } }
 }
 
+function isShippedStatus(status: string): boolean {
+  return status === 'shipped' || status === 'in_transit' || status === 'delivered'
+}
+
+/**
+ * Best-effort stock movement for a shipped shipment: decrement (export) the
+ * inventory balance for each line from the order's warehouse, and record an
+ * `export` transaction against the shipment. Reversed with `import` when the
+ * shipment is cancelled/deleted. Skips silently when there is no warehouse or
+ * no matching balance, so a shipment without tracked stock still succeeds.
+ */
+async function recordShipmentStockMovement(
+  params: {
+    inventoryModel: Model<InventoryDocument>
+    transactionModel: Model<InventoryTransactionDocument>
+    serialNumberModel?: Model<SerialNumberDocument> | null
+    siteId: string
+    warehouseId: string
+    shipmentId: string
+    shipmentCode: string
+    orderCode: string
+    direction: 'export' | 'import' | 'return_in'
+    items: ShipmentDocument['items']
+    audit?: ContentAuditMeta
+  },
+): Promise<void> {
+  const type = params.direction === 'export' ? 'export' : params.direction === 'return_in' ? 'return_in' : 'import'
+  const sign = params.direction === 'export' ? -1 : 1
+  for (const line of params.items) {
+    if (!line.itemId) continue
+    const balance = await params.inventoryModel
+      .findOne({ siteId: params.siteId, itemId: line.itemId, variantId: line.variantId ?? null, warehouseId: params.warehouseId, isDeleted: { $ne: true } })
+      .lean<InventoryDocument & { _id: Types.ObjectId }>()
+    if (!balance) continue
+    try {
+      await recordInventoryTransaction(
+        params.inventoryModel,
+        params.transactionModel,
+        params.siteId,
+        {
+          inventoryId: String(balance._id),
+          type,
+          quantityChange: sign * line.quantity,
+          unitCost: 0,
+          imeiCodes: line.serials ?? [],
+          referenceId: params.shipmentId,
+          referenceCode: params.shipmentCode,
+          referenceModel: 'Shipment',
+          reason: `Shipment ${params.shipmentCode} (${params.direction}) for order ${params.orderCode}`,
+        },
+        { audit: params.audit, serialNumberModel: params.serialNumberModel ?? undefined },
+      )
+    } catch {
+      // Best-effort: a failed movement for one line must not abort the shipment
+      // state change; the ledger can be reconciled manually.
+    }
+  }
+}
+
 export async function createShipment(
   shipmentModel: Model<ShipmentDocument>,
   orderModel: Model<OrderDocument>,
   siteId: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null },
+  inventoryModel?: Model<InventoryDocument> | null,
+  transactionModel?: Model<InventoryTransactionDocument> | null,
 ): Promise<ShipmentAdmin> {
   let draft
   try {
@@ -178,6 +243,23 @@ export async function createShipment(
   }
   if (draft.status === 'delivered') record.deliveredAt = record.deliveredAt ?? new Date()
 
+  // Order-driven stock movement: a shipped shipment decrements inventory.
+  if (inventoryModel && transactionModel && order.warehouseId && isShippedStatus(draft.status)) {
+    await recordShipmentStockMovement({
+      inventoryModel,
+      transactionModel,
+      serialNumberModel: meta?.serialNumberModel ?? null,
+      siteId,
+      warehouseId: order.warehouseId,
+      shipmentId: String(record._id),
+      shipmentCode: record.code,
+      orderCode: order.code,
+      direction: 'export',
+      items: draft.items,
+      audit: meta?.audit,
+    })
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: RESOURCE,
@@ -199,7 +281,10 @@ export async function updateShipment(
   siteId: string,
   id: string,
   input: { status?: string, carrier?: string, trackingNumber?: string, note?: string, revision: number },
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null },
+  inventoryModel?: Model<InventoryDocument> | null,
+  transactionModel?: Model<InventoryTransactionDocument> | null,
+  orderModel?: Model<OrderDocument> | null,
 ): Promise<ShipmentAdmin> {
   if (!Number.isInteger(input.revision) || input.revision < 1) {
     throw new ShipmentServiceError(422, 'SHIPMENT_REVISION_REQUIRED', 'Revision is required')
@@ -239,6 +324,44 @@ export async function updateShipment(
   ).lean<ShipmentRecord>()
   if (!updated) throw new ShipmentServiceError(409, 'SHIPMENT_REVISION_CONFLICT', 'Shipment changed; retry')
 
+  // Order-driven stock movement on status transition.
+  if (inventoryModel && transactionModel && orderModel && record.status !== updated.status) {
+    const wasShipped = isShippedStatus(record.status)
+    const isNowShipped = isShippedStatus(updated.status)
+    const order = await orderModel.findOne({ _id: Types.ObjectId.isValid(updated.orderId) ? new Types.ObjectId(updated.orderId) : null, siteId }).lean<OrderDocument & { _id: Types.ObjectId }>()
+    if (order?.warehouseId) {
+      if (!wasShipped && isNowShipped) {
+        await recordShipmentStockMovement({
+          inventoryModel,
+          transactionModel,
+          serialNumberModel: meta?.serialNumberModel ?? null,
+          siteId,
+          warehouseId: order.warehouseId,
+          shipmentId: String(updated._id),
+          shipmentCode: updated.code,
+          orderCode: order.code,
+          direction: 'export',
+          items: updated.items,
+          audit: meta?.audit,
+        })
+      } else if (wasShipped && !isNowShipped && (updated.status === 'cancelled' || updated.status === 'returned')) {
+        await recordShipmentStockMovement({
+          inventoryModel,
+          transactionModel,
+          serialNumberModel: meta?.serialNumberModel ?? null,
+          siteId,
+          warehouseId: order.warehouseId,
+          shipmentId: String(updated._id),
+          shipmentCode: updated.code,
+          orderCode: order.code,
+          direction: updated.status === 'returned' ? 'return_in' : 'import',
+          items: updated.items,
+          audit: meta?.audit,
+        })
+      }
+    }
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: RESOURCE,
@@ -269,7 +392,10 @@ export async function softDeleteShipment(
   siteId: string,
   id: string,
   revision: number,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null },
+  inventoryModel?: Model<InventoryDocument> | null,
+  transactionModel?: Model<InventoryTransactionDocument> | null,
+  orderModel?: Model<OrderDocument> | null,
 ): Promise<ShipmentAdmin> {
   const record = await model.findOne({ _id: objectId(id, 'SHIPMENT_ID_INVALID'), siteId }).lean<ShipmentRecord>()
   if (!record) throw new ShipmentServiceError(404, 'SHIPMENT_NOT_FOUND', 'Shipment not found')
@@ -280,6 +406,26 @@ export async function softDeleteShipment(
     { returnDocument: 'after' },
   ).lean<ShipmentRecord>()
   if (!updated) throw new ShipmentServiceError(409, 'SHIPMENT_REVISION_CONFLICT', 'Shipment changed; retry')
+
+  if (inventoryModel && transactionModel && orderModel && isShippedStatus(record.status)) {
+    const order = await orderModel.findOne({ _id: Types.ObjectId.isValid(record.orderId) ? new Types.ObjectId(record.orderId) : null, siteId }).lean<OrderDocument & { _id: Types.ObjectId }>()
+    if (order?.warehouseId) {
+      await recordShipmentStockMovement({
+        inventoryModel,
+        transactionModel,
+        serialNumberModel: meta?.serialNumberModel ?? null,
+        siteId,
+        warehouseId: order.warehouseId,
+        shipmentId: String(record._id),
+        shipmentCode: record.code,
+        orderCode: order.code,
+        direction: 'import',
+        items: record.items,
+        audit: meta?.audit,
+      })
+    }
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: RESOURCE,
