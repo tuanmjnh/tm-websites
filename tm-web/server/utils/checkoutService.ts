@@ -33,7 +33,7 @@ export class CheckoutError extends Error {
   }
 }
 
-interface CheckoutOrderRecord {
+export interface CheckoutOrderRecord {
   _id: unknown
   code: string
   status: string
@@ -47,7 +47,7 @@ function round(value: number): number {
   return Math.round(value * 100) / 100
 }
 
-function resolveSiteId(event: H3Event): string {
+export function resolveSiteId(event: H3Event): string {
   const config = useRuntimeConfig(event)
   const siteId = String(config.siteId || config.public.siteId || '').trim()
   if (!SITE_ID_PATTERN.test(siteId)) {
@@ -62,7 +62,7 @@ function readRecord(value: unknown): Record<string, unknown> {
     : {}
 }
 
-function toOrder(order: CheckoutOrderRecord): PublicCheckoutOrder {
+export function toOrder(order: CheckoutOrderRecord): PublicCheckoutOrder {
   const items = Array.isArray(order.items) ? order.items : []
   return {
     code: order.code,

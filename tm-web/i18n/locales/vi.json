@@ -163,7 +163,46 @@
     "orderCode": "Mã đơn hàng",
     "orderTotal": "Tổng tiền",
     "orderItems": "Sản phẩm",
-    "continueShopping": "Tiếp tục mua sắm"
+    "continueShopping": "Tiếp tục mua sắm",
+    "lookupOrder": "Tra cứu đơn hàng"
+  },
+  "lookup": {
+    "title": "Tra cứu đơn hàng",
+    "subtitle": "Nhập mã đơn hàng và số điện thoại bạn đã dùng khi đặt hàng.",
+    "code": "Mã đơn hàng",
+    "phone": "Số điện thoại đặt hàng",
+    "submit": "Tra cứu",
+    "searching": "Đang tra cứu…",
+    "invalidField": "Thông tin này chưa hợp lệ.",
+    "notFound": "Không tìm thấy đơn hàng khớp mã và số điện thoại này. Vui lòng kiểm tra lại mã đơn trong tin nhắn xác nhận.",
+    "failed": "Chưa tra cứu được đơn hàng. Vui lòng thử lại.",
+    "placedAt": "Đặt ngày {date}",
+    "items": "Sản phẩm",
+    "total": "Tổng tiền",
+    "paymentMethodLabel": "Hình thức thanh toán",
+    "paymentStatusLabel": "Thanh toán",
+    "newSearch": "Tra cứu đơn khác",
+    "browse": "Xem sản phẩm",
+    "status": {
+      "pending": "Chờ xác nhận",
+      "processing": "Đang xử lý",
+      "shipped": "Đang giao",
+      "completed": "Đã giao",
+      "cancelled": "Đã huỷ"
+    },
+    "paymentMethod": {
+      "cash": "Tiền mặt",
+      "banking": "Chuyển khoản",
+      "cod": "Thanh toán khi nhận hàng",
+      "card": "Thẻ",
+      "other": "Khác"
+    },
+    "paymentStatus": {
+      "unpaid": "Chưa thanh toán",
+      "partial": "Thanh toán một phần",
+      "paid": "Đã thanh toán",
+      "refunded": "Đã hoàn tiền"
+    }
   },
   "category": {
     "indexTitle": "Danh mục",

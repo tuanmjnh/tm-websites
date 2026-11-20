@@ -163,7 +163,46 @@
     "orderCode": "Order code",
     "orderTotal": "Total",
     "orderItems": "Items",
-    "continueShopping": "Continue shopping"
+    "continueShopping": "Continue shopping",
+    "lookupOrder": "Track your order"
+  },
+  "lookup": {
+    "title": "Order lookup",
+    "subtitle": "Enter the order code and the phone number you gave when ordering.",
+    "code": "Order code",
+    "phone": "Phone number on the order",
+    "submit": "Look up",
+    "searching": "Looking up…",
+    "invalidField": "This value is not valid.",
+    "notFound": "No order matches that code and phone number. Check the code in your confirmation message.",
+    "failed": "The lookup could not be completed. Please try again.",
+    "placedAt": "Placed on {date}",
+    "items": "Items",
+    "total": "Total",
+    "paymentMethodLabel": "Payment method",
+    "paymentStatusLabel": "Payment",
+    "newSearch": "Look up another order",
+    "browse": "Browse products",
+    "status": {
+      "pending": "Awaiting confirmation",
+      "processing": "Being prepared",
+      "shipped": "On the way",
+      "completed": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "paymentMethod": {
+      "cash": "Cash",
+      "banking": "Bank transfer",
+      "cod": "Cash on delivery",
+      "card": "Card",
+      "other": "Other"
+    },
+    "paymentStatus": {
+      "unpaid": "Unpaid",
+      "partial": "Partially paid",
+      "paid": "Paid",
+      "refunded": "Refunded"
+    }
   },
   "category": {
     "indexTitle": "Categories",

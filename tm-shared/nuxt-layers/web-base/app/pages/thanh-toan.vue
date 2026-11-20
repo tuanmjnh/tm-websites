@@ -239,7 +239,10 @@ const submit = async () => {
           </dd>
         </div>
       </dl>
-      <UButton to="/products" color="primary" size="md" class="mt-6" :label="t('checkout.continueShopping')" />
+      <div class="mt-6 flex flex-wrap gap-2">
+        <UButton to="/products" color="primary" size="md" :label="t('checkout.continueShopping')" />
+        <UButton to="/tra-cuu-don" color="neutral" variant="soft" size="md" :label="t('checkout.lookupOrder')" />
+      </div>
     </section>
 
     <section v-else-if="isEmpty" class="mt-10 rounded-[6px] border border-default/60 bg-elevated/20 px-6 py-12 text-center">
