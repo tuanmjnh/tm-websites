@@ -213,7 +213,7 @@ export async function recordInventoryTransaction(
   transactionModel: Model<InventoryTransactionDocument>,
   siteId: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> },
 ): Promise<InventoryTransactionAdmin> {
   const source = (input ?? {}) as Record<string, unknown>
   const type = normalizeType(source.type)

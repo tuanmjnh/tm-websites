@@ -9,6 +9,7 @@ import {
 import type { WarehouseDocument } from '../models/warehouse'
 import type { InventoryDocument } from '../models/inventory'
 import type { InventoryTransactionDocument } from '../models/inventoryTransaction'
+import type { SerialNumberDocument } from '../models/serialNumber'
 import { createInventory } from './inventoryService'
 import { recordInventoryTransaction } from './inventoryTransactionService'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
@@ -111,6 +112,7 @@ export function toAdminInventoryTransfer(record: InventoryTransferRecord): Inven
       itemName: line.itemName ?? '',
       quantity: line.quantity,
       receivedQuantity: line.receivedQuantity ?? 0,
+      serials: Array.isArray(line.serials) ? line.serials : [],
     })),
     note: record.note ?? '',
     shippedAt: iso(record.shippedAt),
@@ -281,6 +283,7 @@ export async function createInventoryTransfer(
 async function moveLine(
   inventoryModel: Model<InventoryDocument>,
   transactionModel: Model<InventoryTransactionDocument>,
+  serialNumberModel: Model<SerialNumberDocument> | null,
   siteId: string,
   transfer: InventoryTransferRecord,
   line: InventoryTransferLine,
@@ -293,13 +296,15 @@ async function moveLine(
     variantId: line.variantId ?? null,
     warehouseId: String(warehouseId),
     type,
+    targetWarehouseId: type === 'transfer_out' ? String(transfer.toWarehouseId) : undefined,
     quantityChange: quantity,
     unitCost: 0,
+    imeiCodes: Array.isArray(line.serials) ? line.serials : [],
     referenceModel: 'InventoryTransfer',
     referenceId: String(transfer._id),
     referenceCode: transfer.code,
     reason: `${type === 'transfer_out' ? 'Xuất chuyển kho' : 'Nhập chuyển kho'} ${transfer.code}`,
-  })
+  }, serialNumberModel ? { serialNumberModel } : undefined)
 }
 
 /**
@@ -342,7 +347,7 @@ export async function shipInventoryTransfer(
   siteId: string,
   id: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> },
 ): Promise<InventoryTransferAdmin> {
   const body = (input ?? {}) as Record<string, unknown>
   const revision = Number(body.revision)
@@ -362,13 +367,13 @@ export async function shipInventoryTransfer(
   const moved: InventoryTransferLine[] = []
   try {
     for (const line of record.lines ?? []) {
-      await moveLine(inventoryModel, transactionModel, siteId, record, line, record.fromWarehouseId, -line.quantity, 'transfer_out')
+      await moveLine(inventoryModel, transactionModel, meta?.serialNumberModel ?? null, siteId, record, line, record.fromWarehouseId, -line.quantity, 'transfer_out')
       moved.push(line)
     }
   } catch (error) {
     // Put back what already left, so a refused line cannot strand stock in transit.
     for (const line of moved) {
-      await moveLine(inventoryModel, transactionModel, siteId, record, line, record.fromWarehouseId, line.quantity, 'return_in')
+      await moveLine(inventoryModel, transactionModel, meta?.serialNumberModel ?? null, siteId, record, line, record.fromWarehouseId, line.quantity, 'return_in')
         .catch(() => undefined)
     }
     throw new InventoryTransferServiceError(422, 'INVENTORY_TRANSFER_STOCK_FAILED', 'The source warehouse could not release every line', {
@@ -411,7 +416,7 @@ export async function receiveInventoryTransfer(
   siteId: string,
   id: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> },
 ): Promise<InventoryTransferAdmin> {
   const body = (input ?? {}) as Record<string, unknown>
   const revision = Number(body.revision)
@@ -463,7 +468,7 @@ export async function receiveInventoryTransfer(
 
   for (const entry of received) {
     await ensureBalance(inventoryModel, warehouseModel, siteId, entry.line, record.toWarehouseId)
-    await moveLine(inventoryModel, transactionModel, siteId, record, entry.line, record.toWarehouseId, entry.delta, 'transfer_in')
+    await moveLine(inventoryModel, transactionModel, meta?.serialNumberModel ?? null, siteId, record, entry.line, record.toWarehouseId, entry.delta, 'transfer_in')
   }
 
   const complete = lines.every(line => line.receivedQuantity >= line.quantity)
@@ -508,7 +513,7 @@ export async function cancelInventoryTransfer(
   siteId: string,
   id: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> },
 ): Promise<InventoryTransferAdmin> {
   const body = (input ?? {}) as Record<string, unknown>
   const revision = Number(body.revision)
@@ -533,7 +538,7 @@ export async function cancelInventoryTransfer(
     for (const line of record.lines ?? []) {
       const remaining = line.quantity - (line.receivedQuantity ?? 0)
       if (remaining <= 0) continue
-      await moveLine(inventoryModel, transactionModel, siteId, record, line, record.fromWarehouseId, remaining, 'return_in')
+      await moveLine(inventoryModel, transactionModel, meta?.serialNumberModel ?? null, siteId, record, line, record.fromWarehouseId, remaining, 'return_in')
     }
   }
 

@@ -37,7 +37,10 @@ export const InventoryTransferLineSchema = z.object({
   quantity: z.number().int().min(1).max(999999),
   /** Cumulative: a second partial receipt reports the new total, not a delta. */
   receivedQuantity: z.number().int().min(0).default(0),
+  /** Optional IMEI/serial numbers moved with this line. */
+  serials: z.array(z.string().trim().min(1).max(120)).max(1000).default([]),
 })
+
 
 export type InventoryTransferLine = z.infer<typeof InventoryTransferLineSchema>
 
