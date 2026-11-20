@@ -1039,3 +1039,159 @@ export async function bulkUpdateCatalogItemsByFilter(
     meta,
   )
 }
+
+export interface CatalogImportRowResult {
+  row: number
+  key: string | null
+  status: 'created' | 'updated' | 'failed'
+  id: string | null
+  code: string | null
+  message: string | null
+}
+
+export interface CatalogImportResult {
+  total: number
+  created: number
+  updated: number
+  failed: number
+  results: CatalogImportRowResult[]
+}
+
+const IMPORT_MAX_ROWS = 500
+
+/**
+ * Bulk import for catalog items. Each row is validated independently, so one
+ * bad row does not abort the rest; rows that match an existing key update that
+ * record instead of duplicating it. The import is bounded and audited per row.
+ */
+export async function importCatalogItems(
+  model: Model<CatalogItemDocument>,
+  categoryModel: Model<CatalogCategoryDocument>,
+  siteId: string,
+  rows: unknown[],
+  meta?: CatalogWriteMeta,
+): Promise<CatalogImportResult> {
+  if (!Array.isArray(rows)) {
+    throw new CatalogServiceError(422, 'CATALOG_IMPORT_INVALID', 'Import rows must be an array')
+  }
+  if (rows.length === 0) {
+    throw new CatalogServiceError(422, 'CATALOG_IMPORT_EMPTY', 'Import requires at least one row')
+  }
+  if (rows.length > IMPORT_MAX_ROWS) {
+    throw new CatalogServiceError(422, 'CATALOG_IMPORT_TOO_LARGE', `Import is limited to ${IMPORT_MAX_ROWS} rows`, { limit: IMPORT_MAX_ROWS })
+  }
+
+  const results: CatalogImportRowResult[] = []
+  let created = 0
+  let updated = 0
+  let failed = 0
+
+  for (const [index, row] of rows.entries()) {
+    const rowNumber = index + 1
+    let key: string | null = null
+    try {
+      let draft
+      try {
+        draft = normalizeCatalogItemInput(row)
+      } catch (error) {
+        translateInvariant(error)
+        throw error
+      }
+      key = draft.key
+
+      const categories = await resolveCategoryIds(categoryModel, siteId, draft.categories)
+      const existing = await model.findOne({ siteId, key: draft.key }).lean<CatalogItemRecord>()
+
+      if (existing) {
+        const updatedRecord = await model.findOneAndUpdate(
+          { _id: existing._id, siteId },
+          {
+            $set: {
+              type: draft.type,
+              title: draft.title,
+              slug: draft.slug,
+              shortDesc: draft.shortDesc,
+              description: draft.description,
+              thumbnail: draft.thumbnail,
+              gallery: draft.gallery,
+              basePrice: draft.basePrice,
+              salePrice: draft.salePrice,
+              sku: draft.sku,
+              barcode: draft.barcode,
+              uom: draft.uom,
+              stock: draft.stock,
+              manageStock: draft.manageStock,
+              categories,
+              tags: draft.tags,
+              attributes: draft.attributes,
+              variants: draft.variants,
+              seo: draft.seo,
+              searchString: buildSearchString(draft),
+            },
+            $inc: { revision: 1 },
+          },
+          { returnDocument: 'after' },
+        ).lean<CatalogItemRecord>()
+
+        if (!updatedRecord) throw new CatalogServiceError(409, 'CATALOG_IMPORT_CONFLICT', 'Catalog item changed during import')
+
+        await recordContentAudit(meta?.audit, {
+          siteId,
+          resourceType: 'catalog_item',
+          resourceId: String(updatedRecord._id),
+          resourceKey: updatedRecord.key,
+          action: 'update',
+          revision: updatedRecord.revision,
+          fromStatus: existing.status,
+          toStatus: updatedRecord.status,
+          changedFields: ['title', 'basePrice', 'stock', 'categories'],
+        })
+
+        results.push({ row: rowNumber, key, status: 'updated', id: String(updatedRecord._id), code: null, message: null })
+        updated += 1
+      } else {
+        const createdRecord = await model.create({
+          ...draft,
+          siteId,
+          categories,
+          status: 'draft',
+          isActive: false,
+          isDeleted: false,
+          publishedAt: null,
+          deletedAt: null,
+          revision: 1,
+          searchString: buildSearchString(draft),
+        })
+        const record = createdRecord.toObject() as CatalogItemRecord
+
+        await recordContentAudit(meta?.audit, {
+          siteId,
+          resourceType: 'catalog_item',
+          resourceId: String(record._id),
+          resourceKey: record.key,
+          action: 'create',
+          revision: record.revision,
+          fromStatus: null,
+          toStatus: record.status,
+          changedFields: ['key', 'title', 'basePrice', 'categories'],
+        })
+
+        results.push({ row: rowNumber, key, status: 'created', id: String(record._id), code: null, message: null })
+        created += 1
+      }
+    } catch (error) {
+      failed += 1
+      const serviceError = error instanceof CatalogServiceError ? error : null
+      results.push({
+        row: rowNumber,
+        key,
+        status: 'failed',
+        id: null,
+        code: serviceError?.code ?? 'CATALOG_IMPORT_FAILED',
+        message: serviceError?.message ?? 'Import failed',
+      })
+    }
+  }
+
+  return { total: rows.length, created, updated, failed, results }
+}
