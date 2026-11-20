@@ -1,6 +1,6 @@
 import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
-import type { OrderDocument } from '../models/order'
+import type { OrderDocument, OrderStatus } from '../models/order'
 import type { InventoryDocument } from '../models/inventory'
 import type { InventoryTransactionDocument } from '../models/inventoryTransaction'
 import type { SerialNumberDocument } from '../models/serialNumber'
@@ -180,6 +180,99 @@ async function recordShipmentStockMovement(
   }
 }
 
+/**
+ * Recompute an order's status from its non-cancelled shipments.
+ *
+ * Shipped quantity drives the status: nothing shipped keeps the order where it
+ * is (unless it had been advanced and the shipments are gone, in which case it
+ * returns to `pending`); a partial shipment moves it to `processing`; every
+ * line fully shipped moves it to `shipped`, or `completed` when all of those
+ * shipments are delivered. Cancelled orders are never touched. The status is
+ * only written when it actually changes, with a history entry and an audit row.
+ */
+async function recomputeOrderStatusFromShipments(
+  orderModel: Model<OrderDocument>,
+  shipmentModel: Model<ShipmentDocument>,
+  siteId: string,
+  orderId: string,
+  audit?: ContentAuditMeta,
+): Promise<void> {
+  if (!Types.ObjectId.isValid(orderId)) return
+  const order = await orderModel
+    .findOne({ _id: new Types.ObjectId(orderId), siteId, isDeleted: { $ne: true } })
+    .lean<OrderDocument & { _id: Types.ObjectId }>()
+  if (!order || order.status === 'cancelled') return
+
+  const shipments = await shipmentModel
+    .find({ siteId, orderId, isDeleted: { $ne: true }, status: { $in: ['shipped', 'in_transit', 'delivered'] } })
+    .lean<ShipmentRecord[]>()
+
+  const shippedByKey = new Map<string, { shipped: number; delivered: number }>()
+  for (const shipment of shipments) {
+    const isDelivered = shipment.status === 'delivered'
+    for (const line of shipment.items ?? []) {
+      const key = `${line.itemId ?? ''}::${line.variantId ?? ''}`
+      const current = shippedByKey.get(key) ?? { shipped: 0, delivered: 0 }
+      current.shipped += line.quantity ?? 0
+      if (isDelivered) current.delivered += line.quantity ?? 0
+      shippedByKey.set(key, current)
+    }
+  }
+
+  let hasShippableLine = false
+  let allShipped = true
+  let allDelivered = true
+  let anyShipped = false
+  for (const item of order.items ?? []) {
+    const target = (item.quantity ?? 0) - (item.returnedQuantity ?? 0)
+    if (target <= 0) continue
+    hasShippableLine = true
+    const stats = shippedByKey.get(`${item.itemId ?? ''}::${item.variantId ?? ''}`) ?? { shipped: 0, delivered: 0 }
+    if (stats.shipped < target) allShipped = false
+    if (stats.delivered < target) allDelivered = false
+    if (stats.shipped > 0) anyShipped = true
+  }
+
+  let newStatus: OrderStatus = order.status
+  if (!hasShippableLine) {
+    // nothing to ship; leave the order alone
+  } else if (shipments.length === 0) {
+    if (order.status === 'shipped' || order.status === 'completed') newStatus = 'pending'
+  } else if (allShipped && anyShipped) {
+    newStatus = allDelivered ? 'completed' : 'shipped'
+  } else if (anyShipped) {
+    newStatus = 'processing'
+  }
+
+  if (newStatus === order.status) return
+
+  const updated = await orderModel
+    .findOneAndUpdate(
+      { _id: order._id, siteId, revision: order.revision },
+      {
+        $set: { status: newStatus },
+        $push: { history: { status: newStatus, at: new Date().toISOString(), note: 'Auto-updated from shipment fulfillment', actorId: '' } },
+        $inc: { revision: 1 },
+      },
+      { returnDocument: 'after' },
+    )
+    .lean<OrderDocument & { _id: Types.ObjectId }>()
+
+  if (!updated) return
+
+  await recordContentAudit(audit, {
+    siteId,
+    resourceType: 'order',
+    resourceId: String(updated._id),
+    resourceKey: updated.code,
+    action: 'update',
+    revision: updated.revision,
+    fromStatus: order.status,
+    toStatus: updated.status,
+    changedFields: ['status'],
+  })
+}
+
 export async function createShipment(
   shipmentModel: Model<ShipmentDocument>,
   orderModel: Model<OrderDocument>,
@@ -269,6 +362,9 @@ export async function createShipment(
       audit: meta?.audit,
     })
   }
+
+  // Keep the order's status in step with its shipments.
+  await recomputeOrderStatusFromShipments(orderModel, shipmentModel, siteId, String(order._id), meta?.audit)
 
   await recordContentAudit(meta?.audit, {
     siteId,
@@ -374,6 +470,11 @@ export async function updateShipment(
     }
   }
 
+  // Keep the order's status in step with its shipments.
+  if (orderModel && record.status !== updated.status) {
+    await recomputeOrderStatusFromShipments(orderModel, model, siteId, updated.orderId, meta?.audit)
+  }
+
   await recordContentAudit(meta?.audit, {
     siteId,
     resourceType: RESOURCE,
@@ -437,6 +538,11 @@ export async function softDeleteShipment(
         audit: meta?.audit,
       })
     }
+  }
+
+  // Keep the order's status in step with its shipments.
+  if (orderModel) {
+    await recomputeOrderStatusFromShipments(orderModel, model, siteId, record.orderId, meta?.audit)
   }
 
   await recordContentAudit(meta?.audit, {

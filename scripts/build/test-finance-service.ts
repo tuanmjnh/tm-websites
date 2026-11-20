@@ -215,10 +215,88 @@ async function integration() {
       assert.equal(payment.partyId, storedSupplier.id)
     })
 
+    await check('a payment can be allocated across two orders', async () => {
+      const orderA = await createOrder(Order, Customer, SITE, {
+        customerId: customer.id,
+        status: 'processing',
+        items: [{ itemName: 'A', price: 100000, quantity: 1 }],
+      }, meta)
+      const orderB = await createOrder(Order, Customer, SITE, {
+        customerId: customer.id,
+        status: 'processing',
+        items: [{ itemName: 'B', price: 200000, quantity: 1 }],
+      }, meta)
+      const payment = await recordPayment(Payment, targets, SITE, {
+        direction: 'receivable',
+        allocations: [
+          { referenceModel: 'Order', referenceId: orderA.id, amount: 100000 },
+          { referenceModel: 'Order', referenceId: orderB.id, amount: 50000 },
+        ],
+        method: 'banking',
+      }, meta)
+      assert.equal(payment.amount, 150000)
+      assert.equal(payment.allocations.length, 2)
+      const afterA = await getOrder(Order, SITE, orderA.id)
+      const afterB = await getOrder(Order, SITE, orderB.id)
+      assert.equal(afterA.paidAmount, 100000)
+      assert.equal(afterA.paymentStatus, 'paid')
+      assert.equal(afterB.paidAmount, 50000)
+      assert.equal(afterB.paymentStatus, 'partial')
+    })
+
+    await check('voiding an allocated payment reverses every document', async () => {
+      // find the allocated payment
+      const list = await listPayments(Payment, SITE, { state: 'posted' })
+      const allocated = list.data.find(p => p.allocations.length === 2)
+      assert.ok(allocated)
+      const current = await getPayment(Payment, SITE, allocated!.id)
+      const voided = await voidPayment(Payment, targets, SITE, allocated!.id, { revision: current.revision }, meta)
+      assert.equal(voided.state, 'voided')
+      // locate the two orders by re-reading via allocations
+      for (const alloc of allocated!.allocations) {
+        const order = await getOrder(Order, SITE, alloc.referenceId)
+        assert.equal(order.paidAmount, 0)
+      }
+    })
+
+    await check('a payment cannot mix orders and purchase orders', async () => {
+      const order = await createOrder(Order, Customer, SITE, {
+        status: 'processing',
+        items: [{ itemName: 'X', price: 10000, quantity: 1 }],
+      }, meta)
+      await assert.rejects(
+        () => recordPayment(Payment, targets, SITE, {
+          direction: 'receivable',
+          allocations: [
+            { referenceModel: 'Order', referenceId: order.id, amount: 1000 },
+            { referenceModel: 'PurchaseOrder', referenceId: purchaseOrder.id, amount: 1000 },
+          ],
+        }, meta),
+        isPaymentError(422, 'PAYMENT_MIXED_REFERENCES'),
+      )
+    })
+
+    await check('a payment cannot list the same document twice', async () => {
+      const order = await createOrder(Order, Customer, SITE, {
+        status: 'processing',
+        items: [{ itemName: 'Y', price: 10000, quantity: 1 }],
+      }, meta)
+      await assert.rejects(
+        () => recordPayment(Payment, targets, SITE, {
+          direction: 'receivable',
+          allocations: [
+            { referenceModel: 'Order', referenceId: order.id, amount: 1000 },
+            { referenceModel: 'Order', referenceId: order.id, amount: 1000 },
+          ],
+        }, meta),
+        isPaymentError(409, 'PAYMENT_DUPLICATE_REFERENCE'),
+      )
+    })
+
     await check('every payment mutation records an audit entry', async () => {
       const entries = await Audit.find({ siteId: SITE, resourceType: 'payment' }).lean<{ action: string, toStatus: string | null }[]>()
-      assert.equal(entries.filter(entry => entry.action === 'create').length, 3)
-      assert.ok(entries.some(entry => entry.toStatus === 'voided'))
+      assert.equal(entries.filter(entry => entry.action === 'create').length, 4)
+      assert.ok(entries.filter(entry => entry.toStatus === 'voided').length >= 2)
     })
   } finally {
     await connection.db?.dropDatabase().catch(() => undefined)

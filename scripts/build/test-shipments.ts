@@ -144,6 +144,73 @@ async function run() {
       assert.equal(freed.items[0]!.quantity, 2)
     })
 
+    await check('a partial shipment moves the order to processing', async () => {
+      const freshOrder = await createOrder(Order, null, SITE, {
+        code: 'ORD-STATUS',
+        items: [{ itemId: 'item-x', variantId: null, itemName: 'X', sku: 'X-01', price: 10000, quantity: 4 }],
+        shippingAddress: { fullName: 'An', city: 'HCM' },
+      }, meta)
+      const sh = await createShipment(Shipment, Order, SITE, {
+        code: 'SHP-ST-1',
+        orderId: freshOrder.id,
+        status: 'shipped',
+        items: [{ itemId: 'item-x', variantId: null, itemName: 'X', sku: 'X-01', quantity: 2 }],
+      }, meta)
+      assert.equal(sh.status, 'shipped')
+      const updatedOrder = await Order.findOne({ _id: freshOrder.id, siteId: SITE }).lean()
+      assert.equal(updatedOrder?.status, 'processing')
+    })
+
+    await check('shipping every line moves the order to shipped', async () => {
+      const freshOrder = await createOrder(Order, null, SITE, {
+        code: 'ORD-STATUS2',
+        items: [{ itemId: 'item-y', variantId: null, itemName: 'Y', sku: 'Y-01', price: 10000, quantity: 2 }],
+        shippingAddress: { fullName: 'An', city: 'HCM' },
+      }, meta)
+      await createShipment(Shipment, Order, SITE, {
+        code: 'SHP-ST-2',
+        orderId: freshOrder.id,
+        status: 'shipped',
+        items: [{ itemId: 'item-y', variantId: null, itemName: 'Y', sku: 'Y-01', quantity: 2 }],
+      }, meta)
+      const updatedOrder = await Order.findOne({ _id: freshOrder.id, siteId: SITE }).lean()
+      assert.equal(updatedOrder?.status, 'shipped')
+    })
+
+    await check('cancelling the last shipment returns the order to pending', async () => {
+      const freshOrder = await createOrder(Order, null, SITE, {
+        code: 'ORD-STATUS3',
+        items: [{ itemId: 'item-z', variantId: null, itemName: 'Z', sku: 'Z-01', price: 10000, quantity: 2 }],
+        shippingAddress: { fullName: 'An', city: 'HCM' },
+      }, meta)
+      const sh = await createShipment(Shipment, Order, SITE, {
+        code: 'SHP-ST-3',
+        orderId: freshOrder.id,
+        status: 'shipped',
+        items: [{ itemId: 'item-z', variantId: null, itemName: 'Z', sku: 'Z-01', quantity: 2 }],
+      }, meta)
+      const cancelled = await updateShipment(Shipment, SITE, sh.id, { status: 'cancelled', revision: sh.revision }, meta, null, null, Order)
+      assert.equal(cancelled.status, 'cancelled')
+      const updatedOrder = await Order.findOne({ _id: freshOrder.id, siteId: SITE }).lean()
+      assert.equal(updatedOrder?.status, 'pending')
+    })
+
+    await check('a delivered shipment moves the order to completed', async () => {
+      const freshOrder = await createOrder(Order, null, SITE, {
+        code: 'ORD-STATUS4',
+        items: [{ itemId: 'item-w', variantId: null, itemName: 'W', sku: 'W-01', price: 10000, quantity: 2 }],
+        shippingAddress: { fullName: 'An', city: 'HCM' },
+      }, meta)
+      await createShipment(Shipment, Order, SITE, {
+        code: 'SHP-ST-4',
+        orderId: freshOrder.id,
+        status: 'delivered',
+        items: [{ itemId: 'item-w', variantId: null, itemName: 'W', sku: 'W-01', quantity: 2 }],
+      }, meta)
+      const updatedOrder = await Order.findOne({ _id: freshOrder.id, siteId: SITE }).lean()
+      assert.equal(updatedOrder?.status, 'completed')
+    })
+
     await check('soft delete and restore keep the revision moving', async () => {
       const removed = await softDeleteShipment(Shipment, SITE, first.id, (await getShipment(Shipment, SITE, first.id)).revision, meta)
       assert.equal(removed.isDeleted, true)

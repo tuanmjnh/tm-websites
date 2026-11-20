@@ -2,6 +2,7 @@ import { Types } from 'mongoose'
 import type { Model } from 'mongoose'
 import {
   PaymentInvariantError,
+  type PaymentAllocation,
   type PaymentDirection,
   type PaymentDocument,
   type PaymentMethod,
@@ -39,6 +40,7 @@ export interface PaymentAdmin {
   referenceId: string
   referenceCode: string
   partyId: string | null
+  allocations: { referenceModel: PaymentReference, referenceId: string, referenceCode: string, amount: number }[]
   amount: number
   currency: string
   method: PaymentMethod
@@ -141,6 +143,12 @@ export function toAdminPayment(record: PaymentRecord): PaymentAdmin {
     referenceId: String(record.referenceId),
     referenceCode: record.referenceCode ?? '',
     partyId: record.partyId ? String(record.partyId) : null,
+    allocations: (record.allocations ?? []).map((entry) => ({
+      referenceModel: entry.referenceModel,
+      referenceId: String(entry.referenceId),
+      referenceCode: entry.referenceCode ?? '',
+      amount: entry.amount ?? 0,
+    })),
     amount: record.amount ?? 0,
     currency: record.currency ?? 'VND',
     method: record.method ?? 'cash',
@@ -261,6 +269,29 @@ function targetModel(targets: PaymentTargets, referenceModel: PaymentReference):
  * covers the amount, and `paymentStatus` is recomputed in the same pipeline
  * stage, so an overpayment cannot slip between a check and a write.
  */
+interface AllocationInput {
+  referenceModel: PaymentReference
+  referenceId: string
+  amount: number
+}
+
+function readAllocations(body: Record<string, unknown>, fallback: AllocationInput): AllocationInput[] {
+  const raw = body.allocations
+  if (!Array.isArray(raw) || raw.length === 0) return [fallback]
+  const parsed: AllocationInput[] = []
+  for (const entry of raw) {
+    const record = readBody(entry)
+    const referenceModel = readEnum(record.referenceModel, PAYMENT_REFERENCES, 'PAYMENT_REFERENCE_MODEL_INVALID', 'Reference model')
+    const referenceId = String(record.referenceId ?? '')
+    const amount = readAmount(record.amount)
+    parsed.push({ referenceModel, referenceId, amount })
+  }
+  if (parsed.length > 50) {
+    throw new PaymentServiceError(422, 'PAYMENT_TOO_MANY_ALLOCATIONS', 'A payment may cover at most 50 documents')
+  }
+  return parsed
+}
+
 export async function recordPayment(
   model: Model<PaymentDocument>,
   targets: PaymentTargets,
@@ -270,13 +301,46 @@ export async function recordPayment(
 ): Promise<PaymentAdmin> {
   const body = readBody(input)
   const direction = readEnum(body.direction, PAYMENT_DIRECTIONS, 'PAYMENT_DIRECTION_INVALID', 'Direction')
-  const referenceModel = readEnum(body.referenceModel, PAYMENT_REFERENCES, 'PAYMENT_REFERENCE_MODEL_INVALID', 'Reference model')
   const method = body.method === undefined
     ? 'cash'
     : readEnum(body.method, PAYMENT_METHODS, 'PAYMENT_METHOD_INVALID', 'Payment method')
-  const amount = readAmount(body.amount)
-  const referenceId = String(body.referenceId ?? '')
 
+  const primaryReferenceModel = (typeof body.referenceModel === 'string' && PAYMENT_REFERENCES.includes(body.referenceModel as PaymentReference))
+    ? (body.referenceModel as PaymentReference)
+    : null
+  const primaryReferenceId = String(body.referenceId ?? '')
+  const primaryAmount = body.amount === undefined ? 0 : Number(body.amount)
+
+  const fallback: AllocationInput = {
+    referenceModel: primaryReferenceModel ?? 'Order',
+    referenceId: primaryReferenceId,
+    amount: Number.isFinite(primaryAmount) && primaryAmount > 0 ? round(primaryAmount) : 0,
+  }
+  // When allocations are supplied they carry their own amounts; the top-level
+  // amount/referenceModel/referenceId are then optional and ignored.
+  const hasAllocations = Array.isArray(body.allocations) && (body.allocations as unknown[]).length > 0
+  if (!hasAllocations) {
+    if (!primaryReferenceModel) {
+      throw new PaymentServiceError(422, 'PAYMENT_REFERENCE_MODEL_INVALID', 'Reference model is not one of Order, PurchaseOrder')
+    }
+    if (!fallback.referenceId) {
+      throw new PaymentServiceError(422, 'PAYMENT_REFERENCE_ID_INVALID', 'Reference id is required')
+    }
+    if (fallback.amount <= 0) {
+      // fall back to readAmount for a clear error
+      readAmount(body.amount)
+    }
+  }
+
+  const allocations = readAllocations(body, fallback)
+
+  // Every document in one payment must belong to the same direction, otherwise
+  // a single payment would mix money in and money out.
+  const referenceModels = new Set(allocations.map((entry) => entry.referenceModel))
+  if (referenceModels.size > 1) {
+    throw new PaymentServiceError(422, 'PAYMENT_MIXED_REFERENCES', 'A payment cannot cover both orders and purchase orders')
+  }
+  const referenceModel = allocations[0]!.referenceModel
   const expectedDirection: PaymentDirection = referenceModel === 'Order' ? 'receivable' : 'payable'
   if (direction !== expectedDirection) {
     throw new PaymentServiceError(422, 'PAYMENT_DIRECTION_MISMATCH', `A payment for ${referenceModel} is ${expectedDirection}`, {
@@ -285,21 +349,38 @@ export async function recordPayment(
     })
   }
 
-  const target = await loadTarget(targets, siteId, referenceModel, referenceId)
-  if (['cancelled', 'refunded'].includes(target.status)) {
-    throw new PaymentServiceError(409, 'PAYMENT_REFERENCE_CLOSED', `The document is ${target.status} and cannot take a payment`, {
-      status: target.status,
-    })
+  // Load every target up front so a missing/closed document fails before any
+  // balance moves.
+  const loaded: { allocation: AllocationInput, target: PayableRecord, payable: Model<PayableRecord> }[] = []
+  for (const allocation of allocations) {
+    const target = await loadTarget(targets, siteId, allocation.referenceModel, allocation.referenceId)
+    if (['cancelled', 'refunded'].includes(target.status)) {
+      throw new PaymentServiceError(409, 'PAYMENT_REFERENCE_CLOSED', `The document is ${target.status} and cannot take a payment`, {
+        status: target.status,
+        referenceId: allocation.referenceId,
+      })
+    }
+    const outstanding = round((target.totalAmount ?? 0) - (target.paidAmount ?? 0))
+    if (allocation.amount > outstanding) {
+      throw new PaymentServiceError(409, 'PAYMENT_EXCEEDS_OUTSTANDING', 'The payment is larger than the outstanding balance', {
+        outstanding,
+        amount: allocation.amount,
+        total: target.totalAmount,
+        paid: target.paidAmount,
+        referenceId: allocation.referenceId,
+      })
+    }
+    loaded.push({ allocation, target, payable: targetModel(targets, allocation.referenceModel) })
   }
 
-  const outstanding = round((target.totalAmount ?? 0) - (target.paidAmount ?? 0))
-  if (amount > outstanding) {
-    throw new PaymentServiceError(409, 'PAYMENT_EXCEEDS_OUTSTANDING', 'The payment is larger than the outstanding balance', {
-      outstanding,
-      amount,
-      total: target.totalAmount,
-      paid: target.paidAmount,
-    })
+  // Reject duplicate references within one payment.
+  const seen = new Set<string>()
+  for (const { allocation } of loaded) {
+    const key = `${allocation.referenceModel}:${allocation.referenceId}`
+    if (seen.has(key)) {
+      throw new PaymentServiceError(409, 'PAYMENT_DUPLICATE_REFERENCE', 'The same document cannot appear twice in one payment', { referenceId: allocation.referenceId })
+    }
+    seen.add(key)
   }
 
   const code = normalizePaymentCode(body.code) || generatedCode()
@@ -308,28 +389,56 @@ export async function recordPayment(
     throw new PaymentServiceError(422, 'PAYMENT_PAID_AT_INVALID', 'paidAt is not a valid date')
   }
 
-  const payable = targetModel(targets, referenceModel)
-  const updated = await payable
-    .findOneAndUpdate(
-      {
-        _id: target._id,
-        siteId,
-        revision: target.revision,
-        $expr: { $gte: [{ $subtract: ['$totalAmount', '$paidAmount'] }, amount] },
-      },
-      [
-        { $set: { paidAmount: { $add: ['$paidAmount', amount] } } },
-        { $set: { paymentStatus: statusExpression(), revision: { $add: ['$revision', 1] } } },
-      ],
-      { returnDocument: 'after', updatePipeline: true },
-    )
-    .lean<PayableRecord | null>()
+  // Apply each balance move; track what moved so a failure can roll everything back.
+  const updatedTargets: { payable: Model<PayableRecord>, record: PayableRecord, amount: number }[] = []
+  for (const { allocation, target, payable } of loaded) {
+    const updated = await payable
+      .findOneAndUpdate(
+        {
+          _id: target._id,
+          siteId,
+          revision: target.revision,
+          $expr: { $gte: [{ $subtract: ['$totalAmount', '$paidAmount'] }, allocation.amount] },
+        },
+        [
+          { $set: { paidAmount: { $add: ['$paidAmount', allocation.amount] } } },
+          { $set: { paymentStatus: statusExpression(), revision: { $add: ['$revision', 1] } } },
+        ],
+        { returnDocument: 'after', updatePipeline: true },
+      )
+      .lean<PayableRecord | null>()
 
-  if (!updated) {
-    throw new PaymentServiceError(409, 'PAYMENT_REFERENCE_CONFLICT', 'The document changed while the payment was being posted; reload and retry', {
-      expectedRevision: target.revision,
-    })
+    if (!updated) {
+      // Roll back the moves already applied.
+      for (const moved of updatedTargets) {
+        await moved.payable
+          .findOneAndUpdate(
+            { _id: moved.record._id, siteId, revision: moved.record.revision },
+            [
+              { $set: { paidAmount: { $subtract: ['$paidAmount', moved.amount] } } },
+              { $set: { paymentStatus: statusExpression(), revision: { $add: ['$revision', 1] } } },
+            ],
+            { updatePipeline: true },
+          )
+          .lean()
+      }
+      throw new PaymentServiceError(409, 'PAYMENT_REFERENCE_CONFLICT', 'A document changed while the payment was being posted; reload and retry', {
+        expectedRevision: target.revision,
+        referenceId: allocation.referenceId,
+      })
+    }
+    updatedTargets.push({ payable, record: updated, amount: allocation.amount })
   }
+
+  const totalAmount = round(allocations.reduce((sum, entry) => sum + entry.amount, 0))
+  const primary = loaded[0]!
+
+  const allocationDocs: PaymentAllocation[] = loaded.map(({ allocation, target }) => ({
+    referenceModel: allocation.referenceModel,
+    referenceId: target._id,
+    referenceCode: target.code,
+    amount: allocation.amount,
+  }))
 
   let created: PaymentRecord
   try {
@@ -337,11 +446,14 @@ export async function recordPayment(
       siteId,
       code,
       direction,
-      referenceModel,
-      referenceId: target._id,
-      referenceCode: target.code,
-      partyId: referenceModel === 'Order' ? (target.customerId ?? null) : (target.supplierId ?? null),
-      amount,
+      referenceModel: primary.allocation.referenceModel,
+      referenceId: primary.target._id,
+      referenceCode: primary.target.code,
+      partyId: primary.allocation.referenceModel === 'Order'
+        ? (primary.target.customerId ?? null)
+        : (primary.target.supplierId ?? null),
+      allocations: allocationDocs,
+      amount: totalAmount,
       currency: typeof body.currency === 'string' ? body.currency.trim().toUpperCase().slice(0, 3) : 'VND',
       method,
       state: 'posted',
@@ -354,27 +466,20 @@ export async function recordPayment(
       revision: 1,
     }) as PaymentRecord
   } catch (error) {
-    // The balance already moved, so undo it rather than leave a payment-shaped
-    // hole in the document. A second failure is surfaced, not hidden.
-    const reverted = await payable
-      .findOneAndUpdate(
-        { _id: target._id, siteId, revision: updated.revision },
-        [
-          { $set: { paidAmount: { $subtract: ['$paidAmount', amount] } } },
-          { $set: { paymentStatus: statusExpression(), revision: { $add: ['$revision', 1] } } },
-        ],
-        { updatePipeline: true },
-      )
-      .lean<PayableRecord | null>()
-
-    const duplicate = (error as { code?: number }).code === 11000
-    if (!reverted) {
-      throw new PaymentServiceError(500, 'PAYMENT_ROLLBACK_FAILED', 'The payment could not be stored and the document balance could not be restored', {
-        referenceModel,
-        referenceId: String(target._id),
-        amount,
-      })
+    // Undo every balance move.
+    for (const moved of updatedTargets) {
+      await moved.payable
+        .findOneAndUpdate(
+          { _id: moved.record._id, siteId, revision: moved.record.revision },
+          [
+            { $set: { paidAmount: { $subtract: ['$paidAmount', moved.amount] } } },
+            { $set: { paymentStatus: statusExpression(), revision: { $add: ['$revision', 1] } } },
+          ],
+          { updatePipeline: true },
+        )
+        .lean()
     }
+    const duplicate = (error as { code?: number }).code === 11000
     throw new PaymentServiceError(
       duplicate ? 409 : 502,
       duplicate ? 'PAYMENT_CODE_EXISTS' : 'PAYMENT_STORE_FAILED',
@@ -391,7 +496,7 @@ export async function recordPayment(
     revision: created.revision,
     fromStatus: null,
     toStatus: 'posted',
-    changedFields: ['amount', 'referenceId', 'paidAt'],
+    changedFields: ['amount', 'referenceId', 'paidAt', 'allocations'],
   })
 
   return toAdminPayment(created)
@@ -424,28 +529,56 @@ export async function voidPayment(
     throw new PaymentServiceError(409, 'PAYMENT_ALREADY_VOIDED', 'This payment is already void')
   }
 
-  const payable = targetModel(targets, record.referenceModel)
-  const reverted = await payable
-    .findOneAndUpdate(
-      {
-        _id: record.referenceId,
-        siteId,
-        $expr: { $gte: ['$paidAmount', record.amount] },
-      },
-      [
-        { $set: { paidAmount: { $subtract: ['$paidAmount', record.amount] } } },
-        { $set: { paymentStatus: statusExpression(), revision: { $add: ['$revision', 1] } } },
-      ],
-      { returnDocument: 'after', updatePipeline: true },
-    )
-    .lean<PayableRecord | null>()
+  const allocations = (record.allocations && record.allocations.length > 0)
+    ? record.allocations
+    : [{ referenceModel: record.referenceModel, referenceId: record.referenceId, referenceCode: record.referenceCode, amount: record.amount }]
 
-  if (!reverted) {
-    throw new PaymentServiceError(409, 'PAYMENT_VOID_UNBALANCED', 'The document no longer holds this payment amount; reconcile before voiding', {
-      referenceModel: record.referenceModel,
-      referenceId: String(record.referenceId),
-      amount: record.amount,
-    })
+  // Reverse every allocation; if any document can no longer cover its share,
+  // report unbalanced before touching the payment row.
+  const payables: { payable: Model<PayableRecord>, allocation: (typeof allocations)[number] }[] = []
+  for (const allocation of allocations) {
+    payables.push({ payable: targetModel(targets, allocation.referenceModel), allocation })
+  }
+
+  // Pre-check every document can cover its share before touching any of them.
+  for (const { allocation } of payables) {
+    const payable = targetModel(targets, allocation.referenceModel)
+    const doc = await payable
+      .findOne({ _id: allocation.referenceId, siteId })
+      .lean<PayableRecord | null>()
+    if (!doc || (doc.paidAmount ?? 0) < allocation.amount) {
+      throw new PaymentServiceError(409, 'PAYMENT_VOID_UNBALANCED', 'A document no longer holds this payment amount; reconcile before voiding', {
+        referenceModel: allocation.referenceModel,
+        referenceId: String(allocation.referenceId),
+        amount: allocation.amount,
+      })
+    }
+  }
+
+  const revertedDocs: PayableRecord[] = []
+  for (const { payable, allocation } of payables) {
+    const reverted = await payable
+      .findOneAndUpdate(
+        {
+          _id: allocation.referenceId,
+          siteId,
+          $expr: { $gte: ['$paidAmount', allocation.amount] },
+        },
+        [
+          { $set: { paidAmount: { $subtract: ['$paidAmount', allocation.amount] } } },
+          { $set: { paymentStatus: statusExpression(), revision: { $add: ['$revision', 1] } } },
+        ],
+        { returnDocument: 'after', updatePipeline: true },
+      )
+      .lean<PayableRecord | null>()
+    if (!reverted) {
+      throw new PaymentServiceError(409, 'PAYMENT_VOID_UNBALANCED', 'A document no longer holds this payment amount; reconcile before voiding', {
+        referenceModel: allocation.referenceModel,
+        referenceId: String(allocation.referenceId),
+        amount: allocation.amount,
+      })
+    }
+    revertedDocs.push(reverted)
   }
 
   const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 1000) : ''

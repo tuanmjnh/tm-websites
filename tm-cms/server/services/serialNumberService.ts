@@ -7,6 +7,7 @@ import {
   type SerialNumberRegisterInput,
   normalizeSerialNumberInput,
   SERIAL_STATUSES,
+  SERIAL_NUMBER_SCHEMA_VERSION,
 } from '../models/serialNumber'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 
@@ -105,6 +106,113 @@ export async function listSerialNumbers(
   for (const status of SERIAL_STATUSES) counts[status] = await model.countDocuments({ ...base, status })
   const deleted = params.includeDeleted ? await model.countDocuments({ siteId, isDeleted: true }) : 0
   return { data, nextCursor, hasMore, counts: { ...counts, deleted } }
+}
+
+export interface SerialNumberImportRowResult {
+  row: number
+  serial: string | null
+  status: 'created' | 'failed'
+  id: string | null
+  code: string | null
+  message: string | null
+}
+
+export interface SerialNumberImportResult {
+  total: number
+  created: number
+  failed: number
+  results: SerialNumberImportRowResult[]
+}
+
+const IMPORT_MAX_ROWS = 500
+
+export async function importSerialNumbers(
+  model: Model<SerialNumberDocument>,
+  siteId: string,
+  rows: unknown[],
+  meta?: { audit?: ContentAuditMeta },
+): Promise<SerialNumberImportResult> {
+  if (!Array.isArray(rows)) {
+    throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_IMPORT_INVALID', 'Import rows must be an array')
+  }
+  if (rows.length === 0) {
+    throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_IMPORT_EMPTY', 'Import requires at least one row')
+  }
+  if (rows.length > IMPORT_MAX_ROWS) {
+    throw new SerialNumberServiceError(422, 'SERIAL_NUMBER_IMPORT_TOO_LARGE', `Import is limited to ${IMPORT_MAX_ROWS} rows`, { limit: IMPORT_MAX_ROWS })
+  }
+
+  const results: SerialNumberImportRowResult[] = []
+  let created = 0
+  let failed = 0
+  const seen = new Set<string>()
+
+  for (const [index, row] of rows.entries()) {
+    const rowNumber = index + 1
+    let serial: string | null = null
+    try {
+      let draft
+      try {
+        draft = normalizeSerialNumberInput(row)
+      } catch (error) {
+        translateInvariant(error)
+        throw error
+      }
+      serial = draft.serial
+
+      if (seen.has(serial)) {
+        throw new SerialNumberServiceError(409, 'SERIAL_NUMBER_DUPLICATE', 'Serial number already registered', { serial })
+      }
+      seen.add(serial)
+
+      const existing = await model.findOne({ siteId, serial }).lean<SerialRecord>()
+      if (existing) {
+        throw new SerialNumberServiceError(409, 'SERIAL_NUMBER_DUPLICATE', 'Serial number already registered', { serial })
+      }
+
+      const createdDoc = await model.create({
+        siteId,
+        serial: draft.serial,
+        itemId: draft.itemId,
+        variantId: draft.variantId,
+        warehouseId: draft.warehouseId,
+        purchaseOrderId: draft.purchaseOrderId,
+        note: draft.note,
+        status: 'in_stock',
+        revision: 1,
+        schemaVersion: SERIAL_NUMBER_SCHEMA_VERSION,
+      })
+      const record = createdDoc.toObject() as SerialRecord
+
+      await recordContentAudit(meta?.audit, {
+        siteId,
+        resourceType: RESOURCE,
+        resourceId: String(record._id),
+        resourceKey: record.serial,
+        action: 'create',
+        revision: record.revision,
+        fromStatus: null,
+        toStatus: 'in_stock',
+        changedFields: ['serial', 'itemId', 'status'],
+      })
+
+      results.push({ row: rowNumber, serial, status: 'created', id: String(record._id), code: null, message: null })
+      created += 1
+    } catch (error) {
+      failed += 1
+      const serviceError = error instanceof SerialNumberServiceError ? error : null
+      results.push({
+        row: rowNumber,
+        serial,
+        status: 'failed',
+        id: null,
+        code: serviceError?.code ?? 'SERIAL_NUMBER_IMPORT_FAILED',
+        message: serviceError?.message ?? 'Import failed',
+      })
+    }
+  }
+
+  return { total: rows.length, created, failed, results }
 }
 
 export async function registerSerialNumbers(

@@ -54,6 +54,13 @@ export const PaymentDraftSchema = z.object({
 
 export type PaymentDraft = z.infer<typeof PaymentDraftSchema>
 
+export interface PaymentAllocation {
+  referenceModel: PaymentReference
+  referenceId: Types.ObjectId
+  referenceCode: string
+  amount: number
+}
+
 export interface PaymentDocument {
   siteId: string
   code: string
@@ -62,6 +69,8 @@ export interface PaymentDocument {
   referenceId: Types.ObjectId
   referenceCode: string
   partyId: Types.ObjectId | null
+  /** How the payment amount is split across documents. Always present; a single-document payment has one entry. */
+  allocations: PaymentAllocation[]
   amount: number
   currency: string
   method: PaymentMethod
@@ -108,6 +117,20 @@ const PaymentMongooseSchema = new Schema<PaymentDocument>(
     referenceId: { type: Schema.Types.ObjectId, required: true },
     referenceCode: { type: String, default: '' },
     partyId: { type: Schema.Types.ObjectId, default: null },
+    allocations: {
+      type: [
+        new Schema(
+          {
+            referenceModel: { type: String, enum: PAYMENT_REFERENCES, required: true },
+            referenceId: { type: Schema.Types.ObjectId, required: true },
+            referenceCode: { type: String, default: '' },
+            amount: { type: Number, required: true },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
     amount: { type: Number, required: true },
     currency: { type: String, default: 'VND' },
     method: { type: String, enum: PAYMENT_METHODS, default: 'cash' },
