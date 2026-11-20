@@ -284,6 +284,7 @@
         "salary_config": "Salary configs",
         "payroll": "Payroll",
         "stocktake": "Stocktake",
+        "newsletter_subscription": "Newsletter subscription",
         "shift_template": "Shift template",
         "shift_assignment": "Shift assignment"
       },

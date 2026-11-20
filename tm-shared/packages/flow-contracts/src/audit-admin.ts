@@ -31,6 +31,7 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'payment',
   'inventory_transfer',
   'stocktake',
+  'newsletter_subscription',
   'notification',
   'notification_subscription',
   'mail_template',
