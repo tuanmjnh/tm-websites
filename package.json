@@ -49,6 +49,7 @@
     "test:supplier-prices": "tsx scripts/build/test-supplier-prices.ts",
     "test:newsletter": "tsx scripts/build/test-newsletter.ts",
     "test:contact-messages": "tsx scripts/build/test-contact-messages.ts",
+    "test:shipments": "tsx scripts/build/test-shipments.ts",
     "test:hr-shifts": "tsx scripts/build/test-hr-shifts.ts",
     "test:stocktake": "tsx scripts/build/test-stocktake-service.ts",
     "test:catalog": "tsx scripts/build/test-catalog-service.ts",

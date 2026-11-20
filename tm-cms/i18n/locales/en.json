@@ -286,6 +286,7 @@
         "stocktake": "Stocktake",
         "newsletter_subscription": "Newsletter subscription",
         "contact_message": "Contact message",
+        "shipment": "Shipment",
         "shift_template": "Shift template",
         "shift_assignment": "Shift assignment"
       },

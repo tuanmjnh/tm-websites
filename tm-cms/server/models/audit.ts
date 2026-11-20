@@ -30,6 +30,7 @@ export const AUDIT_RESOURCE_TYPES = [
     'stocktake',
   'newsletter_subscription',
   'contact_message',
+  'shipment',
   'notification',
   'notification_subscription',
   'mail_template',
