@@ -32,6 +32,7 @@ export const AUDIT_RESOURCE_TYPES = [
   'newsletter_subscription',
   'contact_message',
   'shipment',
+  'serial_number',
   'notification',
   'notification_subscription',
   'mail_template',

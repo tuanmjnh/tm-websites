@@ -51,6 +51,7 @@
     "test:contact-messages": "tsx scripts/build/test-contact-messages.ts",
     "test:shipments": "tsx scripts/build/test-shipments.ts",
     "test:order-returns": "tsx scripts/build/test-order-returns.ts",
+    "test:serial-numbers": "tsx scripts/build/test-serial-numbers.ts",
     "test:hr-shifts": "tsx scripts/build/test-hr-shifts.ts",
     "test:stocktake": "tsx scripts/build/test-stocktake-service.ts",
     "test:catalog": "tsx scripts/build/test-catalog-service.ts",

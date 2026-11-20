@@ -28,6 +28,7 @@ import type { NewsletterSubscriptionDocument } from '../models/newsletterSubscri
 import type { ContactMessageDocument } from '../models/contactMessage'
 import type { ShipmentDocument } from '../models/shipment'
 import type { OrderReturnDocument } from '../models/orderReturn'
+import type { SerialNumberDocument } from '../models/serialNumber'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -60,6 +61,7 @@ import { newsletterSubscriptionModel, syncNewsletterSubscriptionIndexes } from '
 import { contactMessageModel, syncContactMessageIndexes } from '../models/contactMessage'
 import { shipmentModel, syncShipmentIndexes } from '../models/shipment'
 import { orderReturnModel, syncOrderReturnIndexes } from '../models/orderReturn'
+import { serialNumberModel, syncSerialNumberIndexes } from '../models/serialNumber'
 import type { StaffProfileDocument } from '../models/staffProfile'
 import type { AttendanceDocument } from '../models/attendance'
 import type { SalaryConfigDocument } from '../models/salaryConfig'
@@ -115,6 +117,7 @@ export interface PreparedModels {
   ContactMessage: Model<ContactMessageDocument>
   Shipment: Model<ShipmentDocument>
   OrderReturn: Model<OrderReturnDocument>
+  SerialNumber: Model<SerialNumberDocument>
   StaffProfile: Model<StaffProfileDocument>
   Attendance: Model<AttendanceDocument>
   SalaryConfig: Model<SalaryConfigDocument>
@@ -159,6 +162,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncContactMessageIndexes(connection)
   await syncShipmentIndexes(connection)
   await syncOrderReturnIndexes(connection)
+  await syncSerialNumberIndexes(connection)
   await syncStaffProfileIndexes(connection)
   await syncAttendanceIndexes(connection)
   await syncSalaryConfigIndexes(connection)
@@ -202,6 +206,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     ContactMessage: contactMessageModel(connection),
     Shipment: shipmentModel(connection),
     OrderReturn: orderReturnModel(connection),
+    SerialNumber: serialNumberModel(connection),
     StaffProfile: staffProfileModel(connection),
     Attendance: attendanceModel(connection),
     SalaryConfig: salaryConfigModel(connection),
