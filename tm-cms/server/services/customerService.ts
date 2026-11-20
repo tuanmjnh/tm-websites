@@ -641,3 +641,43 @@ export async function importCustomers(
 
   return { total: rows.length, created, updated, failed, results }
 }
+
+export interface CustomerDuplicateGroup {
+  key: string
+  field: 'email' | 'phone' | 'subjectId'
+  customers: { id: string, code: string, fullName: string }[]
+}
+
+/**
+ * Read-only deduplication report (CRM-01): groups customers that share a
+ * non-empty email, phone or Hub subject id. The policy is "detect, do not
+ * silently merge" — an operator resolves each group manually, because merging
+ * would move order history and loyalty points.
+ */
+export async function findDuplicateCustomers(
+  model: Model<CustomerDocument>,
+  siteId: string,
+): Promise<CustomerDuplicateGroup[]> {
+  const records = await model
+    .find({ siteId, isDeleted: { $ne: true } })
+    .select('_id code fullName email phone subjectId')
+    .lean<CustomerRecord[]>()
+  const groups: CustomerDuplicateGroup[] = []
+  const buckets = new Map<string, CustomerDuplicateGroup>()
+  for (const record of records) {
+    const candidates: { field: 'email' | 'phone' | 'subjectId', value: string }[] = []
+    if (record.email) candidates.push({ field: 'email', value: record.email.trim().toLowerCase() })
+    if (record.phone) candidates.push({ field: 'phone', value: record.phone.trim() })
+    if (record.subjectId) candidates.push({ field: 'subjectId', value: record.subjectId.trim() })
+    for (const { field, value } of candidates) {
+      const key = `${field}:${value}`
+      const bucket = buckets.get(key) ?? { key, field, customers: [] }
+      bucket.customers.push({ id: String(record._id), code: record.code, fullName: record.fullName ?? '' })
+      buckets.set(key, bucket)
+    }
+  }
+  for (const bucket of buckets.values()) {
+    if (bucket.customers.length > 1) groups.push(bucket)
+  }
+  return groups.sort((a, b) => b.customers.length - a.customers.length)
+}
