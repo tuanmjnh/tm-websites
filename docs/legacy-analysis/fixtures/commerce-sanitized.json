@@ -1,0 +1,1310 @@
+{
+  "meta": {
+    "generatedAt": "2026-11-19T09:49:49.652Z",
+    "source": "local legacy DB (redacted, synthetic PII)",
+    "counts": {
+      "quotations": 3,
+      "purchaseOrders": 6,
+      "suppliers": 3,
+      "warehouses": 3,
+      "inventories": 49,
+      "itemRefs": 24,
+      "variantRefs": 44
+    }
+  },
+  "suppliers": [
+    {
+      "_id": "supplier-1",
+      "code": "SUP001",
+      "title": "Supplier 1",
+      "email": "supplier1@example.test",
+      "phone": "0900000001",
+      "status": "active",
+      "rating": 0,
+      "itemsSupplied": [],
+      "avatar": null,
+      "isDeleted": false,
+      "deletedAt": null,
+      "sort": 0
+    },
+    {
+      "_id": "supplier-2",
+      "code": "SUP002",
+      "title": "Supplier 2",
+      "email": "supplier2@example.test",
+      "phone": "0900000002",
+      "status": "active",
+      "rating": 0,
+      "itemsSupplied": [],
+      "avatar": null,
+      "isDeleted": false,
+      "deletedAt": null,
+      "sort": 0
+    },
+    {
+      "_id": "supplier-3",
+      "code": "SUP003",
+      "title": "Supplier 3",
+      "email": "supplier3@example.test",
+      "phone": "0900000003",
+      "status": "active",
+      "rating": 0,
+      "itemsSupplied": [],
+      "avatar": null,
+      "isDeleted": false,
+      "deletedAt": null,
+      "sort": 0
+    }
+  ],
+  "warehouses": [
+    {
+      "_id": "warehouse-1",
+      "code": "WH001",
+      "title": "Warehouse 1",
+      "address": "Fixture Address",
+      "phone": "0900000001",
+      "status": "active",
+      "description": "Fixture warehouse",
+      "avatar": null,
+      "sort": 0,
+      "isDeleted": false,
+      "deletedAt": null
+    },
+    {
+      "_id": "warehouse-2",
+      "code": "WH002",
+      "title": "Warehouse 2",
+      "address": "Fixture Address",
+      "phone": "0900000002",
+      "status": "active",
+      "description": "Fixture warehouse",
+      "avatar": null,
+      "sort": 0,
+      "isDeleted": true,
+      "deletedAt": 1780190843349
+    },
+    {
+      "_id": "warehouse-3",
+      "code": "WH003",
+      "title": "Warehouse 3",
+      "address": "Fixture Address",
+      "phone": "0900000003",
+      "status": "active",
+      "description": "Fixture warehouse",
+      "avatar": null,
+      "sort": 0,
+      "isDeleted": true,
+      "deletedAt": 1780190845562
+    }
+  ],
+  "quotations": [
+    {
+      "_id": "quotation-1",
+      "code": "QUO-2610-0001",
+      "customerId": "customer-3",
+      "userId": "user-1",
+      "channel": "admin",
+      "status": "cancelled",
+      "items": [
+        {
+          "itemId": "item-1",
+          "variantId": "variant-1",
+          "itemName": "Fixture Item",
+          "sku": "SKU-HTFR44J8-7F-120X190",
+          "quantity": 5,
+          "price": 0
+        },
+        {
+          "itemId": "item-2",
+          "variantId": null,
+          "itemName": "Fixture Item",
+          "sku": "SKU-Z3V0T2PY",
+          "quantity": 1,
+          "price": 0
+        }
+      ],
+      "itemsPrice": 9320000,
+      "shippingFee": 0,
+      "discountAmount": 0,
+      "totalAmount": 9320000,
+      "shippingAddress": {
+        "fullName": "Fixture Customer",
+        "phone": "0900000001",
+        "street": "1 Fixture Street",
+        "ward": "Fixture Ward",
+        "district": "Fixture District",
+        "city": "Ho Chi Minh",
+        "country": "Vietnam"
+      },
+      "adminNote": "Fixture note",
+      "customerNote": "",
+      "internalNote": "",
+      "assignedStaffId": null,
+      "warehouseId": "warehouse-1",
+      "validUntil": 1793769438352,
+      "convertedOrderId": null,
+      "estimatedCost": 5492000,
+      "estimatedProfit": 3828000,
+      "isDeleted": false,
+      "deletedAt": null,
+      "version": 2
+    },
+    {
+      "_id": "quotation-2",
+      "code": "QUO-2611-0012",
+      "customerId": "customer-1",
+      "userId": "user-2",
+      "channel": "portal",
+      "status": "submitted",
+      "items": [
+        {
+          "itemId": "item-3",
+          "variantId": "variant-2",
+          "itemName": "Fixture Item",
+          "sku": "SKU-YBKY5HES-160X200",
+          "quantity": 3,
+          "price": 0
+        },
+        {
+          "itemId": "item-3",
+          "variantId": "variant-3",
+          "itemName": "Fixture Item",
+          "sku": "SKU-YBKY5HES-180X200",
+          "quantity": 1,
+          "price": 0
+        },
+        {
+          "itemId": "item-4",
+          "variantId": "variant-4",
+          "itemName": "Fixture Item",
+          "sku": "SKU-K7PF301C-150X190",
+          "quantity": 1,
+          "price": 0
+        },
+        {
+          "itemId": "item-4",
+          "variantId": "variant-5",
+          "itemName": "Fixture Item",
+          "sku": "SKU-K7PF301C-160X200",
+          "quantity": 1,
+          "price": 0
+        },
+        {
+          "itemId": "item-4",
+          "variantId": "variant-6",
+          "itemName": "Fixture Item",
+          "sku": "SKU-K7PF301C-120X190",
+          "quantity": 1,
+          "price": 0
+        }
+      ],
+      "itemsPrice": 2110000,
+      "shippingFee": 0,
+      "discountAmount": 0,
+      "totalAmount": 2110000,
+      "shippingAddress": {
+        "fullName": "Fixture Customer",
+        "phone": "0900000001",
+        "street": "1 Fixture Street",
+        "ward": "Fixture Ward",
+        "district": "Fixture District",
+        "city": "Ho Chi Minh",
+        "country": "Vietnam"
+      },
+      "adminNote": "Fixture note",
+      "customerNote": "",
+      "internalNote": "",
+      "assignedStaffId": null,
+      "warehouseId": null,
+      "validUntil": null,
+      "convertedOrderId": null,
+      "estimatedCost": 1160000,
+      "estimatedProfit": 950000,
+      "isDeleted": false,
+      "deletedAt": null,
+      "version": 1
+    },
+    {
+      "_id": "quotation-3",
+      "code": "QUO-2611-0013",
+      "customerId": "customer-1",
+      "userId": "user-3",
+      "channel": "portal",
+      "status": "submitted",
+      "items": [
+        {
+          "itemId": "item-5",
+          "variantId": "variant-7",
+          "itemName": "Fixture Item",
+          "sku": "SKU-WR0Q9RP4-120X190",
+          "quantity": 1,
+          "price": 0
+        },
+        {
+          "itemId": "item-6",
+          "variantId": "variant-8",
+          "itemName": "Fixture Item",
+          "sku": "SKU-VDAI05B3-20X60",
+          "quantity": 1,
+          "price": 0
+        },
+        {
+          "itemId": "item-7",
+          "variantId": null,
+          "itemName": "Fixture Item",
+          "sku": "SKU-ZTC1I4TZ",
+          "quantity": 1,
+          "price": 0
+        }
+      ],
+      "itemsPrice": 375000,
+      "shippingFee": 0,
+      "discountAmount": 0,
+      "totalAmount": 375000,
+      "shippingAddress": {
+        "fullName": "Fixture Customer",
+        "phone": "0900000001",
+        "street": "1 Fixture Street",
+        "ward": "Fixture Ward",
+        "district": "Fixture District",
+        "city": "Ho Chi Minh",
+        "country": "Vietnam"
+      },
+      "adminNote": "Fixture note",
+      "customerNote": "",
+      "internalNote": "",
+      "assignedStaffId": null,
+      "warehouseId": null,
+      "validUntil": null,
+      "convertedOrderId": null,
+      "estimatedCost": 0,
+      "estimatedProfit": 375000,
+      "isDeleted": false,
+      "deletedAt": null,
+      "version": 1
+    }
+  ],
+  "purchase_orders": [
+    {
+      "_id": "purchase-order-1",
+      "code": "PO-2605-0001",
+      "supplierId": null,
+      "warehouseId": "warehouse-1",
+      "status": "completed",
+      "paymentStatus": "unpaid",
+      "paymentMethod": "cash",
+      "items": [
+        {
+          "itemId": "item-8",
+          "variantId": null,
+          "quantity": 15,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-9",
+          "variantId": null,
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-10",
+          "variantId": null,
+          "quantity": 6,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-2",
+          "variantId": null,
+          "quantity": 6,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-11",
+          "variantId": null,
+          "quantity": 6,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-12",
+          "variantId": null,
+          "quantity": 6,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-13",
+          "variantId": null,
+          "quantity": 5,
+          "unitCost": 0
+        }
+      ],
+      "totalAmount": 24780000,
+      "orderedTotalAmount": 24780000,
+      "paidAmount": 0,
+      "expectedDeliveryDate": 1778518800000,
+      "reconcileNote": "",
+      "isDeleted": false,
+      "deletedAt": null,
+      "createdBy": "user-1"
+    },
+    {
+      "_id": "purchase-order-2",
+      "code": "PO-2605-0002",
+      "supplierId": null,
+      "warehouseId": "warehouse-1",
+      "status": "completed",
+      "paymentStatus": "unpaid",
+      "paymentMethod": "cash",
+      "items": [
+        {
+          "itemId": "item-14",
+          "variantId": "variant-9",
+          "quantity": 1,
+          "unitCost": 0
+        }
+      ],
+      "totalAmount": 1370000,
+      "orderedTotalAmount": 1370000,
+      "paidAmount": 0,
+      "expectedDeliveryDate": 1778518800000,
+      "reconcileNote": "",
+      "isDeleted": false,
+      "deletedAt": null,
+      "createdBy": "user-2"
+    },
+    {
+      "_id": "purchase-order-3",
+      "code": "PO-2605-0003",
+      "supplierId": null,
+      "warehouseId": "warehouse-1",
+      "status": "completed",
+      "paymentStatus": "unpaid",
+      "paymentMethod": "cash",
+      "items": [
+        {
+          "itemId": "item-15",
+          "variantId": "variant-10",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-15",
+          "variantId": "variant-11",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-16",
+          "variantId": "variant-12",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-16",
+          "variantId": "variant-13",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-14",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-15",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-16",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-17",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-18",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-19",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-20",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-21",
+          "quantity": 3,
+          "unitCost": 0
+        }
+      ],
+      "totalAmount": 107690000,
+      "orderedTotalAmount": 107690000,
+      "paidAmount": 0,
+      "expectedDeliveryDate": 1778518800000,
+      "reconcileNote": "",
+      "isDeleted": false,
+      "deletedAt": null,
+      "createdBy": "user-3"
+    },
+    {
+      "_id": "purchase-order-4",
+      "code": "PO-2605-0004",
+      "supplierId": null,
+      "warehouseId": "warehouse-1",
+      "status": "cancelled",
+      "paymentStatus": "unpaid",
+      "paymentMethod": "cash",
+      "items": [
+        {
+          "itemId": "item-15",
+          "variantId": "variant-10",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-15",
+          "variantId": "variant-11",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-16",
+          "variantId": "variant-12",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-16",
+          "variantId": "variant-13",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-14",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-15",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-16",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-17",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-18",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-19",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-20",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-17",
+          "variantId": "variant-21",
+          "quantity": 3,
+          "unitCost": 0
+        }
+      ],
+      "totalAmount": 0,
+      "orderedTotalAmount": 107690000,
+      "paidAmount": 0,
+      "expectedDeliveryDate": 1778518800000,
+      "reconcileNote": "",
+      "isDeleted": false,
+      "deletedAt": null,
+      "createdBy": "user-4"
+    },
+    {
+      "_id": "purchase-order-5",
+      "code": "PO-2605-0005",
+      "supplierId": null,
+      "warehouseId": "warehouse-1",
+      "status": "completed",
+      "paymentStatus": "unpaid",
+      "paymentMethod": "cash",
+      "items": [
+        {
+          "itemId": "item-18",
+          "variantId": null,
+          "quantity": 10,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-19",
+          "variantId": null,
+          "quantity": 10,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-20",
+          "variantId": "variant-22",
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-20",
+          "variantId": "variant-23",
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-20",
+          "variantId": "variant-24",
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-20",
+          "variantId": "variant-25",
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-21",
+          "variantId": "variant-26",
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-21",
+          "variantId": "variant-27",
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-21",
+          "variantId": "variant-28",
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-21",
+          "variantId": "variant-29",
+          "quantity": 4,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-22",
+          "variantId": "variant-30",
+          "quantity": 4,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-22",
+          "variantId": "variant-31",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-22",
+          "variantId": "variant-32",
+          "quantity": 2,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-23",
+          "variantId": "variant-33",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-23",
+          "variantId": "variant-34",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-23",
+          "variantId": "variant-35",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-23",
+          "variantId": "variant-36",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-23",
+          "variantId": "variant-37",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-4",
+          "variantId": "variant-6",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-4",
+          "variantId": "variant-4",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-4",
+          "variantId": "variant-5",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-4",
+          "variantId": "variant-38",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-4",
+          "variantId": "variant-39",
+          "quantity": 3,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-24",
+          "variantId": "variant-40",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-24",
+          "variantId": "variant-41",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-24",
+          "variantId": "variant-42",
+          "quantity": 1,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-24",
+          "variantId": "variant-43",
+          "quantity": 1,
+          "unitCost": 0
+        }
+      ],
+      "totalAmount": 22490000,
+      "orderedTotalAmount": 22490000,
+      "paidAmount": 0,
+      "expectedDeliveryDate": 1778950800000,
+      "reconcileNote": "",
+      "isDeleted": false,
+      "deletedAt": null,
+      "createdBy": "user-5"
+    },
+    {
+      "_id": "purchase-order-6",
+      "code": "PO-2606-0001",
+      "supplierId": null,
+      "warehouseId": "warehouse-1",
+      "status": "completed",
+      "paymentStatus": "paid",
+      "paymentMethod": "cash",
+      "items": [
+        {
+          "itemId": "item-1",
+          "variantId": "variant-1",
+          "quantity": 5,
+          "unitCost": 0
+        },
+        {
+          "itemId": "item-1",
+          "variantId": "variant-44",
+          "quantity": 5,
+          "unitCost": 0
+        }
+      ],
+      "totalAmount": 7938000,
+      "orderedTotalAmount": 7938000,
+      "paidAmount": 7938000,
+      "expectedDeliveryDate": 1778605200000,
+      "reconcileNote": "",
+      "isDeleted": false,
+      "deletedAt": null,
+      "createdBy": "user-6"
+    }
+  ],
+  "inventories": [
+    {
+      "_id": "inventory-1",
+      "itemId": "item-16",
+      "variantId": "variant-12",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-UN2MHN6Q-160X200-10F",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-2",
+      "itemId": "item-17",
+      "variantId": "variant-14",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-3C9ZE6RC-160X200-9F",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-3",
+      "itemId": "item-15",
+      "variantId": "variant-11",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-D6HMWEKM-180X200-9F",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-4",
+      "itemId": "item-16",
+      "variantId": "variant-13",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-UN2MHN6Q-180X200-10F",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-5",
+      "itemId": "item-17",
+      "variantId": "variant-15",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-3C9ZE6RC-180X200-9F",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-6",
+      "itemId": "item-17",
+      "variantId": "variant-16",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-3C9ZE6RC-120X190-5F",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-7",
+      "itemId": "item-17",
+      "variantId": "variant-18",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-3C9ZE6RC-150X190-5F",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-8",
+      "itemId": "item-17",
+      "variantId": "variant-17",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-3C9ZE6RC-120X190-7F",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-9",
+      "itemId": "item-17",
+      "variantId": "variant-19",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-3C9ZE6RC-150X190-7F",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-10",
+      "itemId": "item-17",
+      "variantId": "variant-20",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-3C9ZE6RC-160X200-7F",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-11",
+      "itemId": "item-17",
+      "variantId": "variant-21",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-3C9ZE6RC-180X200-7F",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-12",
+      "itemId": "item-15",
+      "variantId": "variant-10",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-D6HMWEKM-160X200-9F",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-13",
+      "itemId": "item-14",
+      "variantId": "variant-9",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-I05Y2WLW-120X190",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-14",
+      "itemId": "item-2",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-Z3V0T2PY",
+      "quantityOnHand": 6,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-15",
+      "itemId": "item-9",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-0S403L5N",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-16",
+      "itemId": "item-10",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-EC5UTNYH",
+      "quantityOnHand": 6,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-17",
+      "itemId": "item-11",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-Y83Y0PCA",
+      "quantityOnHand": 6,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-18",
+      "itemId": "item-12",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-DYGHTDYK",
+      "quantityOnHand": 6,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-19",
+      "itemId": "item-13",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-B3069KTB",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-20",
+      "itemId": "item-8",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-NEXX266S",
+      "quantityOnHand": 15,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-21",
+      "itemId": "item-19",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-H3KF53U9",
+      "quantityOnHand": 10,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-22",
+      "itemId": "item-20",
+      "variantId": "variant-23",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K5HW79FG-150X190",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-23",
+      "itemId": "item-21",
+      "variantId": "variant-29",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-LZRLCGB9-200X220",
+      "quantityOnHand": 4,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-24",
+      "itemId": "item-23",
+      "variantId": "variant-33",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-335Z39Q5-120X190",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-25",
+      "itemId": "item-23",
+      "variantId": "variant-35",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-335Z39Q5-160X200",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-26",
+      "itemId": "item-4",
+      "variantId": "variant-6",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K7PF301C-120X190",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-27",
+      "itemId": "item-4",
+      "variantId": "variant-5",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K7PF301C-160X200",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-28",
+      "itemId": "item-20",
+      "variantId": "variant-22",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K5HW79FG-120X190",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-29",
+      "itemId": "item-20",
+      "variantId": "variant-24",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K5HW79FG-160X200",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-30",
+      "itemId": "item-20",
+      "variantId": "variant-25",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K5HW79FG-180X200",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-31",
+      "itemId": "item-22",
+      "variantId": "variant-31",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-Y4XNXAMH-180X200",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-32",
+      "itemId": "item-22",
+      "variantId": "variant-32",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-Y4XNXAMH-200X220",
+      "quantityOnHand": 2,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-33",
+      "itemId": "item-23",
+      "variantId": "variant-36",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-335Z39Q5-180X200",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-34",
+      "itemId": "item-4",
+      "variantId": "variant-4",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K7PF301C-150X190",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-35",
+      "itemId": "item-4",
+      "variantId": "variant-38",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K7PF301C-180X200",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-36",
+      "itemId": "item-4",
+      "variantId": "variant-39",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-K7PF301C-200X220",
+      "quantityOnHand": 3,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-37",
+      "itemId": "item-24",
+      "variantId": "variant-41",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-9CXXCNR2-160X200",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-38",
+      "itemId": "item-21",
+      "variantId": "variant-26",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-LZRLCGB9-120X190",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-39",
+      "itemId": "item-21",
+      "variantId": "variant-27",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-LZRLCGB9-160X200",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-40",
+      "itemId": "item-21",
+      "variantId": "variant-28",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-LZRLCGB9-180X200",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-41",
+      "itemId": "item-22",
+      "variantId": "variant-30",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-Y4XNXAMH-160X200",
+      "quantityOnHand": 4,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-42",
+      "itemId": "item-23",
+      "variantId": "variant-37",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-335Z39Q5-200X220",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-43",
+      "itemId": "item-24",
+      "variantId": "variant-42",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-9CXXCNR2-180X200",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-44",
+      "itemId": "item-18",
+      "variantId": null,
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-6KS59OG2",
+      "quantityOnHand": 10,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-45",
+      "itemId": "item-23",
+      "variantId": "variant-34",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-335Z39Q5-150X190",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-46",
+      "itemId": "item-24",
+      "variantId": "variant-40",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-9CXXCNR2-150X190",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-47",
+      "itemId": "item-24",
+      "variantId": "variant-43",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-9CXXCNR2-200X220",
+      "quantityOnHand": 1,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-48",
+      "itemId": "item-1",
+      "variantId": "variant-1",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-HTFR44J8-7F-120X190",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    },
+    {
+      "_id": "inventory-49",
+      "itemId": "item-1",
+      "variantId": "variant-44",
+      "warehouseId": "warehouse-1",
+      "sku": "SKU-HTFR44J8-7F-150X190",
+      "quantityOnHand": 5,
+      "quantityReserved": 0,
+      "lowStockThreshold": 0,
+      "binLocation": null
+    }
+  ]
+}

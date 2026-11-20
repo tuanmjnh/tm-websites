@@ -11,6 +11,10 @@
     "./catalog": "./src/catalog.ts",
     "./catalog-admin": "./src/catalog-admin.ts",
     "./public-cart": "./src/public-cart.ts",
+    "./public-checkout": "./src/public-checkout.ts",
+    "./public-order-lookup": "./src/public-order-lookup.ts",
+    "./public-contact": "./src/public-contact.ts",
+    "./public-newsletter": "./src/public-newsletter.ts",
     "./hub-admin": "./src/hub-admin.ts",
     "./category-admin": "./src/category-admin.ts",
     "./content-admin": "./src/content-admin.ts",
@@ -20,7 +24,8 @@
     "./tag-admin": "./src/tag-admin.ts",
     "./site-public": "./src/site-public.ts",
     "./public-content": "./src/public-content.ts",
-    "./redirect-admin": "./src/redirect-admin.ts"
+    "./redirect-admin": "./src/redirect-admin.ts",
+    "./customer-admin": "./src/customer-admin.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"

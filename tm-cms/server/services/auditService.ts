@@ -120,3 +120,43 @@ export async function listAuditEntries(
     total,
   }
 }
+
+const MAX_EXPORT_ROWS = 5000
+
+function csvCell(value: string | number): string {
+  let text = String(value)
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+export async function exportAuditCsv(
+  model: Model<AuditEntryDocument>,
+  siteId: string,
+  params: { resourceType?: string, action?: string, limit?: number } = {},
+): Promise<{ csv: string, rows: number, truncated: boolean }> {
+  const limit = Math.min(Math.max(Math.trunc(params.limit ?? MAX_EXPORT_ROWS), 1), MAX_EXPORT_ROWS)
+  const filter: Record<string, unknown> = { siteId }
+  if (params.resourceType) filter.resourceType = params.resourceType
+  if (params.action) filter.action = params.action
+
+  const records = await model.find(filter).sort({ _id: -1 }).limit(limit + 1).lean<AuditRecord[]>()
+  const truncated = records.length > limit
+  const page = truncated ? records.slice(0, limit) : records
+
+  const lines: string[] = ['Ngày,Loại tài nguyên,Mã tài nguyên,Hành động,Revision,Từ trạng thái,Đến trạng thái,Trường thay đổi,Tác nhân,Email']
+  for (const record of page) {
+    lines.push([
+      new Date(record.createdAt).toISOString(),
+      record.resourceType,
+      record.resourceId,
+      record.action,
+      record.revision ?? '',
+      record.fromStatus ?? '',
+      record.toStatus ?? '',
+      Array.isArray(record.changedFields) ? record.changedFields.join(';') : '',
+      record.actor?.name ?? '',
+      record.actor?.email ?? '',
+    ].map(csvCell).join(','))
+  }
+  return { csv: `${lines.join('\n')}\n`, rows: page.length, truncated }
+}

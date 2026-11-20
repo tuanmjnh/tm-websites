@@ -15,6 +15,7 @@ import {
   legacyContentStatus,
   legacyDate,
   legacyKeywords,
+  legacyContentCompleteness,
   legacyEmptyDatabaseWarning,
   legacyCollectionState,
   legacyList,
@@ -36,7 +37,9 @@ import {
  * What the v2 schema cannot hold stays in per-record `legacy.*` attributes
  * (body template, thumbnail URL, sort weight, home flag) instead of being
  * silently dropped. Legacy `gallery` and media-embed lists have no column and
- * are reported by the dry run, not written as invalid media ids.
+ * are reported by the dry run, not written as invalid media ids; a record that
+ * loses one of them, or has no body, is marked `legacy.incomplete` so it never
+ * reads as a finished migration (owner decision J1, 2026-11-19).
  *
  * The legacy documents are read raw (`strict:false`), never through a model:
  * their shape is not a write schema and must not become one.
@@ -200,6 +203,16 @@ try {
     if (legacyList(record.gallery).length) droppedGallery.push(key)
     if (legacyList(record.media).length) droppedMedia.push(key)
 
+    // J1: v2 has no renderer for the legacy format and no mapping from a gallery
+    // or media URL to a media id, so an incomplete record is marked, not guessed.
+    const completeness = legacyContentCompleteness(record)
+    const attributes = legacyContentAttributes(record)
+    if (completeness.reasons.length) {
+      attributes['legacy.incomplete'] = completeness.reasons.join(',')
+      if (completeness.gallery) attributes['legacy.gallerySkipped'] = completeness.gallery
+      if (completeness.media) attributes['legacy.mediaSkipped'] = completeness.media
+    }
+
     const status = legacyContentStatus(record)
 
     return {
@@ -213,7 +226,7 @@ try {
         .filter((entry): entry is string => Boolean(entry)),
       tags: legacyTags(record.tags),
       media: [] as string[],
-      attributes: legacyContentAttributes(record),
+      attributes,
       publishAt: null,
       unpublishAt: null,
       publishedAt: legacyDate(record.publishedAt),
@@ -271,6 +284,13 @@ try {
 
   // What actually came through, field by field. The totals cannot show a dropped
   // field: every legacy tag was missing and the report still looked healthy.
+  // Only records that are actually written: an unusable record is already reported
+  // under `invalid records`, and counting it here would inflate the state.
+  const incompleteContents = plannedContents.filter(planned => planned.locales.length && planned.attributes['legacy.incomplete'])
+  const incompleteNoBody = incompleteContents.filter(planned => String(planned.attributes['legacy.incomplete']).includes('no-body')).length
+  const incompleteGallery = incompleteContents.filter(planned => String(planned.attributes['legacy.incomplete']).includes('gallery')).length
+  const incompleteMedia = incompleteContents.filter(planned => String(planned.attributes['legacy.incomplete']).includes('media')).length
+
   const coverage = {
     thumbnail: plannedContents.filter(content => content.attributes['legacy.thumbnail']).length,
     template: plannedContents.filter(content => content.attributes['legacy.template']).length,
@@ -297,6 +317,9 @@ try {
   if (unresolvedCategories.size) console.log(`  unresolved category ids ${unresolvedCategories.size}`)
   if (droppedGallery.length) console.log(`  legacy gallery lists not carried (${droppedGallery.length}): ${droppedGallery.slice(0, 5).join(', ')}${droppedGallery.length > 5 ? ', …' : ''}`)
   if (droppedMedia.length) console.log(`  legacy media embeds not carried (${droppedMedia.length}): ${droppedMedia.slice(0, 5).join(', ')}${droppedMedia.length > 5 ? ', …' : ''}`)
+  if (incompleteContents.length) {
+    console.log(`  not fully migrated ${incompleteContents.length}: no body ${incompleteNoBody}, gallery not carried ${incompleteGallery}, media not carried ${incompleteMedia} — marked legacy.incomplete`)
+  }
   if (categoryConflicts.length) {
     console.log(`  category slug conflicts resolved ${categoryConflicts.length}`)
     for (const conflict of categoryConflicts.slice(0, 10)) console.log(`    ${conflict}`)

@@ -10,7 +10,35 @@ import { MenuServiceError } from '#server/services/menuService'
 import { ContentServiceError } from '#server/services/contentService'
 import { TagServiceError } from '#server/services/tagService'
 import { CatalogServiceError } from '#server/services/catalogService'
+import { CustomerServiceError } from '#server/services/customerService'
+import { CustomerSegmentServiceError } from '#server/services/customerSegmentService'
+import { OrderServiceError } from '#server/services/orderService'
+import { QuotationServiceError } from '#server/services/quotationService'
+import { WarehouseServiceError } from '#server/services/warehouseService'
+import { InventoryServiceError } from '#server/services/inventoryService'
+import { InventoryTransactionServiceError } from '#server/services/inventoryTransactionService'
+import { PaymentServiceError } from '#server/services/paymentService'
+import { InventoryTransferServiceError } from '#server/services/inventoryTransferService'
+import { NotificationServiceError } from '#server/services/notificationService'
+import { MailServiceError } from '#server/services/mailService'
+import { HrServiceError } from '#server/services/staffService'
+import { FinanceReportError } from '#server/services/financeReportService'
+import { StocktakeServiceError } from '#server/services/stocktakeService'
+import { MailAnalyticsError } from '#server/services/mailAnalyticsService'
+import { SupplierPriceError } from '#server/services/supplierPriceService'
+import { NewsletterServiceError } from '#server/services/newsletterService'
+import { ContactMessageServiceError } from '#server/services/contactMessageService'
+import { ShipmentServiceError } from '#server/services/shipmentService'
+import { OrderReturnServiceError } from '#server/services/orderReturnService'
+import { SerialNumberServiceError } from '#server/services/serialNumberService'
+import { SupplierServiceError } from '#server/services/supplierService'
+import { PurchaseOrderServiceError } from '#server/services/purchaseOrderService'
 import { RedirectServiceError } from '#server/services/redirectService'
+import { TaskServiceError } from '#server/services/taskService'
+import { JobServiceError } from '#server/services/jobService'
+import { PayableServiceError } from '#server/services/payableService'
+import { PushSubscriptionServiceError } from '#server/services/pushSubscriptionService'
+import { CustomerPortalServiceError } from '#server/services/customerPortalService'
 import { MediaStorageError } from './mediaStorage'
 import { AdminTagRenameRequestSchema } from '@tm/flow-contracts/tag-admin'
 import { ATTRIBUTE_KEY_PATTERN, ATTRIBUTE_VALUE_MAX_LENGTH } from '#server/models/content'
@@ -97,6 +125,25 @@ export const CatalogDeleteQuerySchema = z.object({
   revision: z.coerce.number().int().min(1),
 })
 
+/** CRM list filters; `segment` is the segment id the editor selected. */
+export const CustomerListQuerySchema = z.object({
+  q: z.string().trim().max(80).optional(),
+  segment: z.string().trim().max(64).optional(),
+  includeDeleted: z.enum(['true', 'false']).optional(),
+  cursor: z.string().max(64).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+})
+
+/** CRM writes keep the free-form body the service validates, like the other editors. */
+export const CustomerBodySchema = z.record(z.string(), z.unknown())
+
+export const CustomerSegmentBodySchema = z.record(z.string(), z.unknown())
+
+/** Soft delete and restore both carry the revision the editor saw. */
+export const CustomerDeleteQuerySchema = z.object({
+  revision: z.coerce.number().int().min(1),
+})
+
 export const ContentEventSchema = z.object({
   event: z.enum(['publish', 'schedule', 'unpublish', 'archive', 'restore', 'delete']),
   revision: z.number().int().min(1),
@@ -146,11 +193,95 @@ export function translateContentError(error: unknown): never {
   if (error instanceof RedirectServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
+  if (error instanceof CustomerServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof CustomerSegmentServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof OrderServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof QuotationServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof WarehouseServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof InventoryServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof InventoryTransactionServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof PaymentServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof InventoryTransferServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof NotificationServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof MailServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof HrServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof FinanceReportError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof StocktakeServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof MailAnalyticsError) {
+    return errorResponse(error.statusCode, error.code, error.message)
+  }
+  if (error instanceof SupplierPriceError) {
+    return errorResponse(error.statusCode, error.code, error.message)
+  }
+  if (error instanceof NewsletterServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof ContactMessageServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof ShipmentServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof OrderReturnServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof SerialNumberServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof SupplierServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof PurchaseOrderServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
   if (error instanceof MediaServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof MediaStorageError) {
     return errorResponse(error.statusCode, error.code, error.message)
+  }
+  if (error instanceof TaskServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof JobServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof PayableServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof PushSubscriptionServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof CustomerPortalServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof IdempotencyError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)

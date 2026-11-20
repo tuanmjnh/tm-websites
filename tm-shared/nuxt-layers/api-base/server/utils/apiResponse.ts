@@ -12,6 +12,8 @@ export interface ApiResponseOptions<T> {
     hasMore?: boolean
     /** Status buckets for a filtered admin list. */
     counts?: Record<string, number>
+    /** Money and day sums for an admin list that reports totals (payroll). */
+    totals?: Record<string, number>
     /** Folder names the current admin list is grouped by (media library). */
     folders?: string[]
   }

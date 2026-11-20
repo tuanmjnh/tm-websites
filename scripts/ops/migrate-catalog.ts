@@ -263,6 +263,17 @@ try {
     }
   })
 
+  // A legacy item can point at a category id its own copy does not hold (the local
+  // `sen-tuan` copy has two such rows). The link is dropped because there is nothing
+  // to point at — but silently: the row still counts as migrated, so parity stays
+  // green while the product quietly loses its category. Report every one by name.
+  const unresolvedCategoryRefs: { itemKey: string, categoryId: string }[] = []
+  for (const item of plannedItems) {
+    for (const categoryId of item.categoryLegacyIds) {
+      if (!categoryKeyByLegacy.has(categoryId)) unresolvedCategoryRefs.push({ itemKey: item.key, categoryId })
+    }
+  }
+
   // What actually came through, field by field. A mapper that drops a field looks
   // exactly like clean data in the totals: `tags` was 0 of 241 items for a day
   // because nothing printed that number.
@@ -297,12 +308,29 @@ try {
     console.log(`  category slug conflicts resolved ${categorySlugConflicts.length}`)
     for (const conflict of categorySlugConflicts.slice(0, 10)) console.log(`    ${conflict}`)
   }
+  if (unresolvedCategoryRefs.length) {
+    console.log(`  unresolved item category references ${unresolvedCategoryRefs.length}`)
+    for (const entry of unresolvedCategoryRefs.slice(0, 10)) {
+      console.log(`    ${entry.itemKey}: category ${entry.categoryId} does not exist in item_categories`)
+    }
+  }
 
   if (!apply) {
     console.log('  nothing was written; rerun with --apply')
   } else {
     const { CatalogItem, CatalogCategory } = await prepareDatabase(connection)
-    for (const planned of plannedCategories) {
+    // Parents must be written before their children so `categoryIdByLegacy`
+    // already holds the parent's v2 id when a child resolves its `parent`.
+    // Legacy rows arrive in storage order, which is not topological.
+    const categoriesByLegacyId = new Map(plannedCategories.map(planned => [planned.legacyId, planned]))
+    const legacyCategoryDepth = (planned: (typeof plannedCategories)[number], seen = new Set<string>()): number => {
+      if (!planned.parentLegacyId || !categoriesByLegacyId.has(planned.parentLegacyId)) return 0
+      if (seen.has(planned.legacyId)) return 0
+      seen.add(planned.legacyId)
+      return 1 + legacyCategoryDepth(categoriesByLegacyId.get(planned.parentLegacyId)!, seen)
+    }
+    const orderedCategories = [...plannedCategories].sort((a, b) => legacyCategoryDepth(a) - legacyCategoryDepth(b))
+    for (const planned of orderedCategories) {
       const parent = planned.parentLegacyId ? categoryIdByLegacy.get(planned.parentLegacyId) ?? null : null
       const ancestors = planned.ancestorsLegacyIds
         .map(id => categoryIdByLegacy.get(id))

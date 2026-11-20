@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { NewsletterSubscribeRequestSchema, PublicContactMessageSchema } from '@tm/flow-contracts'
+import type { NewsletterSubscribeResponse } from '@tm/flow-contracts'
+
 const { t } = useI18n()
 const { brandName, contactEmail, contactPhone, contactAddress } = usePublicSite()
 const { socialLinks } = useSiteConfig()
@@ -13,6 +16,86 @@ const channels = computed(() => [
   contactPhone.value && { icon: 'i-lucide-phone', label: t('contact.phone'), value: contactPhone.value, href: `tel:${contactPhone.value.replace(/\s+/g, '')}` },
   contactAddress.value && { icon: 'i-lucide-map-pin', label: t('contact.address'), value: contactAddress.value, href: undefined },
 ].filter(Boolean) as Array<{ icon: string, label: string, value: string, href?: string }>)
+
+/**
+ * Message form.
+ *
+ * The message is stored for the storefront operator to answer; nothing is sent
+ * from the request, so the form does not promise an email reply it cannot
+ * deliver. `form.website` is a honeypot the server ignores when filled.
+ */
+const form = reactive({ name: '', email: '', phone: '', subject: '', message: '', website: '' })
+const sending = ref(false)
+const sent = ref(false)
+const failed = ref(false)
+const fieldErrors = ref<Record<string, string>>({})
+
+const submitMessage = async () => {
+  if (sending.value) return
+
+  fieldErrors.value = {}
+  failed.value = false
+
+  const parsed = PublicContactMessageSchema.safeParse(form)
+  if (!parsed.success) {
+    const errors: Record<string, string> = {}
+    for (const issue of parsed.error.issues) {
+      const field = String(issue.path[issue.path.length - 1] ?? '')
+      if (field && !errors[field]) errors[field] = t('contact.form.invalidField')
+    }
+    fieldErrors.value = errors
+    return
+  }
+
+  sending.value = true
+  try {
+    await $fetch('/api/public/contact-message', { method: 'POST', body: parsed.data })
+    sent.value = true
+    Object.assign(form, { name: '', email: '', phone: '', subject: '', message: '' })
+  } catch {
+    failed.value = true
+  } finally {
+    sending.value = false
+  }
+}
+
+/**
+ * Newsletter signup is double opt-in: the answer says whether a confirmation
+ * mail was queued, so the page never claims a subscription that is still
+ * pending — or a mail that no template/provider allowed.
+ */
+const newsletter = reactive({ email: '', consent: false })
+const newsletterSending = ref(false)
+const newsletterState = ref<'idle' | 'invalid' | 'failed' | 'pending_confirmation' | 'already_confirmed' | 'no_mail_provider'>('idle')
+
+const subscribeNewsletter = async () => {
+  if (newsletterSending.value) return
+  newsletterState.value = 'idle'
+
+  const parsed = NewsletterSubscribeRequestSchema.safeParse({
+    email: newsletter.email,
+    name: form.name,
+    consent: newsletter.consent,
+  })
+  if (!parsed.success) {
+    newsletterState.value = 'invalid'
+    return
+  }
+
+  newsletterSending.value = true
+  try {
+    const response = await $fetch<NewsletterSubscribeResponse>('/api/public/newsletter/subscribe', {
+      method: 'POST',
+      body: parsed.data,
+    })
+    newsletterState.value = response.data.state
+    if (response.data.state !== 'no_mail_provider') newsletter.email = ''
+  } catch {
+    newsletterState.value = 'failed'
+  } finally {
+    newsletterSending.value = false
+  }
+}
 
 const robots = usePageRobots({ empty: () => !channels.value.length && !socialLinks.value.length })
 
@@ -63,6 +146,110 @@ useSeoMeta({
       :title="t('contact.emptyTitle')"
       :description="t('contact.emptyHint')"
     />
+
+    <section class="panel mt-6 border-default p-6">
+      <h2 class="text-sm font-semibold text-highlighted">
+        {{ t('contact.form.title') }}
+      </h2>
+
+      <div v-if="sent" class="mt-3" role="status">
+        <p class="text-sm font-medium text-highlighted">{{ t('contact.form.sentTitle') }}</p>
+        <p class="mt-1 text-sm text-muted">{{ t('contact.form.sentHint') }}</p>
+        <UButton color="neutral" variant="soft" size="sm" class="mt-3" :label="t('contact.form.sendAnother')" @click="sent = false" />
+      </div>
+
+      <form v-else class="mt-3 space-y-4" @submit.prevent="submitMessage">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="contact-name" class="mb-1 block text-xs font-medium text-muted">{{ t('contact.form.name') }}</label>
+            <UInput id="contact-name" v-model="form.name" autocomplete="name" :disabled="sending" class="w-full" />
+            <p v-if="fieldErrors.name" class="mt-1 text-xs text-error">{{ fieldErrors.name }}</p>
+          </div>
+          <div>
+            <label for="contact-email" class="mb-1 block text-xs font-medium text-muted">{{ t('contact.form.email') }}</label>
+            <UInput id="contact-email" v-model="form.email" type="email" autocomplete="email" :disabled="sending" class="w-full" />
+            <p v-if="fieldErrors.email" class="mt-1 text-xs text-error">{{ fieldErrors.email }}</p>
+          </div>
+          <div>
+            <label for="contact-phone" class="mb-1 block text-xs font-medium text-muted">{{ t('contact.form.phone') }}</label>
+            <UInput id="contact-phone" v-model="form.phone" type="tel" autocomplete="tel" :disabled="sending" class="w-full" />
+          </div>
+          <div>
+            <label for="contact-subject" class="mb-1 block text-xs font-medium text-muted">{{ t('contact.form.subject') }}</label>
+            <UInput id="contact-subject" v-model="form.subject" :disabled="sending" class="w-full" />
+          </div>
+        </div>
+        <div>
+          <label for="contact-message" class="mb-1 block text-xs font-medium text-muted">{{ t('contact.form.message') }}</label>
+          <UTextarea id="contact-message" v-model="form.message" :rows="5" :disabled="sending" class="w-full" />
+          <p v-if="fieldErrors.message" class="mt-1 text-xs text-error">{{ fieldErrors.message }}</p>
+        </div>
+
+        <div class="sr-only" aria-hidden="true">
+          <label for="contact-website">Website</label>
+          <input id="contact-website" v-model="form.website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div v-if="failed" class="rounded-[6px] border border-error/50 bg-error/10 px-4 py-3" role="alert">
+          <p class="text-sm text-error">{{ t('contact.form.failed') }}</p>
+        </div>
+
+        <UButton
+          type="submit"
+          color="primary"
+          size="md"
+          :loading="sending"
+          :label="sending ? t('contact.form.sending') : t('contact.form.submit')"
+        />
+      </form>
+    </section>
+
+    <section class="panel mt-6 border-default p-6">
+      <h2 class="text-sm font-semibold text-highlighted">{{ t('newsletter.title') }}</h2>
+      <p class="mt-1 text-sm text-muted">{{ t('newsletter.subtitle') }}</p>
+
+      <form class="mt-3 space-y-3" @submit.prevent="subscribeNewsletter">
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <label class="sr-only" for="newsletter-email">{{ t('newsletter.email') }}</label>
+          <UInput
+            id="newsletter-email"
+            v-model="newsletter.email"
+            type="email"
+            autocomplete="email"
+            :placeholder="t('newsletter.emailPlaceholder')"
+            :disabled="newsletterSending"
+            class="w-full sm:max-w-xs"
+          />
+          <UButton
+            type="submit"
+            color="primary"
+            size="md"
+            :loading="newsletterSending"
+            :label="t('newsletter.submit')"
+          />
+        </div>
+        <label class="flex items-start gap-2 text-xs text-muted">
+          <input v-model="newsletter.consent" type="checkbox" class="mt-0.5" :disabled="newsletterSending">
+          <span>{{ t('newsletter.consent') }}</span>
+        </label>
+
+        <p v-if="newsletterState === 'pending_confirmation'" class="text-sm text-primary" role="status">
+          {{ t('newsletter.pending') }}
+        </p>
+        <p v-else-if="newsletterState === 'already_confirmed'" class="text-sm text-primary" role="status">
+          {{ t('newsletter.already') }}
+        </p>
+        <p v-else-if="newsletterState === 'no_mail_provider'" class="text-sm text-warning" role="status">
+          {{ t('newsletter.noMail') }}
+        </p>
+        <p v-else-if="newsletterState === 'invalid'" class="text-sm text-error" role="alert">
+          {{ t('newsletter.invalid') }}
+        </p>
+        <p v-else-if="newsletterState === 'failed'" class="text-sm text-error" role="alert">
+          {{ t('newsletter.failed') }}
+        </p>
+      </form>
+    </section>
 
     <section v-if="socialLinks.length" class="mt-6">
       <h2 class="text-sm font-semibold text-highlighted">

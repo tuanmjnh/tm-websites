@@ -1,0 +1,85 @@
+import assert from 'node:assert/strict'
+import {
+  NewsletterSubscribeRequestSchema,
+  NewsletterSubscribeResponseSchema,
+  NewsletterTokenRequestSchema,
+  NewsletterConfirmResponseSchema,
+  normalizeNewsletterEmail,
+} from '../../tm-shared/packages/flow-contracts/src/public-newsletter.js'
+import {
+  renderMailText,
+  templateVariables,
+} from '../../tm-web/server/utils/mailRender.js'
+
+let checks = 0
+
+async function check(name: string, fn: () => Promise<void> | void) {
+  try {
+    await fn()
+    checks++
+    console.log(`   ✅ ${name}`)
+  } catch (error) {
+    console.error(`   ❌ ${name}`)
+    console.error(`      ${(error as Error).message}`)
+    process.exitCode = 1
+  }
+}
+
+console.log('Newsletter — double opt-in contract and mail rendering\n')
+
+await check('an email is normalized to lowercase without whitespace', async () => {
+  assert.equal(normalizeNewsletterEmail('  A@Example.COM '), 'a@example.com')
+})
+
+await check('a signup requires consent', async () => {
+  assert.equal(NewsletterSubscribeRequestSchema.safeParse({ email: 'a@example.com', consent: true }).success, true)
+  assert.equal(NewsletterSubscribeRequestSchema.safeParse({ email: 'a@example.com', consent: false }).success, false)
+  assert.equal(NewsletterSubscribeRequestSchema.safeParse({ email: 'a@example.com' }).success, false)
+})
+
+await check('an invalid email is rejected', async () => {
+  assert.equal(NewsletterSubscribeRequestSchema.safeParse({ email: 'nope', consent: true }).success, false)
+})
+
+await check('the response states what happened instead of promising a mail', async () => {
+  for (const state of ['pending_confirmation', 'already_confirmed', 'no_mail_provider']) {
+    assert.equal(NewsletterSubscribeResponseSchema.safeParse({ success: true, data: { state } }).success, true)
+  }
+  assert.equal(NewsletterSubscribeResponseSchema.safeParse({ success: true, data: { state: 'sent' } }).success, false)
+})
+
+await check('a token shorter than 16 characters is rejected', async () => {
+  assert.equal(NewsletterTokenRequestSchema.safeParse({ token: 'short' }).success, false)
+  assert.equal(NewsletterTokenRequestSchema.safeParse({ token: 'a'.repeat(36) }).success, true)
+})
+
+await check('confirmation returns the confirmed status', async () => {
+  const parsed = NewsletterConfirmResponseSchema.parse({ success: true, data: { status: 'confirmed' } })
+  assert.equal(parsed.data.status, 'confirmed')
+})
+
+await check('template tokens render raw in text and escaped in HTML', async () => {
+  const variables = { name: 'A <b>', confirmUrl: 'https://shop.example/newsletter/xac-nhan?token=t' }
+  assert.equal(renderMailText('Xin chào {{ name }}', variables, { escape: false }), 'Xin chào A <b>')
+  assert.equal(
+    renderMailText('<p>Xin chào {{name}}</p>', variables, { escape: true }),
+    '<p>Xin chào A &lt;b&gt;</p>',
+  )
+  assert.equal(
+    renderMailText('{{ confirmUrl }}', variables, { escape: false }),
+    'https://shop.example/newsletter/xac-nhan?token=t',
+  )
+})
+
+await check('an unknown variable renders empty instead of leaking the token', async () => {
+  assert.equal(renderMailText('[{{ missing }}]', {}, { escape: false }), '[]')
+})
+
+await check('referenced variables are listed once each', async () => {
+  assert.deepEqual(
+    templateVariables('{{ email }} {{name}} {{ email }}', '{{ confirmUrl }}'),
+    ['email', 'name', 'confirmUrl'],
+  )
+})
+
+console.log(`\n${process.exitCode ? '❌' : '✅'} Newsletter checks: ${checks} passed\n`)

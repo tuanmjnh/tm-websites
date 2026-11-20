@@ -1,0 +1,173 @@
+{
+  "meta": {
+    "generatedAt": "2026-11-19T09:45:35.072Z",
+    "source": "local legacy DB (redacted, synthetic PII)",
+    "counts": {
+      "customers": 3,
+      "segments": 2,
+      "identities": 3
+    }
+  },
+  "customer_segments": [
+    {
+      "_id": "segment-1",
+      "title": "Segment 1",
+      "code": "SEG1",
+      "description": null,
+      "defaultDiscountPercent": 0,
+      "freeShipping": false,
+      "thumbnail": null,
+      "gallery": [],
+      "autoJoinCriteria": {
+        "minSpent": 0,
+        "minOrders": 0
+      },
+      "sort": 0,
+      "isDeleted": false,
+      "deletedAt": null
+    },
+    {
+      "_id": "segment-2",
+      "title": "Segment 2",
+      "code": "SEG2",
+      "description": null,
+      "defaultDiscountPercent": 0,
+      "freeShipping": false,
+      "thumbnail": null,
+      "gallery": [],
+      "autoJoinCriteria": {
+        "minSpent": 0,
+        "minOrders": 0
+      },
+      "sort": 1,
+      "isDeleted": false,
+      "deletedAt": null
+    }
+  ],
+  "customers": [
+    {
+      "_id": "customer-1",
+      "userId": "user-1",
+      "code": "CUS00001",
+      "addresses": [
+        {
+          "_id": "addr-1-1",
+          "isDefault": true,
+          "title": "home",
+          "recipientName": "Customer 1",
+          "phone": "0900000001",
+          "street": "1 Fixture Street",
+          "ward": "Fixture Ward",
+          "city": "Ho Chi Minh",
+          "country": "Vietnam",
+          "sort": 0
+        }
+      ],
+      "customerSegment": "segment-1",
+      "loyaltyPoints": 100,
+      "metrics": {
+        "totalOrders": 2,
+        "totalSpent": 100000,
+        "lastOrderAt": null
+      },
+      "note": "Fixture note",
+      "isActive": true,
+      "isDeleted": false,
+      "deletedAt": null
+    },
+    {
+      "_id": "customer-2",
+      "userId": "user-2",
+      "code": "CUS00002",
+      "addresses": [
+        {
+          "_id": "addr-2-1",
+          "isDefault": true,
+          "title": "office",
+          "recipientName": "Customer 2",
+          "phone": "0900000002",
+          "street": "1 Fixture Street",
+          "ward": "Fixture Ward",
+          "city": "Ho Chi Minh",
+          "country": "Vietnam",
+          "sort": 0
+        }
+      ],
+      "customerSegment": "segment-2",
+      "loyaltyPoints": 100,
+      "metrics": {
+        "totalOrders": 2,
+        "totalSpent": 100000,
+        "lastOrderAt": null
+      },
+      "note": "Fixture note",
+      "isActive": true,
+      "isDeleted": false,
+      "deletedAt": null
+    },
+    {
+      "_id": "customer-3",
+      "userId": "user-3",
+      "code": "CUS00003",
+      "addresses": [],
+      "customerSegment": "segment-2",
+      "loyaltyPoints": 100,
+      "metrics": {
+        "totalOrders": 2,
+        "totalSpent": 100000,
+        "lastOrderAt": null
+      },
+      "note": "Fixture note",
+      "isActive": true,
+      "isDeleted": false,
+      "deletedAt": null
+    }
+  ],
+  "identities": [
+    {
+      "_id": "user-1",
+      "email": "customer1@example.test",
+      "username": "customer1",
+      "type": "customer",
+      "isActive": true,
+      "isDeleted": false,
+      "profile": {
+        "fullName": "Customer 1",
+        "phone": "0900000001",
+        "gender": "other",
+        "city": "Ho Chi Minh",
+        "country": "Vietnam"
+      }
+    },
+    {
+      "_id": "user-2",
+      "email": "customer2@example.test",
+      "username": "customer2",
+      "type": "customer",
+      "isActive": true,
+      "isDeleted": false,
+      "profile": {
+        "fullName": "Customer 2",
+        "phone": "0900000002",
+        "gender": "other",
+        "city": "Ho Chi Minh",
+        "country": "Vietnam"
+      }
+    },
+    {
+      "_id": "user-3",
+      "email": "customer3@example.test",
+      "username": "customer3",
+      "type": "customer",
+      "isActive": true,
+      "isDeleted": false,
+      "profile": {
+        "fullName": "Customer 3",
+        "phone": "0900000003",
+        "gender": "other",
+        "city": "Ho Chi Minh",
+        "country": "Vietnam"
+      }
+    }
+  ]
+}
