@@ -36,6 +36,7 @@ export const AUDIT_RESOURCE_TYPES = [
   'notification',
     'notification_subscription',
   'push_subscription',
+  'task',
   'mail_template',
   'mail_delivery',
   'staff_profile',
