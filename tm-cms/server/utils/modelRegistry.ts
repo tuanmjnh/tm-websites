@@ -27,6 +27,7 @@ import type { MailDeliveryDocument } from '../models/mailDelivery'
 import type { NewsletterSubscriptionDocument } from '../models/newsletterSubscription'
 import type { ContactMessageDocument } from '../models/contactMessage'
 import type { ShipmentDocument } from '../models/shipment'
+import type { OrderReturnDocument } from '../models/orderReturn'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -58,6 +59,7 @@ import { mailDeliveryModel, syncMailDeliveryIndexes } from '../models/mailDelive
 import { newsletterSubscriptionModel, syncNewsletterSubscriptionIndexes } from '../models/newsletterSubscription'
 import { contactMessageModel, syncContactMessageIndexes } from '../models/contactMessage'
 import { shipmentModel, syncShipmentIndexes } from '../models/shipment'
+import { orderReturnModel, syncOrderReturnIndexes } from '../models/orderReturn'
 import type { StaffProfileDocument } from '../models/staffProfile'
 import type { AttendanceDocument } from '../models/attendance'
 import type { SalaryConfigDocument } from '../models/salaryConfig'
@@ -112,6 +114,7 @@ export interface PreparedModels {
   NewsletterSubscription: Model<NewsletterSubscriptionDocument>
   ContactMessage: Model<ContactMessageDocument>
   Shipment: Model<ShipmentDocument>
+  OrderReturn: Model<OrderReturnDocument>
   StaffProfile: Model<StaffProfileDocument>
   Attendance: Model<AttendanceDocument>
   SalaryConfig: Model<SalaryConfigDocument>
@@ -155,6 +158,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncNewsletterSubscriptionIndexes(connection)
   await syncContactMessageIndexes(connection)
   await syncShipmentIndexes(connection)
+  await syncOrderReturnIndexes(connection)
   await syncStaffProfileIndexes(connection)
   await syncAttendanceIndexes(connection)
   await syncSalaryConfigIndexes(connection)
@@ -197,6 +201,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     NewsletterSubscription: newsletterSubscriptionModel(connection),
     ContactMessage: contactMessageModel(connection),
     Shipment: shipmentModel(connection),
+    OrderReturn: orderReturnModel(connection),
     StaffProfile: staffProfileModel(connection),
     Attendance: attendanceModel(connection),
     SalaryConfig: salaryConfigModel(connection),

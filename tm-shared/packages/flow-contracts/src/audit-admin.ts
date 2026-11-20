@@ -22,6 +22,7 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'customer',
   'customer_segment',
   'order',
+  'order_return',
   'quotation',
   'warehouse',
   'inventory',

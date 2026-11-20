@@ -269,6 +269,7 @@
         "customer": "Khách hàng",
         "customer_segment": "Nhóm khách hàng",
         "order": "Đơn hàng",
+        "order_return": "Trả hàng",
         "quotation": "Báo giá",
         "warehouse": "Kho",
         "inventory": "Tồn kho",

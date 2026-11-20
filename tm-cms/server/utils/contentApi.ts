@@ -29,6 +29,7 @@ import { SupplierPriceError } from '#server/services/supplierPriceService'
 import { NewsletterServiceError } from '#server/services/newsletterService'
 import { ContactMessageServiceError } from '#server/services/contactMessageService'
 import { ShipmentServiceError } from '#server/services/shipmentService'
+import { OrderReturnServiceError } from '#server/services/orderReturnService'
 import { SupplierServiceError } from '#server/services/supplierService'
 import { PurchaseOrderServiceError } from '#server/services/purchaseOrderService'
 import { RedirectServiceError } from '#server/services/redirectService'
@@ -241,6 +242,9 @@ export function translateContentError(error: unknown): never {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof ShipmentServiceError) {
+    return errorResponse(error.statusCode, error.code, error.message, error.details)
+  }
+  if (error instanceof OrderReturnServiceError) {
     return errorResponse(error.statusCode, error.code, error.message, error.details)
   }
   if (error instanceof SupplierServiceError) {

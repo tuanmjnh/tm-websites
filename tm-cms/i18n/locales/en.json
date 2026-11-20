@@ -978,6 +978,7 @@
         "parent": "Parent category",
         "noParent": "None (root category)",
         "order": "Order",
+        "order_return": "Order return",
         "description": "Category description",
         "descriptionEn": "Category description (EN)",
         "image": "Category image (URL)",
