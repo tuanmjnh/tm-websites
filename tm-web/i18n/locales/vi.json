@@ -166,6 +166,25 @@
     "continueShopping": "Tiếp tục mua sắm",
     "lookupOrder": "Tra cứu đơn hàng"
   },
+  "newsletter": {
+    "title": "Nhận tin từ cửa hàng",
+    "subtitle": "Đăng ký để nhận thông tin sản phẩm mới và khuyến mãi qua email.",
+    "email": "Email",
+    "emailPlaceholder": "Email của bạn",
+    "consent": "Tôi đồng ý nhận email từ cửa hàng và có thể huỷ đăng ký bất cứ lúc nào.",
+    "submit": "Đăng ký",
+    "pending": "Vui lòng kiểm tra email và bấm liên kết xác nhận để hoàn tất đăng ký.",
+    "already": "Email này đã đăng ký nhận tin.",
+    "noMail": "Đã ghi nhận email của bạn, nhưng cửa hàng chưa gửi được thư xác nhận. Vui lòng liên hệ cửa hàng.",
+    "invalid": "Vui lòng nhập email hợp lệ và đánh dấu đồng ý nhận email.",
+    "failed": "Chưa gửi được đăng ký. Vui lòng thử lại.",
+    "confirmTitle": "Xác nhận đăng ký nhận tin",
+    "confirming": "Đang xác nhận…",
+    "confirmed": "Email của bạn đã được xác nhận. Cảm ơn bạn đã đăng ký!",
+    "confirmInvalid": "Liên kết xác nhận không còn hiệu lực hoặc đã được dùng.",
+    "confirmFailed": "Chưa xác nhận được. Vui lòng thử lại sau.",
+    "backHome": "Về trang chủ"
+  },
   "lookup": {
     "title": "Tra cứu đơn hàng",
     "subtitle": "Nhập mã đơn hàng và số điện thoại bạn đã dùng khi đặt hàng.",

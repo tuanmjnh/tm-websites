@@ -166,6 +166,25 @@
     "continueShopping": "Continue shopping",
     "lookupOrder": "Track your order"
   },
+  "newsletter": {
+    "title": "Hear from the store",
+    "subtitle": "Subscribe for new products and offers by email.",
+    "email": "Email",
+    "emailPlaceholder": "Your email",
+    "consent": "I agree to receive email from the store and can unsubscribe at any time.",
+    "submit": "Subscribe",
+    "pending": "Check your inbox and open the confirmation link to finish subscribing.",
+    "already": "This email is already subscribed.",
+    "noMail": "Your email was noted, but the store could not send the confirmation mail yet. Please contact the store.",
+    "invalid": "Enter a valid email and tick the consent box.",
+    "failed": "The signup could not be sent. Please try again.",
+    "confirmTitle": "Confirm your subscription",
+    "confirming": "Confirming…",
+    "confirmed": "Your email is confirmed. Thanks for subscribing!",
+    "confirmInvalid": "This confirmation link has expired or was already used.",
+    "confirmFailed": "The confirmation could not be completed. Please try again later.",
+    "backHome": "Back to home"
+  },
   "lookup": {
     "title": "Order lookup",
     "subtitle": "Enter the order code and the phone number you gave when ordering.",

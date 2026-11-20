@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { PublicContactMessageSchema } from '@tm/flow-contracts'
+import { NewsletterSubscribeRequestSchema, PublicContactMessageSchema } from '@tm/flow-contracts'
+import type { NewsletterSubscribeResponse } from '@tm/flow-contracts'
 
 const { t } = useI18n()
 const { brandName, contactEmail, contactPhone, contactAddress } = usePublicSite()
@@ -55,6 +56,44 @@ const submitMessage = async () => {
     failed.value = true
   } finally {
     sending.value = false
+  }
+}
+
+/**
+ * Newsletter signup is double opt-in: the answer says whether a confirmation
+ * mail was queued, so the page never claims a subscription that is still
+ * pending — or a mail that no template/provider allowed.
+ */
+const newsletter = reactive({ email: '', consent: false })
+const newsletterSending = ref(false)
+const newsletterState = ref<'idle' | 'invalid' | 'failed' | 'pending_confirmation' | 'already_confirmed' | 'no_mail_provider'>('idle')
+
+const subscribeNewsletter = async () => {
+  if (newsletterSending.value) return
+  newsletterState.value = 'idle'
+
+  const parsed = NewsletterSubscribeRequestSchema.safeParse({
+    email: newsletter.email,
+    name: form.name,
+    consent: newsletter.consent,
+  })
+  if (!parsed.success) {
+    newsletterState.value = 'invalid'
+    return
+  }
+
+  newsletterSending.value = true
+  try {
+    const response = await $fetch<NewsletterSubscribeResponse>('/api/public/newsletter/subscribe', {
+      method: 'POST',
+      body: parsed.data,
+    })
+    newsletterState.value = response.data.state
+    if (response.data.state !== 'no_mail_provider') newsletter.email = ''
+  } catch {
+    newsletterState.value = 'failed'
+  } finally {
+    newsletterSending.value = false
   }
 }
 
@@ -162,6 +201,53 @@ useSeoMeta({
           :loading="sending"
           :label="sending ? t('contact.form.sending') : t('contact.form.submit')"
         />
+      </form>
+    </section>
+
+    <section class="panel mt-6 border-default p-6">
+      <h2 class="text-sm font-semibold text-highlighted">{{ t('newsletter.title') }}</h2>
+      <p class="mt-1 text-sm text-muted">{{ t('newsletter.subtitle') }}</p>
+
+      <form class="mt-3 space-y-3" @submit.prevent="subscribeNewsletter">
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <label class="sr-only" for="newsletter-email">{{ t('newsletter.email') }}</label>
+          <UInput
+            id="newsletter-email"
+            v-model="newsletter.email"
+            type="email"
+            autocomplete="email"
+            :placeholder="t('newsletter.emailPlaceholder')"
+            :disabled="newsletterSending"
+            class="w-full sm:max-w-xs"
+          />
+          <UButton
+            type="submit"
+            color="primary"
+            size="md"
+            :loading="newsletterSending"
+            :label="t('newsletter.submit')"
+          />
+        </div>
+        <label class="flex items-start gap-2 text-xs text-muted">
+          <input v-model="newsletter.consent" type="checkbox" class="mt-0.5" :disabled="newsletterSending">
+          <span>{{ t('newsletter.consent') }}</span>
+        </label>
+
+        <p v-if="newsletterState === 'pending_confirmation'" class="text-sm text-primary" role="status">
+          {{ t('newsletter.pending') }}
+        </p>
+        <p v-else-if="newsletterState === 'already_confirmed'" class="text-sm text-primary" role="status">
+          {{ t('newsletter.already') }}
+        </p>
+        <p v-else-if="newsletterState === 'no_mail_provider'" class="text-sm text-warning" role="status">
+          {{ t('newsletter.noMail') }}
+        </p>
+        <p v-else-if="newsletterState === 'invalid'" class="text-sm text-error" role="alert">
+          {{ t('newsletter.invalid') }}
+        </p>
+        <p v-else-if="newsletterState === 'failed'" class="text-sm text-error" role="alert">
+          {{ t('newsletter.failed') }}
+        </p>
       </form>
     </section>
 
