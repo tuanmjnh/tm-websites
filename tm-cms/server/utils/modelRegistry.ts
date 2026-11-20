@@ -32,6 +32,7 @@ import type { SerialNumberDocument } from '../models/serialNumber'
 import type { PushSubscriptionDocument } from '../models/pushSubscription'
 import type { JobDocument } from '../models/job'
 import type { TaskDocument } from '../models/task'
+import type { PayableDocument } from '../models/payable'
 import type { RedirectDocument } from '../models/redirect'
 import { auditModel, syncAuditIndexes } from '../models/audit'
 import { contentModel, syncContentIndexes } from '../models/content'
@@ -68,6 +69,7 @@ import { serialNumberModel, syncSerialNumberIndexes } from '../models/serialNumb
 import { pushSubscriptionModel, syncPushSubscriptionIndexes } from '../models/pushSubscription'
 import { jobModel, syncJobIndexes } from '../models/job'
 import { taskModel, syncTaskIndexes } from '../models/task'
+import { payableModel, syncPayableIndexes } from '../models/payable'
 import type { StaffProfileDocument } from '../models/staffProfile'
 import type { AttendanceDocument } from '../models/attendance'
 import type { SalaryConfigDocument } from '../models/salaryConfig'
@@ -126,7 +128,8 @@ export interface PreparedModels {
   SerialNumber: Model<SerialNumberDocument>
   PushSubscription: Model<PushSubscriptionDocument>
   Job: Model<JobDocument>
-  Task: Model<TaskDocument>
+    Task: Model<TaskDocument>
+  Payable: Model<PayableDocument>
   StaffProfile: Model<StaffProfileDocument>
   Attendance: Model<AttendanceDocument>
   SalaryConfig: Model<SalaryConfigDocument>
@@ -174,7 +177,8 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncSerialNumberIndexes(connection)
   await syncPushSubscriptionIndexes(connection)
   await syncJobIndexes(connection)
-  await syncTaskIndexes(connection)
+    await syncTaskIndexes(connection)
+  await syncPayableIndexes(connection)
   await syncStaffProfileIndexes(connection)
   await syncAttendanceIndexes(connection)
   await syncSalaryConfigIndexes(connection)
@@ -221,7 +225,8 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     SerialNumber: serialNumberModel(connection),
     PushSubscription: pushSubscriptionModel(connection),
     Job: jobModel(connection),
-    Task: taskModel(connection),
+        Task: taskModel(connection),
+    Payable: payableModel(connection),
     StaffProfile: staffProfileModel(connection),
     Attendance: attendanceModel(connection),
     SalaryConfig: salaryConfigModel(connection),

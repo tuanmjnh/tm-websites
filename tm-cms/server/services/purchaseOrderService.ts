@@ -10,6 +10,7 @@ import {
   normalizePurchaseOrderInput,
 } from '../models/purchaseOrder'
 import type { SerialNumberDocument } from '../models/serialNumber'
+import type { PayableDocument } from '../models/payable'
 import { registerSerialNumbers, SerialNumberServiceError } from './serialNumberService'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 import { recordInventoryTransaction } from './inventoryTransactionService'
@@ -505,7 +506,7 @@ export async function receivePurchaseOrder(
   siteId: string,
   id: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument>; payableModel?: Model<PayableDocument> },
 ): Promise<PurchaseOrderAdmin> {
   const body = (input ?? {}) as Record<string, unknown>
   const revision = Number(body.revision)
@@ -677,6 +678,16 @@ export async function receivePurchaseOrder(
     toStatus: updated.status,
     changedFields: ['items', 'status', 'reconcileNote'],
   })
+
+  // Auto-post a payable when the order is received (PUR-01).
+  if (meta?.payableModel && (nextStatus === 'received' || nextStatus === 'partial')) {
+    try {
+      const { postPayableForPurchaseOrder } = await import('./payableService.js')
+      await postPayableForPurchaseOrder(meta.payableModel, model, siteId, String(updated._id), { audit: meta.audit })
+    } catch {
+      // best-effort; do not block receipt
+    }
+  }
 
   return toAdminPurchaseOrder(updated)
 }
