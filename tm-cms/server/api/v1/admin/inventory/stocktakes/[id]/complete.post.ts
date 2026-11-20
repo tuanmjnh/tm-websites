@@ -20,12 +20,13 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Stocktake, Inventory, InventoryTransaction, Audit, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ Stocktake, Inventory, InventoryTransaction, SerialNumber, Audit, IdempotencyKey }) =>
       executeIdempotent(
         { model: IdempotencyKey, siteId, action: `stocktake.complete:${id}`, key: idempotencyKey, payload: body },
         async () => {
           const completed = await completeStocktake(Stocktake, Inventory, InventoryTransaction, siteId, id, body, {
             audit: auditMetaOf(event, user, Audit),
+            serialNumberModel: SerialNumber,
           })
           return {
             statusCode: 200,

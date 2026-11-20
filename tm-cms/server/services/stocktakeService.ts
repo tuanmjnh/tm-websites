@@ -5,6 +5,7 @@ import type { InventoryTransactionDocument } from '../models/inventoryTransactio
 import type { StocktakeDocument, StocktakeLine, StocktakeStatus } from '../models/stocktake'
 import { StocktakeInvariantError, normalizeStocktakeInput } from '../models/stocktake'
 import { recordInventoryTransaction, InventoryTransactionServiceError } from './inventoryTransactionService'
+import type { SerialNumberDocument } from '../models/serialNumber'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 
 
@@ -164,7 +165,7 @@ export async function completeStocktake(
   siteId: string,
   id: string,
   input: CompleteStocktakeInput,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> },
 ): Promise<StocktakeAdmin> {
   if (!Types.ObjectId.isValid(id)) throw new StocktakeServiceError(422, 'STOCKTAKE_ID_INVALID', 'Mã kiểm kê không hợp lệ')
 
@@ -238,6 +239,7 @@ export async function completeStocktake(
           type: difference > 0 ? 'adjustment_inc' : 'adjustment_dec',
           quantityChange: difference,
           unitCost: 0,
+          imeiCodes: Array.isArray(line.serials) ? line.serials : [],
           referenceModel: 'Stocktake',
           referenceId: String(record._id),
           referenceCode: record.code,

@@ -34,6 +34,8 @@ export const StocktakeLineSchema = z.object({
   countedQuantity: z.number().int().min(0).default(0),
   difference: z.number().int().default(0),
   note: z.string().trim().max(500).default(''),
+  /** Optional IMEI/serial numbers affected by this adjustment. */
+  serials: z.array(z.string().trim().min(1).max(120)).max(1000).default([]),
 })
 
 export type StocktakeLine = z.infer<typeof StocktakeLineSchema>
