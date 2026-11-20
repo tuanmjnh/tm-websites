@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
       }))
 
     setHeader(event, 'cache-control', 'no-store')
-    return successResponse({ data: result.data, meta: { nextCursor: result.nextCursor, hasMore: result.hasMore, counts: result.counts } })
+    return successResponse({ data: result.data, meta: { nextCursor: result.nextCursor ?? undefined, hasMore: result.hasMore, counts: result.counts } })
   } catch (error) {
     return translateContentError(error)
   }
