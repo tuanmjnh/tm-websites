@@ -25,6 +25,7 @@ const newsletterSchema = new Schema<NewsletterDoc>(
     source: String,
     ipHash: loose,
     confirmTokenHash: loose,
+    unsubscribeTokenHash: loose,
     subscribedAt: loose,
     confirmedAt: loose,
     unsubscribedAt: loose,

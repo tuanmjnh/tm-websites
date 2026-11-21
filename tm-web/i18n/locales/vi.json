@@ -183,6 +183,11 @@
     "confirmed": "Email của bạn đã được xác nhận. Cảm ơn bạn đã đăng ký!",
     "confirmInvalid": "Liên kết xác nhận không còn hiệu lực hoặc đã được dùng.",
     "confirmFailed": "Chưa xác nhận được. Vui lòng thử lại sau.",
+    "unsubscribeTitle": "Huỷ đăng ký nhận tin",
+    "unsubscribing": "Đang huỷ…",
+    "unsubscribed": "Bạn đã huỷ đăng ký nhận tin. Cửa hàng sẽ không gửi email cho bạn nữa.",
+    "unsubscribeInvalid": "Liên kết huỷ đăng ký không hợp lệ.",
+    "unsubscribeFailed": "Chưa huỷ được đăng ký. Vui lòng thử lại sau.",
     "backHome": "Về trang chủ"
   },
   "lookup": {

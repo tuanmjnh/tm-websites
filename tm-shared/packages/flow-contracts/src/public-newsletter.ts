@@ -62,3 +62,17 @@ export const NewsletterConfirmResponseSchema = z.object({
   success: z.literal(true),
   data: z.object({ status: z.literal('confirmed') }),
 })
+
+/**
+ * Opting out carries its own token.
+ *
+ * Confirmation consumes its token, so a confirmed subscriber has nothing left
+ * to prove the address is theirs. Every signup therefore stores a second hash
+ * for the unsubscribe link that stays usable after confirmation.
+ */
+export const NewsletterUnsubscribeResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({ status: z.literal('unsubscribed') }),
+})
+
+export type NewsletterUnsubscribeResponse = z.infer<typeof NewsletterUnsubscribeResponseSchema>

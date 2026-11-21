@@ -183,6 +183,11 @@
     "confirmed": "Your email is confirmed. Thanks for subscribing!",
     "confirmInvalid": "This confirmation link has expired or was already used.",
     "confirmFailed": "The confirmation could not be completed. Please try again later.",
+    "unsubscribeTitle": "Unsubscribe from the newsletter",
+    "unsubscribing": "Unsubscribing…",
+    "unsubscribed": "You have been unsubscribed. The store will not email you again.",
+    "unsubscribeInvalid": "This unsubscribe link is not valid.",
+    "unsubscribeFailed": "The unsubscribe could not be completed. Please try again later.",
     "backHome": "Back to home"
   },
   "lookup": {

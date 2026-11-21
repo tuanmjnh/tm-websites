@@ -4,6 +4,7 @@ import {
   NewsletterSubscribeResponseSchema,
   NewsletterTokenRequestSchema,
   NewsletterConfirmResponseSchema,
+  NewsletterUnsubscribeResponseSchema,
   normalizeNewsletterEmail,
   newsletterRecipientName,
   NEWSLETTER_NEUTRAL_NAME,
@@ -65,6 +66,20 @@ await check('a token shorter than 16 characters is rejected', async () => {
 await check('confirmation returns the confirmed status', async () => {
   const parsed = NewsletterConfirmResponseSchema.parse({ success: true, data: { status: 'confirmed' } })
   assert.equal(parsed.data.status, 'confirmed')
+})
+
+await check('opting out answers the unsubscribed status', async () => {
+  const parsed = NewsletterUnsubscribeResponseSchema.parse({ success: true, data: { status: 'unsubscribed' } })
+  assert.equal(parsed.data.status, 'unsubscribed')
+  assert.equal(NewsletterUnsubscribeResponseSchema.safeParse({ success: true, data: { status: 'confirmed' } }).success, false)
+})
+
+await check('the same link token shape carries the unsubscribe link', async () => {
+  assert.equal(NewsletterTokenRequestSchema.safeParse({ token: 'b'.repeat(36) }).success, true)
+  assert.equal(
+    renderMailText('Huỷ đăng ký: {{ unsubscribeUrl }}', { unsubscribeUrl: 'https://shop.example/newsletter/huy-dang-ky?token=t' }, { escape: false }),
+    'Huỷ đăng ký: https://shop.example/newsletter/huy-dang-ky?token=t',
+  )
 })
 
 await check('template tokens render raw in text and escaped in HTML', async () => {

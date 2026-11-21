@@ -19,6 +19,10 @@ import { withSiteDb } from './mongo'
  * The pending row is written with an upsert so two concurrent signups for the
  * same address race on the unique `(siteId, email)` index instead of both
  * inserting and one failing with a duplicate-key 500.
+ *
+ * Signup also mints a second token for opting out. Confirmation burns its token,
+ * so without a separate unsubscribe hash a confirmed subscriber could never
+ * leave the list from the mail they received.
  */
 
 export const NEWSLETTER_CONFIRM_TEMPLATE = 'newsletter-confirm'
@@ -37,6 +41,8 @@ export async function subscribePublicNewsletter(
   const email = input.email
   const token = randomUUID()
   const tokenHash = hashToken(token)
+  const unsubscribeToken = randomUUID()
+  const unsubscribeTokenHash = hashToken(unsubscribeToken)
   const now = new Date()
 
   return withSiteDb(event, async () => {
@@ -61,6 +67,7 @@ export async function subscribePublicNewsletter(
       source: 'web-newsletter-form',
       ipHash: null,
       confirmTokenHash: tokenHash,
+      unsubscribeTokenHash,
       subscribedAt: now,
       confirmedAt: null,
       unsubscribedAt: null,
@@ -119,6 +126,9 @@ export async function subscribePublicNewsletter(
         // neutrally instead of echoing the address back at the reader.
         name: newsletterRecipientName(input.name),
         confirmUrl: `${siteUrl}/newsletter/xac-nhan?token=${token}`,
+        // A template that offers an opt-out link uses this one; a template that
+        // does not simply ignores the extra variable.
+        unsubscribeUrl: `${siteUrl}/newsletter/huy-dang-ky?token=${unsubscribeToken}`,
       },
       // Keyed by the confirmation token, not just the subscription: each
       // signup rotates the stored hash, so a per-subscription key would let the
@@ -150,6 +160,55 @@ export async function confirmPublicNewsletter(
 
     if (!updated) {
       throw new CheckoutError(404, 'NEWSLETTER_TOKEN_NOT_FOUND', 'Liên kết xác nhận không còn hiệu lực')
+    }
+  })
+}
+
+/**
+ * Opt a subscriber out from the link in their mail.
+ *
+ * The unsubscribe hash is kept after the transition, so opening the same link
+ * twice (or a mail client prefetching it) answers success instead of looking
+ * like a broken link. A signup again later rotates the hash, which retires the
+ * old link with the rest of that subscription's tokens.
+ */
+export async function unsubscribePublicNewsletter(
+  event: H3Event,
+  token: string,
+): Promise<void> {
+  const siteId = resolveSiteId(event)
+  const tokenHash = hashToken(token)
+
+  await withSiteDb(event, async () => {
+    const now = new Date()
+    const updated = await PublicNewsletterModel.findOneAndUpdate(
+      {
+        siteId,
+        unsubscribeTokenHash: tokenHash,
+        status: { $in: ['pending', 'confirmed'] },
+        isDeleted: { $ne: true },
+      },
+      {
+        $set: {
+          status: 'unsubscribed',
+          unsubscribedAt: now,
+          // The confirmation link must not be able to opt them back in.
+          confirmTokenHash: null,
+          consent: false,
+          updatedAt: now,
+        },
+        $inc: { revision: 1 },
+      },
+      { returnDocument: 'after' },
+    ).lean<Record<string, unknown> | null>()
+
+    if (updated) return
+
+    const already = await PublicNewsletterModel
+      .findOne({ siteId, unsubscribeTokenHash: tokenHash, isDeleted: { $ne: true } })
+      .lean<Record<string, unknown> | null>()
+    if (!already) {
+      throw new CheckoutError(404, 'NEWSLETTER_TOKEN_NOT_FOUND', 'Liên kết huỷ đăng ký không hợp lệ')
     }
   })
 }
