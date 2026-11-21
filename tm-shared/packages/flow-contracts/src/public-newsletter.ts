@@ -76,3 +76,29 @@ export const NewsletterUnsubscribeResponseSchema = z.object({
 })
 
 export type NewsletterUnsubscribeResponse = z.infer<typeof NewsletterUnsubscribeResponseSchema>
+
+/**
+ * Asking for the confirmation mail again.
+ *
+ * Only the address is taken: the server looks up its own pending row and mints
+ * fresh tokens, so a caller cannot choose which link is sent where.
+ */
+export const NewsletterResendRequestSchema = z.object({
+  email: z.string().trim().toLowerCase().regex(EMAIL_PATTERN).max(200),
+})
+
+export type NewsletterResendRequest = z.infer<typeof NewsletterResendRequestSchema>
+
+/**
+ * One neutral answer on purpose.
+ *
+ * Whether an address is pending, already confirmed or never signed up, the
+ * endpoint says the same thing, so it cannot be used to probe the list. The
+ * copy in the form explains that a mail follows only if one was awaited.
+ */
+export const NewsletterResendResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({ state: z.literal('accepted') }),
+})
+
+export type NewsletterResendResponse = z.infer<typeof NewsletterResendResponseSchema>

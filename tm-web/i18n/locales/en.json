@@ -188,7 +188,11 @@
     "unsubscribed": "You have been unsubscribed. The store will not email you again.",
     "unsubscribeInvalid": "This unsubscribe link is not valid.",
     "unsubscribeFailed": "The unsubscribe could not be completed. Please try again later.",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "resend": "Resend confirmation mail",
+    "resending": "Resending…",
+    "resent": "If this address is awaiting confirmation, we have sent the mail again. Please check your spam folder too.",
+    "resendFailed": "The mail could not be resent. Please try again later."
   },
   "lookup": {
     "title": "Order lookup",

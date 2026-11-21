@@ -28,7 +28,12 @@ onMounted(async () => {
     state.value = 'unsubscribed'
   } catch (error) {
     const code = (error as { data?: { data?: { code?: string }; code?: string } })?.data
-    state.value = (code?.data?.code || code?.code) === 'NEWSLETTER_TOKEN_NOT_FOUND' ? 'invalid' : 'failed'
+    const reason = code?.data?.code || code?.code
+    // A truncated or malformed link is unusable, not retryable: offering "try
+    // again later" for a bad URL only sends the reader round in circles.
+    state.value = reason === 'NEWSLETTER_TOKEN_NOT_FOUND' || reason === 'NEWSLETTER_TOKEN_INVALID'
+      ? 'invalid'
+      : 'failed'
   } finally {
     if (import.meta.client) window.history.replaceState({}, '', route.path)
   }

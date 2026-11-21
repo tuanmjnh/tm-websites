@@ -5,6 +5,8 @@ import {
   NewsletterTokenRequestSchema,
   NewsletterConfirmResponseSchema,
   NewsletterUnsubscribeResponseSchema,
+  NewsletterResendRequestSchema,
+  NewsletterResendResponseSchema,
   normalizeNewsletterEmail,
   newsletterRecipientName,
   NEWSLETTER_NEUTRAL_NAME,
@@ -72,6 +74,20 @@ await check('opting out answers the unsubscribed status', async () => {
   const parsed = NewsletterUnsubscribeResponseSchema.parse({ success: true, data: { status: 'unsubscribed' } })
   assert.equal(parsed.data.status, 'unsubscribed')
   assert.equal(NewsletterUnsubscribeResponseSchema.safeParse({ success: true, data: { status: 'confirmed' } }).success, false)
+})
+
+await check('asking for the mail again takes only a normalised address', async () => {
+  const parsed = NewsletterResendRequestSchema.parse({ email: '  Again@Example.COM ' })
+  assert.equal(parsed.email, 'again@example.com')
+  assert.equal(NewsletterResendRequestSchema.safeParse({ email: 'nope' }).success, false)
+  assert.equal(NewsletterResendRequestSchema.safeParse({}).success, false)
+})
+
+await check('a resend answers one neutral state, never whether the address is on the list', async () => {
+  assert.equal(NewsletterResendResponseSchema.safeParse({ success: true, data: { state: 'accepted' } }).success, true)
+  for (const leaky of ['sent', 'not_pending', 'cooldown', 'already_confirmed']) {
+    assert.equal(NewsletterResendResponseSchema.safeParse({ success: true, data: { state: leaky } }).success, false)
+  }
 })
 
 await check('the same link token shape carries the unsubscribe link', async () => {

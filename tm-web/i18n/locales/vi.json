@@ -188,7 +188,11 @@
     "unsubscribed": "Bạn đã huỷ đăng ký nhận tin. Cửa hàng sẽ không gửi email cho bạn nữa.",
     "unsubscribeInvalid": "Liên kết huỷ đăng ký không hợp lệ.",
     "unsubscribeFailed": "Chưa huỷ được đăng ký. Vui lòng thử lại sau.",
-    "backHome": "Về trang chủ"
+    "backHome": "Về trang chủ",
+    "resend": "Gửi lại thư xác nhận",
+    "resending": "Đang gửi lại…",
+    "resent": "Nếu email này đang chờ xác nhận, chúng tôi đã gửi lại thư. Nhớ kiểm tra cả hộp thư rác.",
+    "resendFailed": "Chưa gửi lại được thư. Vui lòng thử lại sau."
   },
   "lookup": {
     "title": "Tra cứu đơn hàng",

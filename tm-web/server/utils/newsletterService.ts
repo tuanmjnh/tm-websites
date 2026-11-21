@@ -27,7 +27,61 @@ import { withSiteDb } from './mongo'
 
 export const NEWSLETTER_CONFIRM_TEMPLATE = 'newsletter-confirm'
 
+/**
+ * How long one address must wait before another confirmation mail is queued.
+ *
+ * The storefront has no captcha; without a floor on repeats the resend button
+ * would let anyone put the same inbox into the queue in a loop.
+ */
+export const NEWSLETTER_RESEND_COOLDOWN_MS = 5 * 60 * 1000
+
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex')
+
+interface NewsletterConfirmationMail {
+  siteId: string
+  siteUrl: string
+  subscriptionId: string
+  email: string
+  name: string
+  confirmToken: string
+  unsubscribeToken: string
+}
+
+/**
+ * Queue the one confirmation mail for a subscription and note when it went out.
+ *
+ * `confirmSentAt` is written only after the row is queued, so a missing template
+ * does not start a cooldown over a mail nobody received.
+ */
+async function queueNewsletterConfirmation(event: H3Event, mail: NewsletterConfirmationMail): Promise<boolean> {
+  const result = await queueStorefrontMail(event, {
+    templateCode: NEWSLETTER_CONFIRM_TEMPLATE,
+    to: mail.email,
+    variables: {
+      email: mail.email,
+      // Many templates greet by name. A footer signup has no name, so greet
+      // neutrally instead of echoing the address back at the reader.
+      name: mail.name,
+      confirmUrl: `${mail.siteUrl}/newsletter/xac-nhan?token=${mail.confirmToken}`,
+      // A template that offers an opt-out link uses this one; a template that
+      // does not simply ignores the extra variable.
+      unsubscribeUrl: `${mail.siteUrl}/newsletter/huy-dang-ky?token=${mail.unsubscribeToken}`,
+    },
+    // Keyed by the confirmation token, not just the subscription: each signup
+    // or resend rotates the stored hash, so a per-subscription key would let the
+    // queue answer `queued` with an older message whose token no longer
+    // matches — a dead link. The fingerprint keeps one mail per issued token.
+    dedupeKey: `newsletter-confirm:${mail.subscriptionId}:${hashToken(mail.confirmToken).slice(0, 16)}`,
+  })
+
+  if (!result.queued) return false
+
+  await PublicNewsletterModel.updateOne(
+    { _id: mail.subscriptionId, siteId: mail.siteId },
+    { $set: { confirmSentAt: new Date() } },
+  )
+  return true
+}
 
 export type SubscribeState = 'pending_confirmation' | 'already_confirmed' | 'confirmation_not_queued'
 
@@ -117,27 +171,17 @@ export async function subscribePublicNewsletter(
     // queued; the signup stays pending and visible to the operator.
     if (!siteUrl) return 'confirmation_not_queued' as const
 
-    const mail = await queueStorefrontMail(event, {
-      templateCode: NEWSLETTER_CONFIRM_TEMPLATE,
-      to: email,
-      variables: {
-        email,
-        // Many templates greet by name. A footer signup has no name, so greet
-        // neutrally instead of echoing the address back at the reader.
-        name: newsletterRecipientName(input.name),
-        confirmUrl: `${siteUrl}/newsletter/xac-nhan?token=${token}`,
-        // A template that offers an opt-out link uses this one; a template that
-        // does not simply ignores the extra variable.
-        unsubscribeUrl: `${siteUrl}/newsletter/huy-dang-ky?token=${unsubscribeToken}`,
-      },
-      // Keyed by the confirmation token, not just the subscription: each
-      // signup rotates the stored hash, so a per-subscription key would let the
-      // queue answer `queued` with an older message whose token no longer
-      // matches — a dead link. The fingerprint keeps one mail per issued token.
-      dedupeKey: `newsletter-confirm:${subscriptionId}:${tokenHash.slice(0, 16)}`,
+    const queued = await queueNewsletterConfirmation(event, {
+      siteId,
+      siteUrl,
+      subscriptionId,
+      email,
+      name: newsletterRecipientName(input.name),
+      confirmToken: token,
+      unsubscribeToken,
     })
 
-    return mail.queued ? ('pending_confirmation' as const) : ('confirmation_not_queued' as const)
+    return queued ? ('pending_confirmation' as const) : ('confirmation_not_queued' as const)
   })
 }
 
@@ -210,5 +254,67 @@ export async function unsubscribePublicNewsletter(
     if (!already) {
       throw new CheckoutError(404, 'NEWSLETTER_TOKEN_NOT_FOUND', 'Liên kết huỷ đăng ký không hợp lệ')
     }
+  })
+}
+
+/**
+ * Send the confirmation mail again for a signup that is still pending.
+ *
+ * The answer is the same whether or not the address is on the list, because a
+ * distinguishable response would turn this into a way to probe subscribers.
+ * A pending row gets a fresh confirm/unsubscribe pair — the older links die with
+ * the hashes they were issued against — and one address cannot be queued twice
+ * inside `NEWSLETTER_RESEND_COOLDOWN_MS`. The token rotation is a conditional
+ * update, so two taps that pass the cooldown together still queue one mail.
+ */
+export async function resendNewsletterConfirmation(event: H3Event, email: string): Promise<void> {
+  const siteId = resolveSiteId(event)
+  const config = useRuntimeConfig(event)
+  const siteUrl = String(config.public.siteUrl || '').replace(/\/+$/, '')
+  if (!siteUrl) return
+
+  const confirmToken = randomUUID()
+  const unsubscribeToken = randomUUID()
+
+  await withSiteDb(event, async () => {
+    const now = new Date()
+    const pending = await PublicNewsletterModel
+      .findOne({ siteId, email, status: 'pending', isDeleted: { $ne: true } })
+      .lean<Record<string, unknown> | null>()
+    if (!pending) return
+
+    const lastSentAt = pending.confirmSentAt instanceof Date ? pending.confirmSentAt : null
+    if (lastSentAt && now.getTime() - lastSentAt.getTime() < NEWSLETTER_RESEND_COOLDOWN_MS) return
+
+    const rotated = await PublicNewsletterModel.findOneAndUpdate(
+      {
+        _id: pending._id,
+        siteId,
+        status: 'pending',
+        confirmTokenHash: pending.confirmTokenHash ?? null,
+      },
+      {
+        $set: {
+          confirmTokenHash: hashToken(confirmToken),
+          // A resent mail carries a fresh opt-out link too; the previous one is
+          // retired with the hash it was issued against.
+          unsubscribeTokenHash: hashToken(unsubscribeToken),
+          updatedAt: now,
+        },
+        $inc: { revision: 1 },
+      },
+      { returnDocument: 'after' },
+    ).lean<Record<string, unknown> | null>()
+    if (!rotated) return
+
+    await queueNewsletterConfirmation(event, {
+      siteId,
+      siteUrl,
+      subscriptionId: String(rotated._id),
+      email,
+      name: newsletterRecipientName(typeof pending.name === 'string' ? pending.name : ''),
+      confirmToken,
+      unsubscribeToken,
+    })
   })
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NewsletterSubscribeRequestSchema, PublicContactMessageSchema } from '@tm/flow-contracts'
+import { NewsletterResendRequestSchema, NewsletterSubscribeRequestSchema, PublicContactMessageSchema } from '@tm/flow-contracts'
 import type { NewsletterSubscribeResponse } from '@tm/flow-contracts'
 
 const { t } = useI18n()
@@ -68,6 +68,12 @@ const newsletter = reactive({ email: '', consent: false })
 const newsletterSending = ref(false)
 const newsletterState = ref<'idle' | 'invalid' | 'failed' | 'pending_confirmation' | 'already_confirmed' | 'confirmation_not_queued'>('idle')
 
+// The address that was just signed up. The input is cleared afterwards, so a
+// resend uses this copy instead of whatever the visitor types next.
+const newsletterSubmittedEmail = ref('')
+const newsletterResending = ref(false)
+const newsletterResendState = ref<'idle' | 'accepted' | 'failed'>('idle')
+
 const subscribeNewsletter = async () => {
   if (newsletterSending.value) return
   newsletterState.value = 'idle'
@@ -89,11 +95,39 @@ const subscribeNewsletter = async () => {
       body: parsed.data,
     })
     newsletterState.value = response.data.state
+    newsletterSubmittedEmail.value = parsed.data.email
+    newsletterResendState.value = 'idle'
     if (response.data.state !== 'confirmation_not_queued') newsletter.email = ''
   } catch {
     newsletterState.value = 'failed'
   } finally {
     newsletterSending.value = false
+  }
+}
+
+/**
+ * Queue the confirmation mail again. The server answers the same neutral state
+ * for every address, so the form repeats that wording instead of guessing
+ * whether a mail was sent — that would leak who is on the list.
+ */
+const resendNewsletterConfirmation = async () => {
+  if (newsletterResending.value || !newsletterSubmittedEmail.value) return
+  newsletterResendState.value = 'idle'
+
+  const parsed = NewsletterResendRequestSchema.safeParse({ email: newsletterSubmittedEmail.value })
+  if (!parsed.success) {
+    newsletterResendState.value = 'failed'
+    return
+  }
+
+  newsletterResending.value = true
+  try {
+    await $fetch('/api/public/newsletter/resend', { method: 'POST', body: parsed.data })
+    newsletterResendState.value = 'accepted'
+  } catch {
+    newsletterResendState.value = 'failed'
+  } finally {
+    newsletterResending.value = false
   }
 }
 
@@ -248,6 +282,26 @@ useSeoMeta({
         <p v-else-if="newsletterState === 'failed'" class="text-sm text-error" role="alert">
           {{ t('newsletter.failed') }}
         </p>
+
+        <div
+          v-if="newsletterSubmittedEmail && (newsletterState === 'pending_confirmation' || newsletterState === 'confirmation_not_queued')"
+          class="space-y-2"
+        >
+          <UButton
+            color="neutral"
+            variant="soft"
+            size="sm"
+            :loading="newsletterResending"
+            :label="newsletterResending ? t('newsletter.resending') : t('newsletter.resend')"
+            @click="resendNewsletterConfirmation"
+          />
+          <p v-if="newsletterResendState === 'accepted'" class="text-xs text-muted" role="status">
+            {{ t('newsletter.resent') }}
+          </p>
+          <p v-else-if="newsletterResendState === 'failed'" class="text-xs text-error" role="alert">
+            {{ t('newsletter.resendFailed') }}
+          </p>
+        </div>
       </form>
     </section>
 

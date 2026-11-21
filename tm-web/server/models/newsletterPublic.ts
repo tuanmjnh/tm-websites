@@ -26,6 +26,8 @@ const newsletterSchema = new Schema<NewsletterDoc>(
     ipHash: loose,
     confirmTokenHash: loose,
     unsubscribeTokenHash: loose,
+    // When the confirmation mail last went out; the resend cooldown reads it.
+    confirmSentAt: loose,
     subscribedAt: loose,
     confirmedAt: loose,
     unsubscribedAt: loose,
