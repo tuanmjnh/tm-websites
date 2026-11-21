@@ -69,6 +69,7 @@ const paymentOptions = computed(() =>
 
 const submitting = ref(false)
 const order = ref<PublicCheckoutOrder | null>(null)
+const mailQueued = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
 const cartChanged = ref<PublicCheckoutBlockedLine[]>([])
 const failed = ref(false)
@@ -182,12 +183,14 @@ const submit = async () => {
 
   submitting.value = true
   try {
-    const response = await $fetch<{ data: PublicCheckoutOrder }>('/api/public/checkout', {
+    const response = await $fetch<{ data: PublicCheckoutOrder, mailQueued?: boolean }>('/api/public/checkout', {
       method: 'POST',
       headers: { [PUBLIC_CHECKOUT_IDEMPOTENCY_HEADER]: idempotencyKey() },
       body: parsed.data as PublicCheckoutRequest,
     })
     order.value = response.data
+    // Only claim a mail when the server queued one.
+    mailQueued.value = response.mailQueued === true
     forgetKey()
     clear()
   } catch (error) {
@@ -223,6 +226,7 @@ const submit = async () => {
       <UIcon name="i-lucide-circle-check" class="size-9 text-primary" aria-hidden="true" />
       <h2 class="mt-3 text-base font-semibold text-highlighted">{{ t('checkout.successTitle') }}</h2>
       <p class="mt-2 max-w-xl text-sm text-muted">{{ t('checkout.successHint') }}</p>
+      <p v-if="mailQueued" class="mt-2 max-w-xl text-sm text-muted">{{ t('checkout.mailQueued') }}</p>
       <dl class="mt-6 grid max-w-md gap-2 text-sm">
         <div class="flex items-baseline justify-between gap-4 border-b border-default/50 pb-2">
           <dt class="text-muted">{{ t('checkout.orderCode') }}</dt>

@@ -160,6 +160,7 @@
     "failed": "Chưa gửi được đơn hàng. Vui lòng thử lại.",
     "successTitle": "Đã ghi nhận đơn hàng",
     "successHint": "Cửa hàng sẽ liên hệ với bạn qua số điện thoại để xác nhận đơn.",
+    "mailQueued": "Thư xác nhận đơn hàng đang được gửi tới email bạn nhập.",
     "orderCode": "Mã đơn hàng",
     "orderTotal": "Tổng tiền",
     "orderItems": "Sản phẩm",

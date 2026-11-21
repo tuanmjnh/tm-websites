@@ -76,9 +76,68 @@ export type PublicCheckoutOrder = z.infer<typeof PublicCheckoutOrderSchema>
 export const PublicCheckoutResponseSchema = z.object({
   success: z.literal(true),
   data: PublicCheckoutOrderSchema,
+  /**
+   * True only when a confirmation message is in the queue. A missing template
+   * or a guest who gave no address is `false`, so the success page never
+   * promises a mail that was not sent.
+   */
+  mailQueued: z.boolean().default(false),
 })
 
 export type PublicCheckoutResponse = z.infer<typeof PublicCheckoutResponseSchema>
+
+/** CMS template the storefront queues after an order is written. */
+export const ORDER_CONFIRMATION_TEMPLATE = 'order-confirmation'
+
+const CONFIRMATION_LOCALE = 'vi-VN'
+
+function confirmationMoney(value: number, currency: string): string {
+  const amount = Number.isFinite(value) ? value : 0
+  return new Intl.NumberFormat(CONFIRMATION_LOCALE, {
+    style: 'currency',
+    currency: currency || 'VND',
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+export interface OrderConfirmationMailInput {
+  orderCode: string
+  customerName: string
+  email: string
+  phone: string
+  currency: string
+  totalAmount: number
+  itemCount: number
+  items: { name: string, quantity: number, unitPrice: number }[]
+  siteUrl: string
+}
+
+/**
+ * Variables handed to the CMS `order-confirmation` template. The item list is
+ * pre-rendered as text lines because a template only substitutes tokens; the
+ * storefront snapshots nothing else, so the mail cannot drift from the order.
+ */
+export function orderConfirmationVariables(input: OrderConfirmationMailInput): Record<string, string> {
+  const currency = input.currency || 'VND'
+  const items = input.items.length
+    ? input.items
+        .map(item => `${item.quantity} × ${item.name.trim() || 'Sản phẩm'} — ${confirmationMoney(item.unitPrice, currency)}`)
+        .join('\n')
+    : ''
+
+  return {
+    orderCode: input.orderCode,
+    name: input.customerName.trim(),
+    email: input.email.trim().toLowerCase(),
+    phone: input.phone.trim(),
+    itemCount: String(input.itemCount),
+    items,
+    total: confirmationMoney(input.totalAmount, currency),
+    totalAmount: String(input.totalAmount),
+    currency,
+    orderLookupUrl: `${input.siteUrl.replace(/\/+$/, '')}/tra-cuu-don`,
+  }
+}
 
 /**
  * Order codes are derived from the caller's idempotency key, so the same submit

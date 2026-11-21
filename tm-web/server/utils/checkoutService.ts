@@ -15,6 +15,7 @@ import {
 import { revalidatePublicCart } from './cartService'
 import { getCatalogCurrency } from './catalogService'
 import { withSiteDb } from './mongo'
+import { orderConfirmationQueued, queueOrderConfirmation } from './orderMail'
 import { getSiteLocale } from './publicSite'
 
 const SITE_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -31,6 +32,12 @@ export class CheckoutError extends Error {
     this.code = code
     this.details = details
   }
+}
+
+export interface CheckoutResult {
+  order: PublicCheckoutOrder
+  /** True only when a confirmation message really entered the queue. */
+  mailQueued: boolean
 }
 
 export interface CheckoutOrderRecord {
@@ -109,7 +116,7 @@ export async function createPublicCheckout(
   event: H3Event,
   request: PublicCheckoutRequest,
   idempotencyKey: string,
-): Promise<PublicCheckoutOrder> {
+): Promise<CheckoutResult> {
   const siteId = resolveSiteId(event)
   const locale = getSiteLocale(event)
   const currency = getCatalogCurrency(event)
@@ -117,7 +124,11 @@ export async function createPublicCheckout(
 
   return withSiteDb(event, async () => {
     const existing = await PublicCheckoutOrderModel.findOne({ siteId, code }).lean<CheckoutOrderRecord | null>()
-    if (existing) return toOrder(existing)
+    if (existing) {
+      // A retried submit must answer the same thing, including whether the
+      // confirmation mail was queued the first time.
+      return { order: toOrder(existing), mailQueued: await orderConfirmationQueued(event, siteId, existing.code) }
+    }
 
     const cart = await revalidatePublicCart(event, request.lines)
     const blocked = checkoutBlockingLines(cart)
@@ -190,7 +201,9 @@ export async function createPublicCheckout(
       // retry of the same submit lost the insert race, so return its order.
       if ((error as { code?: number }).code === 11000) {
         const raced = await PublicCheckoutOrderModel.findOne({ siteId, code }).lean<CheckoutOrderRecord | null>()
-        if (raced) return toOrder(raced)
+        if (raced) {
+          return { order: toOrder(raced), mailQueued: await orderConfirmationQueued(event, siteId, raced.code) }
+        }
       }
       throw error
     }
@@ -214,7 +227,30 @@ export async function createPublicCheckout(
       createdAt: now,
     })
 
-    return toOrder(record)
+    // The order exists; the confirmation mail is best-effort from here on.
+    let mailQueued = false
+    try {
+      mailQueued = await queueOrderConfirmation(event, {
+        orderCode: record.code,
+        customerName: request.shippingAddress.fullName || request.customer.fullName,
+        email: request.customer.email ?? '',
+        phone: request.customer.phone,
+        currency: record.currency,
+        totalAmount: record.totalAmount,
+        itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+        items: items.map(item => ({
+          name: item.itemName,
+          quantity: item.quantity,
+          unitPrice: item.price,
+        })),
+        siteUrl: String(useRuntimeConfig(event).public.siteUrl || ''),
+      })
+    } catch {
+      // A mail template or queue problem must not fail an order the customer
+      // already placed; the success page simply does not claim a mail.
+    }
+
+    return { order: toOrder(record), mailQueued }
   })
 }
 

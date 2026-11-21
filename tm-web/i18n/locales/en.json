@@ -160,6 +160,7 @@
     "failed": "The order could not be sent. Please try again.",
     "successTitle": "Order received",
     "successHint": "The store will contact you on the phone number you gave to confirm it.",
+    "mailQueued": "A confirmation email is being sent to the address you entered.",
     "orderCode": "Order code",
     "orderTotal": "Total",
     "orderItems": "Items",

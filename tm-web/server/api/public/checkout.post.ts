@@ -39,13 +39,17 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const order = await createPublicCheckout(event, body.data, idempotencyKey)
+    const result = await createPublicCheckout(event, body.data, idempotencyKey)
 
     setResponseStatus(event, 201)
     setHeader(event, 'Cache-Control', 'no-store')
     setHeader(event, 'X-Content-Type-Options', 'nosniff')
 
-    return PublicCheckoutResponseSchema.parse({ success: true, data: order })
+    return PublicCheckoutResponseSchema.parse({
+      success: true,
+      data: result.order,
+      mailQueued: result.mailQueued,
+    })
   } catch (error) {
     if (error instanceof CheckoutError) {
       throw createError({

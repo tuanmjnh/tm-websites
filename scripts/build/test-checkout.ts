@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict'
 import {
+  ORDER_CONFIRMATION_TEMPLATE,
   PublicCheckoutRequestSchema,
   PublicCheckoutResponseSchema,
   checkoutBlockingLines,
   checkoutOrderCode,
+  orderConfirmationVariables,
 } from '../../tm-shared/packages/flow-contracts/src/public-checkout.js'
 import { buildPublicCart, type PublicCartLineInput } from '../../tm-shared/packages/flow-contracts/src/public-cart.js'
 import type { PublicCatalogItemDetail } from '../../tm-shared/packages/flow-contracts/src/catalog.js'
+import { renderMailText } from '../../tm-web/server/utils/mailRender.js'
 
 let checks = 0
 
@@ -124,6 +127,7 @@ await check('a price change alone does not block: the server price wins', async 
 await check('the response carries no internal ids', async () => {
   const parsed = PublicCheckoutResponseSchema.parse({
     success: true,
+    mailQueued: true,
     data: {
       code: 'WEB-1A2B3C4D',
       status: 'pending',
@@ -136,6 +140,61 @@ await check('the response carries no internal ids', async () => {
   })
   assert.equal(parsed.data.items.length, 1)
   assert.equal(Object.keys(parsed.data).includes('id'), false)
+  assert.equal(parsed.mailQueued, true)
+})
+
+await check('the success answer never claims a mail it did not queue', async () => {
+  const base = {
+    success: true as const,
+    data: {
+      code: 'WEB-1A2B3C4D',
+      status: 'pending',
+      paymentStatus: 'unpaid',
+      currency: 'VND',
+      totalAmount: 240000,
+      itemCount: 2,
+      items: [{ name: { vi: 'Áo thử' }, quantity: 2, unitPrice: 120000, lineTotal: 240000 }],
+    },
+  }
+  assert.equal(PublicCheckoutResponseSchema.parse(base).mailQueued, false)
+  assert.equal(PublicCheckoutResponseSchema.parse({ ...base, mailQueued: false }).mailQueued, false)
+  assert.equal(PublicCheckoutResponseSchema.safeParse({ ...base, mailQueued: 'yes' }).success, false)
+})
+
+await check('the confirmation mail gets the order, its money and a lookup link', async () => {
+  const variables = orderConfirmationVariables({
+    orderCode: 'WEB-9423BFC2',
+    customerName: '  Nguyễn Văn A ',
+    email: ' A@Example.COM ',
+    phone: '0901234567',
+    currency: 'VND',
+    totalAmount: 240000,
+    itemCount: 3,
+    items: [
+      { name: 'Áo thử', quantity: 2, unitPrice: 120000 },
+      { name: '  ', quantity: 1, unitPrice: 0 },
+    ],
+    siteUrl: 'https://shop.example/',
+  })
+
+  assert.equal(ORDER_CONFIRMATION_TEMPLATE, 'order-confirmation')
+  assert.equal(variables.orderCode, 'WEB-9423BFC2')
+  assert.equal(variables.name, 'Nguyễn Văn A')
+  assert.equal(variables.email, 'a@example.com')
+  assert.equal(variables.itemCount, '3')
+  // ICU separates the amount from the symbol with a non-breaking space.
+  assert.equal(variables.total.replace(/\u00a0/g, ' '), '240.000 ₫')
+  assert.equal(variables.currency, 'VND')
+  assert.equal(variables.orderLookupUrl, 'https://shop.example/tra-cuu-don')
+  assert.equal(
+    variables.items.replace(/\u00a0/g, ' '),
+    '2 × Áo thử — 120.000 ₫\n1 × Sản phẩm — 0 ₫',
+  )
+  // Rendering the values into a template works like every other queued mail.
+  assert.equal(
+    renderMailText('Đơn {{ orderCode }}: {{ total }}', variables, { escape: false }).replace(/\u00a0/g, ' '),
+    'Đơn WEB-9423BFC2: 240.000 ₫',
+  )
 })
 
 console.log(`\n${process.exitCode ? '❌' : '✅'} Checkout checks: ${checks} passed\n`)
