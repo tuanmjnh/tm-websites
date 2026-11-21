@@ -123,11 +123,14 @@ export async function createPublicCheckout(
   const code = checkoutOrderCode(idempotencyKey)
 
   return withSiteDb(event, async () => {
+    const confirmationQueued = (orderCode: string) =>
+      orderConfirmationQueued(event, siteId, orderCode, request.customer.email ?? '')
+
     const existing = await PublicCheckoutOrderModel.findOne({ siteId, code }).lean<CheckoutOrderRecord | null>()
     if (existing) {
       // A retried submit must answer the same thing, including whether the
       // confirmation mail was queued the first time.
-      return { order: toOrder(existing), mailQueued: await orderConfirmationQueued(event, siteId, existing.code) }
+      return { order: toOrder(existing), mailQueued: await confirmationQueued(existing.code) }
     }
 
     const cart = await revalidatePublicCart(event, request.lines)
@@ -202,7 +205,7 @@ export async function createPublicCheckout(
       if ((error as { code?: number }).code === 11000) {
         const raced = await PublicCheckoutOrderModel.findOne({ siteId, code }).lean<CheckoutOrderRecord | null>()
         if (raced) {
-          return { order: toOrder(raced), mailQueued: await orderConfirmationQueued(event, siteId, raced.code) }
+          return { order: toOrder(raced), mailQueued: await confirmationQueued(raced.code) }
         }
       }
       throw error

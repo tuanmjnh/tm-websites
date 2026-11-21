@@ -27,6 +27,15 @@ export type StorefrontMailResult =
 
 const DEFAULT_LOCALE = 'vi'
 
+/**
+ * The stored dedupe key is scoped to the recipient. Exported so a reader can
+ * rebuild the exact key of a delivery it is looking for instead of matching it
+ * with a pattern.
+ */
+export function storefrontDedupeKey(to: string, dedupeKey: string): string {
+  return `${to.trim().toLowerCase()}:${dedupeKey}`.slice(0, 200)
+}
+
 export async function queueStorefrontMail(
   event: H3Event,
   input: StorefrontMailInput,
@@ -79,7 +88,7 @@ export async function queueStorefrontMail(
         lastError: null,
         nextAttemptAt: now,
         providerId: null,
-        dedupeKey: `${to}:${input.dedupeKey}`.slice(0, 200),
+        dedupeKey: storefrontDedupeKey(to, input.dedupeKey),
         sentAt: null,
         cancelledAt: null,
         schemaVersion: 1,
