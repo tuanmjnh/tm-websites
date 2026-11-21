@@ -1,5 +1,6 @@
 import { NewsletterSubscribeRequestSchema, NewsletterSubscribeResponseSchema } from '@tm/flow-contracts'
-import { subscribePublicNewsletter } from '#server/utils/newsletterService'
+import { CheckoutError } from '#server/utils/checkoutService'
+import { subscribePublicNewsletter, type SubscribeState } from '#server/utils/newsletterService'
 
 /**
  * `POST /api/public/newsletter/subscribe` starts a double opt-in signup.
@@ -18,7 +19,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const state = await subscribePublicNewsletter(event, body.data)
+  let state: SubscribeState
+  try {
+    state = await subscribePublicNewsletter(event, body.data)
+  } catch (error) {
+    if (error instanceof CheckoutError) {
+      throw createError({ statusCode: error.statusCode, statusMessage: error.code, data: { code: error.code } })
+    }
+    throw error
+  }
 
   setHeader(event, 'Cache-Control', 'no-store')
   setHeader(event, 'X-Content-Type-Options', 'nosniff')

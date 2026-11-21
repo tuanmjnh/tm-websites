@@ -5,6 +5,8 @@ import {
   NewsletterTokenRequestSchema,
   NewsletterConfirmResponseSchema,
   normalizeNewsletterEmail,
+  newsletterRecipientName,
+  NEWSLETTER_NEUTRAL_NAME,
 } from '../../tm-shared/packages/flow-contracts/src/public-newsletter.js'
 import {
   renderMailText,
@@ -42,10 +44,17 @@ await check('an invalid email is rejected', async () => {
 })
 
 await check('the response states what happened instead of promising a mail', async () => {
-  for (const state of ['pending_confirmation', 'already_confirmed', 'no_mail_provider']) {
+  for (const state of ['pending_confirmation', 'already_confirmed', 'confirmation_not_queued']) {
     assert.equal(NewsletterSubscribeResponseSchema.safeParse({ success: true, data: { state } }).success, true)
   }
   assert.equal(NewsletterSubscribeResponseSchema.safeParse({ success: true, data: { state: 'sent' } }).success, false)
+})
+
+await check('a missing name falls back to a neutral greeting, never the address', async () => {
+  assert.equal(newsletterRecipientName(''), NEWSLETTER_NEUTRAL_NAME)
+  assert.equal(newsletterRecipientName('   '), NEWSLETTER_NEUTRAL_NAME)
+  assert.equal(newsletterRecipientName(' An '), 'An')
+  assert.ok(!newsletterRecipientName('').includes('@'))
 })
 
 await check('a token shorter than 16 characters is rejected', async () => {

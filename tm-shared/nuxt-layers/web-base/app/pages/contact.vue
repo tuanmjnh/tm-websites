@@ -66,7 +66,7 @@ const submitMessage = async () => {
  */
 const newsletter = reactive({ email: '', consent: false })
 const newsletterSending = ref(false)
-const newsletterState = ref<'idle' | 'invalid' | 'failed' | 'pending_confirmation' | 'already_confirmed' | 'no_mail_provider'>('idle')
+const newsletterState = ref<'idle' | 'invalid' | 'failed' | 'pending_confirmation' | 'already_confirmed' | 'confirmation_not_queued'>('idle')
 
 const subscribeNewsletter = async () => {
   if (newsletterSending.value) return
@@ -89,7 +89,7 @@ const subscribeNewsletter = async () => {
       body: parsed.data,
     })
     newsletterState.value = response.data.state
-    if (response.data.state !== 'no_mail_provider') newsletter.email = ''
+    if (response.data.state !== 'confirmation_not_queued') newsletter.email = ''
   } catch {
     newsletterState.value = 'failed'
   } finally {
@@ -239,7 +239,7 @@ useSeoMeta({
         <p v-else-if="newsletterState === 'already_confirmed'" class="text-sm text-primary" role="status">
           {{ t('newsletter.already') }}
         </p>
-        <p v-else-if="newsletterState === 'no_mail_provider'" class="text-sm text-warning" role="status">
+        <p v-else-if="newsletterState === 'confirmation_not_queued'" class="text-sm text-warning" role="status">
           {{ t('newsletter.noMail') }}
         </p>
         <p v-else-if="newsletterState === 'invalid'" class="text-sm text-error" role="alert">
