@@ -1412,6 +1412,8 @@
         "calculateHint": "Only draft rows recalculate; approved and paid rows are locked. A salary config effective in the period is required.",
         "calculated": "Payroll calculated",
         "summary": "All {all} · Draft {draft} · Approved {approved} · Paid {paid} · Cancelled {cancelled} · Total {total}",
+        "export": "Export CSV",
+        "exportHint": "Exports the whole period under the current filters, with the daily rate and allowances for checking.",
         "empty": "No payroll for this period",
         "permissionDenied": "Payroll holds money, so viewing it requires write access.",
         "allStatuses": "All statuses",

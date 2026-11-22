@@ -19,6 +19,7 @@ import {
   totalAllowances,
 } from '../models/salaryConfig'
 import type { StaffProfileDocument } from '../models/staffProfile'
+import { csvCell } from '../utils/csv'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 import { HrServiceError } from './staffService'
 
@@ -223,11 +224,11 @@ export interface PayrollListParams {
   limit?: number
 }
 
-export async function listPayrolls(
-  model: Model<PayrollDocument>,
-  siteId: string,
-  params: PayrollListParams = {},
-): Promise<{ data: PayrollAdmin[], counts: Record<PayrollStatus | 'all', number>, totals: { netPay: number, workDays: number } }> {
+/**
+ * The filter the list and the export share, so a downloaded sheet cannot cover
+ * different rows from the table it came from.
+ */
+function payrollFilter(siteId: string, params: PayrollListParams): Record<string, unknown> {
   const filter: Record<string, unknown> = { siteId }
   if (params.period) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(params.period)) {
@@ -237,6 +238,15 @@ export async function listPayrolls(
   }
   if (params.staffId) filter.staffId = objectId(params.staffId, 'STAFF_ID_INVALID')
   if (params.status) filter.status = params.status
+  return filter
+}
+
+export async function listPayrolls(
+  model: Model<PayrollDocument>,
+  siteId: string,
+  params: PayrollListParams = {},
+): Promise<{ data: PayrollAdmin[], counts: Record<PayrollStatus | 'all', number>, totals: { netPay: number, workDays: number } }> {
+  const filter = payrollFilter(siteId, params)
 
   const limit = Math.min(Math.max(Math.trunc(params.limit ?? 100), 1), 500)
   const records = await model.find(filter).sort({ period: -1, employeeCode: 1 }).limit(limit).lean<PayrollRecord[]>()
@@ -257,6 +267,66 @@ export async function listPayrolls(
   }
 
   return { data: records.map(toAdminPayroll), counts, totals }
+}
+
+const PAYROLL_STATUS_LABEL: Record<PayrollStatus, string> = {
+  draft: 'Nháp',
+  approved: 'Đã duyệt',
+  paid: 'Đã trả',
+  cancelled: 'Đã huỷ',
+}
+
+const EXPORT_COLUMNS = [
+  'Kỳ', 'Mã nhân sự', 'Trạng thái', 'Ngày công', 'Ngày phép', 'Ngày vắng',
+  'Lương tháng', 'Lương ngày', 'Lương công', 'Phụ cấp', 'Điều chỉnh', 'Thực lĩnh',
+] as const
+
+/**
+ * A payroll sheet for the accountant, not a dump: the money columns are the ones
+ * already frozen on the row (an approved or paid month keeps the numbers it was
+ * approved with), the status is written as words, and the base salary, daily rate
+ * and base pay travel separately so a total can be checked by hand.
+ */
+export function payrollToCsv(rows: PayrollAdmin[], label: string): string {
+  const lines: string[] = [`# Bảng lương ${label} (${rows.length} dòng)`, EXPORT_COLUMNS.join(',')]
+  for (const row of rows) {
+    lines.push([
+      row.period,
+      row.employeeCode,
+      PAYROLL_STATUS_LABEL[row.status] ?? row.status,
+      row.workDays,
+      row.leaveDays,
+      row.absentDays,
+      row.baseSalary,
+      row.dailyRate,
+      row.basePay,
+      row.allowancePay,
+      row.adjustmentTotal,
+      row.netPay,
+    ].map(csvCell).join(','))
+  }
+  return `${lines.join('\n')}\n`
+}
+
+const MAX_EXPORT_ROWS = 5000
+
+/** Bounded, and it says so instead of silently cutting a month short. */
+export async function exportPayrollsCsv(
+  model: Model<PayrollDocument>,
+  siteId: string,
+  params: PayrollListParams = {},
+): Promise<{ csv: string, rows: number, truncated: boolean }> {
+  const filter = payrollFilter(siteId, params)
+  const records = await model
+    .find(filter)
+    .sort({ period: -1, employeeCode: 1 })
+    .limit(MAX_EXPORT_ROWS + 1)
+    .lean<PayrollRecord[]>()
+  const truncated = records.length > MAX_EXPORT_ROWS
+  const page = truncated ? records.slice(0, MAX_EXPORT_ROWS) : records
+
+  const csv = payrollToCsv(page.map(toAdminPayroll), params.period ?? 'tất cả các kỳ')
+  return { csv, rows: page.length, truncated }
 }
 
 export async function getPayroll(

@@ -514,6 +514,16 @@ async function loadPayrolls() {
 
 watch([payrollPeriod, payrollStaff, payrollStatus], () => loadPayrolls())
 
+/** Same rule as the attendance export: the file is the filter, not the table page. */
+const payrollExportHref = computed(() => {
+  const query = new URLSearchParams()
+  if (payrollPeriod.value) query.set('period', payrollPeriod.value)
+  if (payrollStaff.value !== 'all') query.set('staffId', payrollStaff.value)
+  if (payrollStatus.value !== 'all') query.set('status', payrollStatus.value)
+  const search = query.toString()
+  return `/api/v1/admin/hr/payrolls/export.csv${search ? `?${search}` : ''}`
+})
+
 const calculateOpen = ref(false)
 const calculateSaving = ref(false)
 const calculateError = ref<string | null>(null)
@@ -1053,6 +1063,15 @@ resetOnClose(staffFormOpen, attendanceFormOpen, templateFormOpen, assignFormOpen
               <p class="text-xs text-muted">
                 {{ t('admin.hr.payroll.summary', { all: payrollCounts.all, draft: payrollCounts.draft, approved: payrollCounts.approved, paid: payrollCounts.paid, cancelled: payrollCounts.cancelled, total: money(payrollTotals.netPay) }) }}
               </p>
+              <UButton
+                :href="payrollExportHref"
+                icon="i-lucide-download"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                :title="t('admin.hr.payroll.exportHint')"
+                :label="t('admin.hr.payroll.export')"
+              />
             </div>
 
             <p v-if="payrollError" class="text-xs text-error">{{ payrollError }}</p>

@@ -19,10 +19,12 @@ import {
   approvePayroll,
   calculatePayroll,
   cancelPayroll,
+  exportPayrollsCsv,
   getPayroll,
   listPayrolls,
   listSalaryConfigs,
   payPayroll,
+  payrollToCsv,
   setSalaryConfig,
 } from '../../tm-cms/server/services/payrollService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
@@ -517,6 +519,35 @@ async function integration() {
 
       assert.deepEqual((await listPayrolls(Payroll, OTHER_SITE)).data, [])
       await assert.rejects(() => getPayroll(Payroll, OTHER_SITE, octoberPayrollId), isHrError(404, 'PAYROLL_NOT_FOUND'))
+    })
+
+    await check('the payroll export carries the frozen money columns, filter and all', async () => {
+      const october = await exportPayrollsCsv(Payroll, SITE, { period: '2026-10' })
+      const lines = october.csv.trimEnd().split('\n')
+      assert.equal(october.rows, 1)
+      assert.equal(october.truncated, false)
+      assert.equal(lines[0], '# Bảng lương 2026-10 (1 dòng)')
+      assert.equal(lines[1], 'Kỳ,Mã nhân sự,Trạng thái,Ngày công,Ngày phép,Ngày vắng,Lương tháng,Lương ngày,Lương công,Phụ cấp,Điều chỉnh,Thực lĩnh')
+      assert.equal(lines[2], '2026-10,NV-001,Đã trả,20,2,2,26000000,1000000,20000000,1000000,500000,21500000')
+
+      // A cancelled row stays visible on purpose: the sheet must explain the period,
+      // and an approved month keeps the numbers it was approved with.
+      const cancelled = await exportPayrollsCsv(Payroll, SITE, { status: 'cancelled' })
+      assert.equal(cancelled.rows, 1)
+      assert.ok(cancelled.csv.includes('2026-09,NV-001,Đã huỷ,'), `got: ${cancelled.csv}`)
+
+      assert.equal((await exportPayrollsCsv(Payroll, OTHER_SITE, { period: '2026-10' })).rows, 0)
+      await assert.rejects(
+        () => exportPayrollsCsv(Payroll, SITE, { period: '2026-13' }),
+        isHrError(422, 'PAYROLL_PERIOD_INVALID'),
+      )
+
+      // A code an operator typed must not become a formula when Excel opens the file.
+      const guarded = payrollToCsv([{
+        ...(await getPayroll(Payroll, SITE, octoberPayrollId)),
+        employeeCode: '=CMD|calc',
+      }], '2026-10')
+      assert.ok(guarded.includes(",'=CMD|calc,"), `got: ${guarded}`)
     })
 
     await check('every HR mutation is audited, including the payroll transitions', async () => {

@@ -1414,6 +1414,8 @@
         "calculateHint": "Chỉ dòng nháp được tính lại; dòng đã duyệt hoặc đã chi trả bị khoá. Cần cấu hình lương hiệu lực trong kỳ.",
         "calculated": "Đã tính bảng lương",
         "summary": "Tất cả {all} · Nháp {draft} · Đã duyệt {approved} · Đã trả {paid} · Đã huỷ {cancelled} · Tổng {total}",
+        "export": "Xuất CSV",
+        "exportHint": "Xuất toàn bộ kỳ theo bộ lọc đang chọn, kèm lương ngày và phụ cấp để đối chiếu.",
         "empty": "Chưa có bảng lương cho kỳ này",
         "permissionDenied": "Bảng lương chứa số tiền nên cần quyền ghi để xem.",
         "allStatuses": "Mọi trạng thái",
