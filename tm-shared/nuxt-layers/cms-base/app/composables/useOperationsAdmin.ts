@@ -253,6 +253,60 @@ export interface FinanceLedgerRow {
   voidedAt: string | null
 }
 
+export interface AdminSupplier {
+  id: string
+  siteId: string
+  code: string
+  title: string
+  email: string
+  phone: string
+  status: string
+  rating: number
+  itemsSupplied: string[]
+  avatar: string | null
+  note: string
+  isDeleted: boolean
+  deletedAt: string | null
+  revision: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface AdminPurchaseOrderLine {
+  itemId: string | null
+  variantId: string | null
+  itemName: string
+  sku: string
+  quantity: number
+  unitCost: number
+  receivedQuantity: number
+  rejectedQuantity: number
+  note: string
+}
+
+export interface AdminPurchaseOrder {
+  id: string
+  siteId: string
+  code: string
+  supplierId: string | null
+  warehouseId: string | null
+  status: string
+  paymentStatus: string
+  paymentMethod: string
+  items: AdminPurchaseOrderLine[]
+  totalAmount: number
+  orderedTotalAmount: number
+  paidAmount: number
+  expectedDeliveryDate: string | null
+  reconcileNote: string
+  note: string
+  isDeleted: boolean
+  deletedAt: string | null
+  revision: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 interface ListMeta {
   nextCursor?: string
   hasMore?: boolean
@@ -374,8 +428,10 @@ export const useOperationsAdmin = () => {
 
   /* ------------------------------- catalog ------------------------------- */
 
-  const listItemOptions = async (q = '') => {
-    const payload = await plainFetch(`/api/v1/admin/catalog/items${pageQuery({ q, limit: 20 })}`) as {
+  const listItemOptions = async (q = '', limit = 20) => {
+    // The catalog list route caps `limit` at 50; anything larger is a 422.
+    const bounded = Math.min(Math.max(Math.trunc(limit) || 20, 1), 50)
+    const payload = await plainFetch(`/api/v1/admin/catalog/items${pageQuery({ q, limit: bounded })}`) as {
       data: { id: string, key: string, sku: string, title: Record<string, string>, basePrice: number, salePrice: number | null, stock: number }[]
     }
     return payload.data
@@ -519,6 +575,71 @@ export const useOperationsAdmin = () => {
   const voidPayable = async (id: string, body: Record<string, unknown>, reason?: string) =>
     one<AdminPayable>(await write(`/api/v1/admin/finance/payables/${id}/void`, 'POST', body, reason))
 
+  /* ----------------------------- procurement ----------------------------- */
+
+  const listSuppliers = async (params: {
+    q?: string
+    status?: string
+    includeDeleted?: boolean
+    cursor?: string | null
+    limit?: number
+  } = {}) => {
+    const payload = await plainFetch(`/api/v1/admin/procurement/suppliers${pageQuery({
+      q: params.q,
+      status: params.status,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
+      cursor: params.cursor ?? undefined,
+      limit: params.limit,
+    })}`) as ListResponse<AdminSupplier>
+    return withMeta(payload, { all: 0, active: 0, inactive: 0, deleted: 0 })
+  }
+
+  const createSupplier = async (body: Record<string, unknown>, reason?: string) =>
+    one<AdminSupplier>(await write('/api/v1/admin/procurement/suppliers', 'POST', body, reason))
+
+  const updateSupplier = async (id: string, body: Record<string, unknown>, reason?: string) =>
+    one<AdminSupplier>(await write(`/api/v1/admin/procurement/suppliers/${id}`, 'PATCH', body, reason))
+
+  const deleteSupplier = async (id: string, revision: number, reason?: string) =>
+    one<AdminSupplier>(await write(`/api/v1/admin/procurement/suppliers/${id}?revision=${revision}`, 'DELETE', {}, reason))
+
+  const restoreSupplier = async (id: string, revision: number, reason?: string) =>
+    one<AdminSupplier>(await write(`/api/v1/admin/procurement/suppliers/${id}/restore?revision=${revision}`, 'POST', {}, reason))
+
+  const listPurchaseOrders = async (params: {
+    q?: string
+    status?: string
+    supplier?: string
+    includeDeleted?: boolean
+    cursor?: string | null
+    limit?: number
+  } = {}) => {
+    const payload = await plainFetch(`/api/v1/admin/procurement/purchase-orders${pageQuery({
+      q: params.q,
+      status: params.status,
+      supplier: params.supplier,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
+      cursor: params.cursor ?? undefined,
+      limit: params.limit,
+    })}`) as ListResponse<AdminPurchaseOrder>
+    return withMeta(payload, { all: 0, active: 0, deleted: 0 })
+  }
+
+  const createPurchaseOrder = async (body: Record<string, unknown>, reason?: string) =>
+    one<AdminPurchaseOrder>(await write('/api/v1/admin/procurement/purchase-orders', 'POST', body, reason))
+
+  const updatePurchaseOrder = async (id: string, body: Record<string, unknown>, reason?: string) =>
+    one<AdminPurchaseOrder>(await write(`/api/v1/admin/procurement/purchase-orders/${id}`, 'PATCH', body, reason))
+
+  const deletePurchaseOrder = async (id: string, revision: number, reason?: string) =>
+    one<AdminPurchaseOrder>(await write(`/api/v1/admin/procurement/purchase-orders/${id}?revision=${revision}`, 'DELETE', {}, reason))
+
+  const restorePurchaseOrder = async (id: string, revision: number, reason?: string) =>
+    one<AdminPurchaseOrder>(await write(`/api/v1/admin/procurement/purchase-orders/${id}/restore?revision=${revision}`, 'POST', {}, reason))
+
+  const receivePurchaseOrder = async (id: string, body: Record<string, unknown>, reason?: string) =>
+    one<AdminPurchaseOrder>(await write(`/api/v1/admin/procurement/purchase-orders/${id}/receive`, 'POST', body, reason))
+
   /* ------------------------------- reports ------------------------------- */
 
   const financeSummary = async (range: { from?: string, to?: string } = {}) => {
@@ -600,6 +721,17 @@ export const useOperationsAdmin = () => {
     voidPayment,
     listPayables,
     voidPayable,
+    listSuppliers,
+    createSupplier,
+    updateSupplier,
+    deleteSupplier,
+    restoreSupplier,
+    listPurchaseOrders,
+    createPurchaseOrder,
+    updatePurchaseOrder,
+    deletePurchaseOrder,
+    restorePurchaseOrder,
+    receivePurchaseOrder,
     financeSummary,
     financeAging,
     financeLedger,

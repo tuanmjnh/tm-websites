@@ -67,6 +67,7 @@
     "catalog": "Sản phẩm & Danh mục",
     "orders": "Đơn hàng & Bán hàng",
     "inventory": "Kho & Tồn kho",
+    "purchaseOrders": "Mua hàng & Nhà cung cấp",
     "finance": "Tài chính & Thu chi",
     "reports": "Báo cáo & Phân tích",
     "media": "Thư viện Media",
@@ -1232,6 +1233,135 @@
         }
       }
     },
+    "purchasing": {
+      "title": "Mua hàng & Nhà cung cấp",
+      "description": "Nhà cung cấp, đơn mua và nhập hàng một phần",
+      "tabs": {
+        "suppliers": "Nhà cung cấp",
+        "orders": "Đơn mua"
+      },
+      "summary": "Tất cả {all} · Đang dùng {active} · Đã ẩn {deleted}",
+      "includeDeleted": "Gồm cả mục đã ẩn",
+      "noMatch": "Không có mục nào khớp bộ lọc",
+      "loadMore": "Tải thêm",
+      "badgeHidden": "Đã ẩn",
+      "suppliers": {
+        "create": "Tạo nhà cung cấp",
+        "createTitle": "Tạo nhà cung cấp",
+        "editTitle": "Sửa nhà cung cấp",
+        "created": "Đã tạo nhà cung cấp",
+        "updated": "Đã cập nhật nhà cung cấp",
+        "hidden": "Đã ẩn nhà cung cấp",
+        "restored": "Đã khôi phục nhà cung cấp",
+        "empty": "Chưa có nhà cung cấp nào",
+        "allStatuses": "Mọi trạng thái",
+        "searchPlaceholder": "Tìm theo mã, tên, email...",
+        "none": "Không chọn nhà cung cấp",
+        "statuses": {
+          "active": "Đang dùng",
+          "inactive": "Ngừng dùng"
+        },
+        "fields": {
+          "code": "Mã",
+          "title": "Tên",
+          "email": "Email",
+          "phone": "Điện thoại",
+          "status": "Trạng thái",
+          "rating": "Đánh giá (0–5)",
+          "itemsSupplied": "Mặt hàng cung cấp",
+          "note": "Ghi chú"
+        },
+        "itemsSuppliedHint": "Cách nhau bằng dấu phẩy",
+        "itemsCount": "{count} mặt hàng",
+        "rating": "Đánh giá {value}/5",
+        "hide": "Ẩn nhà cung cấp",
+        "restore": "Khôi phục nhà cung cấp",
+        "hideHint": "Ẩn nhà cung cấp {code}? Đơn mua cũ vẫn giữ nguyên.",
+        "restoreHint": "Khôi phục nhà cung cấp {code}?"
+      },
+      "orders": {
+        "create": "Tạo đơn mua",
+        "createTitle": "Tạo đơn mua",
+        "editTitle": "Sửa đơn mua",
+        "created": "Đã tạo đơn mua",
+        "updated": "Đã cập nhật đơn mua",
+        "hidden": "Đã ẩn đơn mua",
+        "restored": "Đã khôi phục đơn mua",
+        "received": "Đã ghi nhận hàng về",
+        "empty": "Chưa có đơn mua nào",
+        "allStatuses": "Mọi trạng thái",
+        "allSuppliers": "Mọi nhà cung cấp",
+        "searchPlaceholder": "Tìm theo mã, sản phẩm, ghi chú...",
+        "statuses": {
+          "draft": "Nháp",
+          "ordered": "Đã đặt",
+          "partial": "Nhận một phần",
+          "received": "Đã nhận",
+          "cancelled": "Đã huỷ"
+        },
+        "paymentStatuses": {
+          "unpaid": "Chưa trả",
+          "paid": "Đã trả",
+          "partial": "Trả một phần",
+          "refunded": "Đã hoàn"
+        },
+        "paymentMethods": {
+          "cash": "Tiền mặt",
+          "banking": "Chuyển khoản",
+          "cod": "COD",
+          "card": "Thẻ",
+          "other": "Khác"
+        },
+        "fields": {
+          "supplier": "Nhà cung cấp",
+          "warehouse": "Kho nhận",
+          "status": "Trạng thái",
+          "paymentMethod": "Hình thức thanh toán",
+          "expectedDeliveryDate": "Ngày dự kiến về",
+          "note": "Ghi chú",
+          "itemName": "Tên hàng",
+          "sku": "SKU"
+        },
+        "noWarehouse": "Không gán kho",
+        "noItem": "Không gắn sản phẩm",
+        "receiveNeedsWarehouse": "Đơn mua chưa gán kho nhận nên không thể nhập hàng; sửa đơn và chọn kho trước.",
+        "receiveNeedsItem": "Có dòng hàng chưa gắn sản phẩm trong danh mục nên không thể nhập kho; gắn sản phẩm cho từng dòng trước.",
+        "lines": "Dòng hàng",
+        "addLine": "Thêm dòng",
+        "removeLine": "Xoá dòng",
+        "linesLocked": "Đơn đã chốt nên không sửa được dòng hàng.",
+        "total": "Tổng dự kiến: {total}",
+        "itemsCount": "{count} dòng",
+        "receive": "Nhập hàng",
+        "receiveTitle": "Nhập hàng · {code}",
+        "receiveHint": "Ghi số lượng thực nhận và số lượng loại; tổng không vượt quá số đặt.",
+        "receiveLine": "Đặt {ordered} · đã nhận {received} · loại {rejected}",
+        "remaining": "còn {count}",
+        "receivedQty": "Nhận",
+        "rejectedQty": "Loại",
+        "receiveSubmit": "Ghi nhận",
+        "hide": "Ẩn đơn mua",
+        "restore": "Khôi phục đơn mua",
+        "hideHint": "Ẩn đơn mua {code}? Hàng đã nhận vẫn nằm trong kho.",
+        "restoreHint": "Khôi phục đơn mua {code}?"
+      },
+      "errors": {
+        "conflict": "Đơn đã bị người khác sửa, tải lại trước khi lưu",
+        "revisionRequired": "Thiếu phiên bản hiện tại",
+        "notFound": "Không tìm thấy mục này",
+        "codeExists": "Mã này đã được dùng",
+        "locked": "Đơn đã nhận hoặc đã huỷ nên không sửa được; số nhận không vượt số đặt",
+        "supplierDeleted": "Nhà cung cấp đã bị ẩn, khôi phục trước",
+        "supplierNotFound": "Không tìm thấy nhà cung cấp trong site này",
+        "receiptTarget": "Nhập hàng cần đơn mua có kho nhận và từng dòng gắn sản phẩm trong danh mục",
+        "receiptStock": "Chưa có dòng tồn kho cho sản phẩm này trong kho nhận; tạo tồn kho cho sản phẩm ở kho đó trước khi nhập hàng.",
+        "invalid": "Dữ liệu không hợp lệ",
+        "titleRequired": "Nhập tên nhà cung cấp",
+        "codeRequired": "Nhập mã nhà cung cấp",
+        "linesRequired": "Đơn mua cần ít nhất một dòng hàng",
+        "receiptEmpty": "Nhập số lượng nhận hoặc loại cho ít nhất một dòng"
+      }
+    },
     "inventory": {
       "title": "Kho & Tồn kho",
       "description": "Tồn kho theo kho, danh mục kho, phiếu chuyển kho và kiểm kê",
@@ -1615,6 +1745,9 @@
     },
     "inventory": {
       "description": "Theo dõi số lượng tồn, định mức tối thiểu và cảnh báo hết hàng"
+    },
+    "purchaseOrders": {
+      "description": "Nhà cung cấp, đơn mua và nhập hàng từng phần vào kho"
     },
     "finance": {
       "description": "Theo dõi dòng tiền, công nợ và hiệu quả lợi nhuận theo kỳ"

@@ -11,6 +11,7 @@ export type CmsModuleKey =
   | 'catalog'
   | 'orders'
   | 'inventory'
+  | 'purchaseOrders'
   | 'finance'
   | 'reports'
   | 'media'
@@ -82,6 +83,16 @@ export const CMS_MODULE_MAP = {
     navKey: 'nav.inventory',
     descriptionKey: 'modules.inventory.description',
     // INV-01/02: balances, warehouses, transfers and stocktakes are live.
+    dataSource: 'connected',
+  },
+  purchaseOrders: {
+    key: 'purchaseOrders',
+    route: '/purchasing',
+    icon: 'i-lucide-clipboard-list',
+    disabledIcon: 'i-lucide-clipboard-list',
+    navKey: 'nav.purchaseOrders',
+    descriptionKey: 'modules.purchaseOrders.description',
+    // PUR-01: suppliers, purchase orders and the partial receipt against them.
     dataSource: 'connected',
   },
   finance: {

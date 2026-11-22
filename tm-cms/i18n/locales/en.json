@@ -67,6 +67,7 @@
     "catalog": "Catalog & Products",
     "orders": "Orders & Sales",
     "inventory": "Inventory & Stock",
+    "purchaseOrders": "Purchasing & Suppliers",
     "finance": "Finance & Accounting",
     "reports": "Reports & Analytics",
     "media": "Media Library",
@@ -1230,6 +1231,135 @@
         }
       }
     },
+    "purchasing": {
+      "title": "Purchasing & Suppliers",
+      "description": "Suppliers, purchase orders and partial receipts",
+      "tabs": {
+        "suppliers": "Suppliers",
+        "orders": "Purchase orders"
+      },
+      "summary": "All {all} · Active {active} · Hidden {deleted}",
+      "includeDeleted": "Include hidden records",
+      "noMatch": "Nothing matches these filters",
+      "loadMore": "Load more",
+      "badgeHidden": "Hidden",
+      "suppliers": {
+        "create": "Create supplier",
+        "createTitle": "Create supplier",
+        "editTitle": "Edit supplier",
+        "created": "Supplier created",
+        "updated": "Supplier updated",
+        "hidden": "Supplier hidden",
+        "restored": "Supplier restored",
+        "empty": "No suppliers yet",
+        "allStatuses": "All statuses",
+        "searchPlaceholder": "Search by code, name, email...",
+        "none": "No supplier",
+        "statuses": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "fields": {
+          "code": "Code",
+          "title": "Name",
+          "email": "Email",
+          "phone": "Phone",
+          "status": "Status",
+          "rating": "Rating (0–5)",
+          "itemsSupplied": "Items supplied",
+          "note": "Note"
+        },
+        "itemsSuppliedHint": "Separate entries with commas",
+        "itemsCount": "{count} items",
+        "rating": "Rating {value}/5",
+        "hide": "Hide supplier",
+        "restore": "Restore supplier",
+        "hideHint": "Hide supplier {code}? Its purchase orders stay as they are.",
+        "restoreHint": "Restore supplier {code}?"
+      },
+      "orders": {
+        "create": "Create purchase order",
+        "createTitle": "Create purchase order",
+        "editTitle": "Edit purchase order",
+        "created": "Purchase order created",
+        "updated": "Purchase order updated",
+        "hidden": "Purchase order hidden",
+        "restored": "Purchase order restored",
+        "received": "Receipt recorded",
+        "empty": "No purchase orders yet",
+        "allStatuses": "All statuses",
+        "allSuppliers": "All suppliers",
+        "searchPlaceholder": "Search by code, item, note...",
+        "statuses": {
+          "draft": "Draft",
+          "ordered": "Ordered",
+          "partial": "Partially received",
+          "received": "Received",
+          "cancelled": "Cancelled"
+        },
+        "paymentStatuses": {
+          "unpaid": "Unpaid",
+          "paid": "Paid",
+          "partial": "Partially paid",
+          "refunded": "Refunded"
+        },
+        "paymentMethods": {
+          "cash": "Cash",
+          "banking": "Bank transfer",
+          "cod": "COD",
+          "card": "Card",
+          "other": "Other"
+        },
+        "fields": {
+          "supplier": "Supplier",
+          "warehouse": "Receiving warehouse",
+          "status": "Status",
+          "paymentMethod": "Payment method",
+          "expectedDeliveryDate": "Expected date",
+          "note": "Note",
+          "itemName": "Item name",
+          "sku": "SKU"
+        },
+        "noWarehouse": "No warehouse",
+        "noItem": "No catalog item",
+        "receiveNeedsWarehouse": "This order has no receiving warehouse, so stock cannot come in; edit it and pick a warehouse first.",
+        "receiveNeedsItem": "A line is not linked to a catalog item, so stock cannot move; link every line first.",
+        "lines": "Lines",
+        "addLine": "Add line",
+        "removeLine": "Remove line",
+        "linesLocked": "This order is closed, so its lines cannot be edited.",
+        "total": "Estimated total: {total}",
+        "itemsCount": "{count} lines",
+        "receive": "Receive",
+        "receiveTitle": "Receive · {code}",
+        "receiveHint": "Record the quantity received and rejected; together they cannot exceed the ordered quantity.",
+        "receiveLine": "Ordered {ordered} · received {received} · rejected {rejected}",
+        "remaining": "{count} left",
+        "receivedQty": "Received",
+        "rejectedQty": "Rejected",
+        "receiveSubmit": "Record receipt",
+        "hide": "Hide purchase order",
+        "restore": "Restore purchase order",
+        "hideHint": "Hide purchase order {code}? Stock it already brought in stays.",
+        "restoreHint": "Restore purchase order {code}?"
+      },
+      "errors": {
+        "conflict": "Someone else changed this record; reload before saving",
+        "revisionRequired": "The current revision is missing",
+        "notFound": "That record was not found",
+        "codeExists": "That code is already in use",
+        "locked": "The order is received or cancelled, or the receipt exceeds what was ordered",
+        "supplierDeleted": "The supplier is hidden; restore it first",
+        "supplierNotFound": "No such supplier in this site",
+        "receiptTarget": "Receiving needs a warehouse on the order and a catalog item on every line",
+        "receiptStock": "This item has no stock balance in the receiving warehouse yet; create one there before receiving.",
+        "invalid": "The data is not valid",
+        "titleRequired": "Enter the supplier name",
+        "codeRequired": "Enter the supplier code",
+        "linesRequired": "A purchase order needs at least one line",
+        "receiptEmpty": "Enter a received or rejected quantity on at least one line"
+      }
+    },
     "inventory": {
       "title": "Inventory",
       "description": "Stock per warehouse, warehouses, transfers and stocktakes",
@@ -1613,6 +1743,9 @@
     },
     "inventory": {
       "description": "Track stock levels, minimum thresholds and low-stock alerts"
+    },
+    "purchaseOrders": {
+      "description": "Suppliers, purchase orders and receiving stock in parts"
     },
     "finance": {
       "description": "Track cash flow, receivables and profitability by period"
