@@ -1300,3 +1300,5 @@ Kept because the earlier Hub-backed modules and the Web PWA were verified live b
 - Not done: no import of the 3 legacy customers, no orders/metrics writer, no dedup, no portal, no browser pass on `/customers`.
 
 - HR-01 CMS screen (2026-11-22): `/hr` with Staff (create/edit/hide/restore + salary configs), Attendance (monthly record/correct/delete) and Payroll (calculate/approve/pay/cancel with adjustments) on `useOperationsAdmin`; entitlement `hr` enabled for `sentuan`. Gates: `verify:modules` 32/32, `verify:audit-reason-ui` 63/63. Browser flow on `:4005`: staff → salary config → attendance day → payroll 1.500.000 draft → approved → paid, hide/restore; probe data removed. Not done: roster/shift UI, self-service surface.
+
+- HR-02 CMS roster (2026-11-22): fourth tab on `/hr` — range roster (day groups, worked hours, assign/cancel with audit) and shift templates (create/edit/archive, overnight and capacity, revision on PATCH). Gates unchanged (`verify:modules` 32/32, `verify:audit-reason-ui` 63/63). Browser: created `PROBE-CA-1`, assigned it (8h00 summary), cancelled, archived; probe rows removed. Not done: week grid, bulk apply, assignment edit.

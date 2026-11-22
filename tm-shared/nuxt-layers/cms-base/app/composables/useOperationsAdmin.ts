@@ -375,6 +375,40 @@ export interface AdminPayroll {
   updatedAt: string | null
 }
 
+export interface AdminShiftTemplate {
+  id: string
+  code: string
+  name: string
+  startTime: string
+  endTime: string
+  breakMinutes: number
+  spanMinutes: number
+  workedMinutes: number
+  overnight: boolean
+  capacity: number | null
+  isActive: boolean
+  note: string
+  revision: number
+  updatedAt: string | null
+}
+
+export interface AdminShiftAssignment {
+  id: string
+  templateId: string
+  shiftCode: string
+  staffId: string
+  employeeCode: string
+  staffName: string | null
+  date: string
+  startTime: string
+  endTime: string
+  breakMinutes: number
+  workedMinutes: number
+  overnight: boolean
+  note: string
+  updatedAt: string | null
+}
+
 interface ListMeta {
   nextCursor?: string
   hasMore?: boolean
@@ -799,6 +833,52 @@ export const useOperationsAdmin = () => {
   const cancelPayroll = async (id: string, revision: number, cancelReason: string, reason?: string) =>
     one<AdminPayroll>(await write(`/api/v1/admin/hr/payrolls/${id}/cancel`, 'POST', { revision, reason: cancelReason }, reason))
 
+  const listShiftTemplates = async (includeInactive = false) => {
+    const payload = await plainFetch(`/api/v1/admin/hr/shift-templates${pageQuery({
+      includeInactive: includeInactive ? 'true' : undefined,
+    })}`) as { data: AdminShiftTemplate[], meta?: { counts?: Record<string, number> } }
+    return {
+      data: payload.data,
+      summary: { active: 0, inactive: 0, ...(payload.meta?.counts ?? {}) } as Record<string, number>,
+    }
+  }
+
+  const createShiftTemplate = async (body: Record<string, unknown>, reason?: string) =>
+    one<AdminShiftTemplate>(await write('/api/v1/admin/hr/shift-templates', 'POST', body, reason))
+
+  const updateShiftTemplate = async (id: string, body: Record<string, unknown>, reason?: string) =>
+    one<AdminShiftTemplate>(await write(`/api/v1/admin/hr/shift-templates/${id}`, 'PATCH', body, reason))
+
+  const archiveShiftTemplate = async (id: string, reason?: string) =>
+    one<AdminShiftTemplate>(await write(`/api/v1/admin/hr/shift-templates/${id}`, 'DELETE', {}, reason))
+
+  const listShiftAssignments = async (params: { from?: string, to?: string, staffId?: string, templateId?: string } = {}) => {
+    const payload = await plainFetch(`/api/v1/admin/hr/shift-assignments${pageQuery({
+      from: params.from,
+      to: params.to,
+      staffId: params.staffId,
+      templateId: params.templateId,
+    })}`) as { data: AdminShiftAssignment[], meta?: { totals?: Record<string, number> } }
+    return {
+      data: payload.data,
+      totals: {
+        assignments: payload.meta?.totals?.assignments ?? 0,
+        staff: payload.meta?.totals?.staff ?? 0,
+        days: payload.meta?.totals?.days ?? 0,
+        workedMinutes: payload.meta?.totals?.workedMinutes ?? 0,
+      },
+    }
+  }
+
+  const assignShift = async (body: Record<string, unknown>, reason?: string) =>
+    (await write('/api/v1/admin/hr/shift-assignments', 'POST', body, reason)) as unknown as {
+      data: AdminShiftAssignment
+      meta?: { created?: boolean }
+    }
+
+  const cancelShiftAssignment = async (id: string, reason?: string) =>
+    one<{ id: string }>(await write(`/api/v1/admin/hr/shift-assignments/${id}`, 'DELETE', {}, reason))
+
   /* ------------------------------- reports ------------------------------- */
 
   const financeSummary = async (range: { from?: string, to?: string } = {}) => {
@@ -906,6 +986,13 @@ export const useOperationsAdmin = () => {
     approvePayroll,
     payPayroll,
     cancelPayroll,
+    listShiftTemplates,
+    createShiftTemplate,
+    updateShiftTemplate,
+    archiveShiftTemplate,
+    listShiftAssignments,
+    assignShift,
+    cancelShiftAssignment,
     financeSummary,
     financeAging,
     financeLedger,

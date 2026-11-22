@@ -1238,6 +1238,7 @@
       "tabs": {
         "staff": "Staff",
         "attendance": "Attendance",
+        "shifts": "Shifts",
         "payroll": "Payroll"
       },
       "noMatch": "Nothing matches these filters",
@@ -1313,6 +1314,58 @@
           "note": "Note"
         }
       },
+      "shifts": {
+        "overnight": "Overnight",
+        "worked": "{minutes} min worked",
+        "template": {
+          "title": "Shift templates",
+          "summary": "{active} active · {inactive} inactive",
+          "create": "Add shift",
+          "createTitle": "Add shift template",
+          "editTitle": "Edit shift template",
+          "created": "Shift template created",
+          "updated": "Shift template updated",
+          "archived": "Shift template archived",
+          "empty": "No shift templates yet",
+          "active": "Active",
+          "inactive": "Inactive",
+          "break": "{minutes} min break",
+          "capacity": "up to {count} people",
+          "archive": "Archive shift",
+          "archiveHint": "Archive shift {code}? It is refused while people are still scheduled from today on.",
+          "hint": "A scheduled shift keeps the times it was planned with: editing the template later never moves a published roster.",
+          "fields": {
+            "code": "Shift code",
+            "name": "Shift name",
+            "startTime": "Start time",
+            "endTime": "End time",
+            "breakMinutes": "Break (minutes)",
+            "capacity": "Capacity (0 = unlimited)",
+            "isActive": "In use",
+            "note": "Note"
+          }
+        },
+        "roster": {
+          "from": "From",
+          "to": "To",
+          "summary": "{assignments} assignments · {staff} staff · {days} days · {hours}",
+          "empty": "No shifts assigned in this range",
+          "assign": "Assign shift",
+          "assignTitle": "Assign a shift",
+          "assigned": "Shift assigned",
+          "cancelled": "Assignment cancelled",
+          "cancel": "Cancel assignment",
+          "cancelHint": "Cancel shift {code} on {date} for {name}?",
+          "noTemplate": "No active shift yet — create one before planning the roster.",
+          "hint": "One shift per person per day, from today up to 180 days ahead.",
+          "fields": {
+            "staff": "Staff",
+            "template": "Shift",
+            "date": "Date",
+            "note": "Note"
+          }
+        }
+      },
       "payroll": {
         "calculate": "Calculate payroll",
         "calculateTitle": "Calculate payroll",
@@ -1379,7 +1432,9 @@
         "invalid": "Invalid payload",
         "staffRequired": "Hub subject, employee code and full name are required",
         "attendanceRequired": "Choose a staff member and a date",
-        "cancelReason": "Give a cancellation reason (at least 3 characters)"
+        "cancelReason": "Give a cancellation reason (at least 3 characters)",
+        "shiftRequired": "Shift code and name are required",
+        "shiftAssignRequired": "Choose a staff member, a shift and a date"
       }
     },
     "purchasing": {

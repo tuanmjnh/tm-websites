@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminAttendance, AdminPayroll, AdminSalaryConfig, AdminStaff } from '../composables/useOperationsAdmin'
+import type { AdminAttendance, AdminPayroll, AdminSalaryConfig, AdminShiftAssignment, AdminShiftTemplate, AdminStaff } from '../composables/useOperationsAdmin'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -9,7 +9,7 @@ const ops = useOperationsAdmin()
 const canRead = computed(() => hasCapability('content.read'))
 const canWrite = computed(() => hasCapability('content.write'))
 
-type Tab = 'staff' | 'attendance' | 'payroll'
+type Tab = 'staff' | 'attendance' | 'shifts' | 'payroll'
 const tab = ref<Tab>('staff')
 
 const { reason: auditReason, resetOnClose } = useAuditReason()
@@ -271,6 +271,191 @@ async function submitAttendance() {
   }
 }
 
+/* -------------------------------- shifts --------------------------------- */
+
+const shiftTemplates = ref<AdminShiftTemplate[]>([])
+const shiftTemplateCounts = ref<Record<string, number>>({ active: 0, inactive: 0 })
+const shiftTemplatesLoading = ref(false)
+const shiftTemplatesError = ref<string | null>(null)
+
+const assignments = ref<AdminShiftAssignment[]>([])
+const assignmentTotals = ref({ assignments: 0, staff: 0, days: 0, workedMinutes: 0 })
+const assignmentFrom = ref(new Date().toISOString().slice(0, 10))
+const assignmentTo = ref(new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10))
+const assignmentStaff = ref('all')
+const assignmentsLoading = ref(false)
+const assignmentsError = ref<string | null>(null)
+
+const hours = (minutes: number) => `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`
+
+const assignmentGroups = computed(() => {
+  const groups = new Map<string, AdminShiftAssignment[]>()
+  for (const entry of assignments.value) {
+    const list = groups.get(entry.date) ?? []
+    list.push(entry)
+    groups.set(entry.date, list)
+  }
+  return [...groups.entries()].map(([date, rows]) => ({ date, rows }))
+})
+
+async function loadShifts() {
+  if (!canRead.value) return
+  shiftTemplatesLoading.value = true
+  assignmentsLoading.value = true
+  shiftTemplatesError.value = null
+  assignmentsError.value = null
+  try {
+    const [templates, roster] = await Promise.all([
+      ops.listShiftTemplates(true),
+      ops.listShiftAssignments({
+        from: assignmentFrom.value || undefined,
+        to: assignmentTo.value || undefined,
+        staffId: assignmentStaff.value === 'all' ? undefined : assignmentStaff.value,
+      }),
+    ])
+    shiftTemplates.value = templates.data
+    shiftTemplateCounts.value = { ...shiftTemplateCounts.value, ...templates.summary }
+    assignments.value = roster.data
+    assignmentTotals.value = roster.totals
+  } catch (e) {
+    const message = describeError(e)
+    shiftTemplatesError.value = message
+    assignmentsError.value = message
+  } finally {
+    shiftTemplatesLoading.value = false
+    assignmentsLoading.value = false
+  }
+}
+
+watch([assignmentFrom, assignmentTo, assignmentStaff], () => loadShifts())
+
+const activeTemplates = computed(() => shiftTemplates.value.filter(entry => entry.isActive))
+
+const templateOptions = computed(() => activeTemplates.value
+  .map(entry => ({ label: `${entry.code} · ${entry.name} (${entry.startTime}–${entry.endTime})`, value: entry.id })))
+
+const templateFormOpen = ref(false)
+const templateSaving = ref(false)
+const templateError = ref<string | null>(null)
+const templateEditing = ref<AdminShiftTemplate | null>(null)
+const templateForm = reactive({
+  code: '',
+  name: '',
+  startTime: '08:00',
+  endTime: '17:00',
+  breakMinutes: 60,
+  capacity: 0,
+  isActive: true,
+  note: '',
+})
+
+function openTemplateCreate() {
+  templateEditing.value = null
+  Object.assign(templateForm, { code: '', name: '', startTime: '08:00', endTime: '17:00', breakMinutes: 60, capacity: 0, isActive: true, note: '' })
+  auditReason.value = ''
+  templateError.value = null
+  templateFormOpen.value = true
+}
+
+function openTemplateEdit(entry: AdminShiftTemplate) {
+  templateEditing.value = entry
+  Object.assign(templateForm, {
+    code: entry.code,
+    name: entry.name,
+    startTime: entry.startTime,
+    endTime: entry.endTime,
+    breakMinutes: entry.breakMinutes,
+    capacity: entry.capacity ?? 0,
+    isActive: entry.isActive,
+    note: entry.note,
+  })
+  auditReason.value = ''
+  templateError.value = null
+  templateFormOpen.value = true
+}
+
+async function submitTemplate() {
+  if (templateSaving.value) return
+  if (!templateForm.code.trim() || !templateForm.name.trim()) {
+    templateError.value = t('admin.hr.errors.shiftRequired')
+    return
+  }
+  templateSaving.value = true
+  templateError.value = null
+  try {
+    const payload = {
+      code: templateForm.code.trim().toUpperCase(),
+      name: templateForm.name.trim(),
+      startTime: templateForm.startTime,
+      endTime: templateForm.endTime,
+      breakMinutes: Math.trunc(Number(templateForm.breakMinutes)) || 0,
+      capacity: Number(templateForm.capacity) > 0 ? Math.trunc(Number(templateForm.capacity)) : null,
+      isActive: templateForm.isActive,
+      note: templateForm.note.trim(),
+    }
+    if (templateEditing.value) {
+      await ops.updateShiftTemplate(templateEditing.value.id, { ...payload, revision: templateEditing.value.revision }, auditReason.value.trim() || undefined)
+      toast.add({ title: t('admin.hr.shifts.template.updated'), color: 'success' })
+    } else {
+      await ops.createShiftTemplate(payload, auditReason.value.trim() || undefined)
+      toast.add({ title: t('admin.hr.shifts.template.created'), color: 'success' })
+    }
+    templateFormOpen.value = false
+    await loadShifts()
+  } catch (e) {
+    templateError.value = describeError(e)
+  } finally {
+    templateSaving.value = false
+  }
+}
+
+const assignFormOpen = ref(false)
+const assignSaving = ref(false)
+const assignError = ref<string | null>(null)
+const assignForm = reactive({
+  staffId: '',
+  templateId: '',
+  date: new Date().toISOString().slice(0, 10),
+  note: '',
+})
+
+function openAssign() {
+  Object.assign(assignForm, {
+    staffId: staffOptions.value[0]?.value || '',
+    templateId: templateOptions.value[0]?.value || '',
+    date: assignmentFrom.value || new Date().toISOString().slice(0, 10),
+    note: '',
+  })
+  auditReason.value = ''
+  assignError.value = null
+  assignFormOpen.value = true
+}
+
+async function submitAssign() {
+  if (assignSaving.value) return
+  if (!assignForm.staffId || !assignForm.templateId || !assignForm.date) {
+    assignError.value = t('admin.hr.errors.shiftAssignRequired')
+    return
+  }
+  assignSaving.value = true
+  assignError.value = null
+  try {
+    await ops.assignShift({
+      staffId: assignForm.staffId,
+      templateId: assignForm.templateId,
+      date: assignForm.date,
+      note: assignForm.note.trim(),
+    }, auditReason.value.trim() || undefined)
+    toast.add({ title: t('admin.hr.shifts.roster.assigned'), color: 'success' })
+    assignFormOpen.value = false
+    await loadShifts()
+  } catch (e) {
+    assignError.value = describeError(e)
+  } finally {
+    assignSaving.value = false
+  }
+}
+
 /* -------------------------------- payroll -------------------------------- */
 
 const payrolls = ref<AdminPayroll[]>([])
@@ -472,11 +657,15 @@ const confirmError = ref<string | null>(null)
 const confirmMode = ref<'delete' | 'restore'>('delete')
 const confirmStaff = ref<AdminStaff | null>(null)
 const confirmAttendance = ref<AdminAttendance | null>(null)
+const confirmTemplate = ref<AdminShiftTemplate | null>(null)
+const confirmAssignment = ref<AdminShiftAssignment | null>(null)
 
 function askStaff(entry: AdminStaff, mode: 'delete' | 'restore') {
   confirmMode.value = mode
   confirmStaff.value = entry
   confirmAttendance.value = null
+  confirmTemplate.value = null
+  confirmAssignment.value = null
   auditReason.value = ''
   confirmError.value = null
   confirmOpen.value = true
@@ -486,6 +675,30 @@ function askAttendance(entry: AdminAttendance) {
   confirmMode.value = 'delete'
   confirmAttendance.value = entry
   confirmStaff.value = null
+  confirmTemplate.value = null
+  confirmAssignment.value = null
+  auditReason.value = ''
+  confirmError.value = null
+  confirmOpen.value = true
+}
+
+function askTemplate(entry: AdminShiftTemplate) {
+  confirmMode.value = 'delete'
+  confirmTemplate.value = entry
+  confirmStaff.value = null
+  confirmAttendance.value = null
+  confirmAssignment.value = null
+  auditReason.value = ''
+  confirmError.value = null
+  confirmOpen.value = true
+}
+
+function askAssignment(entry: AdminShiftAssignment) {
+  confirmMode.value = 'delete'
+  confirmAssignment.value = entry
+  confirmStaff.value = null
+  confirmAttendance.value = null
+  confirmTemplate.value = null
   auditReason.value = ''
   confirmError.value = null
   confirmOpen.value = true
@@ -497,7 +710,15 @@ async function runConfirm() {
   confirmError.value = null
   try {
     const note = auditReason.value.trim() || undefined
-    if (confirmAttendance.value) {
+    if (confirmTemplate.value) {
+      await ops.archiveShiftTemplate(confirmTemplate.value.id, note)
+      toast.add({ title: t('admin.hr.shifts.template.archived'), color: 'success' })
+      await loadShifts()
+    } else if (confirmAssignment.value) {
+      await ops.cancelShiftAssignment(confirmAssignment.value.id, note)
+      toast.add({ title: t('admin.hr.shifts.roster.cancelled'), color: 'success' })
+      await loadShifts()
+    } else if (confirmAttendance.value) {
       await ops.deleteAttendance(confirmAttendance.value.id, note)
       toast.add({ title: t('admin.hr.attendance.deleted'), color: 'success' })
       await loadAttendances()
@@ -519,10 +740,10 @@ async function runConfirm() {
   }
 }
 
-if (canRead.value) await Promise.all([loadStaff(), loadAttendances()])
+if (canRead.value) await Promise.all([loadStaff(), loadAttendances(), loadShifts()])
 if (canWrite.value) await loadPayrolls()
 
-resetOnClose(staffFormOpen, attendanceFormOpen, calculateOpen, cancelOpen, salaryOpen, confirmOpen)
+resetOnClose(staffFormOpen, attendanceFormOpen, templateFormOpen, assignFormOpen, calculateOpen, cancelOpen, salaryOpen, confirmOpen)
 </script>
 
 <template>
@@ -554,6 +775,15 @@ resetOnClose(staffFormOpen, attendanceFormOpen, calculateOpen, cancelOpen, salar
           @click="openAttendanceCreate()"
         />
         <UButton
+          v-else-if="canWrite && tab === 'shifts'"
+          icon="i-lucide-calendar-plus"
+          color="primary"
+          variant="soft"
+          size="sm"
+          :label="t('admin.hr.shifts.roster.assign')"
+          @click="openAssign"
+        />
+        <UButton
           v-else-if="canWrite && tab === 'payroll'"
           icon="i-lucide-calculator"
           color="primary"
@@ -581,6 +811,14 @@ resetOnClose(staffFormOpen, attendanceFormOpen, calculateOpen, cancelOpen, salar
             :color="tab === 'attendance' ? 'primary' : 'neutral'"
             :variant="tab === 'attendance' ? 'soft' : 'ghost'"
             @click="tab = 'attendance'"
+          />
+          <UButton
+            icon="i-lucide-calendar-range"
+            :label="t('admin.hr.tabs.shifts')"
+            size="sm"
+            :color="tab === 'shifts' ? 'primary' : 'neutral'"
+            :variant="tab === 'shifts' ? 'soft' : 'ghost'"
+            @click="tab = 'shifts'"
           />
           <UButton
             icon="i-lucide-banknote"
@@ -690,6 +928,83 @@ resetOnClose(staffFormOpen, attendanceFormOpen, calculateOpen, cancelOpen, salar
               </div>
             </div>
           </div>
+        </template>
+
+        <!-- Shifts -->
+        <template v-else-if="tab === 'shifts'">
+          <div class="flex flex-wrap items-end gap-3">
+            <UFormField :label="t('admin.hr.shifts.roster.from')" size="sm">
+              <UInput v-model="assignmentFrom" type="date" size="sm" class="w-full sm:w-40" />
+            </UFormField>
+            <UFormField :label="t('admin.hr.shifts.roster.to')" size="sm">
+              <UInput v-model="assignmentTo" type="date" size="sm" class="w-full sm:w-40" />
+            </UFormField>
+            <USelect v-model="assignmentStaff" :items="[{ label: t('admin.hr.attendance.allStaff'), value: 'all' }, ...staffOptions]" value-key="value" size="sm" class="w-full sm:w-56" />
+            <p class="text-xs text-muted">
+              {{ t('admin.hr.shifts.roster.summary', { assignments: assignmentTotals.assignments, staff: assignmentTotals.staff, days: assignmentTotals.days, hours: hours(assignmentTotals.workedMinutes) }) }}
+            </p>
+          </div>
+
+          <p v-if="assignmentsError" class="text-xs text-error">{{ assignmentsError }}</p>
+          <p v-else-if="!assignmentsLoading && !assignments.length" class="text-xs text-muted">{{ t('admin.hr.shifts.roster.empty') }}</p>
+
+          <div v-if="assignmentGroups.length" class="flex flex-col gap-2">
+            <div v-for="group in assignmentGroups" :key="group.date" class="overflow-hidden rounded-[4px] border border-default/60">
+              <p class="border-b border-default/40 bg-elevated/40 px-3 py-1.5 font-mono text-xs text-highlighted">{{ group.date }}</p>
+              <div v-for="entry in group.rows" :key="entry.id" class="flex flex-wrap items-center gap-3 border-b border-default/40 px-3 py-2 text-sm last:border-b-0">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-mono text-xs text-highlighted">{{ entry.shiftCode }}</span>
+                    <span class="truncate font-medium text-highlighted">{{ entry.staffName || entry.employeeCode }}</span>
+                    <UBadge v-if="entry.overnight" color="neutral" variant="subtle" size="sm">{{ t('admin.hr.shifts.overnight') }}</UBadge>
+                  </div>
+                  <p class="mt-0.5 truncate text-xs text-muted">
+                    <span>{{ entry.startTime }} → {{ entry.endTime }}</span>
+                    <span> · {{ t('admin.hr.shifts.worked', { minutes: entry.workedMinutes }) }}</span>
+                    <span v-if="entry.note"> · {{ entry.note }}</span>
+                  </p>
+                </div>
+                <UButton v-if="canWrite" icon="i-lucide-x" color="error" variant="ghost" size="xs" :title="t('admin.hr.shifts.roster.cancel')" @click="askAssignment(entry)" />
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-2 flex items-center justify-between gap-2">
+            <div>
+              <p class="text-sm font-medium text-highlighted">{{ t('admin.hr.shifts.template.title') }}</p>
+              <p class="text-xs text-muted">{{ t('admin.hr.shifts.template.summary', { active: shiftTemplateCounts.active, inactive: shiftTemplateCounts.inactive }) }}</p>
+            </div>
+            <UButton v-if="canWrite" icon="i-lucide-plus" color="neutral" variant="soft" size="sm" :label="t('admin.hr.shifts.template.create')" @click="openTemplateCreate" />
+          </div>
+
+          <p v-if="shiftTemplatesError" class="text-xs text-error">{{ shiftTemplatesError }}</p>
+          <p v-else-if="!shiftTemplatesLoading && !shiftTemplates.length" class="text-xs text-muted">{{ t('admin.hr.shifts.template.empty') }}</p>
+
+          <div v-if="shiftTemplates.length" class="overflow-hidden rounded-[4px] border border-default/60">
+            <div v-for="entry in shiftTemplates" :key="entry.id" class="flex flex-wrap items-center gap-3 border-b border-default/40 px-3 py-2 text-sm last:border-b-0">
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-mono text-xs text-highlighted">{{ entry.code }}</span>
+                  <span class="truncate font-medium text-highlighted">{{ entry.name }}</span>
+                  <UBadge :color="entry.isActive ? 'success' : 'neutral'" variant="subtle" size="sm">
+                    {{ entry.isActive ? t('admin.hr.shifts.template.active') : t('admin.hr.shifts.template.inactive') }}
+                  </UBadge>
+                  <UBadge v-if="entry.overnight" color="neutral" variant="subtle" size="sm">{{ t('admin.hr.shifts.overnight') }}</UBadge>
+                </div>
+                <p class="mt-0.5 truncate text-xs text-muted">
+                  <span>{{ entry.startTime }} → {{ entry.endTime }}</span>
+                  <span> · {{ t('admin.hr.shifts.worked', { minutes: entry.workedMinutes }) }}</span>
+                  <span> · {{ t('admin.hr.shifts.template.break', { minutes: entry.breakMinutes }) }}</span>
+                  <span v-if="entry.capacity"> · {{ t('admin.hr.shifts.template.capacity', { count: entry.capacity }) }}</span>
+                </p>
+              </div>
+              <div v-if="canWrite" class="flex items-center gap-1">
+                <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="xs" :title="t('common.edit')" @click="openTemplateEdit(entry)" />
+                <UButton v-if="entry.isActive" icon="i-lucide-archive" color="error" variant="ghost" size="xs" :title="t('admin.hr.shifts.template.archive')" @click="askTemplate(entry)" />
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-muted">{{ t('admin.hr.shifts.template.hint') }}</p>
         </template>
 
         <!-- Payroll -->
@@ -934,16 +1249,99 @@ resetOnClose(staffFormOpen, attendanceFormOpen, calculateOpen, cancelOpen, salar
       </template>
     </UModal>
 
+    <!-- Shift template form -->
+    <UModal v-model:open="templateFormOpen" :title="templateEditing ? t('admin.hr.shifts.template.editTitle') : t('admin.hr.shifts.template.createTitle')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-lg' }">
+      <template #body>
+        <div class="flex flex-col gap-3">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <UFormField :label="t('admin.hr.shifts.template.fields.code')">
+              <UInput v-model="templateForm.code" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.hr.shifts.template.fields.name')">
+              <UInput v-model="templateForm.name" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.hr.shifts.template.fields.startTime')">
+              <UInput v-model="templateForm.startTime" type="time" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.hr.shifts.template.fields.endTime')">
+              <UInput v-model="templateForm.endTime" type="time" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.hr.shifts.template.fields.breakMinutes')">
+              <UInput v-model.number="templateForm.breakMinutes" type="number" min="0" max="240" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.hr.shifts.template.fields.capacity')">
+              <UInput v-model.number="templateForm.capacity" type="number" min="0" max="200" class="w-full" />
+            </UFormField>
+          </div>
+          <USwitch v-model="templateForm.isActive" :label="t('admin.hr.shifts.template.fields.isActive')" />
+          <UFormField :label="t('admin.hr.shifts.template.fields.note')">
+            <UInput v-model="templateForm.note" class="w-full" />
+          </UFormField>
+          <p class="text-xs text-muted">{{ t('admin.hr.shifts.template.hint') }}</p>
+          <AuditReasonField v-model="auditReason" />
+          <p v-if="templateError" class="text-xs text-error">{{ templateError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="templateFormOpen = false" />
+          <UButton color="primary" variant="soft" :loading="templateSaving" :label="t('common.save')" @click="submitTemplate" />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Assign shift -->
+    <UModal v-model:open="assignFormOpen" :title="t('admin.hr.shifts.roster.assignTitle')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
+      <template #body>
+        <div class="flex flex-col gap-3">
+          <UFormField :label="t('admin.hr.shifts.roster.fields.staff')">
+            <USelect v-model="assignForm.staffId" :items="staffOptions" value-key="value" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('admin.hr.shifts.roster.fields.template')">
+            <USelect v-model="assignForm.templateId" :items="templateOptions" value-key="value" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('admin.hr.shifts.roster.fields.date')">
+            <UInput v-model="assignForm.date" type="date" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('admin.hr.shifts.roster.fields.note')">
+            <UInput v-model="assignForm.note" class="w-full" />
+          </UFormField>
+          <p v-if="!templateOptions.length" class="text-xs text-warning">{{ t('admin.hr.shifts.roster.noTemplate') }}</p>
+          <p class="text-xs text-muted">{{ t('admin.hr.shifts.roster.hint') }}</p>
+          <AuditReasonField v-model="auditReason" />
+          <p v-if="assignError" class="text-xs text-error">{{ assignError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="assignFormOpen = false" />
+          <UButton color="primary" variant="soft" :loading="assignSaving" :label="t('common.save')" @click="submitAssign" />
+        </div>
+      </template>
+    </UModal>
+
     <!-- Hide / restore / delete day -->
-    <UModal v-model:open="confirmOpen" :title="confirmMode === 'restore' ? t('admin.hr.staff.restore') : confirmAttendance ? t('admin.hr.attendance.delete') : t('admin.hr.staff.hide')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
+    <UModal
+      v-model:open="confirmOpen"
+      :title="confirmTemplate
+        ? t('admin.hr.shifts.template.archive')
+        : confirmAssignment
+          ? t('admin.hr.shifts.roster.cancel')
+          : confirmMode === 'restore' ? t('admin.hr.staff.restore') : confirmAttendance ? t('admin.hr.attendance.delete') : t('admin.hr.staff.hide')"
+      :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }"
+    >
       <template #body>
         <div class="flex flex-col gap-3">
           <p class="text-sm text-toned">
-            {{ confirmAttendance
-              ? t('admin.hr.attendance.deleteHint', { date: confirmAttendance.date, name: staffName(confirmAttendance.staffId) })
-              : confirmMode === 'restore'
-                ? t('admin.hr.staff.restoreHint', { code: confirmStaff?.employeeCode || '' })
-                : t('admin.hr.staff.hideHint', { code: confirmStaff?.employeeCode || '' }) }}
+            {{ confirmTemplate
+              ? t('admin.hr.shifts.template.archiveHint', { code: confirmTemplate.code })
+              : confirmAssignment
+                ? t('admin.hr.shifts.roster.cancelHint', { code: confirmAssignment.shiftCode, date: confirmAssignment.date, name: confirmAssignment.staffName || confirmAssignment.employeeCode })
+                : confirmAttendance
+                  ? t('admin.hr.attendance.deleteHint', { date: confirmAttendance.date, name: staffName(confirmAttendance.staffId) })
+                  : confirmMode === 'restore'
+                    ? t('admin.hr.staff.restoreHint', { code: confirmStaff?.employeeCode || '' })
+                    : t('admin.hr.staff.hideHint', { code: confirmStaff?.employeeCode || '' }) }}
           </p>
           <AuditReasonField v-model="auditReason" />
           <p v-if="confirmError" class="text-xs text-error">{{ confirmError }}</p>
@@ -952,7 +1350,7 @@ resetOnClose(staffFormOpen, attendanceFormOpen, calculateOpen, cancelOpen, salar
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="confirmOpen = false" />
-          <UButton :color="confirmAttendance || confirmMode === 'delete' ? 'error' : 'primary'" variant="soft" :loading="confirmBusy" :label="t('common.save')" @click="runConfirm" />
+          <UButton :color="confirmAttendance || confirmTemplate || confirmAssignment || confirmMode === 'delete' ? 'error' : 'primary'" variant="soft" :loading="confirmBusy" :label="t('common.save')" @click="runConfirm" />
         </div>
       </template>
     </UModal>

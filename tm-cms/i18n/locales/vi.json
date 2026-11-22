@@ -1240,6 +1240,7 @@
       "tabs": {
         "staff": "Nhân sự",
         "attendance": "Chấm công",
+        "shifts": "Ca làm việc",
         "payroll": "Bảng lương"
       },
       "noMatch": "Không có mục nào khớp bộ lọc",
@@ -1315,6 +1316,58 @@
           "note": "Ghi chú"
         }
       },
+      "shifts": {
+        "overnight": "Qua đêm",
+        "worked": "{minutes} phút công",
+        "template": {
+          "title": "Ca làm việc",
+          "summary": "{active} đang dùng · {inactive} tạm ngưng",
+          "create": "Thêm ca",
+          "createTitle": "Thêm ca làm việc",
+          "editTitle": "Sửa ca làm việc",
+          "created": "Đã tạo ca làm việc",
+          "updated": "Đã cập nhật ca làm việc",
+          "archived": "Đã lưu trữ ca làm việc",
+          "empty": "Chưa có ca làm việc nào",
+          "active": "Đang dùng",
+          "inactive": "Tạm ngưng",
+          "break": "nghỉ {minutes} phút",
+          "capacity": "tối đa {count} người",
+          "archive": "Lưu trữ ca",
+          "archiveHint": "Lưu trữ ca {code}? Ca đang có người xếp từ hôm nay sẽ bị từ chối.",
+          "hint": "Ca đã xếp giữ giờ của lúc xếp: sửa ca sau đó không làm đổi lịch đã công bố.",
+          "fields": {
+            "code": "Mã ca",
+            "name": "Tên ca",
+            "startTime": "Giờ bắt đầu",
+            "endTime": "Giờ kết thúc",
+            "breakMinutes": "Nghỉ (phút)",
+            "capacity": "Sức chứa (0 = không giới hạn)",
+            "isActive": "Đang sử dụng",
+            "note": "Ghi chú"
+          }
+        },
+        "roster": {
+          "from": "Từ ngày",
+          "to": "Đến ngày",
+          "summary": "{assignments} phân ca · {staff} nhân sự · {days} ngày · {hours}",
+          "empty": "Chưa có phân ca trong khoảng này",
+          "assign": "Phân ca",
+          "assignTitle": "Phân ca làm việc",
+          "assigned": "Đã phân ca",
+          "cancelled": "Đã huỷ phân ca",
+          "cancel": "Huỷ phân ca",
+          "cancelHint": "Huỷ ca {code} ngày {date} của {name}?",
+          "noTemplate": "Chưa có ca đang dùng — tạo ca trước khi phân lịch.",
+          "hint": "Mỗi người một ngày một ca, và chỉ xếp được từ hôm nay đến 180 ngày tới.",
+          "fields": {
+            "staff": "Nhân sự",
+            "template": "Ca",
+            "date": "Ngày",
+            "note": "Ghi chú"
+          }
+        }
+      },
       "payroll": {
         "calculate": "Tính lương",
         "calculateTitle": "Tính bảng lương",
@@ -1381,7 +1434,9 @@
         "invalid": "Dữ liệu không hợp lệ",
         "staffRequired": "Cần Hub subject, mã nhân viên và họ tên",
         "attendanceRequired": "Chọn nhân sự và ngày",
-        "cancelReason": "Nêu lý do huỷ (ít nhất 3 ký tự)"
+        "cancelReason": "Nêu lý do huỷ (ít nhất 3 ký tự)",
+        "shiftRequired": "Cần mã và tên ca",
+        "shiftAssignRequired": "Chọn nhân sự, ca và ngày"
       }
     },
     "purchasing": {
