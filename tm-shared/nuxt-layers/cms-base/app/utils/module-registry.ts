@@ -70,11 +70,9 @@ export const CMS_MODULE_MAP = {
     disabledIcon: 'i-lucide-shopping-cart',
     navKey: 'nav.orders',
     descriptionKey: 'modules.orders.description',
-    pendingHintKey: 'modules.orders.pendingHint',
-    // Nothing stores an order: Q17 left checkout out and no order model was
-    // accepted, so this waits on a decision rather than on a connection.
-    blocker: 'waiting-decision',
-    dataSource: 'pending',
+    // COM-01/02/03 landed on the tenant database: the page lists, creates,
+    // updates, hides and restores orders and shows their status history.
+    dataSource: 'connected',
   },
   inventory: {
     key: 'inventory',
@@ -83,10 +81,8 @@ export const CMS_MODULE_MAP = {
     disabledIcon: 'i-lucide-package-x',
     navKey: 'nav.inventory',
     descriptionKey: 'modules.inventory.description',
-    pendingHintKey: 'modules.inventory.pendingHint',
-    // A stock ledger with reservations is a data model, not a connection.
-    blocker: 'waiting-decision',
-    dataSource: 'pending',
+    // INV-01/02: balances, warehouses, transfers and stocktakes are live.
+    dataSource: 'connected',
   },
   finance: {
     key: 'finance',
@@ -95,9 +91,8 @@ export const CMS_MODULE_MAP = {
     disabledIcon: 'i-lucide-wallet',
     navKey: 'nav.finance',
     descriptionKey: 'modules.finance.description',
-    pendingHintKey: 'modules.finance.pendingHint',
-    blocker: 'waiting-decision',
-    dataSource: 'pending',
+    // FIN-01: payments and payables have their own collections and commands.
+    dataSource: 'connected',
   },
   reports: {
     key: 'reports',
@@ -106,10 +101,8 @@ export const CMS_MODULE_MAP = {
     disabledIcon: 'i-lucide-bar-chart-3',
     navKey: 'nav.reports',
     descriptionKey: 'modules.reports.description',
-    pendingHintKey: 'modules.reports.pendingHint',
-    // Reports read the ledger and stock data, so they follow finance/inventory.
-    blocker: 'waiting-decision',
-    dataSource: 'pending',
+    // FIN-02: summary, aging and ledger computed from the live ledger.
+    dataSource: 'connected',
   },
   media: {
     key: 'media',

@@ -1,6 +1,7 @@
 {
   "common": {
     "dashboard": "Dashboard",
+    "confirm": "Confirm",
     "save": "Save Changes",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -1069,6 +1070,338 @@
         "revisionConflict": "The redirect changed elsewhere; reload before saving."
       }
     },
+    "orders": {
+      "title": "Orders",
+      "description": "Sales orders: lines, status, payment and handling history",
+      "create": "Create order",
+      "createTitle": "Create order",
+      "editTitle": "Edit order",
+      "searchPlaceholder": "Search by code or customer...",
+      "allStatuses": "All statuses",
+      "includeDeleted": "Include hidden orders",
+      "summary": "All {all} · Active {active} · Hidden {deleted}",
+      "empty": "No orders yet",
+      "noMatch": "No order matches these filters",
+      "permissionDenied": "You do not have permission to view orders",
+      "loadMore": "Load more",
+      "badgeHidden": "Hidden",
+      "itemsCount": "{count} lines",
+      "draftTotal": "Draft total: {total}",
+      "history": "Status history",
+      "noHistory": "No history yet",
+      "revision": "Revision {revision}",
+      "created": "Order created",
+      "updated": "Order updated",
+      "hidden": "Order hidden",
+      "restored": "Order restored",
+      "hide": "Hide order",
+      "restore": "Restore",
+      "hideTitle": "Hide order",
+      "restoreTitle": "Restore order",
+      "hideHint": "Hide order {code}? It is kept and can be restored.",
+      "restoreHint": "Restore order {code}?",
+      "codePlaceholder": "Leave blank to generate one",
+      "fields": {
+        "code": "Order code",
+        "status": "Status",
+        "paymentMethod": "Payment method",
+        "paidAmount": "Paid amount",
+        "shippingFee": "Shipping fee",
+        "discount": "Discount",
+        "note": "Note",
+        "items": "Lines",
+        "pickItem": "Pick a product",
+        "addItem": "Add line",
+        "noItems": "No lines yet",
+        "price": "Price",
+        "quantity": "Quantity",
+        "removeItem": "Remove line",
+        "address": {
+          "fullName": "Recipient",
+          "phone": "Phone",
+          "street": "Address",
+          "city": "City/Province"
+        }
+      },
+      "statuses": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "shipped": "Shipped",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "paymentStatuses": {
+        "unpaid": "Unpaid",
+        "paid": "Paid",
+        "partial": "Partially paid",
+        "refunded": "Refunded"
+      },
+      "paymentMethods": {
+        "cash": "Cash",
+        "banking": "Bank transfer",
+        "cod": "Cash on delivery",
+        "card": "Card",
+        "other": "Other"
+      },
+      "errors": {
+        "invalid": "The order payload is invalid",
+        "notFound": "Order not found",
+        "deleted": "The order is hidden",
+        "locked": "Lines cannot be changed after shipping",
+        "revisionRequired": "The current order revision is missing",
+        "conflict": "The order changed elsewhere; reload before saving",
+        "customerMissing": "The order customer was not found",
+        "codeExists": "This order code is already in use",
+        "itemsRequired": "An order needs at least one line"
+      }
+    },
+    "inventory": {
+      "title": "Inventory",
+      "description": "Stock per warehouse, warehouses, transfers and stocktakes",
+      "permissionDenied": "You do not have permission to view inventory",
+      "loadMore": "Load more",
+      "allWarehouses": "All warehouses",
+      "tabs": {
+        "balances": "Stock",
+        "warehouses": "Warehouses",
+        "transfers": "Transfers",
+        "stocktakes": "Stocktakes"
+      },
+      "balances": {
+        "searchPlaceholder": "Search SKU...",
+        "summary": "All {all} · Low stock {lowStock}",
+        "empty": "No stock recorded yet",
+        "lowStock": "Low stock",
+        "onHand": "On hand",
+        "reserved": "Reserved",
+        "available": "Available"
+      },
+      "warehouses": {
+        "create": "Add warehouse",
+        "createTitle": "Add warehouse",
+        "editTitle": "Edit warehouse",
+        "created": "Warehouse created",
+        "updated": "Warehouse saved",
+        "hidden": "Warehouse hidden",
+        "restored": "Warehouse restored",
+        "empty": "No warehouses yet",
+        "hiddenBadge": "Hidden",
+        "hide": "Hide warehouse",
+        "restore": "Restore",
+        "hideTitle": "Hide warehouse",
+        "restoreTitle": "Restore warehouse",
+        "revision": "Revision {revision}",
+        "codePlaceholder": "Leave blank to generate one",
+        "fields": {
+          "code": "Warehouse code",
+          "title": "Warehouse name",
+          "phone": "Phone",
+          "status": "Status",
+          "address": "Address",
+          "description": "Description"
+        },
+        "statuses": {
+          "active": "Active",
+          "inactive": "Inactive"
+        }
+      },
+      "transfers": {
+        "create": "Create transfer",
+        "createTitle": "Create stock transfer",
+        "created": "Stock transfer created",
+        "shipped": "Transfer shipped",
+        "received": "Transfer received",
+        "cancelled": "Transfer cancelled",
+        "allStatuses": "All statuses",
+        "summary": "All {all} · Draft {draft} · In transit {inTransit}",
+        "empty": "No stock transfers yet",
+        "lineCount": "{count} lines",
+        "ship": "Ship",
+        "receive": "Receive",
+        "cancel": "Cancel",
+        "shipTitle": "Ship transfer",
+        "receiveTitle": "Receive transfer",
+        "cancelTitle": "Cancel transfer",
+        "pickItem": "Pick a product",
+        "addLine": "Add line",
+        "noLines": "No lines yet",
+        "fields": {
+          "from": "Source warehouse",
+          "to": "Destination warehouse",
+          "quantity": "Quantity",
+          "note": "Note"
+        },
+        "statuses": {
+          "draft": "Draft",
+          "in_transit": "In transit",
+          "received": "Received",
+          "cancelled": "Cancelled"
+        }
+      },
+      "stocktakes": {
+        "create": "Create stocktake",
+        "createTitle": "Create stocktake",
+        "created": "Stocktake created",
+        "completed": "Stocktake completed",
+        "cancelled": "Stocktake cancelled",
+        "allStatuses": "All statuses",
+        "summary": "Draft {draft} · Completed {completed}",
+        "empty": "No stocktakes yet",
+        "lineCount": "{count} lines",
+        "complete": "Complete stocktake",
+        "cancel": "Cancel",
+        "completeTitle": "Complete stocktake",
+        "cancelTitle": "Cancel stocktake",
+        "completeHint": "Differences become adjustment entries on the stock ledger.",
+        "pickItem": "Pick a product",
+        "addLine": "Add line",
+        "noLines": "No lines yet",
+        "fields": {
+          "code": "Stocktake code",
+          "warehouse": "Warehouse",
+          "counted": "Counted",
+          "note": "Note"
+        },
+        "statuses": {
+          "draft": "Draft",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        }
+      },
+      "errors": {
+        "conflict": "The record changed elsewhere; reload before saving",
+        "revisionRequired": "The current revision is missing",
+        "notFound": "Record not found",
+        "codeExists": "This code is already in use",
+        "stockFailed": "The source warehouse does not hold enough stock",
+        "sameWarehouse": "Source and destination must differ",
+        "locked": "The document is in a state that does not allow this action",
+        "invalid": "The payload is invalid",
+        "titleRequired": "Enter a warehouse name",
+        "transferIncomplete": "Pick two different warehouses and at least one line",
+        "stocktakeIncomplete": "Enter a code, pick a warehouse and add at least one line"
+      }
+    },
+    "finance": {
+      "title": "Finance",
+      "description": "Record payments, follow payables and void the wrong entry",
+      "permissionDenied": "You do not have permission to view finance",
+      "loadMore": "Load more",
+      "void": "Void",
+      "voidHint": "A voided entry is kept for reconciliation.",
+      "tabs": {
+        "payments": "Payments",
+        "payables": "Payables"
+      },
+      "directions": {
+        "receivable": "Money in",
+        "payable": "Money out"
+      },
+      "paymentStates": {
+        "posted": "Posted",
+        "voided": "Voided"
+      },
+      "payableStates": {
+        "posted": "Outstanding",
+        "voided": "Voided"
+      },
+      "methods": {
+        "cash": "Cash",
+        "banking": "Bank transfer",
+        "cod": "Cash on delivery",
+        "card": "Card",
+        "other": "Other"
+      },
+      "references": {
+        "order": "Order",
+        "purchaseOrder": "Purchase order"
+      },
+      "payments": {
+        "create": "Record payment",
+        "createTitle": "Record payment",
+        "created": "Payment recorded",
+        "void": "Void payment",
+        "voidTitle": "Void payment",
+        "voidedToast": "Payment voided",
+        "allDirections": "All directions",
+        "allStates": "All states",
+        "summary": "All {all} · Posted {posted} · {amount}",
+        "empty": "No payments yet",
+        "referencePlaceholder": "Paste an order or purchase-order id",
+        "directionHint": "Orders take money in; purchase orders take money out.",
+        "fields": {
+          "direction": "Direction",
+          "referenceModel": "Document type",
+          "referenceId": "Document",
+          "amount": "Amount",
+          "method": "Method",
+          "note": "Note"
+        }
+      },
+      "payables": {
+        "hint": "Payables are posted when a purchase order is received.",
+        "empty": "No payables yet",
+        "purchaseOrder": "Purchase order",
+        "voidedAt": "Voided on",
+        "void": "Void payable",
+        "voidTitle": "Void payable",
+        "voidedToast": "Payable voided"
+      },
+      "errors": {
+        "exceeds": "The amount is larger than the outstanding balance",
+        "conflict": "The record changed elsewhere; reload before saving",
+        "notFound": "Record not found",
+        "direction": "The direction does not match the document",
+        "closed": "The document is closed and cannot take a payment",
+        "alreadyVoided": "This entry is already voided",
+        "invalid": "The payload is invalid",
+        "reasonRequired": "Enter a reason to void",
+        "paymentIncomplete": "Enter a document and an amount above zero"
+      }
+    },
+    "reports": {
+      "title": "Reports",
+      "description": "Cash flow, aging and ledger computed from posted entries",
+      "permissionDenied": "You do not have permission to view reports",
+      "from": "From",
+      "to": "To",
+      "apply": "Run report",
+      "summary": "Cash flow for the period",
+      "rangeHint": "Period {from} → {to} ({timeZone})",
+      "received": "Money in",
+      "paidOut": "Money out",
+      "net": "Net",
+      "voided": "Voided",
+      "paymentCount": "{count} entries",
+      "receivables": "Receivables",
+      "payables": "Payables",
+      "outstandingHint": "{count} documents · {overdue} over 30 days",
+      "method": "Method",
+      "aging": "Aging",
+      "asOf": "As of",
+      "refreshAging": "Recalculate",
+      "buckets": {
+        "current": "Current",
+        "1-30": "1–30 days",
+        "31-60": "31–60 days",
+        "61-90": "61–90 days",
+        "90+": "Over 90 days"
+      },
+      "ledger": "Ledger",
+      "allStates": "All states",
+      "exportCsv": "Export CSV",
+      "ledgerTotals": "In {receivable} · Out {payable} · Voided {voided}",
+      "ledgerEmpty": "No entries in this period",
+      "day": "Day",
+      "code": "Code",
+      "reference": "Document",
+      "amount": "Amount",
+      "state": "State",
+      "loadMore": "Load more",
+      "errors": {
+        "invalidRange": "The date range is invalid"
+      }
+    },
     "customers": {
       "title": "Customers",
       "description": "Customer profiles for this website: contact, addresses, segment and loyalty points. Sign-in and roles stay in Hub.",
@@ -1201,20 +1534,16 @@
       "description": "Manage categories, attributes and pricing for the entire product catalog"
     },
     "orders": {
-      "description": "Track the full order lifecycle from creation to successful delivery",
-      "pendingHint": "No order is stored anywhere in this round: checkout was left out and no order model was accepted, so the module cannot read or write one yet."
+      "description": "Track the full order lifecycle from creation to successful delivery"
     },
     "inventory": {
-      "description": "Track stock levels, minimum thresholds and low-stock alerts",
-      "pendingHint": "Stock needs a ledger with reservations and movements first; that model is not agreed yet, so nothing here reads stock levels."
+      "description": "Track stock levels, minimum thresholds and low-stock alerts"
     },
     "finance": {
-      "description": "Track cash flow, receivables and profitability by period",
-      "pendingHint": "Finance needs a posting and payable/receivable model first, which follows the order and inventory decisions."
+      "description": "Track cash flow, receivables and profitability by period"
     },
     "reports": {
-      "description": "Aggregate operations, sales and finance reports by period",
-      "pendingHint": "Reports aggregate the ledger and stock data, so they arrive after finance and inventory are modelled."
+      "description": "Aggregate operations, sales and finance reports by period"
     },
     "media": {
       "description": "Images, video and digital assets served through the TM Hub media gateway"

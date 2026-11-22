@@ -37,6 +37,9 @@ const WRITE_PAGES: PageExpectation[] = [
   { page: 'tags', composable: 'useTagAdmin' },
   { page: 'configs', composable: 'useSettingsAdmin' },
   { page: 'customers', composable: 'useCrmAdmin' },
+  { page: 'orders', composable: 'useOperationsAdmin' },
+  { page: 'inventory', composable: 'useOperationsAdmin' },
+  { page: 'finance', composable: 'useOperationsAdmin' },
 ]
 
 const errors: string[] = []

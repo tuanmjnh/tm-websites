@@ -1169,21 +1169,21 @@ Run on the local machine (Node 24.22.2, pnpm 12.15.0, local MongoDB on `127.0.0.
 
 ## Module backlog — every module that is still incomplete
 
-A module counts as done when its parity row's exit gate is met, not when its page exists. This table is the tracking list for the five CMS modules whose pages are still `pending`, plus the gaps that sit behind them. **Rule for an automated session:** take the first row whose blocker is `none`; never start a row by inventing the data model it is waiting for, and record the evidence here when a row lands.
+A module counts as done when its parity row's exit gate is met, not when its page exists. This table tracks every module that is still incomplete. **Rule for an automated session:** take the first row whose blocker is `none`; never start a row by inventing the data model it is waiting for, and record the evidence here when a row lands.
 
 | Module (parity IDs) | Page | State | What exists | What is missing | Blocker |
 | --- | --- | --- | --- | --- | --- |
-| Orders (COM-01, COM-02, COM-03, POR-01) | `/orders` | pending | route, nav, module state, an honest hint and blocker badge | order model, admin list/detail, line + address snapshots, state machine, duplicate-submit protection, idempotent create | **decision** — Q17 left checkout out and no order model was accepted; P5 domain decisions open |
-| Inventory (INV-01, INV-02) | `/inventory` | pending | same shell | stock ledger, reservations, movements, transfers, stocktake, serials | **decision** — same P5 gate; this row also blocks CAT-02's serial/IMEI |
-| Finance (FIN-01, FIN-02) | `/finance` | pending | same shell | posting model, receivables/payables, allocations, reversals | **decision** — follows the order and inventory models |
-| Reports | `/reports` | pending | same shell | aggregation over the ledger and stock data | **decision** — follows finance and inventory |
-| AI Workspace | `/ai` | pending, out of scope | route kept, page now states Q15 instead of inviting a provider | nothing planned | none — Q15 keeps it out of v2; only a new decision brings it back |
+| Orders (COM-01, COM-02, COM-03, POR-01) | `/orders` | connected 2026-11-22 | list with status/deleted filters and counts, create with catalog-picked lines and address, edit with revision lock + status history, hide/restore, audit note, `test:commerce` 22 | no payment capture from the order, no discount/tax rules, no line edit after shipping (server rule, shown in UI), no returns/shipment screens on this page (services exist) | none for the surface above; the missing items are follow-up slices |
+| Inventory (INV-01, INV-02) | `/inventory` | connected 2026-11-22 | balances with low-stock badge, warehouse CRUD + hide/restore, transfers (create/ship/receive/cancel) and stocktakes (create/complete/cancel) against the real ledger | no manual balance edit, no partial-receipt UI (receive books full lines), no serial/IMEI picker, no inventory export | none; CAT-02 serials still needs its own catalog page |
+| Finance (FIN-01, FIN-02) | `/finance` | connected 2026-11-22 | payments list/create/void with direction + document picker by id, payables list/void, audit note | no order/purchase-order search picker (paste id), no partial allocation editor, no reconciliation screen | none; reconciliation API exists but has no screen |
+| Reports | `/reports` | connected 2026-11-22 | finance summary by method, receivables/payables + aging buckets, ledger with state filter, load-more and CSV export, live from the ledger | no inventory/stock reports, no saved ranges, no chart, no scheduled report | none for the finance reports that exist |
+| AI Workspace | `/ai` | pending, out of scope | route kept, page states Q15 instead of inviting a provider | nothing planned | none — Q15 keeps it out of v2; only a new decision brings it back |
 
 The same treatment applies to gaps that have no module page of their own:
 
 | Gap | Blocker | First slice when unblocked |
 | --- | --- | --- |
-| CAT-02 serial/IMEI on catalog items | inventory model above | serial numbers on the catalog item + movement link |
+| CAT-02 serial/IMEI on catalog items | none — the serial service and routes exist | serial numbers on the catalog item + movement link |
 | P1 proxy allowlist (broad forwarding today) | **ADR 0002 D1**, not a live session — business paths stay proxied until each domain migrates, and a deny-by-default allowlist was measured then reverted on 2026-11-18 (audit §5.2) | after a new ADR: narrow one migrated domain at a time, starting with the first Hub-backed screen that moves to a local service |
 | P1 CSRF beyond origin matching | owner decision on the no-`Origin`/no-`Sec-Fetch-Site` policy | double-submit or token binding, plus the policy tests |
 | P1 web auth BFF (`tm-web` has no auth handlers) | web login UX decision | BFF handlers + a signed-in storefront check |

@@ -1,6 +1,7 @@
 {
   "common": {
     "dashboard": "Bảng điều khiển",
+    "confirm": "Xác nhận",
     "save": "Lưu thay đổi",
     "cancel": "Hủy bỏ",
     "delete": "Xóa",
@@ -1071,6 +1072,338 @@
         "revisionConflict": "Chuyển hướng đã bị thay đổi ở phiên khác, hãy tải lại."
       }
     },
+    "orders": {
+      "title": "Đơn hàng",
+      "description": "Đơn bán hàng: dòng hàng, trạng thái, thanh toán và lịch sử xử lý",
+      "create": "Tạo đơn hàng",
+      "createTitle": "Tạo đơn hàng",
+      "editTitle": "Sửa đơn hàng",
+      "searchPlaceholder": "Tìm mã đơn hoặc khách hàng...",
+      "allStatuses": "Mọi trạng thái",
+      "includeDeleted": "Gồm đơn đã ẩn",
+      "summary": "Tất cả {all} · Đang hoạt động {active} · Đã ẩn {deleted}",
+      "empty": "Chưa có đơn hàng nào",
+      "noMatch": "Không có đơn hàng khớp bộ lọc",
+      "permissionDenied": "Bạn không có quyền xem đơn hàng",
+      "loadMore": "Tải thêm",
+      "badgeHidden": "Đã ẩn",
+      "itemsCount": "{count} dòng hàng",
+      "draftTotal": "Tạm tính: {total}",
+      "history": "Lịch sử trạng thái",
+      "noHistory": "Chưa có lịch sử",
+      "revision": "Phiên bản {revision}",
+      "created": "Đã tạo đơn hàng",
+      "updated": "Đã cập nhật đơn hàng",
+      "hidden": "Đã ẩn đơn hàng",
+      "restored": "Đã khôi phục đơn hàng",
+      "hide": "Ẩn đơn",
+      "restore": "Khôi phục",
+      "hideTitle": "Ẩn đơn hàng",
+      "restoreTitle": "Khôi phục đơn hàng",
+      "hideHint": "Ẩn đơn {code}? Đơn vẫn được giữ lại và có thể khôi phục.",
+      "restoreHint": "Khôi phục đơn {code}?",
+      "codePlaceholder": "Để trống để hệ thống tự sinh",
+      "fields": {
+        "code": "Mã đơn",
+        "status": "Trạng thái",
+        "paymentMethod": "Hình thức thanh toán",
+        "paidAmount": "Đã thanh toán",
+        "shippingFee": "Phí vận chuyển",
+        "discount": "Giảm giá",
+        "note": "Ghi chú",
+        "items": "Dòng hàng",
+        "pickItem": "Chọn sản phẩm",
+        "addItem": "Thêm dòng",
+        "noItems": "Chưa có dòng hàng nào",
+        "price": "Giá",
+        "quantity": "Số lượng",
+        "removeItem": "Bỏ dòng",
+        "address": {
+          "fullName": "Người nhận",
+          "phone": "Điện thoại",
+          "street": "Địa chỉ",
+          "city": "Tỉnh/Thành"
+        }
+      },
+      "statuses": {
+        "pending": "Chờ xử lý",
+        "processing": "Đang xử lý",
+        "shipped": "Đã gửi",
+        "completed": "Hoàn tất",
+        "cancelled": "Đã huỷ"
+      },
+      "paymentStatuses": {
+        "unpaid": "Chưa thanh toán",
+        "paid": "Đã thanh toán",
+        "partial": "Thanh toán một phần",
+        "refunded": "Đã hoàn tiền"
+      },
+      "paymentMethods": {
+        "cash": "Tiền mặt",
+        "banking": "Chuyển khoản",
+        "cod": "Thu hộ (COD)",
+        "card": "Thẻ",
+        "other": "Khác"
+      },
+      "errors": {
+        "invalid": "Dữ liệu đơn hàng không hợp lệ",
+        "notFound": "Không tìm thấy đơn hàng",
+        "deleted": "Đơn hàng đã bị ẩn",
+        "locked": "Đơn đã gửi không sửa được dòng hàng",
+        "revisionRequired": "Thiếu phiên bản hiện tại của đơn",
+        "conflict": "Đơn đã bị thay đổi ở phiên khác, hãy tải lại",
+        "customerMissing": "Không tìm thấy khách hàng của đơn",
+        "codeExists": "Mã đơn này đã được dùng",
+        "itemsRequired": "Đơn cần ít nhất một dòng hàng"
+      }
+    },
+    "inventory": {
+      "title": "Kho & Tồn kho",
+      "description": "Tồn kho theo kho, danh mục kho, phiếu chuyển kho và kiểm kê",
+      "permissionDenied": "Bạn không có quyền xem tồn kho",
+      "loadMore": "Tải thêm",
+      "allWarehouses": "Mọi kho",
+      "tabs": {
+        "balances": "Tồn kho",
+        "warehouses": "Kho",
+        "transfers": "Chuyển kho",
+        "stocktakes": "Kiểm kê"
+      },
+      "balances": {
+        "searchPlaceholder": "Tìm SKU...",
+        "summary": "Tất cả {all} · Sắp hết {lowStock}",
+        "empty": "Chưa có số liệu tồn kho",
+        "lowStock": "Sắp hết",
+        "onHand": "Thực tế",
+        "reserved": "Giữ chỗ",
+        "available": "Khả dụng"
+      },
+      "warehouses": {
+        "create": "Thêm kho",
+        "createTitle": "Thêm kho",
+        "editTitle": "Sửa kho",
+        "created": "Đã tạo kho",
+        "updated": "Đã lưu kho",
+        "hidden": "Đã ẩn kho",
+        "restored": "Đã khôi phục kho",
+        "empty": "Chưa có kho nào",
+        "hiddenBadge": "Đã ẩn",
+        "hide": "Ẩn kho",
+        "restore": "Khôi phục",
+        "hideTitle": "Ẩn kho",
+        "restoreTitle": "Khôi phục kho",
+        "revision": "Phiên bản {revision}",
+        "codePlaceholder": "Để trống để tự sinh",
+        "fields": {
+          "code": "Mã kho",
+          "title": "Tên kho",
+          "phone": "Điện thoại",
+          "status": "Trạng thái",
+          "address": "Địa chỉ",
+          "description": "Mô tả"
+        },
+        "statuses": {
+          "active": "Đang dùng",
+          "inactive": "Ngưng dùng"
+        }
+      },
+      "transfers": {
+        "create": "Tạo phiếu chuyển",
+        "createTitle": "Tạo phiếu chuyển kho",
+        "created": "Đã tạo phiếu chuyển kho",
+        "shipped": "Đã xuất kho",
+        "received": "Đã nhận kho",
+        "cancelled": "Đã huỷ phiếu chuyển",
+        "allStatuses": "Mọi trạng thái",
+        "summary": "Tất cả {all} · Nháp {draft} · Đang chuyển {inTransit}",
+        "empty": "Chưa có phiếu chuyển kho",
+        "lineCount": "{count} dòng",
+        "ship": "Xuất kho",
+        "receive": "Nhận kho",
+        "cancel": "Huỷ phiếu",
+        "shipTitle": "Xuất kho",
+        "receiveTitle": "Nhận kho",
+        "cancelTitle": "Huỷ phiếu chuyển",
+        "pickItem": "Chọn sản phẩm",
+        "addLine": "Thêm dòng",
+        "noLines": "Chưa có dòng hàng",
+        "fields": {
+          "from": "Kho xuất",
+          "to": "Kho nhận",
+          "quantity": "Số lượng",
+          "note": "Ghi chú"
+        },
+        "statuses": {
+          "draft": "Nháp",
+          "in_transit": "Đang chuyển",
+          "received": "Đã nhận",
+          "cancelled": "Đã huỷ"
+        }
+      },
+      "stocktakes": {
+        "create": "Tạo kiểm kê",
+        "createTitle": "Tạo phiếu kiểm kê",
+        "created": "Đã tạo phiếu kiểm kê",
+        "completed": "Đã hoàn tất kiểm kê",
+        "cancelled": "Đã huỷ phiếu kiểm kê",
+        "allStatuses": "Mọi trạng thái",
+        "summary": "Nháp {draft} · Hoàn tất {completed}",
+        "empty": "Chưa có phiếu kiểm kê",
+        "lineCount": "{count} dòng",
+        "complete": "Hoàn tất kiểm kê",
+        "cancel": "Huỷ phiếu",
+        "completeTitle": "Hoàn tất kiểm kê",
+        "cancelTitle": "Huỷ phiếu kiểm kê",
+        "completeHint": "Chênh lệch sẽ được ghi thành bút toán điều chỉnh tồn kho.",
+        "pickItem": "Chọn sản phẩm",
+        "addLine": "Thêm dòng",
+        "noLines": "Chưa có dòng hàng",
+        "fields": {
+          "code": "Mã kiểm kê",
+          "warehouse": "Kho",
+          "counted": "Đếm được",
+          "note": "Ghi chú"
+        },
+        "statuses": {
+          "draft": "Nháp",
+          "completed": "Hoàn tất",
+          "cancelled": "Đã huỷ"
+        }
+      },
+      "errors": {
+        "conflict": "Dữ liệu đã bị thay đổi ở phiên khác, hãy tải lại",
+        "revisionRequired": "Thiếu phiên bản hiện tại",
+        "notFound": "Không tìm thấy dữ liệu",
+        "codeExists": "Mã này đã được dùng",
+        "stockFailed": "Kho nguồn không đủ hàng để xuất",
+        "sameWarehouse": "Kho xuất và kho nhận phải khác nhau",
+        "locked": "Phiếu đang ở trạng thái không cho phép thao tác này",
+        "invalid": "Dữ liệu không hợp lệ",
+        "titleRequired": "Nhập tên kho",
+        "transferIncomplete": "Chọn hai kho khác nhau và ít nhất một dòng hàng",
+        "stocktakeIncomplete": "Nhập mã, chọn kho và ít nhất một dòng hàng"
+      }
+    },
+    "finance": {
+      "title": "Tài chính & Thu chi",
+      "description": "Ghi nhận thanh toán, theo dõi công nợ phải trả và huỷ khoản sai",
+      "permissionDenied": "Bạn không có quyền xem tài chính",
+      "loadMore": "Tải thêm",
+      "void": "Huỷ khoản",
+      "voidHint": "Khoản đã huỷ vẫn được giữ lại để đối soát.",
+      "tabs": {
+        "payments": "Thanh toán",
+        "payables": "Công nợ phải trả"
+      },
+      "directions": {
+        "receivable": "Thu",
+        "payable": "Chi"
+      },
+      "paymentStates": {
+        "posted": "Đã ghi",
+        "voided": "Đã huỷ"
+      },
+      "payableStates": {
+        "posted": "Đang nợ",
+        "voided": "Đã huỷ"
+      },
+      "methods": {
+        "cash": "Tiền mặt",
+        "banking": "Chuyển khoản",
+        "cod": "Thu hộ (COD)",
+        "card": "Thẻ",
+        "other": "Khác"
+      },
+      "references": {
+        "order": "Đơn hàng",
+        "purchaseOrder": "Đơn mua"
+      },
+      "payments": {
+        "create": "Ghi nhận thanh toán",
+        "createTitle": "Ghi nhận thanh toán",
+        "created": "Đã ghi nhận thanh toán",
+        "void": "Huỷ thanh toán",
+        "voidTitle": "Huỷ thanh toán",
+        "voidedToast": "Đã huỷ thanh toán",
+        "allDirections": "Mọi chiều",
+        "allStates": "Mọi trạng thái",
+        "summary": "Tất cả {all} · Đã ghi {posted} · {amount}",
+        "empty": "Chưa có thanh toán nào",
+        "referencePlaceholder": "Dán id đơn hàng hoặc đơn mua",
+        "directionHint": "Đơn hàng chỉ nhận khoản thu; đơn mua chỉ nhận khoản chi.",
+        "fields": {
+          "direction": "Chiều tiền",
+          "referenceModel": "Loại chứng từ",
+          "referenceId": "Chứng từ",
+          "amount": "Số tiền",
+          "method": "Hình thức",
+          "note": "Ghi chú"
+        }
+      },
+      "payables": {
+        "hint": "Công nợ sinh ra khi nhận đơn mua.",
+        "empty": "Chưa có công nợ nào",
+        "purchaseOrder": "Đơn mua",
+        "voidedAt": "Huỷ ngày",
+        "void": "Huỷ công nợ",
+        "voidTitle": "Huỷ công nợ",
+        "voidedToast": "Đã huỷ công nợ"
+      },
+      "errors": {
+        "exceeds": "Số tiền vượt quá dư nợ của chứng từ",
+        "conflict": "Dữ liệu đã bị thay đổi ở phiên khác, hãy tải lại",
+        "notFound": "Không tìm thấy dữ liệu",
+        "direction": "Sai chiều thu/chi so với chứng từ",
+        "closed": "Chứng từ đã đóng, không nhận thêm thanh toán",
+        "alreadyVoided": "Khoản này đã được huỷ",
+        "invalid": "Dữ liệu không hợp lệ",
+        "reasonRequired": "Nhập lý do huỷ",
+        "paymentIncomplete": "Nhập chứng từ và số tiền lớn hơn 0"
+      }
+    },
+    "reports": {
+      "title": "Báo cáo & Phân tích",
+      "description": "Dòng tiền, tuổi nợ và sổ quỹ tính trực tiếp từ bút toán đã ghi",
+      "permissionDenied": "Bạn không có quyền xem báo cáo",
+      "from": "Từ ngày",
+      "to": "Đến ngày",
+      "apply": "Xem báo cáo",
+      "summary": "Dòng tiền theo kỳ",
+      "rangeHint": "Kỳ {from} → {to} ({timeZone})",
+      "received": "Tiền thu",
+      "paidOut": "Tiền chi",
+      "net": "Chênh lệch",
+      "voided": "Đã huỷ",
+      "paymentCount": "{count} khoản",
+      "receivables": "Phải thu",
+      "payables": "Phải trả",
+      "outstandingHint": "{count} chứng từ · {overdue} quá 30 ngày",
+      "method": "Hình thức",
+      "aging": "Tuổi nợ",
+      "asOf": "Chốt ngày",
+      "refreshAging": "Tính lại",
+      "buckets": {
+        "current": "Trong hạn",
+        "1-30": "1–30 ngày",
+        "31-60": "31–60 ngày",
+        "61-90": "61–90 ngày",
+        "90+": "Trên 90 ngày"
+      },
+      "ledger": "Sổ quỹ",
+      "allStates": "Mọi trạng thái",
+      "exportCsv": "Xuất CSV",
+      "ledgerTotals": "Thu {receivable} · Chi {payable} · Đã huỷ {voided}",
+      "ledgerEmpty": "Chưa có bút toán nào trong kỳ",
+      "day": "Ngày",
+      "code": "Mã",
+      "reference": "Chứng từ",
+      "amount": "Số tiền",
+      "state": "Trạng thái",
+      "loadMore": "Tải thêm",
+      "errors": {
+        "invalidRange": "Khoảng ngày không hợp lệ"
+      }
+    },
     "customers": {
       "title": "Khách hàng",
       "description": "Hồ sơ khách hàng của website: liên hệ, địa chỉ, nhóm và điểm tích luỹ. Đăng nhập và phân quyền vẫn do Hub quản lý.",
@@ -1203,20 +1536,16 @@
       "description": "Quản lý danh mục, thuộc tính và giá bán của toàn bộ sản phẩm"
     },
     "orders": {
-      "description": "Theo dõi toàn bộ vòng đời đơn hàng từ tạo mới đến khi giao thành công",
-      "pendingHint": "Đợt này không lưu đơn hàng ở đâu cả: checkout chưa làm và chưa có mô hình đơn hàng, nên phân hệ chưa đọc hay ghi được đơn nào."
+      "description": "Theo dõi toàn bộ vòng đời đơn hàng từ tạo mới đến khi giao thành công"
     },
     "inventory": {
-      "description": "Theo dõi số lượng tồn, định mức tối thiểu và cảnh báo hết hàng",
-      "pendingHint": "Tồn kho cần sổ kho với giữ chỗ và phiếu nhập xuất trước; mô hình đó chưa được thống nhất nên chưa có số liệu tồn."
+      "description": "Theo dõi số lượng tồn, định mức tối thiểu và cảnh báo hết hàng"
     },
     "finance": {
-      "description": "Theo dõi dòng tiền, công nợ và hiệu quả lợi nhuận theo kỳ",
-      "pendingHint": "Tài chính cần mô hình bút toán và công nợ trước, phụ thuộc vào quyết định về đơn hàng và tồn kho."
+      "description": "Theo dõi dòng tiền, công nợ và hiệu quả lợi nhuận theo kỳ"
     },
     "reports": {
-      "description": "Tổng hợp báo cáo vận hành, bán hàng và tài chính theo kỳ",
-      "pendingHint": "Báo cáo tổng hợp từ sổ quỹ và dữ liệu tồn kho, nên chỉ có sau khi tài chính và tồn kho được mô hình hoá."
+      "description": "Tổng hợp báo cáo vận hành, bán hàng và tài chính theo kỳ"
     },
     "media": {
       "description": "Hình ảnh, video và tài nguyên số phân phối qua cổng media của TM Hub"
