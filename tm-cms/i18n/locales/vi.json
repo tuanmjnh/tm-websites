@@ -1481,6 +1481,22 @@
         "qty": "SL",
         "unitCost": "Giá nhập",
         "value": "Giá trị",
+        "check": {
+          "title": "Kiểm tra giá trước khi đặt",
+          "hint": "So đơn giá đề nghị với lần nhập gần nhất của cùng nhà cung cấp và mặt hàng; lần nhập đầu tiên thì chưa có kết luận.",
+          "item": "Mặt hàng",
+          "supplier": "Nhà cung cấp",
+          "unitCost": "Đơn giá đề nghị",
+          "quantity": "Số lượng",
+          "threshold": "Ngưỡng (%)",
+          "run": "Kiểm tra",
+          "incomplete": "Chọn mặt hàng, nhà cung cấp và đơn giá trước khi kiểm tra",
+          "costInvalid": "Đơn giá không hợp lệ",
+          "flagged": "Lệch {change} — cần xem lại",
+          "within": "Trong ngưỡng {threshold}%",
+          "noHistory": "Chưa có lần nhập nào để so sánh",
+          "last": "Lần cuối {amount} · {date}"
+        },
         "hint": "Tính từ phiếu nhập kho, không phải dòng đặt hàng: báo giá không giao thì không phải giá đã trả; giá trung bình đã tính theo số lượng nhận."
       },
       "summary": "Tất cả {all} · Đang dùng {active} · Đã ẩn {deleted}",

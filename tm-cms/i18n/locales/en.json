@@ -1479,6 +1479,22 @@
         "qty": "Qty",
         "unitCost": "Unit cost",
         "value": "Value",
+        "check": {
+          "title": "Check a price before ordering",
+          "hint": "Compares a proposed unit cost with the last receipt of the same supplier and item; a first purchase has nothing to compare with.",
+          "item": "Item",
+          "supplier": "Supplier",
+          "unitCost": "Proposed unit cost",
+          "quantity": "Quantity",
+          "threshold": "Threshold (%)",
+          "run": "Check",
+          "incomplete": "Pick an item, a supplier and a unit cost first",
+          "costInvalid": "Unit cost is not valid",
+          "flagged": "{change} off — needs review",
+          "within": "Within {threshold}%",
+          "noHistory": "No earlier receipt to compare",
+          "last": "Last {amount} · {date}"
+        },
         "hint": "Computed from stock receipts, not from ordered lines: a quote that never arrived is not a price paid; the average is weighted by received quantity."
       },
       "summary": "All {all} · Active {active} · Hidden {deleted}",

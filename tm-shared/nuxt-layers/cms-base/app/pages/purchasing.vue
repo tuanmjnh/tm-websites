@@ -629,6 +629,54 @@ async function loadPrices() {
 
 watch([priceSupplier, priceItem, priceFrom, priceTo], () => loadPrices())
 
+const priceCheckItem = ref('')
+const priceCheckSupplier = ref('')
+const priceCheckCost = ref<number | null>(null)
+const priceCheckQuantity = ref<number | null>(null)
+const priceCheckThreshold = ref(10)
+const priceCheckBusy = ref(false)
+const priceCheckError = ref<string | null>(null)
+const priceCheckResult = ref<Awaited<ReturnType<typeof ops.checkSupplierPrice>> | null>(null)
+
+const checkItemOptions = computed(() => catalogItems.value.map(item => ({
+  label: item.title.vi || item.title.en || item.key,
+  value: item.id,
+})))
+const checkSupplierOptions = computed(() => supplierOptions.value.filter(option => option.value !== 'none'))
+const priceCheckChange = computed(() => {
+  const change = priceCheckResult.value?.changePercent
+  if (change === null || change === undefined) return null
+  return `${change > 0 ? '+' : ''}${change}%`
+})
+
+async function runPriceCheck() {
+  if (!canRead.value || priceCheckBusy.value) return
+  const cost = Number(priceCheckCost.value)
+  if (!priceCheckItem.value || !priceCheckSupplier.value) {
+    priceCheckError.value = t('admin.purchasing.prices.check.incomplete')
+    return
+  }
+  if (!Number.isFinite(cost) || cost < 0) {
+    priceCheckError.value = t('admin.purchasing.prices.check.costInvalid')
+    return
+  }
+  priceCheckBusy.value = true
+  priceCheckError.value = null
+  try {
+    priceCheckResult.value = await ops.checkSupplierPrice({
+      supplierId: priceCheckSupplier.value,
+      itemId: priceCheckItem.value,
+      unitCost: cost,
+      quantity: priceCheckQuantity.value === null ? undefined : Number(priceCheckQuantity.value),
+      thresholdPercent: Number(priceCheckThreshold.value),
+    })
+  } catch (e) {
+    priceCheckError.value = describeError(e)
+  } finally {
+    priceCheckBusy.value = false
+  }
+}
+
 function togglePriceHistory(key: string) {
   expandedPrices.value = expandedPrices.value.includes(key)
     ? expandedPrices.value.filter(entry => entry !== key)
@@ -878,6 +926,54 @@ resetOnClose(supplierFormOpen, orderFormOpen, receiveOpen, confirmOpen)
 
         <!-- Supplier prices -->
         <template v-else>
+          <div class="rounded-[4px] border border-default/60 p-3">
+            <p class="text-sm font-medium text-highlighted">{{ t('admin.purchasing.prices.check.title') }}</p>
+            <p class="mt-0.5 text-xs text-muted">{{ t('admin.purchasing.prices.check.hint') }}</p>
+            <div class="mt-2 flex flex-wrap items-end gap-2">
+              <UFormField :label="t('admin.purchasing.prices.check.item')" class="w-full sm:w-56">
+                <USelect v-model="priceCheckItem" :items="checkItemOptions" value-key="value" size="sm" class="w-full" />
+              </UFormField>
+              <UFormField :label="t('admin.purchasing.prices.check.supplier')" class="w-full sm:w-52">
+                <USelect v-model="priceCheckSupplier" :items="checkSupplierOptions" value-key="value" size="sm" class="w-full" />
+              </UFormField>
+              <UFormField :label="t('admin.purchasing.prices.check.unitCost')" class="w-full sm:w-40">
+                <UInput v-model.number="priceCheckCost" type="number" min="0" size="sm" class="w-full" />
+              </UFormField>
+              <UFormField :label="t('admin.purchasing.prices.check.quantity')" class="w-full sm:w-28">
+                <UInput v-model.number="priceCheckQuantity" type="number" min="0" size="sm" class="w-full" />
+              </UFormField>
+              <UFormField :label="t('admin.purchasing.prices.check.threshold')" class="w-full sm:w-28">
+                <UInput v-model.number="priceCheckThreshold" type="number" min="0" max="100" size="sm" class="w-full" />
+              </UFormField>
+              <UButton
+                icon="i-lucide-shield-check"
+                color="primary"
+                variant="soft"
+                size="sm"
+                :loading="priceCheckBusy"
+                :label="t('admin.purchasing.prices.check.run')"
+                @click="runPriceCheck"
+              />
+            </div>
+            <p v-if="priceCheckError" class="mt-2 text-xs text-error">{{ priceCheckError }}</p>
+            <div v-if="priceCheckResult" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <UBadge
+                :color="priceCheckResult.needsReview ? 'warning' : priceCheckResult.hasHistory ? 'success' : 'neutral'"
+                variant="subtle"
+                size="sm"
+              >
+                {{ priceCheckResult.needsReview
+                  ? t('admin.purchasing.prices.check.flagged', { change: priceCheckChange })
+                  : priceCheckResult.hasHistory
+                    ? t('admin.purchasing.prices.check.within', { threshold: priceCheckResult.thresholdPercent })
+                    : t('admin.purchasing.prices.check.noHistory') }}
+              </UBadge>
+              <span v-if="priceCheckResult.hasHistory" class="text-muted">
+                {{ t('admin.purchasing.prices.check.last', { amount: money(priceCheckResult.lastUnitCost ?? 0), date: priceCheckResult.lastReceivedAt?.slice(0, 10) ?? '—' }) }}
+              </span>
+            </div>
+          </div>
+
           <div class="flex flex-wrap items-center gap-3">
             <USelect
               v-model="priceSupplier"

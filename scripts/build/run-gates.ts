@@ -40,6 +40,7 @@ const DOMAIN_GATES = [
   'test:order-returns',
   'test:serial-numbers',
   'test:serial-sync',
+  'test:serial-import',
   'test:hr-self-service',
   'test:catalog-import',
   'test:supplier-import',

@@ -54,6 +54,7 @@
     "test:order-returns": "tsx scripts/build/test-order-returns.ts",
     "test:serial-numbers": "tsx scripts/build/test-serial-numbers.ts",
     "test:serial-sync": "tsx scripts/build/test-serial-sync.ts",
+    "test:serial-import": "tsx scripts/build/test-serial-import.ts",
     "test:hr-self-service": "tsx scripts/build/test-hr-self-service.ts",
     "test:catalog-import": "tsx scripts/build/test-catalog-import.ts",
     "test:supplier-import": "tsx scripts/build/test-supplier-import.ts",

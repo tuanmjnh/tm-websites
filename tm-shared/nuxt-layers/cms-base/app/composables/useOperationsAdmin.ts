@@ -1047,6 +1047,40 @@ export const useOperationsAdmin = () => {
     return payload.data
   }
 
+  const checkSupplierPrice = async (params: {
+    supplierId?: string
+    itemId: string
+    variantId?: string
+    unitCost: number
+    quantity?: number
+    thresholdPercent?: number
+  }) => {
+    const payload = await plainFetch(`/api/v1/admin/procurement/supplier-prices/check${pageQuery({
+      supplierId: params.supplierId,
+      itemId: params.itemId,
+      variantId: params.variantId,
+      unitCost: params.unitCost,
+      quantity: params.quantity,
+      thresholdPercent: params.thresholdPercent,
+    })}`) as {
+      data: {
+        supplierId: string | null
+        itemId: string
+        variantId: string | null
+        proposedUnitCost: number
+        quantity: number
+        hasHistory: boolean
+        lastUnitCost: number | null
+        lastReceivedAt: string | null
+        changePercent: number | null
+        thresholdPercent: number
+        needsReview: boolean
+        reason: string
+      }
+    }
+    return payload.data
+  }
+
   /* ------------------------------- reports ------------------------------- */
 
   const financeSummary = async (range: { from?: string, to?: string } = {}) => {
@@ -1172,6 +1206,7 @@ export const useOperationsAdmin = () => {
     assignShift,
     cancelShiftAssignment,
     supplierPriceHistory,
+    checkSupplierPrice,
     financeSummary,
     financeAging,
     financeLedger,
