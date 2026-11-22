@@ -94,6 +94,11 @@ export interface OrderDocument {
   siteId: string
   code: string
   customerId: Types.ObjectId | null
+  /**
+   * Where checkout sent the order's mail. Written by the storefront, read by
+   * the status notification; a CMS-created order leaves it empty.
+   */
+  customerEmail: string
   channel: OrderChannel
   status: OrderStatus
   paymentStatus: PaymentStatus
@@ -190,6 +195,7 @@ export const orderSchema = new Schema<OrderDocument>(
     siteId: { type: String, required: true },
     code: { type: String, required: true },
     customerId: { type: Schema.Types.ObjectId, default: null },
+    customerEmail: { type: String, default: '' },
     channel: { type: String, enum: ORDER_CHANNELS, default: 'admin' },
     status: { type: String, enum: ORDER_STATUSES, default: 'pending' },
     paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: 'unpaid' },

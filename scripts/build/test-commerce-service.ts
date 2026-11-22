@@ -18,6 +18,8 @@ import {
   softDeleteQuotation,
   updateQuotation,
 } from '../../tm-cms/server/services/quotationService.js'
+import { createMailTemplate, updateMailTemplate } from '../../tm-cms/server/services/mailService.js'
+import { ORDER_STATUS_TEMPLATE } from '../../tm-cms/server/services/orderStatusMail.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 
@@ -64,7 +66,7 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Order, Quotation, Customer, Audit } = await prepareDatabase(connection)
+    const { Order, Quotation, Customer, Audit, MailTemplate, MailDelivery } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR } }
 
     const orderItems = [{ itemName: 'Áo thun', sku: 'AT-01', price: 100000, quantity: 2 }]
@@ -160,6 +162,72 @@ async function integration() {
         () => updateOrder(Order, SITE, firstOrder.id, { revision: shipped.revision, items: [{ itemName: 'X', price: 1, quantity: 1 }] }, meta),
         isOrderError(409, 'ORDER_LOCKED'),
       )
+    })
+
+    const statusTemplate = await createMailTemplate(MailTemplate, SITE, {
+      code: ORDER_STATUS_TEMPLATE,
+      locale: 'vi',
+      title: 'Trạng thái đơn hàng',
+      subject: 'Đơn {{orderCode}}: {{statusLabel}}',
+      bodyText: 'Xin chào {{name}}, đơn {{orderCode}} gồm {{itemCount}} sản phẩm ({{total}}).\n{{items}}',
+      variables: ['orderCode', 'name', 'status', 'statusLabel', 'itemCount', 'items', 'total'],
+      purpose: 'transactional',
+      status: 'active',
+    }, meta)
+    const notifyMeta = { ...meta, notify: { delivery: MailDelivery, template: MailTemplate, customer: Customer } }
+    const statusMails = () => MailDelivery.countDocuments({ siteId: SITE, templateCode: ORDER_STATUS_TEMPLATE })
+
+    const mailOrder = await createOrder(Order, Customer, SITE, { code: 'ORD-MAIL', items: orderItems }, meta)
+    await Order.updateOne({ _id: mailOrder.id, siteId: SITE }, { $set: { customerEmail: 'Mail@Example.com' } })
+
+    await check('a status change queues one mail for that transition', async () => {
+      const moved = await updateOrder(Order, SITE, mailOrder.id, { revision: mailOrder.revision, status: 'processing' }, notifyMeta)
+      assert.equal(moved.status, 'processing')
+
+      const delivery = await MailDelivery
+        .findOne({ siteId: SITE, dedupeKey: 'mail@example.com:order-status:processing:ORD-MAIL' })
+        .lean<{ status: string, recipientEmail: string, subject: string, variables: Record<string, string> } | null>()
+      assert.ok(delivery, 'the transition mail is queued')
+      assert.equal(delivery.status, 'queued')
+      assert.equal(delivery.recipientEmail, 'mail@example.com', 'the address is normalised')
+      assert.equal(delivery.subject, 'Đơn ORD-MAIL: Đang xử lý')
+      assert.equal(delivery.variables.status, 'processing')
+      assert.equal(delivery.variables.itemCount, '2')
+      assert.match(delivery.variables.items ?? '', /^2 × Áo thun — /)
+    })
+
+    await check('saving without a status change mails nobody; a repeated transition mails once', async () => {
+      const current = await getOrder(Order, SITE, mailOrder.id)
+      await updateOrder(Order, SITE, mailOrder.id, { revision: current.revision, note: 'Ghi chú nội bộ' }, notifyMeta)
+      assert.equal(await statusMails(), 1, 'a note edit is not a status change')
+
+      const shipped = await updateOrder(Order, SITE, mailOrder.id, { revision: current.revision + 1, status: 'shipped' }, notifyMeta)
+      assert.equal(shipped.status, 'shipped')
+      assert.equal(await statusMails(), 2)
+
+      const back = await updateOrder(Order, SITE, mailOrder.id, { revision: shipped.revision, status: 'processing' }, notifyMeta)
+      assert.equal(back.status, 'processing')
+      assert.equal(await statusMails(), 2, 'one message per transition, even when an order returns to it')
+    })
+
+    await check('an order without an address is not mailed', async () => {
+      const plain = await createOrder(Order, Customer, SITE, { code: 'ORD-NOMAIL', items: orderItems }, meta)
+      const moved = await updateOrder(Order, SITE, plain.id, { revision: plain.revision, status: 'processing' }, notifyMeta)
+      assert.equal(moved.status, 'processing')
+      assert.equal(await statusMails(), 2)
+    })
+
+    await check('a missing status template never blocks the status change', async () => {
+      const archived = await updateMailTemplate(MailTemplate, SITE, statusTemplate.id, {
+        revision: statusTemplate.revision,
+        status: 'archived',
+      }, meta)
+      assert.equal(archived.status, 'archived')
+
+      const current = await getOrder(Order, SITE, mailOrder.id)
+      const cancelled = await updateOrder(Order, SITE, mailOrder.id, { revision: current.revision, status: 'cancelled' }, notifyMeta)
+      assert.equal(cancelled.status, 'cancelled')
+      assert.equal(await statusMails(), 2)
     })
 
     await check('soft delete hides, restore brings back', async () => {

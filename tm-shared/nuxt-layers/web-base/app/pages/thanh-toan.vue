@@ -222,7 +222,7 @@ const submit = async () => {
       <div class="h-24 animate-pulse rounded-[6px] border border-default/50 bg-elevated/20" />
     </div>
 
-    <section v-else-if="order" class="mt-10 rounded-[6px] border border-default/60 bg-elevated/20 px-6 py-10">
+    <section v-else-if="order" class="mt-10 max-w-xl rounded-[6px] border border-default/60 bg-elevated/20 px-6 py-10">
       <UIcon name="i-lucide-circle-check" class="size-9 text-primary" aria-hidden="true" />
       <h2 class="mt-3 text-base font-semibold text-highlighted">{{ t('checkout.successTitle') }}</h2>
       <p class="mt-2 max-w-xl text-sm text-muted">{{ t('checkout.successHint') }}</p>

@@ -9,6 +9,7 @@ import {
   normalizeOrderInput,
 } from '../models/order'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
+import { ORDER_STATUS_TEMPLATE, type OrderStatusMailModels, queueOrderStatusMail } from './orderStatusMail'
 
 export class OrderServiceError extends Error {
   statusCode: number
@@ -24,6 +25,16 @@ export class OrderServiceError extends Error {
 }
 
 export type OrderRecord = OrderDocument & { _id: Types.ObjectId }
+
+/**
+ * Optional side effects of an update. `notify` carries the mail models so a real
+ * status change can tell the customer without the order service owning the
+ * queue; callers that pass none keep the plain update.
+ */
+export interface OrderUpdateMeta {
+  audit?: ContentAuditMeta
+  notify?: OrderStatusMailModels
+}
 
 export interface OrderAdmin {
   id: string
@@ -304,7 +315,7 @@ export async function updateOrder(
   siteId: string,
   id: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: OrderUpdateMeta,
 ): Promise<OrderAdmin> {
   const body = input as Record<string, unknown>
   const revision = Number(body.revision)
@@ -410,6 +421,16 @@ export async function updateOrder(
     toStatus: updated.status,
     changedFields: ['status', 'paymentStatus', 'items', 'totalAmount'],
   })
+
+  // The order is saved; telling the customer is best-effort from here on.
+  if (statusChanged && meta?.notify) {
+    try {
+      const queued = await queueOrderStatusMail(meta.notify, siteId, updated)
+      if (!queued) console.warn(`[order-status] no ${ORDER_STATUS_TEMPLATE} mail for ${updated.code}`)
+    } catch (error) {
+      console.warn(`[order-status] mail failed for ${updated.code}: ${(error as Error).message}`)
+    }
+  }
 
   return toAdminOrder(updated)
 }

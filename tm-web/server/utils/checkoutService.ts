@@ -164,6 +164,9 @@ export async function createPublicCheckout(
       siteId,
       code,
       customerId,
+      // The CMS status notification mails the same address the confirmation
+      // went to; a guest order has no customer profile to look it up from.
+      customerEmail: (request.customer.email ?? '').trim().toLowerCase(),
       channel: 'portal',
       status: 'pending',
       paymentStatus: 'unpaid',
