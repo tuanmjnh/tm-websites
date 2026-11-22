@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ImportOutcome } from '../utils/import-rows'
-import { parseImportRows } from '../utils/import-rows'
+import { failedRowsCsv, parseImportRows } from '../utils/import-rows'
 
 const props = defineProps<{
   open: boolean
@@ -29,6 +29,26 @@ const parseMessage = computed(() => {
 })
 
 const canSubmit = computed(() => !props.busy && parsed.value.rows.length > 0)
+
+/**
+ * Only the rows that failed, with the reason appended, so the operator can fix
+ * that file and import it again without re-sending the rows that already saved.
+ */
+const failedCsv = computed(() => (props.result ? failedRowsCsv(parsed.value.rows, props.result.results) : ''))
+
+function downloadFailed() {
+  if (!failedCsv.value) return
+  // The BOM keeps Vietnamese diacritics readable when Excel opens the file.
+  const blob = new Blob([`\uFEFF${failedCsv.value}\n`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `import-failed-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
 
 function submit() {
   if (!canSubmit.value) return
@@ -63,9 +83,20 @@ watch(() => props.open, (open) => {
         <p v-if="error" class="text-xs text-error">{{ error }}</p>
 
         <div v-if="result" class="flex flex-col gap-2 rounded-[4px] border border-default/60 p-2">
-          <p class="text-xs font-medium text-highlighted">
-            {{ t('admin.import.result', { created: result.created, updated: result.updated, failed: result.failed }) }}
-          </p>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-xs font-medium text-highlighted">
+              {{ t('admin.import.result', { created: result.created, updated: result.updated, failed: result.failed }) }}
+            </p>
+            <UButton
+              v-if="result.failed > 0 && failedCsv"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-download"
+              :label="t('admin.import.downloadFailed', { count: result.failed })"
+              @click="downloadFailed"
+            />
+          </div>
           <div class="max-h-56 overflow-y-auto scroll-thin">
             <div
               v-for="entry in result.results"

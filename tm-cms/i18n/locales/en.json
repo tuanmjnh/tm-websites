@@ -137,6 +137,7 @@
       "invalid": "Cannot read the data: check the JSON/CSV and the 500-row limit",
       "noRows": "A header row and at least one data row are required",
       "submit": "Import",
+      "downloadFailed": "Download failed rows ({count})",
       "result": "{created} created · {updated} updated · {failed} failed",
       "statuses": {
         "created": "Created",

@@ -45,6 +45,9 @@ const DOMAIN_GATES = [
   'test:catalog-import',
   'test:supplier-import',
   'test:customer-import',
+  // The failed-row download: a fix-and-retry file is only honest when it keeps
+  // the operator's cells, drops the rows that already saved and escapes quotes.
+  'test:import-csv',
   'test:hr-shifts',
   'test:stocktake',
   // The importers' --apply half: upserts, key/slug collisions and revision

@@ -75,6 +75,46 @@ function coerceCell(raw: string): unknown {
   return raw
 }
 
+/**
+ * A cell is quoted only when it needs to be, and embedded quotes are doubled.
+ * Objects (a multi-language title, an address) travel as their JSON text so the
+ * operator can fix them and re-import the file the dialog produced.
+ */
+function csvCell(value: unknown): string {
+  if (value === undefined || value === null) return ''
+  const text = typeof value === 'object' ? JSON.stringify(value) : String(value)
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+/**
+ * The failed rows of an import, ready to be fixed and imported again.
+ *
+ * Only failed rows are written: a created row must not be sent twice. The
+ * original cells come from the submitted rows (the dialog keeps them after a
+ * run), and `error_code`/`error_message` are appended so the reason travels with
+ * the row instead of living only in the on-screen list. The result is pure CSV;
+ * the browser adds the UTF-8 BOM when it saves the file.
+ */
+export function failedRowsCsv(rows: Record<string, unknown>[], results: ImportRowResult[]): string {
+  const failed = results.filter(result => result.status === 'failed' && result.row >= 1 && result.row <= rows.length)
+  if (failed.length === 0) return ''
+
+  const columns: string[] = []
+  for (const result of failed) {
+    for (const key of Object.keys(rows[result.row - 1] ?? {})) {
+      if (!columns.includes(key)) columns.push(key)
+    }
+  }
+
+  const lines = [[...columns, 'error_code', 'error_message'].map(csvCell).join(',')]
+  for (const result of failed) {
+    const source = rows[result.row - 1] ?? {}
+    const cells = [...columns.map(key => csvCell(source[key])), csvCell(result.code), csvCell(result.message)]
+    lines.push(cells.join(','))
+  }
+  return lines.join('\n')
+}
+
 export function parseImportRows(text: string): { rows: Record<string, unknown>[], error: ImportParseError | null } {
   const trimmed = text.trim()
   if (!trimmed) return { rows: [], error: 'empty' }

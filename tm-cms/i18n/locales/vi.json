@@ -137,6 +137,7 @@
       "invalid": "Không đọc được dữ liệu: kiểm tra JSON/CSV và giới hạn 500 dòng",
       "noRows": "Cần dòng tiêu đề và ít nhất một dòng dữ liệu",
       "submit": "Nhập",
+      "downloadFailed": "Tải dòng lỗi ({count})",
       "result": "{created} mới · {updated} cập nhật · {failed} lỗi",
       "statuses": {
         "created": "Đã tạo",

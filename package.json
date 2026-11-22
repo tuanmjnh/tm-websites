@@ -59,6 +59,7 @@
     "test:catalog-import": "tsx scripts/build/test-catalog-import.ts",
     "test:supplier-import": "tsx scripts/build/test-supplier-import.ts",
     "test:customer-import": "tsx scripts/build/test-customer-import.ts",
+    "test:import-csv": "tsx scripts/build/test-import-csv.ts",
     "test:hr-shifts": "tsx scripts/build/test-hr-shifts.ts",
     "test:stocktake": "tsx scripts/build/test-stocktake-service.ts",
     "test:catalog": "tsx scripts/build/test-catalog-service.ts",
