@@ -1620,6 +1620,8 @@
         "registered": "Registered {count} serial(s)",
         "order": "Order {order}",
         "noWarehouse": "No warehouse assigned",
+        "importTitle": "Import serials from CSV",
+        "importHint": "Paste CSV or a JSON array with serial and itemId; warehouseId, variantId, purchaseOrderId and note are optional — 500 rows at most. A duplicate serial fails on its own row; the rest are still created.",
         "actions": {
           "sold": "Mark as sold",
           "returned": "Mark as returned",

@@ -13,7 +13,7 @@ import { z } from 'zod'
  * a new key is created as a draft, like the create route.
  */
 const CatalogImportBodySchema = z.object({
-  rows: z.array(z.record(z.string(), z.unknown())).min(1).max(500),
+  rows: z.array(z.record(z.string(), z.unknown())),
 })
 
 export default defineEventHandler(async (event) => {

@@ -11,7 +11,7 @@
 export interface ImportRowResult {
   row: number
   key: string | null
-  status: 'created' | 'updated' | 'failed' | string
+  status: string
   code: string | null
   message: string | null
 }
@@ -24,6 +24,7 @@ export interface ImportOutcome {
   results: ImportRowResult[]
 }
 
+// `empty` is not an error the dialog shows: it is the empty textarea before typing.
 export type ImportParseError = 'empty' | 'invalid' | 'no-rows'
 
 const MAX_ROWS = 500

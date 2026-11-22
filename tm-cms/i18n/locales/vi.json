@@ -1622,6 +1622,8 @@
         "registered": "Đã đăng ký {count} serial",
         "order": "Đơn {order}",
         "noWarehouse": "Chưa gán kho",
+        "importTitle": "Nhập serial từ CSV",
+        "importHint": "Dán CSV hoặc JSON array với cột serial và itemId; warehouseId, variantId, purchaseOrderId và note là tuỳ chọn — tối đa 500 dòng. Serial trùng báo lỗi riêng, các dòng còn lại vẫn được tạo.",
         "actions": {
           "sold": "Đánh dấu đã bán",
           "returned": "Đánh dấu trả lại",

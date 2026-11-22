@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AdminSerialNumber, AdminStocktake, AdminTransfer, AdminWarehouse } from '../composables/useOperationsAdmin'
+import type { ImportOutcome } from '../utils/import-rows'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -408,6 +409,43 @@ async function loadSerials(reset = true) {
 watchDebounced(serialQuery, () => loadSerials(), { debounce: 300 })
 watch([serialStatus, serialWarehouse, serialIncludeDeleted], () => loadSerials())
 
+const serialImportOpen = ref(false)
+const serialImportBusy = ref(false)
+const serialImportError = ref<string | null>(null)
+const serialImportResult = ref<ImportOutcome | null>(null)
+// A CSV example, not an i18n message: the formatting plugin reads `{` as a placeholder.
+const serialImportExample = [
+  'serial,itemId,warehouseId,note',
+  'SN-2026-0001,65f1c0a2b3d4e5f6a7b8c9d0,65f1c0a2b3d4e5f6a7b8c9d1,Nhập từ CSV',
+].join('\n')
+
+function openSerialImport() {
+  auditReason.value = ''
+  serialImportError.value = null
+  serialImportResult.value = null
+  serialImportOpen.value = true
+}
+
+async function runSerialImport(payload: { rows: Record<string, unknown>[], reason: string }) {
+  if (!canWrite.value || serialImportBusy.value) return
+  serialImportBusy.value = true
+  serialImportError.value = null
+  try {
+    const result = await ops.importSerialNumbers(payload.rows, payload.reason || undefined)
+    serialImportResult.value = result
+    toast.add({
+      title: t('admin.import.result', { created: result.created, updated: result.updated, failed: result.failed }),
+      color: result.failed ? 'warning' : 'success',
+    })
+    if (!result.failed) auditReason.value = ''
+    await loadSerials()
+  } catch (e) {
+    serialImportError.value = describeError(e)
+  } finally {
+    serialImportBusy.value = false
+  }
+}
+
 const serialFormOpen = ref(false)
 const serialSaving = ref(false)
 const serialFormError = ref<string | null>(null)
@@ -661,7 +699,7 @@ if (canRead.value) {
   await Promise.all([loadBalances(), loadTransfers(), loadStocktakes(), loadSerials()])
 }
 
-resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, serialFormOpen, serialActionOpen, confirmOpen)
+resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, serialFormOpen, serialImportOpen, serialActionOpen, confirmOpen)
 </script>
 
 <template>
@@ -700,6 +738,15 @@ resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, serialFormO
           size="sm"
           :label="t('admin.inventory.stocktakes.create')"
           @click="openStocktakeCreate"
+        />
+        <UButton
+          v-if="canWrite && tab === 'serials'"
+          icon="i-lucide-upload"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          :label="t('admin.import.button')"
+          @click="openSerialImport"
         />
         <UButton
           v-if="canWrite && tab === 'serials'"
@@ -1069,6 +1116,17 @@ resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, serialFormO
         </div>
       </template>
     </UModal>
+
+    <CmsImportDialog
+      v-model:open="serialImportOpen"
+      :title="t('admin.inventory.serials.importTitle')"
+      :hint="t('admin.inventory.serials.importHint')"
+      :example="serialImportExample"
+      :busy="serialImportBusy"
+      :error="serialImportError"
+      :result="serialImportResult"
+      @submit="runSerialImport"
+    />
 
     <!-- Serial register -->
     <UModal v-model:open="serialFormOpen" :title="t('admin.inventory.serials.createTitle')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-xl' }">

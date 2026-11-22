@@ -5,9 +5,13 @@ import { resolveSiteId } from '#server/utils/site'
 import { parseInput } from '#server/utils/validation'
 import { z } from 'zod'
 
-/** `POST /api/v1/admin/procurement/suppliers/import` upserts up to 500 suppliers by `code`. */
+/**
+ * `POST /api/v1/admin/procurement/suppliers/import` upserts suppliers by
+ * `code`, one result per row; the row limit lives in the service so its own
+ * `SUPPLIER_IMPORT_*` codes are surfaced.
+ */
 const SupplierImportBodySchema = z.object({
-  rows: z.array(z.record(z.string(), z.unknown())).min(1).max(500),
+  rows: z.array(z.record(z.string(), z.unknown())),
 })
 
 export default defineEventHandler(async (event) => {

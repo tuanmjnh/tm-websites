@@ -737,6 +737,31 @@ export const useOperationsAdmin = () => {
   const registerSerialNumbers = async (serials: Record<string, unknown>[], reason?: string) =>
     (await write('/api/v1/admin/serial-numbers', 'POST', { serials }, reason)) as unknown as { data: AdminSerialNumber[] }
 
+  const importSerialNumbers = async (rows: Record<string, unknown>[], reason?: string) => {
+    const payload = await write('/api/v1/admin/serial-numbers/import', 'POST', { rows }, reason) as unknown as {
+      data: {
+        total: number
+        created: number
+        failed: number
+        results: { row: number, serial: string | null, status: string, code: string | null, message: string | null }[]
+      }
+    }
+    return {
+      total: payload.data.total,
+      created: payload.data.created,
+      // An import only ever creates: an existing serial is a per-row failure.
+      updated: 0,
+      failed: payload.data.failed,
+      results: payload.data.results.map(entry => ({
+        row: entry.row,
+        key: entry.serial,
+        status: entry.status,
+        code: entry.code,
+        message: entry.message,
+      })),
+    }
+  }
+
   const markSerialSold = async (id: string, orderId: string, revision: number, reason?: string) =>
     one<AdminSerialNumber>(await write(`/api/v1/admin/serial-numbers/${id}/mark-sold`, 'POST', { orderId, revision }, reason))
 
@@ -1100,6 +1125,7 @@ export const useOperationsAdmin = () => {
     cancelStocktake,
     listSerialNumbers,
     registerSerialNumbers,
+    importSerialNumbers,
     markSerialSold,
     markSerialReturned,
     scrapSerialNumber,
