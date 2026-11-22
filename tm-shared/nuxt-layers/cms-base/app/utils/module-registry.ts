@@ -12,6 +12,7 @@ export type CmsModuleKey =
   | 'orders'
   | 'inventory'
   | 'purchaseOrders'
+  | 'hr'
   | 'finance'
   | 'reports'
   | 'media'
@@ -93,6 +94,16 @@ export const CMS_MODULE_MAP = {
     navKey: 'nav.purchaseOrders',
     descriptionKey: 'modules.purchaseOrders.description',
     // PUR-01: suppliers, purchase orders and the partial receipt against them.
+    dataSource: 'connected',
+  },
+  hr: {
+    key: 'hr',
+    route: '/hr',
+    icon: 'i-lucide-id-card',
+    disabledIcon: 'i-lucide-id-card',
+    navKey: 'nav.hr',
+    descriptionKey: 'modules.hr.description',
+    // HR-01: staff directory, attendance and payroll with its salary configs.
     dataSource: 'connected',
   },
   finance: {

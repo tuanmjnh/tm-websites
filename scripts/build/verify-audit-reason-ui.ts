@@ -40,6 +40,7 @@ const WRITE_PAGES: PageExpectation[] = [
   { page: 'orders', composable: 'useOperationsAdmin' },
   { page: 'inventory', composable: 'useOperationsAdmin' },
   { page: 'purchasing', composable: 'useOperationsAdmin' },
+  { page: 'hr', composable: 'useOperationsAdmin' },
   { page: 'finance', composable: 'useOperationsAdmin' },
 ]
 

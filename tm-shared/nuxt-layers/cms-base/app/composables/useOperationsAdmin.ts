@@ -307,6 +307,74 @@ export interface AdminPurchaseOrder {
   updatedAt: string | null
 }
 
+export interface AdminStaff {
+  id: string
+  subjectId: string
+  employeeCode: string
+  fullName: string
+  positionCode: string
+  jobDescription: string
+  workStatus: string
+  joinedAt: string | null
+  leftAt: string | null
+  phone: string
+  note: string
+  isDeleted: boolean
+  revision: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface AdminAttendance {
+  id: string
+  staffId: string
+  date: string
+  status: string
+  checkIn: string | null
+  checkOut: string | null
+  warehouseId: string | null
+  note: string
+  updatedAt: string | null
+}
+
+export interface AdminSalaryConfig {
+  id: string
+  staffId: string
+  baseSalary: number
+  allowances: { title: string, amount: number }[]
+  allowanceTotal: number
+  standardWorkDays: number
+  effectiveFrom: string
+  note: string
+}
+
+export interface AdminPayroll {
+  id: string
+  staffId: string
+  employeeCode: string
+  period: string
+  status: string
+  salaryConfigId: string
+  standardWorkDays: number
+  baseSalary: number
+  dailyRate: number
+  workDays: number
+  leaveDays: number
+  absentDays: number
+  basePay: number
+  allowancePay: number
+  adjustments: { label: string, amount: number }[]
+  adjustmentTotal: number
+  netPay: number
+  approvedAt: string | null
+  paidAt: string | null
+  cancelledAt: string | null
+  cancelReason: string | null
+  revision: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 interface ListMeta {
   nextCursor?: string
   hasMore?: boolean
@@ -640,6 +708,97 @@ export const useOperationsAdmin = () => {
   const receivePurchaseOrder = async (id: string, body: Record<string, unknown>, reason?: string) =>
     one<AdminPurchaseOrder>(await write(`/api/v1/admin/procurement/purchase-orders/${id}/receive`, 'POST', body, reason))
 
+  /* --------------------------------- hr ---------------------------------- */
+
+  const listStaff = async (params: {
+    q?: string
+    workStatus?: string
+    positionCode?: string
+    includeDeleted?: boolean
+    cursor?: string | null
+    limit?: number
+  } = {}) => {
+    const payload = await plainFetch(`/api/v1/admin/hr/staff${pageQuery({
+      q: params.q,
+      workStatus: params.workStatus,
+      positionCode: params.positionCode,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
+      cursor: params.cursor ?? undefined,
+      limit: params.limit,
+    })}`) as ListResponse<AdminStaff>
+    return withMeta(payload, { all: 0, probation: 0, official: 0, resigned: 0 })
+  }
+
+  const createStaff = async (body: Record<string, unknown>, reason?: string) =>
+    one<AdminStaff>(await write('/api/v1/admin/hr/staff', 'POST', body, reason))
+
+  const updateStaff = async (id: string, body: Record<string, unknown>, reason?: string) =>
+    one<AdminStaff>(await write(`/api/v1/admin/hr/staff/${id}`, 'PATCH', body, reason))
+
+  const deleteStaff = async (id: string, revision: number, reason?: string) =>
+    one<AdminStaff>(await write(`/api/v1/admin/hr/staff/${id}`, 'DELETE', { revision }, reason))
+
+  const restoreStaff = async (id: string, revision: number, reason?: string) =>
+    one<AdminStaff>(await write(`/api/v1/admin/hr/staff/${id}/restore`, 'POST', { revision }, reason))
+
+  const listAttendances = async (params: { month?: string, staffId?: string, status?: string } = {}) => {
+    const payload = await plainFetch(`/api/v1/admin/hr/attendances${pageQuery({
+      month: params.month,
+      staffId: params.staffId,
+      status: params.status,
+    })}`) as { data: AdminAttendance[], meta?: { counts?: Record<string, number> } }
+    return {
+      data: payload.data,
+      summary: { all: 0, present: 0, late: 0, leave: 0, absent: 0, ...(payload.meta?.counts ?? {}) } as Record<string, number>,
+    }
+  }
+
+  const upsertAttendance = async (body: Record<string, unknown>, reason?: string) =>
+    (await write('/api/v1/admin/hr/attendances', 'POST', body, reason)) as unknown as { data: AdminAttendance, meta?: { created?: boolean } }
+
+  const deleteAttendance = async (id: string, reason?: string) =>
+    one<{ id: string }>(await write(`/api/v1/admin/hr/attendances/${id}`, 'DELETE', {}, reason))
+
+  const listSalaryConfigs = async (staffId: string) => {
+    const payload = await plainFetch(`/api/v1/admin/hr/salary-configs${pageQuery({ staffId })}`) as { data: AdminSalaryConfig[] }
+    return payload.data
+  }
+
+  const setSalaryConfig = async (body: Record<string, unknown>, reason?: string) =>
+    one<AdminSalaryConfig>(await write('/api/v1/admin/hr/salary-configs', 'POST', body, reason))
+
+  const listPayrolls = async (params: { period?: string, staffId?: string, status?: string, limit?: number } = {}) => {
+    const payload = await plainFetch(`/api/v1/admin/hr/payrolls${pageQuery({
+      period: params.period,
+      staffId: params.staffId,
+      status: params.status,
+      limit: params.limit,
+    })}`) as {
+      data: AdminPayroll[]
+      meta?: { counts?: Record<string, number>, totals?: { netPay?: number, workDays?: number } }
+    }
+    return {
+      data: payload.data,
+      counts: { all: 0, draft: 0, approved: 0, paid: 0, cancelled: 0, ...(payload.meta?.counts ?? {}) } as Record<string, number>,
+      totals: { netPay: payload.meta?.totals?.netPay ?? 0, workDays: payload.meta?.totals?.workDays ?? 0 },
+    }
+  }
+
+  const calculatePayroll = async (body: Record<string, unknown>, reason?: string) =>
+    (await write('/api/v1/admin/hr/payrolls/calculate', 'POST', body, reason)) as unknown as {
+      data: AdminPayroll[]
+      meta?: { lines?: { staffId: string, employeeCode: string, outcome: string, reason?: string, netPay?: number }[] }
+    }
+
+  const approvePayroll = async (id: string, revision: number, reason?: string) =>
+    one<AdminPayroll>(await write(`/api/v1/admin/hr/payrolls/${id}/approve`, 'POST', { revision }, reason))
+
+  const payPayroll = async (id: string, revision: number, reason?: string) =>
+    one<AdminPayroll>(await write(`/api/v1/admin/hr/payrolls/${id}/pay`, 'POST', { revision }, reason))
+
+  const cancelPayroll = async (id: string, revision: number, cancelReason: string, reason?: string) =>
+    one<AdminPayroll>(await write(`/api/v1/admin/hr/payrolls/${id}/cancel`, 'POST', { revision, reason: cancelReason }, reason))
+
   /* ------------------------------- reports ------------------------------- */
 
   const financeSummary = async (range: { from?: string, to?: string } = {}) => {
@@ -732,6 +891,21 @@ export const useOperationsAdmin = () => {
     deletePurchaseOrder,
     restorePurchaseOrder,
     receivePurchaseOrder,
+    listStaff,
+    createStaff,
+    updateStaff,
+    deleteStaff,
+    restoreStaff,
+    listAttendances,
+    upsertAttendance,
+    deleteAttendance,
+    listSalaryConfigs,
+    setSalaryConfig,
+    listPayrolls,
+    calculatePayroll,
+    approvePayroll,
+    payPayroll,
+    cancelPayroll,
     financeSummary,
     financeAging,
     financeLedger,

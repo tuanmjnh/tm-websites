@@ -18,6 +18,7 @@ const navItems = computed(() => [
   ...gatedModuleItems('orders'),
   ...gatedModuleItems('inventory'),
   ...gatedModuleItems('purchaseOrders'),
+  ...gatedModuleItems('hr'),
   ...gatedModuleItems('finance'),
   ...gatedModuleItems('reports'),
   ...gatedModuleItems('media'),

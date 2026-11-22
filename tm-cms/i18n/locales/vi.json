@@ -68,6 +68,7 @@
     "orders": "Đơn hàng & Bán hàng",
     "inventory": "Kho & Tồn kho",
     "purchaseOrders": "Mua hàng & Nhà cung cấp",
+    "hr": "Nhân sự & Tiền lương",
     "finance": "Tài chính & Thu chi",
     "reports": "Báo cáo & Phân tích",
     "media": "Thư viện Media",
@@ -1233,6 +1234,156 @@
         }
       }
     },
+    "hr": {
+      "title": "Nhân sự & Tiền lương",
+      "description": "Hồ sơ nhân sự, chấm công và bảng lương",
+      "tabs": {
+        "staff": "Nhân sự",
+        "attendance": "Chấm công",
+        "payroll": "Bảng lương"
+      },
+      "noMatch": "Không có mục nào khớp bộ lọc",
+      "loadMore": "Tải thêm",
+      "includeDeleted": "Gồm cả hồ sơ đã ẩn",
+      "badgeHidden": "Đã ẩn",
+      "staff": {
+        "create": "Thêm nhân sự",
+        "createTitle": "Thêm nhân sự",
+        "editTitle": "Sửa hồ sơ nhân sự",
+        "created": "Đã tạo hồ sơ nhân sự",
+        "updated": "Đã cập nhật hồ sơ nhân sự",
+        "hidden": "Đã ẩn hồ sơ nhân sự",
+        "restored": "Đã khôi phục hồ sơ nhân sự",
+        "empty": "Chưa có hồ sơ nhân sự nào",
+        "allStatuses": "Mọi trạng thái",
+        "searchPlaceholder": "Tìm theo mã, tên, điện thoại...",
+        "summary": "Tất cả {all} · Thử việc {probation} · Chính thức {official} · Đã nghỉ {resigned}",
+        "joined": "vào {date}",
+        "positions": {
+          "director": "Giám đốc",
+          "manager": "Quản lý",
+          "staff": "Nhân viên"
+        },
+        "statuses": {
+          "probation": "Thử việc",
+          "official": "Chính thức",
+          "resigned": "Đã nghỉ"
+        },
+        "fields": {
+          "subjectId": "Hub subject",
+          "employeeCode": "Mã nhân viên",
+          "fullName": "Họ tên",
+          "phone": "Điện thoại",
+          "position": "Chức vụ",
+          "workStatus": "Trạng thái làm việc",
+          "joinedAt": "Ngày vào",
+          "leftAt": "Ngày nghỉ",
+          "jobDescription": "Mô tả công việc",
+          "note": "Ghi chú"
+        },
+        "hide": "Ẩn hồ sơ",
+        "restore": "Khôi phục hồ sơ",
+        "hideHint": "Ẩn hồ sơ {code}? Chấm công và bảng lương cũ vẫn giữ nguyên.",
+        "restoreHint": "Khôi phục hồ sơ {code}?"
+      },
+      "attendance": {
+        "create": "Ghi ngày công",
+        "createTitle": "Ghi / sửa ngày công",
+        "created": "Đã ghi ngày công",
+        "updated": "Đã sửa ngày công",
+        "deleted": "Đã xoá ngày công",
+        "empty": "Chưa có chấm công trong tháng này",
+        "allStaff": "Mọi nhân sự",
+        "allStatuses": "Mọi trạng thái",
+        "summary": "Tất cả {all} · Có mặt {present} · Trễ {late} · Nghỉ phép {leave} · Vắng {absent}",
+        "correct": "Sửa ngày công",
+        "delete": "Xoá ngày công",
+        "deleteHint": "Xoá ngày công {date} của {name}? Ngày này sẽ không còn được tính lương.",
+        "hint": "Mỗi người một ngày một dòng: ghi lại cùng ngày là sửa, không phải thêm dòng mới.",
+        "statuses": {
+          "present": "Có mặt",
+          "late": "Đi trễ",
+          "leave": "Nghỉ phép",
+          "absent": "Vắng"
+        },
+        "fields": {
+          "staff": "Nhân sự",
+          "date": "Ngày",
+          "status": "Trạng thái",
+          "checkIn": "Giờ vào",
+          "checkOut": "Giờ ra",
+          "note": "Ghi chú"
+        }
+      },
+      "payroll": {
+        "calculate": "Tính lương",
+        "calculateTitle": "Tính bảng lương",
+        "calculateSubmit": "Tính",
+        "calculateHint": "Chỉ dòng nháp được tính lại; dòng đã duyệt hoặc đã chi trả bị khoá. Cần cấu hình lương hiệu lực trong kỳ.",
+        "calculated": "Đã tính bảng lương",
+        "summary": "Tất cả {all} · Nháp {draft} · Đã duyệt {approved} · Đã trả {paid} · Đã huỷ {cancelled} · Tổng {total}",
+        "empty": "Chưa có bảng lương cho kỳ này",
+        "permissionDenied": "Bảng lương chứa số tiền nên cần quyền ghi để xem.",
+        "allStatuses": "Mọi trạng thái",
+        "approve": "Duyệt",
+        "approved": "Đã duyệt bảng lương",
+        "pay": "Chi trả",
+        "paid": "Đã ghi nhận chi trả",
+        "cancel": "Huỷ",
+        "cancelTitle": "Huỷ bảng lương",
+        "cancelled": "Đã huỷ bảng lương",
+        "days": "{work} công · {leave} phép · {absent} vắng",
+        "adjustment": "điều chỉnh {amount}",
+        "adjustments": "Điều chỉnh",
+        "addAdjustment": "Thêm điều chỉnh",
+        "removeAdjustment": "Xoá điều chỉnh",
+        "statuses": {
+          "draft": "Nháp",
+          "approved": "Đã duyệt",
+          "paid": "Đã trả",
+          "cancelled": "Đã huỷ"
+        },
+        "fields": {
+          "period": "Kỳ lương",
+          "staff": "Nhân sự",
+          "adjustmentLabel": "Nội dung điều chỉnh",
+          "cancelReason": "Lý do huỷ"
+        }
+      },
+      "salary": {
+        "open": "Cấu hình lương",
+        "title": "Cấu hình lương · {name}",
+        "history": "Các mức lương đã đặt",
+        "empty": "Chưa có cấu hình lương",
+        "days": "{days} công/tháng",
+        "allowanceTotal": "Phụ cấp {amount}",
+        "save": "Lưu cấu hình",
+        "saved": "Đã lưu cấu hình lương",
+        "allowances": "Phụ cấp",
+        "addAllowance": "Thêm phụ cấp",
+        "removeAllowance": "Xoá phụ cấp",
+        "fields": {
+          "baseSalary": "Lương cơ bản",
+          "standardWorkDays": "Công chuẩn/tháng",
+          "effectiveFrom": "Hiệu lực từ",
+          "note": "Ghi chú",
+          "allowanceTitle": "Tên phụ cấp"
+        }
+      },
+      "errors": {
+        "conflict": "Dữ liệu đã bị người khác sửa, tải lại trước khi lưu",
+        "revisionRequired": "Thiếu phiên bản hiện tại",
+        "notFound": "Không tìm thấy mục này",
+        "duplicate": "Mã nhân viên hoặc Hub subject đã được dùng",
+        "locked": "Bảng lương đã duyệt hoặc đã trả nên không sửa được",
+        "noSalary": "Chưa có cấu hình lương hiệu lực trong kỳ",
+        "attendanceInvalid": "Ngày công không hợp lệ: giờ ra phải sau giờ vào và ngày nghỉ/vắng không có giờ",
+        "invalid": "Dữ liệu không hợp lệ",
+        "staffRequired": "Cần Hub subject, mã nhân viên và họ tên",
+        "attendanceRequired": "Chọn nhân sự và ngày",
+        "cancelReason": "Nêu lý do huỷ (ít nhất 3 ký tự)"
+      }
+    },
     "purchasing": {
       "title": "Mua hàng & Nhà cung cấp",
       "description": "Nhà cung cấp, đơn mua và nhập hàng một phần",
@@ -1748,6 +1899,9 @@
     },
     "purchaseOrders": {
       "description": "Nhà cung cấp, đơn mua và nhập hàng từng phần vào kho"
+    },
+    "hr": {
+      "description": "Hồ sơ nhân sự, chấm công theo tháng và bảng lương tính từ dữ liệu đã lưu"
     },
     "finance": {
       "description": "Theo dõi dòng tiền, công nợ và hiệu quả lợi nhuận theo kỳ"

@@ -68,6 +68,7 @@
     "orders": "Orders & Sales",
     "inventory": "Inventory & Stock",
     "purchaseOrders": "Purchasing & Suppliers",
+    "hr": "People & Payroll",
     "finance": "Finance & Accounting",
     "reports": "Reports & Analytics",
     "media": "Media Library",
@@ -1231,6 +1232,156 @@
         }
       }
     },
+    "hr": {
+      "title": "People & Payroll",
+      "description": "Staff profiles, attendance and payroll",
+      "tabs": {
+        "staff": "Staff",
+        "attendance": "Attendance",
+        "payroll": "Payroll"
+      },
+      "noMatch": "Nothing matches these filters",
+      "loadMore": "Load more",
+      "includeDeleted": "Include hidden profiles",
+      "badgeHidden": "Hidden",
+      "staff": {
+        "create": "Add staff",
+        "createTitle": "Add staff",
+        "editTitle": "Edit staff profile",
+        "created": "Staff profile created",
+        "updated": "Staff profile updated",
+        "hidden": "Staff profile hidden",
+        "restored": "Staff profile restored",
+        "empty": "No staff profiles yet",
+        "allStatuses": "All statuses",
+        "searchPlaceholder": "Search code, name, phone...",
+        "summary": "All {all} · Probation {probation} · Official {official} · Resigned {resigned}",
+        "joined": "joined {date}",
+        "positions": {
+          "director": "Director",
+          "manager": "Manager",
+          "staff": "Staff"
+        },
+        "statuses": {
+          "probation": "Probation",
+          "official": "Official",
+          "resigned": "Resigned"
+        },
+        "fields": {
+          "subjectId": "Hub subject",
+          "employeeCode": "Employee code",
+          "fullName": "Full name",
+          "phone": "Phone",
+          "position": "Position",
+          "workStatus": "Work status",
+          "joinedAt": "Joined on",
+          "leftAt": "Left on",
+          "jobDescription": "Job description",
+          "note": "Note"
+        },
+        "hide": "Hide profile",
+        "restore": "Restore profile",
+        "hideHint": "Hide profile {code}? Past attendance and payroll stay untouched.",
+        "restoreHint": "Restore profile {code}?"
+      },
+      "attendance": {
+        "create": "Record a day",
+        "createTitle": "Record / correct a day",
+        "created": "Day recorded",
+        "updated": "Day corrected",
+        "deleted": "Day deleted",
+        "empty": "No attendance in this month",
+        "allStaff": "All staff",
+        "allStatuses": "All statuses",
+        "summary": "All {all} · Present {present} · Late {late} · Leave {leave} · Absent {absent}",
+        "correct": "Correct day",
+        "delete": "Delete day",
+        "deleteHint": "Delete {date} for {name}? The day will no longer count for payroll.",
+        "hint": "One row per person per day: saving the same day corrects it instead of adding a row.",
+        "statuses": {
+          "present": "Present",
+          "late": "Late",
+          "leave": "Leave",
+          "absent": "Absent"
+        },
+        "fields": {
+          "staff": "Staff",
+          "date": "Date",
+          "status": "Status",
+          "checkIn": "Check-in",
+          "checkOut": "Check-out",
+          "note": "Note"
+        }
+      },
+      "payroll": {
+        "calculate": "Calculate payroll",
+        "calculateTitle": "Calculate payroll",
+        "calculateSubmit": "Calculate",
+        "calculateHint": "Only draft rows recalculate; approved and paid rows are locked. A salary config effective in the period is required.",
+        "calculated": "Payroll calculated",
+        "summary": "All {all} · Draft {draft} · Approved {approved} · Paid {paid} · Cancelled {cancelled} · Total {total}",
+        "empty": "No payroll for this period",
+        "permissionDenied": "Payroll holds money, so viewing it requires write access.",
+        "allStatuses": "All statuses",
+        "approve": "Approve",
+        "approved": "Payroll approved",
+        "pay": "Mark paid",
+        "paid": "Payment recorded",
+        "cancel": "Cancel",
+        "cancelTitle": "Cancel payroll",
+        "cancelled": "Payroll cancelled",
+        "days": "{work} worked · {leave} leave · {absent} absent",
+        "adjustment": "adjustments {amount}",
+        "adjustments": "Adjustments",
+        "addAdjustment": "Add adjustment",
+        "removeAdjustment": "Remove adjustment",
+        "statuses": {
+          "draft": "Draft",
+          "approved": "Approved",
+          "paid": "Paid",
+          "cancelled": "Cancelled"
+        },
+        "fields": {
+          "period": "Pay period",
+          "staff": "Staff",
+          "adjustmentLabel": "Adjustment label",
+          "cancelReason": "Cancellation reason"
+        }
+      },
+      "salary": {
+        "open": "Salary config",
+        "title": "Salary config · {name}",
+        "history": "Configured salaries",
+        "empty": "No salary config yet",
+        "days": "{days} days/month",
+        "allowanceTotal": "Allowances {amount}",
+        "save": "Save config",
+        "saved": "Salary config saved",
+        "allowances": "Allowances",
+        "addAllowance": "Add allowance",
+        "removeAllowance": "Remove allowance",
+        "fields": {
+          "baseSalary": "Base salary",
+          "standardWorkDays": "Standard days/month",
+          "effectiveFrom": "Effective from",
+          "note": "Note",
+          "allowanceTitle": "Allowance name"
+        }
+      },
+      "errors": {
+        "conflict": "Someone changed this record; reload before saving",
+        "revisionRequired": "Current revision is missing",
+        "notFound": "This record was not found",
+        "duplicate": "That employee code or Hub subject is already used",
+        "locked": "Payroll is approved or paid and can no longer change",
+        "noSalary": "No salary config effective in that period",
+        "attendanceInvalid": "Invalid day: check-out must follow check-in and leave/absent days carry no times",
+        "invalid": "Invalid payload",
+        "staffRequired": "Hub subject, employee code and full name are required",
+        "attendanceRequired": "Choose a staff member and a date",
+        "cancelReason": "Give a cancellation reason (at least 3 characters)"
+      }
+    },
     "purchasing": {
       "title": "Purchasing & Suppliers",
       "description": "Suppliers, purchase orders and partial receipts",
@@ -1746,6 +1897,9 @@
     },
     "purchaseOrders": {
       "description": "Suppliers, purchase orders and receiving stock in parts"
+    },
+    "hr": {
+      "description": "Staff profiles, monthly attendance and payroll computed from stored inputs"
     },
     "finance": {
       "description": "Track cash flow, receivables and profitability by period"

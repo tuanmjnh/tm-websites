@@ -16,6 +16,7 @@ export default defineAppConfig({
       inventory: true,
       purchaseOrders: true,
       finance: true,
+      hr: true,
       reports: true,
       media: true,
       aiWorkspace: true,
