@@ -24,13 +24,14 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Shipment, Audit, IdempotencyKey, Order, Inventory, InventoryTransaction, SerialNumber }) =>
+    const executed = await withPreparedDb(event, ({ Shipment, Audit, IdempotencyKey, Order, Inventory, InventoryTransaction, SerialNumber, MailDelivery, MailTemplate, Customer }) =>
       executeIdempotent(
         { model: IdempotencyKey, siteId, action: `shipment.delete:${id}`, key: idempotencyKey, payload: { revision } },
         async () => {
           const removed = await softDeleteShipment(Shipment, siteId, id, revision, {
             audit: auditMetaOf(event, user, Audit),
             serialNumberModel: SerialNumber,
+            notify: { delivery: MailDelivery, template: MailTemplate, customer: Customer },
           }, Inventory, InventoryTransaction, Order)
           return {
             statusCode: 200,

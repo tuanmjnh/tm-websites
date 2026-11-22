@@ -13,6 +13,7 @@ import {
 } from '../models/shipment'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 import { recordInventoryTransaction } from './inventoryTransactionService'
+import { ORDER_STATUS_TEMPLATE, type OrderStatusMailModels, queueOrderStatusMail } from './orderStatusMail'
 import { revertSerialSale } from './serialNumberService'
 
 export class ShipmentServiceError extends Error {
@@ -189,6 +190,8 @@ async function recordShipmentStockMovement(
  * line fully shipped moves it to `shipped`, or `completed` when all of those
  * shipments are delivered. Cancelled orders are never touched. The status is
  * only written when it actually changes, with a history entry and an audit row.
+ * `notify` carries the mail models, so a move caused by a shipment reaches the
+ * customer exactly like one made by hand in the CMS.
  */
 async function recomputeOrderStatusFromShipments(
   orderModel: Model<OrderDocument>,
@@ -196,6 +199,7 @@ async function recomputeOrderStatusFromShipments(
   siteId: string,
   orderId: string,
   audit?: ContentAuditMeta,
+  notify?: OrderStatusMailModels,
 ): Promise<void> {
   if (!Types.ObjectId.isValid(orderId)) return
   const order = await orderModel
@@ -271,6 +275,18 @@ async function recomputeOrderStatusFromShipments(
     toStatus: updated.status,
     changedFields: ['status'],
   })
+
+  // A shipment moved the order, so tell the customer. Best-effort: the order is
+  // already saved and audited, and a missing address or template must not undo
+  // the recompute.
+  if (notify) {
+    try {
+      const queued = await queueOrderStatusMail(notify, siteId, updated)
+      if (!queued) console.warn(`[order-status] no ${ORDER_STATUS_TEMPLATE} mail for ${updated.code}`)
+    } catch (error) {
+      console.warn(`[order-status] mail failed for ${updated.code}: ${(error as Error).message}`)
+    }
+  }
 }
 
 export async function createShipment(
@@ -278,7 +294,7 @@ export async function createShipment(
   orderModel: Model<OrderDocument>,
   siteId: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null; notify?: OrderStatusMailModels },
   inventoryModel?: Model<InventoryDocument> | null,
   transactionModel?: Model<InventoryTransactionDocument> | null,
 ): Promise<ShipmentAdmin> {
@@ -364,7 +380,7 @@ export async function createShipment(
   }
 
   // Keep the order's status in step with its shipments.
-  await recomputeOrderStatusFromShipments(orderModel, shipmentModel, siteId, String(order._id), meta?.audit)
+  await recomputeOrderStatusFromShipments(orderModel, shipmentModel, siteId, String(order._id), meta?.audit, meta?.notify)
 
   await recordContentAudit(meta?.audit, {
     siteId,
@@ -387,7 +403,7 @@ export async function updateShipment(
   siteId: string,
   id: string,
   input: { status?: string, carrier?: string, trackingNumber?: string, note?: string, revision: number },
-  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null; notify?: OrderStatusMailModels },
   inventoryModel?: Model<InventoryDocument> | null,
   transactionModel?: Model<InventoryTransactionDocument> | null,
   orderModel?: Model<OrderDocument> | null,
@@ -472,7 +488,7 @@ export async function updateShipment(
 
   // Keep the order's status in step with its shipments.
   if (orderModel && record.status !== updated.status) {
-    await recomputeOrderStatusFromShipments(orderModel, model, siteId, updated.orderId, meta?.audit)
+    await recomputeOrderStatusFromShipments(orderModel, model, siteId, updated.orderId, meta?.audit, meta?.notify)
   }
 
   await recordContentAudit(meta?.audit, {
@@ -495,7 +511,7 @@ export async function cancelShipment(
   siteId: string,
   id: string,
   revision: number,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; notify?: OrderStatusMailModels },
 ): Promise<ShipmentAdmin> {
   return updateShipment(model, siteId, id, { status: 'cancelled', revision }, meta)
 }
@@ -505,7 +521,7 @@ export async function softDeleteShipment(
   siteId: string,
   id: string,
   revision: number,
-  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null },
+  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument> | null; notify?: OrderStatusMailModels },
   inventoryModel?: Model<InventoryDocument> | null,
   transactionModel?: Model<InventoryTransactionDocument> | null,
   orderModel?: Model<OrderDocument> | null,
@@ -542,7 +558,7 @@ export async function softDeleteShipment(
 
   // Keep the order's status in step with its shipments.
   if (orderModel) {
-    await recomputeOrderStatusFromShipments(orderModel, model, siteId, record.orderId, meta?.audit)
+    await recomputeOrderStatusFromShipments(orderModel, model, siteId, record.orderId, meta?.audit, meta?.notify)
   }
 
   await recordContentAudit(meta?.audit, {

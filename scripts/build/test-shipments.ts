@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { createMailTemplate } from '../../tm-cms/server/services/mailService.js'
+import { ORDER_STATUS_TEMPLATE } from '../../tm-cms/server/services/orderStatusMail.js'
 import { createOrder } from '../../tm-cms/server/services/orderService.js'
 import { createShipment, getShipment, listShipments, ShipmentServiceError, softDeleteShipment, updateShipment } from '../../tm-cms/server/services/shipmentService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
@@ -45,7 +47,7 @@ async function run() {
   try {
     await connection.db!.dropDatabase()
     const models = await prepareDatabase(connection)
-    const { Order, Shipment, Audit } = models
+    const { Order, Shipment, Audit, MailTemplate, MailDelivery, Customer } = models
     const meta = { audit: { model: Audit, actor: ACTOR } }
 
     const order = await createOrder(Order, null, SITE, {
@@ -209,6 +211,70 @@ async function run() {
       }, meta)
       const updatedOrder = await Order.findOne({ _id: freshOrder.id, siteId: SITE }).lean()
       assert.equal(updatedOrder?.status, 'completed')
+    })
+
+    await createMailTemplate(MailTemplate, SITE, {
+      code: ORDER_STATUS_TEMPLATE,
+      locale: 'vi',
+      title: 'Trạng thái đơn hàng',
+      subject: 'Đơn {{orderCode}}: {{statusLabel}}',
+      bodyText: 'Xin chào {{name}}, đơn {{orderCode}} của bạn: {{statusLabel}}.\n{{items}}',
+      variables: ['orderCode', 'name', 'status', 'statusLabel', 'itemCount', 'items', 'total'],
+      purpose: 'transactional',
+      status: 'active',
+    }, meta)
+    const notifyMeta = { ...meta, notify: { delivery: MailDelivery, template: MailTemplate, customer: Customer } }
+    const statusMails = () => MailDelivery.countDocuments({ siteId: SITE, templateCode: ORDER_STATUS_TEMPLATE })
+
+    const mailedOrder = await createOrder(Order, Customer, SITE, {
+      code: 'ORD-SHIPMAIL',
+      items: [{ itemId: 'item-mail', variantId: null, itemName: 'Áo mail', sku: 'AM-01', price: 50000, quantity: 2 }],
+      shippingAddress: { fullName: 'Bình', city: 'HCM' },
+    }, meta)
+    await Order.updateOne({ _id: mailedOrder.id, siteId: SITE }, { $set: { customerEmail: 'Ship@Example.com' } })
+    const shippedMailOrder = await createShipment(Shipment, Order, SITE, {
+      code: 'SHP-MAIL-1',
+      orderId: mailedOrder.id,
+      status: 'shipped',
+      items: [{ itemId: 'item-mail', variantId: null, itemName: 'Áo mail', sku: 'AM-01', quantity: 2 }],
+    }, notifyMeta)
+
+    await check('a shipment that ships the order mails the customer', async () => {
+      const current = await Order.findOne({ _id: mailedOrder.id, siteId: SITE }).lean()
+      assert.equal(current?.status, 'shipped')
+
+      const delivery = await MailDelivery
+        .findOne({ siteId: SITE, dedupeKey: 'ship@example.com:order-status:shipped:ORD-SHIPMAIL' })
+        .lean<{ status: string, recipientEmail: string, subject: string, variables: Record<string, string> } | null>()
+      assert.ok(delivery, 'the shipment-driven move is queued')
+      assert.equal(delivery.recipientEmail, 'ship@example.com')
+      assert.equal(delivery.subject, 'Đơn ORD-SHIPMAIL: Đang giao hàng')
+      assert.equal(delivery.variables.statusLabel, 'Đang giao hàng')
+      assert.equal(delivery.variables.itemCount, '2')
+      assert.equal(await statusMails(), 1)
+    })
+
+    await check('delivering it mails once, and re-shipping does not repeat the shipped message', async () => {
+      const shippedRev = (await getShipment(Shipment, SITE, shippedMailOrder.id)).revision
+      await updateShipment(Shipment, SITE, shippedMailOrder.id, { status: 'delivered', revision: shippedRev }, notifyMeta, null, null, Order)
+      assert.equal((await Order.findOne({ _id: mailedOrder.id, siteId: SITE }).lean())?.status, 'completed')
+      assert.ok(await MailDelivery.exists({ siteId: SITE, dedupeKey: 'ship@example.com:order-status:completed:ORD-SHIPMAIL' }))
+      assert.equal(await statusMails(), 2)
+
+      const deliveredRev = (await getShipment(Shipment, SITE, shippedMailOrder.id)).revision
+      await updateShipment(Shipment, SITE, shippedMailOrder.id, { status: 'cancelled', revision: deliveredRev }, notifyMeta, null, null, Order)
+      assert.equal((await Order.findOne({ _id: mailedOrder.id, siteId: SITE }).lean())?.status, 'pending')
+      assert.equal(await statusMails(), 3, 'the return to pending is its own transition')
+
+      await createShipment(Shipment, Order, SITE, {
+        code: 'SHP-MAIL-2',
+        orderId: mailedOrder.id,
+        status: 'shipped',
+        items: [{ itemId: 'item-mail', variantId: null, itemName: 'Áo mail', sku: 'AM-01', quantity: 2 }],
+      }, notifyMeta)
+      assert.equal((await Order.findOne({ _id: mailedOrder.id, siteId: SITE }).lean())?.status, 'shipped')
+      assert.equal(await MailDelivery.countDocuments({ siteId: SITE, dedupeKey: 'ship@example.com:order-status:shipped:ORD-SHIPMAIL' }), 1)
+      assert.equal(await statusMails(), 3, 'a status the order already mailed is not sent again')
     })
 
     await check('soft delete and restore keep the revision moving', async () => {

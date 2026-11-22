@@ -39,10 +39,11 @@ export default defineEventHandler(async (event) => {
   const input = parseInput(ShipmentCreateBodySchema, body, 'SHIPMENT_PAYLOAD_INVALID', 'Dữ liệu vận đơn không hợp lệ')
 
   try {
-    const result = await withPreparedDb(event, ({ Shipment, Order, Audit, Inventory, InventoryTransaction, SerialNumber }) =>
+    const result = await withPreparedDb(event, ({ Shipment, Order, Audit, Inventory, InventoryTransaction, SerialNumber, MailDelivery, MailTemplate, Customer }) =>
       createShipment(Shipment, Order, siteId, input, {
         audit: auditMetaOf(event, user, Audit),
         serialNumberModel: SerialNumber,
+        notify: { delivery: MailDelivery, template: MailTemplate, customer: Customer },
       }, Inventory, InventoryTransaction))
 
     setHeader(event, 'cache-control', 'no-store')
