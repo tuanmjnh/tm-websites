@@ -1442,7 +1442,27 @@
       "description": "Suppliers, purchase orders and partial receipts",
       "tabs": {
         "suppliers": "Suppliers",
-        "orders": "Purchase orders"
+        "orders": "Purchase orders",
+        "prices": "Supplier prices"
+      },
+      "prices": {
+        "allSuppliers": "All suppliers",
+        "allItems": "All items",
+        "summary": "{suppliers} suppliers · {items} items · {observations} receipts",
+        "range": "Reading {from} → {to}",
+        "window": "Selected window {from} → {to}",
+        "empty": "No received line in this window",
+        "lastCost": "Last {amount} on {date}",
+        "spread": "min {min} · max {max}",
+        "average": "average {amount}",
+        "quantity": "{quantity} received · {observations} receipts",
+        "historyTitle": "Price history",
+        "date": "Date",
+        "order": "Purchase order",
+        "qty": "Qty",
+        "unitCost": "Unit cost",
+        "value": "Value",
+        "hint": "Computed from stock receipts, not from ordered lines: a quote that never arrived is not a price paid; the average is weighted by received quantity."
       },
       "summary": "All {all} · Active {active} · Hidden {deleted}",
       "includeDeleted": "Include hidden records",

@@ -1444,7 +1444,27 @@
       "description": "Nhà cung cấp, đơn mua và nhập hàng một phần",
       "tabs": {
         "suppliers": "Nhà cung cấp",
-        "orders": "Đơn mua"
+        "orders": "Đơn mua",
+        "prices": "Giá nhập"
+      },
+      "prices": {
+        "allSuppliers": "Mọi nhà cung cấp",
+        "allItems": "Mọi mặt hàng",
+        "summary": "{suppliers} nhà cung cấp · {items} mặt hàng · {observations} lần nhập",
+        "range": "Đang đọc {from} → {to}",
+        "window": "Khoảng đã chọn {from} → {to}",
+        "empty": "Chưa có dòng nhập nào trong khoảng này",
+        "lastCost": "Lần cuối {amount} ngày {date}",
+        "spread": "thấp {min} · cao {max}",
+        "average": "trung bình {amount}",
+        "quantity": "đã nhận {quantity} · {observations} lần",
+        "historyTitle": "Lịch sử giá",
+        "date": "Ngày",
+        "order": "Đơn mua",
+        "qty": "SL",
+        "unitCost": "Giá nhập",
+        "value": "Giá trị",
+        "hint": "Tính từ phiếu nhập kho, không phải dòng đặt hàng: báo giá không giao thì không phải giá đã trả; giá trung bình đã tính theo số lượng nhận."
       },
       "summary": "Tất cả {all} · Đang dùng {active} · Đã ẩn {deleted}",
       "includeDeleted": "Gồm cả mục đã ẩn",

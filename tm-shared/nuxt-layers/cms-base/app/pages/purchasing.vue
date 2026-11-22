@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminPurchaseOrder, AdminSupplier, AdminWarehouse } from '../composables/useOperationsAdmin'
+import type { AdminPurchaseOrder, AdminSupplier, AdminWarehouse, SupplierItemPrice } from '../composables/useOperationsAdmin'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -9,7 +9,7 @@ const ops = useOperationsAdmin()
 const canRead = computed(() => hasCapability('content.read'))
 const canWrite = computed(() => hasCapability('content.write'))
 
-type Tab = 'suppliers' | 'orders'
+type Tab = 'suppliers' | 'orders' | 'prices'
 const tab = ref<Tab>('suppliers')
 
 const { reason: auditReason, resetOnClose } = useAuditReason()
@@ -554,7 +554,52 @@ async function runConfirm() {
   }
 }
 
-if (canRead.value) await Promise.all([loadSuppliers(), loadOrders(), loadWarehouses(), loadCatalogItems()])
+/* ---------------------------- supplier prices --------------------------- */
+
+const priceRows = ref<SupplierItemPrice[]>([])
+const priceRange = ref({ from: '', to: '' })
+const priceSummary = ref({ suppliers: 0, items: 0, observations: 0 })
+const priceSupplier = ref('all')
+const priceItem = ref('all')
+const priceFrom = ref(new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10))
+const priceTo = ref(new Date().toISOString().slice(0, 10))
+const priceLoading = ref(false)
+const priceError = ref<string | null>(null)
+const expandedPrices = ref<string[]>([])
+
+const supplierLabel = (id: string | null) => suppliers.value.find(entry => entry.id === id)?.title ?? '—'
+
+async function loadPrices() {
+  if (!canRead.value) return
+  priceLoading.value = true
+  priceError.value = null
+  try {
+    const result = await ops.supplierPriceHistory({
+      supplierId: priceSupplier.value === 'all' ? undefined : priceSupplier.value,
+      itemId: priceItem.value === 'all' ? undefined : priceItem.value,
+      from: priceFrom.value || undefined,
+      to: priceTo.value || undefined,
+      limit: 100,
+    })
+    priceRows.value = result.data
+    priceRange.value = result.range
+    priceSummary.value = result.summary
+  } catch (e) {
+    priceError.value = describeError(e)
+  } finally {
+    priceLoading.value = false
+  }
+}
+
+watch([priceSupplier, priceItem, priceFrom, priceTo], () => loadPrices())
+
+function togglePriceHistory(key: string) {
+  expandedPrices.value = expandedPrices.value.includes(key)
+    ? expandedPrices.value.filter(entry => entry !== key)
+    : [...expandedPrices.value, key]
+}
+
+if (canRead.value) await Promise.all([loadSuppliers(), loadOrders(), loadWarehouses(), loadCatalogItems(), loadPrices()])
 
 resetOnClose(supplierFormOpen, orderFormOpen, receiveOpen, confirmOpen)
 </script>
@@ -570,7 +615,7 @@ resetOnClose(supplierFormOpen, orderFormOpen, receiveOpen, confirmOpen)
     >
       <template #right>
         <UButton
-          v-if="canWrite"
+          v-if="canWrite && tab !== 'prices'"
           icon="i-lucide-plus"
           color="primary"
           variant="soft"
@@ -597,6 +642,14 @@ resetOnClose(supplierFormOpen, orderFormOpen, receiveOpen, confirmOpen)
             :color="tab === 'orders' ? 'primary' : 'neutral'"
             :variant="tab === 'orders' ? 'soft' : 'ghost'"
             @click="tab = 'orders'"
+          />
+          <UButton
+            icon="i-lucide-line-chart"
+            :label="t('admin.purchasing.tabs.prices')"
+            size="sm"
+            :color="tab === 'prices' ? 'primary' : 'neutral'"
+            :variant="tab === 'prices' ? 'soft' : 'ghost'"
+            @click="tab = 'prices'"
           />
         </div>
 
@@ -684,7 +737,7 @@ resetOnClose(supplierFormOpen, orderFormOpen, receiveOpen, confirmOpen)
         </template>
 
         <!-- Purchase orders -->
-        <template v-else>
+        <template v-else-if="tab === 'orders'">
           <div class="flex flex-wrap items-center gap-3">
             <UInput
               v-model="orderQuery"
@@ -776,6 +829,88 @@ resetOnClose(supplierFormOpen, orderFormOpen, receiveOpen, confirmOpen)
           <div v-if="orderHasMore" class="flex justify-center">
             <UButton color="neutral" variant="ghost" size="sm" :loading="orderLoading" :label="t('admin.purchasing.loadMore')" @click="loadOrders(false)" />
           </div>
+        </template>
+
+        <!-- Supplier prices -->
+        <template v-else>
+          <div class="flex flex-wrap items-center gap-3">
+            <USelect
+              v-model="priceSupplier"
+              :items="[{ label: t('admin.purchasing.prices.allSuppliers'), value: 'all' }, ...supplierOptions.filter(option => option.value !== 'none')]"
+              value-key="value"
+              size="sm"
+              class="w-full sm:w-52"
+            />
+            <USelect
+              v-model="priceItem"
+              :items="[{ label: t('admin.purchasing.prices.allItems'), value: 'all' }, ...catalogItems.map(item => ({ label: item.title.vi || item.title.en || item.key, value: item.id }))]"
+              value-key="value"
+              size="sm"
+              class="w-full sm:w-56"
+            />
+            <UInput v-model="priceFrom" type="date" size="sm" class="w-full sm:w-40" />
+            <UInput v-model="priceTo" type="date" size="sm" class="w-full sm:w-40" />
+            <p class="text-xs text-muted">
+              {{ t('admin.purchasing.prices.summary', { suppliers: priceSummary.suppliers, items: priceSummary.items, observations: priceSummary.observations }) }}
+            </p>
+          </div>
+
+          <p class="text-xs text-muted">
+            {{ priceRange.from ? t('admin.purchasing.prices.range', { from: priceRange.from, to: priceRange.to }) : t('admin.purchasing.prices.window', { from: priceFrom, to: priceTo }) }}
+          </p>
+          <p v-if="priceError" class="text-xs text-error">{{ priceError }}</p>
+          <p v-else-if="!priceLoading && !priceRows.length" class="text-xs text-muted">
+            {{ t('admin.purchasing.prices.empty') }}
+          </p>
+
+          <div v-if="priceRows.length" class="flex flex-col gap-2">
+            <div v-for="row in priceRows" :key="row.key" class="overflow-hidden rounded-[4px] border border-default/60">
+              <div class="flex flex-wrap items-center gap-3 px-3 py-2 text-sm">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-mono text-xs text-highlighted">{{ row.sku || row.itemName }}</span>
+                    <span class="truncate font-medium text-highlighted">{{ row.itemName }}</span>
+                    <UBadge color="neutral" variant="subtle" size="sm">{{ supplierLabel(row.supplierId) }}</UBadge>
+                    <UBadge v-if="row.changePercent !== null && row.changePercent !== 0" :color="row.changePercent > 0 ? 'error' : 'success'" variant="subtle" size="sm">
+                      {{ row.changePercent > 0 ? '+' : '' }}{{ row.changePercent }}%
+                    </UBadge>
+                  </div>
+                  <p class="mt-0.5 truncate text-xs text-muted">
+                    <span>{{ t('admin.purchasing.prices.lastCost', { amount: money(row.lastUnitCost), date: row.lastReceivedAt.slice(0, 10) }) }}</span>
+                    <span> · {{ t('admin.purchasing.prices.spread', { min: money(row.minUnitCost), max: money(row.maxUnitCost) }) }}</span>
+                    <span> · {{ t('admin.purchasing.prices.average', { amount: money(row.averageUnitCost) }) }}</span>
+                    <span> · {{ t('admin.purchasing.prices.quantity', { quantity: money(row.totalQuantity), observations: row.observations }) }}</span>
+                  </p>
+                </div>
+                <UButton
+                  icon="i-lucide-history"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  :title="t('admin.purchasing.prices.historyTitle')"
+                  @click="togglePriceHistory(row.key)"
+                />
+              </div>
+              <div v-if="expandedPrices.includes(row.key)" class="border-t border-default/40 bg-elevated/20 px-3 py-2">
+                <div class="grid grid-cols-[7rem_1fr_5rem_7rem_7rem] gap-2 text-xs text-muted">
+                  <span>{{ t('admin.purchasing.prices.date') }}</span>
+                  <span>{{ t('admin.purchasing.prices.order') }}</span>
+                  <span class="text-right">{{ t('admin.purchasing.prices.qty') }}</span>
+                  <span class="text-right">{{ t('admin.purchasing.prices.unitCost') }}</span>
+                  <span class="text-right">{{ t('admin.purchasing.prices.value') }}</span>
+                </div>
+                <div v-for="entry in row.history" :key="`${row.key}-${entry.receivedAt}`" class="mt-1 grid grid-cols-[7rem_1fr_5rem_7rem_7rem] gap-2 text-xs text-toned">
+                  <span class="font-mono">{{ entry.date }}</span>
+                  <span class="truncate">{{ entry.purchaseOrderCode }}</span>
+                  <span class="text-right">{{ money(entry.quantity) }}</span>
+                  <span class="text-right">{{ money(entry.unitCost) }}</span>
+                  <span class="text-right">{{ money(entry.totalValue) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-xs text-muted">{{ t('admin.purchasing.prices.hint') }}</p>
         </template>
       </div>
     </CmsBasePage>

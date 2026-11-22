@@ -409,6 +409,36 @@ export interface AdminShiftAssignment {
   updatedAt: string | null
 }
 
+export interface PriceObservation {
+  date: string
+  receivedAt: string
+  purchaseOrderCode: string
+  quantity: number
+  unitCost: number
+  totalValue: number
+}
+
+export interface SupplierItemPrice {
+  key: string
+  supplierId: string | null
+  itemId: string
+  variantId: string | null
+  sku: string
+  itemName: string
+  lastUnitCost: number
+  lastReceivedAt: string
+  lastQuantity: number
+  previousUnitCost: number | null
+  changePercent: number | null
+  minUnitCost: number
+  maxUnitCost: number
+  averageUnitCost: number
+  totalQuantity: number
+  totalValue: number
+  observations: number
+  history: PriceObservation[]
+}
+
 interface ListMeta {
   nextCursor?: string
   hasMore?: boolean
@@ -879,6 +909,31 @@ export const useOperationsAdmin = () => {
   const cancelShiftAssignment = async (id: string, reason?: string) =>
     one<{ id: string }>(await write(`/api/v1/admin/hr/shift-assignments/${id}`, 'DELETE', {}, reason))
 
+  const supplierPriceHistory = async (params: {
+    supplierId?: string
+    itemId?: string
+    variantId?: string
+    from?: string
+    to?: string
+    limit?: number
+  } = {}) => {
+    const payload = await plainFetch(`/api/v1/admin/procurement/supplier-prices${pageQuery({
+      supplierId: params.supplierId,
+      itemId: params.itemId,
+      variantId: params.variantId,
+      from: params.from,
+      to: params.to,
+      limit: params.limit,
+    })}`) as {
+      data: {
+        range: { from: string, to: string }
+        data: SupplierItemPrice[]
+        summary: { suppliers: number, items: number, observations: number }
+      }
+    }
+    return payload.data
+  }
+
   /* ------------------------------- reports ------------------------------- */
 
   const financeSummary = async (range: { from?: string, to?: string } = {}) => {
@@ -993,6 +1048,7 @@ export const useOperationsAdmin = () => {
     listShiftAssignments,
     assignShift,
     cancelShiftAssignment,
+    supplierPriceHistory,
     financeSummary,
     financeAging,
     financeLedger,
