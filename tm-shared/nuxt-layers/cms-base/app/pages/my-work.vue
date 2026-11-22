@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminAttendance, AdminPayroll, AdminStaff } from '../composables/useOperationsAdmin'
+import type { AdminAttendance, AdminPayroll, AdminShiftAssignment, AdminStaff } from '../composables/useOperationsAdmin'
 
 const { t } = useI18n()
 const ops = useOperationsAdmin()
@@ -9,11 +9,22 @@ const staff = ref<AdminStaff | null>(null)
 const attendances = ref<AdminAttendance[]>([])
 const attendanceSummary = ref<Record<string, number>>({ all: 0, present: 0, late: 0, leave: 0, absent: 0 })
 const payrolls = ref<AdminPayroll[]>([])
+const shifts = ref<AdminShiftAssignment[]>([])
+const shiftTotals = ref({ assignments: 0, days: 0, workedMinutes: 0 })
 const loading = ref(false)
 const error = ref<string | null>(null)
 const notLinked = ref(false)
 
 const money = (value: number) => new Intl.NumberFormat('vi-VN').format(value)
+const hours = (minutes: number) => `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`
+
+/** The month control drives the roster too: first day → last day of that month. */
+const monthRange = computed(() => {
+  const [year, monthNumber] = month.value.split('-').map(Number)
+  if (!year || !monthNumber) return { from: undefined, to: undefined }
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate()
+  return { from: `${month.value}-01`, to: `${month.value}-${String(lastDay).padStart(2, '0')}` }
+})
 
 const attendanceColor = (status: string) =>
   status === 'present' ? 'success' : status === 'late' ? 'primary' : status === 'leave' ? 'neutral' : 'error'
@@ -35,14 +46,17 @@ async function load() {
   loading.value = true
   error.value = null
   try {
-    const [attendance, payroll] = await Promise.all([
+    const [attendance, payroll, roster] = await Promise.all([
       ops.myAttendance(month.value || undefined),
       ops.myPayroll(month.value || undefined),
+      ops.myShifts(monthRange.value),
     ])
     staff.value = attendance.staff
     attendances.value = attendance.data
     attendanceSummary.value = attendance.summary
     payrolls.value = payroll.data
+    shifts.value = roster.data
+    shiftTotals.value = { assignments: roster.totals.assignments, days: roster.totals.days, workedMinutes: roster.totals.workedMinutes }
     notLinked.value = false
   } catch (e) {
     if (ops.errorCode(e) === 'STAFF_NOT_FOUND') {
@@ -50,6 +64,7 @@ async function load() {
       staff.value = null
       attendances.value = []
       payrolls.value = []
+      shifts.value = []
     } else {
       error.value = describeError(e)
     }
@@ -100,6 +115,32 @@ await load()
         </div>
         <UInput v-model="month" type="month" size="sm" class="w-full sm:w-44" />
       </div>
+
+      <section class="flex flex-col gap-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-medium text-highlighted">{{ t('admin.myWork.rosterTitle') }}</h2>
+          <p class="text-xs text-muted">
+            {{ t('admin.myWork.rosterSummary', {
+              assignments: shiftTotals.assignments,
+              days: shiftTotals.days,
+              hours: hours(shiftTotals.workedMinutes),
+            }) }}
+          </p>
+        </div>
+
+        <p v-if="!shifts.length" class="text-xs text-muted">{{ t('admin.myWork.rosterEmpty') }}</p>
+
+        <div v-if="shifts.length" class="overflow-hidden rounded-[4px] border border-default/60">
+          <div v-for="entry in shifts" :key="entry.id" class="flex flex-wrap items-center gap-3 border-b border-default/40 px-3 py-2 text-sm last:border-b-0">
+            <span class="font-mono text-xs text-highlighted">{{ entry.date }}</span>
+            <UBadge color="neutral" variant="subtle" size="sm">{{ entry.shiftCode }}</UBadge>
+            <span class="text-xs text-muted">{{ entry.startTime }} → {{ entry.endTime }}</span>
+            <UBadge v-if="entry.overnight" color="neutral" variant="subtle" size="sm">{{ t('admin.hr.shifts.overnight') }}</UBadge>
+            <span class="text-xs text-muted">{{ t('admin.hr.shifts.worked', { minutes: entry.workedMinutes }) }}</span>
+            <span v-if="entry.note" class="min-w-0 flex-1 truncate text-xs text-muted">{{ entry.note }}</span>
+          </div>
+        </div>
+      </section>
 
       <section class="flex flex-col gap-2">
         <div class="flex flex-wrap items-center justify-between gap-2">

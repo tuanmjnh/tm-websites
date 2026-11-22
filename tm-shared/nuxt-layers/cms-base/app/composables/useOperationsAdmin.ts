@@ -994,6 +994,18 @@ export const useOperationsAdmin = () => {
     }
   }
 
+  const myShifts = async (params: { from?: string, to?: string } = {}) => {
+    const payload = await plainFetch(`/api/v1/me/shifts${pageQuery({ from: params.from, to: params.to })}`) as {
+      data: { staff: AdminStaff, assignments: AdminShiftAssignment[] }
+      meta?: { totals?: { assignments?: number, staff?: number, days?: number, workedMinutes?: number } }
+    }
+    return {
+      staff: payload.data.staff,
+      data: payload.data.assignments,
+      totals: { assignments: 0, days: 0, workedMinutes: 0, ...(payload.meta?.totals ?? {}) },
+    }
+  }
+
   const myPayroll = async (period?: string) => {
     const payload = await plainFetch(`/api/v1/me/payroll${pageQuery({ period })}`) as {
       data: { staff: AdminStaff, payroll: { data: AdminPayroll[], counts?: Record<string, number>, totals?: { netPay?: number, workDays?: number } } }
@@ -1224,6 +1236,7 @@ export const useOperationsAdmin = () => {
     payPayroll,
     cancelPayroll,
     myAttendance,
+    myShifts,
     myPayroll,
     listShiftTemplates,
     createShiftTemplate,

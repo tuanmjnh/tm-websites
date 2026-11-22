@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { createStaff, getStaffBySubject } from '../../tm-cms/server/services/staffService.js'
 import { upsertAttendance } from '../../tm-cms/server/services/attendanceService.js'
 import { setSalaryConfig, calculatePayroll, listPayrolls } from '../../tm-cms/server/services/payrollService.js'
+import { assignShift, createShiftTemplate, listShiftAssignments } from '../../tm-cms/server/services/shiftService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 
@@ -41,7 +42,7 @@ async function run() {
   try {
     await connection.db!.dropDatabase()
     const models = await prepareDatabase(connection)
-    const { StaffProfile, Attendance, SalaryConfig, Payroll, Audit } = models
+    const { StaffProfile, Attendance, SalaryConfig, Payroll, Audit, ShiftTemplate, ShiftAssignment } = models
     const meta = { audit: { model: Audit, actor: ACTOR } }
 
     const staff = await createStaff(StaffProfile, SITE, {
@@ -87,6 +88,57 @@ async function run() {
       const result = await listPayrolls(Payroll, SITE, { staffId: staff.id, period: '2026-11' })
       assert.equal(result.data.length, 1)
       assert.equal(result.data[0]!.period, '2026-11')
+    })
+
+    const template = await createShiftTemplate(ShiftTemplate, SITE, {
+      code: 'MORNING',
+      name: 'Morning',
+      startTime: '08:00',
+      endTime: '17:00',
+      breakMinutes: 60,
+    }, meta)
+
+    await assignShift({ ShiftTemplate, ShiftAssignment, StaffProfile }, SITE, {
+      staffId: staff.id,
+      templateId: template.template.id,
+      date: '2026-11-23',
+    }, {}, meta)
+
+    const colleague = await createStaff(StaffProfile, SITE, {
+      subjectId: 'user_other',
+      employeeCode: 'E002',
+      fullName: 'Binh Tran',
+      positionCode: 'staff',
+      workStatus: 'official',
+    }, meta)
+
+    await assignShift({ ShiftTemplate, ShiftAssignment, StaffProfile }, SITE, {
+      staffId: colleague.id,
+      templateId: template.template.id,
+      date: '2026-11-24',
+    }, {}, meta)
+
+    await check('the roster lists only the signed-in staff member shifts', async () => {
+      const roster = await listShiftAssignments(
+        { ShiftAssignment, StaffProfile },
+        SITE,
+        { staffId: staff.id, from: '2026-11-01', to: '2026-11-30' },
+      )
+      assert.equal(roster.data.length, 1)
+      assert.equal(roster.data[0]!.staffId, staff.id)
+      assert.equal(roster.data[0]!.shiftCode, 'MORNING')
+      assert.equal(roster.summary.workedMinutes, 480)
+    })
+
+    await check('a colleague reads their own shift, not the first staff member\'s', async () => {
+      const roster = await listShiftAssignments(
+        { ShiftAssignment, StaffProfile },
+        SITE,
+        { staffId: colleague.id, from: '2026-11-01', to: '2026-11-30' },
+      )
+      assert.equal(roster.data.length, 1)
+      assert.equal(roster.data[0]!.staffId, colleague.id)
+      assert.equal(roster.data[0]!.date, '2026-11-24')
     })
 
     await check('an unknown subject has no profile', async () => {
