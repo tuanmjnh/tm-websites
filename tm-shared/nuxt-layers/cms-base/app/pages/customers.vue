@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AdminCustomer, AdminCustomerAddress, AdminCustomerSegment } from '@tm/flow-contracts/customer-admin'
 import { ADMIN_CUSTOMER_LIST_LIMIT_DEFAULT, ADMIN_CUSTOMER_NOTE_MAX } from '@tm/flow-contracts/customer-admin'
+import type { ImportOutcome } from '../utils/import-rows'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -11,6 +12,7 @@ const {
   updateCustomer,
   deleteCustomer,
   restoreCustomer,
+  importCustomers,
   listSegments,
   createSegment,
   updateSegment,
@@ -403,13 +405,48 @@ async function toggleSegment(segment: AdminCustomerSegment) {
   }
 }
 
+/* ------------------------------- import -------------------------------- */
+
+const importOpen = ref(false)
+const importBusy = ref(false)
+const importError = ref<string | null>(null)
+const importResult = ref<ImportOutcome | null>(null)
+const importExample = 'code,subjectId,email,fullName\nKH-01,hub_subject_01,kh1@example.com,Khách 01'
+
+function openImport() {
+  auditReason.value = ''
+  importError.value = null
+  importResult.value = null
+  importOpen.value = true
+}
+
+async function runImport(payload: { rows: Record<string, unknown>[], reason: string }) {
+  if (!canWrite.value || importBusy.value) return
+  importBusy.value = true
+  importError.value = null
+  try {
+    const result = await importCustomers(payload.rows, payload.reason || undefined)
+    importResult.value = result
+    toast.add({
+      title: t('admin.import.result', { created: result.created, updated: result.updated, failed: result.failed }),
+      color: result.failed ? 'warning' : 'success',
+    })
+    if (!result.failed) auditReason.value = ''
+    await load()
+  } catch (caught) {
+    importError.value = describeError(caught)
+  } finally {
+    importBusy.value = false
+  }
+}
+
 if (canRead.value) {
   await loadSegments()
   await load()
 }
 
 // A cancelled note must not ride along with the next action.
-resetOnClose(formOpen, confirmOpen, segmentFormOpen)
+resetOnClose(formOpen, confirmOpen, segmentFormOpen, importOpen)
 </script>
 
 <template>
@@ -427,6 +464,15 @@ resetOnClose(formOpen, confirmOpen, segmentFormOpen)
     >
       <template #right>
         <div class="flex items-center gap-2">
+          <UButton
+            v-if="canWrite"
+            icon="i-lucide-upload"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :label="t('admin.import.button')"
+            @click="openImport"
+          />
           <UButton
             icon="i-lucide-tags"
             color="neutral"
@@ -802,5 +848,16 @@ resetOnClose(formOpen, confirmOpen, segmentFormOpen)
         </div>
       </template>
     </UModal>
+
+    <CmsImportDialog
+      v-model:open="importOpen"
+      :title="t('admin.import.title')"
+      :hint="t('admin.import.hint')"
+      :example="importExample"
+      :busy="importBusy"
+      :error="importError"
+      :result="importResult"
+      @submit="runImport"
+    />
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AdminPurchaseOrder, AdminSupplier, AdminWarehouse, SupplierItemPrice } from '../composables/useOperationsAdmin'
+import type { ImportOutcome } from '../utils/import-rows'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -35,6 +36,41 @@ const describeError = (e: unknown) => {
   if (!status) return t('admin.errors.network')
   if (status === 503) return t('admin.errors.unavailable')
   return t('admin.errors.generic')
+}
+
+/* ------------------------------- import -------------------------------- */
+
+const importOpen = ref(false)
+const importBusy = ref(false)
+const importError = ref<string | null>(null)
+const importResult = ref<ImportOutcome | null>(null)
+const importExample = 'code,title,email,phone\nNCC-01,Nhà cung cấp 01,ncc1@example.com,0900000001'
+
+function openImport() {
+  auditReason.value = ''
+  importError.value = null
+  importResult.value = null
+  importOpen.value = true
+}
+
+async function runImport(payload: { rows: Record<string, unknown>[], reason: string }) {
+  if (!canWrite.value || importBusy.value) return
+  importBusy.value = true
+  importError.value = null
+  try {
+    const result = await ops.importSuppliers(payload.rows, payload.reason || undefined)
+    importResult.value = result
+    toast.add({
+      title: t('admin.import.result', { created: result.created, updated: result.updated, failed: result.failed }),
+      color: result.failed ? 'warning' : 'success',
+    })
+    if (!result.failed) auditReason.value = ''
+    await loadSuppliers()
+  } catch (caught) {
+    importError.value = describeError(caught)
+  } finally {
+    importBusy.value = false
+  }
 }
 
 const statusColor = (status: string) => {
@@ -615,6 +651,15 @@ resetOnClose(supplierFormOpen, orderFormOpen, receiveOpen, confirmOpen)
     >
       <template #right>
         <UButton
+          v-if="canWrite && tab === 'suppliers'"
+          icon="i-lucide-upload"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :label="t('admin.import.button')"
+          @click="openImport"
+        />
+        <UButton
           v-if="canWrite && tab !== 'prices'"
           icon="i-lucide-plus"
           color="primary"
@@ -1111,5 +1156,16 @@ resetOnClose(supplierFormOpen, orderFormOpen, receiveOpen, confirmOpen)
         </div>
       </template>
     </UModal>
+
+    <CmsImportDialog
+      v-model:open="importOpen"
+      :title="t('admin.import.title')"
+      :hint="t('admin.import.hint')"
+      :example="importExample"
+      :busy="importBusy"
+      :error="importError"
+      :result="importResult"
+      @submit="runImport"
+    />
   </div>
 </template>

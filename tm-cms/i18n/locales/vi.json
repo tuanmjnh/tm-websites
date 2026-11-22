@@ -126,6 +126,23 @@
     }
   },
   "admin": {
+    "import": {
+      "button": "Nhập hàng loạt",
+      "title": "Nhập dữ liệu hàng loạt",
+      "hint": "Dán một JSON array hoặc CSV có dòng tiêu đề — tối đa 500 dòng. Dòng trùng khoá sẽ cập nhật bản ghi đó; ô CSV để trống bị bỏ qua và giá trị phức tạp (như tiêu đề đa ngôn ngữ) ghi dạng JSON trong ô.",
+      "source": "Dữ liệu",
+      "placeholder": "Dán JSON hoặc CSV vào đây…",
+      "preview": "{count} dòng sẵn sàng",
+      "invalid": "Không đọc được dữ liệu: kiểm tra JSON/CSV và giới hạn 500 dòng",
+      "noRows": "Cần dòng tiêu đề và ít nhất một dòng dữ liệu",
+      "submit": "Nhập",
+      "result": "{created} mới · {updated} cập nhật · {failed} lỗi",
+      "statuses": {
+        "created": "Đã tạo",
+        "updated": "Đã cập nhật",
+        "failed": "Lỗi"
+      }
+    },
     "errors": {
       "unauthorized": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
       "forbidden": "Tài khoản không có quyền xem dữ liệu này.",

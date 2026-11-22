@@ -126,6 +126,23 @@
     }
   },
   "admin": {
+    "import": {
+      "button": "Bulk import",
+      "title": "Bulk import",
+      "hint": "Paste a JSON array or CSV with a header row — 500 rows at most. A row that matches an existing key updates that record; an empty CSV cell is skipped and a complex value (such as a translated title) goes in as JSON.",
+      "source": "Data",
+      "placeholder": "Paste JSON or CSV here…",
+      "preview": "{count} rows ready",
+      "invalid": "Cannot read the data: check the JSON/CSV and the 500-row limit",
+      "noRows": "A header row and at least one data row are required",
+      "submit": "Import",
+      "result": "{created} created · {updated} updated · {failed} failed",
+      "statuses": {
+        "created": "Created",
+        "updated": "Updated",
+        "failed": "Failed"
+      }
+    },
     "errors": {
       "unauthorized": "Your session has expired. Sign in again.",
       "forbidden": "Your account does not have permission for this data.",

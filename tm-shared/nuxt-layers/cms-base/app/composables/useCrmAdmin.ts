@@ -5,6 +5,7 @@ import type {
   AdminCustomerSegment,
   AdminCustomerUpdate,
 } from '@tm/flow-contracts/customer-admin'
+import type { ImportOutcome } from '../utils/import-rows'
 
 /**
  * CMS CRM client. A customer profile links to a Hub subject; nothing here sends
@@ -102,6 +103,32 @@ export const useCrmAdmin = () => {
     return payload.data
   }
 
+  const importCustomers = async (rows: Record<string, unknown>[], reason?: string): Promise<ImportOutcome> => {
+    const payload = await plainFetch('/api/v1/admin/crm/customers/import', {
+      method: 'POST',
+      body: { rows },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
+    }) as {
+      data: {
+        total: number
+        created: number
+        updated: number
+        failed: number
+        results: { row: number, code: string | null, status: string, codeError: string | null, message: string | null }[]
+      }
+    }
+    return {
+      ...payload.data,
+      results: payload.data.results.map(entry => ({
+        row: entry.row,
+        key: entry.code,
+        status: entry.status,
+        code: entry.codeError,
+        message: entry.message,
+      })),
+    }
+  }
+
   const createSegment = async (input: Record<string, unknown>, reason?: string): Promise<AdminCustomerSegment> => {
     const payload = await plainFetch('/api/v1/admin/crm/segments', {
       method: 'POST',
@@ -147,6 +174,7 @@ export const useCrmAdmin = () => {
     updateCustomer,
     deleteCustomer,
     restoreCustomer,
+    importCustomers,
     listSegments,
     createSegment,
     updateSegment,

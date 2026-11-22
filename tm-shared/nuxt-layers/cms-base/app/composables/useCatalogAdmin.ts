@@ -11,6 +11,7 @@ import type {
   AdminCatalogStatusFilter,
   AdminCatalogItemType,
 } from '@tm/flow-contracts/catalog-admin'
+import type { ImportOutcome } from '../utils/import-rows'
 
 /**
  * CMS catalog client. Records belong to the deployment's site, so requests carry
@@ -100,6 +101,15 @@ export const useCatalogAdmin = () => {
     return payload.data
   }
 
+  const importItems = async (rows: Record<string, unknown>[], reason?: string): Promise<ImportOutcome> => {
+    const payload = await plainFetch('/api/v1/admin/catalog/items/import', {
+      method: 'POST',
+      body: { rows },
+      headers: reason ? { 'x-audit-reason': reason } : undefined,
+    }) as { data: ImportOutcome }
+    return payload.data
+  }
+
   const createCategory = async (draft: AdminCatalogCategoryDraft, reason?: string): Promise<AdminCatalogCategory> => {
     const payload = await plainFetch('/api/v1/admin/catalog/categories', {
       method: 'POST',
@@ -148,6 +158,7 @@ export const useCatalogAdmin = () => {
     runEvent,
     bulkUpdate,
     bulkUpdateByFilter,
+    importItems,
     listCategories,
     createCategory,
     updateCategory,

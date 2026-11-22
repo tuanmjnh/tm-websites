@@ -12,6 +12,7 @@ import type {
 import { effectivePrice, getItemPriceRange } from '@tm/flow-utils/price'
 import { escapeHtml } from '@tm/flow-utils'
 import { buildCatalogCategoryDraft } from '../utils/catalog-category-draft'
+import type { ImportOutcome } from '../utils/import-rows'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -23,6 +24,7 @@ const {
   runEvent,
   bulkUpdate,
   bulkUpdateByFilter,
+  importItems,
   listCategories,
   createCategory,
   updateCategory,
@@ -133,6 +135,46 @@ async function applyBulk() {
     bulkBusy.value = false
   }
 }
+/* ------------------------------- import -------------------------------- */
+
+const importOpen = ref(false)
+const importBusy = ref(false)
+const importError = ref<string | null>(null)
+const importResult = ref<ImportOutcome | null>(null)
+// A JSON example, not an i18n message: the formatting plugin reads `{` as a placeholder.
+const importExample = [
+  '[',
+  '  { "key": "ao-thun", "title": { "vi": "Áo thun" }, "slug": { "vi": "ao-thun" }, "basePrice": 150000 }',
+  ']',
+].join('\n')
+
+function openImport() {
+  auditReason.value = ''
+  importError.value = null
+  importResult.value = null
+  importOpen.value = true
+}
+
+async function runImport(payload: { rows: Record<string, unknown>[], reason: string }) {
+  if (!canWrite.value || importBusy.value) return
+  importBusy.value = true
+  importError.value = null
+  try {
+    const result = await importItems(payload.rows, payload.reason || undefined)
+    importResult.value = result
+    toast.add({
+      title: t('admin.import.result', { created: result.created, updated: result.updated, failed: result.failed }),
+      color: result.failed ? 'warning' : 'success',
+    })
+    if (!result.failed) auditReason.value = ''
+    await load()
+  } catch (caught) {
+    importError.value = messageFor(errorCode(caught))
+  } finally {
+    importBusy.value = false
+  }
+}
+
 const typeFilter = ref<'all' | 'simple' | 'variable'>('all')
 const tagFilter = ref('all')
 
@@ -679,6 +721,15 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
           @click="categoriesOpen = true"
         />
         <UButton
+          v-if="canWrite"
+          icon="i-lucide-upload"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :label="t('admin.import.button')"
+          @click="openImport"
+        />
+        <UButton
           icon="i-lucide-refresh-cw"
           color="neutral"
           variant="ghost"
@@ -1118,5 +1169,16 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
         </div>
       </template>
     </UModal>
+
+    <CmsImportDialog
+      v-model:open="importOpen"
+      :title="t('admin.import.title')"
+      :hint="t('admin.import.hint')"
+      :example="importExample"
+      :busy="importBusy"
+      :error="importError"
+      :result="importResult"
+      @submit="runImport"
+    />
   </div>
 </template>
