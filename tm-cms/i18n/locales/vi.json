@@ -1267,6 +1267,25 @@
       "payrollEmpty": "Tháng này chưa có bảng lương.",
       "netPay": "Thực lĩnh",
       "retry": "Thử lại",
+      "payslip": {
+        "open": "Phiếu lương",
+        "heading": "PHIẾU LƯƠNG",
+        "employee": "Nhân viên",
+        "position": "Vị trí",
+        "baseSalary": "Lương tháng",
+        "dailyRate": "Lương ngày (lương tháng / {days} ngày chuẩn)",
+        "workPay": "Lương công · {work} công · {leave} phép · {absent} vắng",
+        "allowance": "Phụ cấp",
+        "adjustmentTotal": "Tổng điều chỉnh",
+        "paidOn": "Đã chi trả ngày {date}.",
+        "draftNote": "Bảng lương còn ở dạng nháp: số liệu có thể thay đổi khi được duyệt.",
+        "approvedNote": "Bảng lương đã duyệt và đang chờ chi trả.",
+        "cancelledNote": "Bảng lương đã huỷ ({reason}).",
+        "footer": "Số liệu lấy từ chấm công và cấu hình lương đã chốt của kỳ này, không tính lại khi in.",
+        "print": "In / lưu PDF",
+        "back": "Về việc của tôi",
+        "notFound": "Không tìm thấy phiếu lương này trong tài khoản của bạn."
+      },
       "errors": {
         "load": "Không tải được dữ liệu của bạn. Hãy thử lại."
       }

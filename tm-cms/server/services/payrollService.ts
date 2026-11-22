@@ -21,7 +21,7 @@ import {
 import type { StaffProfileDocument } from '../models/staffProfile'
 import { csvCell } from '../utils/csv'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
-import { HrServiceError } from './staffService'
+import { type StaffAdmin, HrServiceError, getStaffBySubject } from './staffService'
 
 /**
  * Salary configuration and payroll (HR-01).
@@ -337,6 +337,30 @@ export async function getPayroll(
   const record = await model.findOne({ _id: objectId(id, 'PAYROLL_ID_INVALID'), siteId }).lean<PayrollRecord | null>()
   if (!record) throw new HrServiceError(404, 'PAYROLL_NOT_FOUND', 'Không tìm thấy bảng lương')
   return toAdminPayroll(record)
+}
+
+/**
+ * One payroll row for the signed-in staff member.
+ *
+ * The profile comes from the Hub subject, never from the request, and a row that
+ * belongs to someone else answers `PAYROLL_NOT_FOUND` rather than `forbidden`: an
+ * employee must not learn that a colleague's payroll id exists.
+ */
+export async function getOwnPayroll(
+  model: Model<PayrollDocument>,
+  staffModel: Model<StaffProfileDocument>,
+  siteId: string,
+  subjectId: string,
+  id: string,
+): Promise<{ staff: StaffAdmin, payroll: PayrollAdmin }> {
+  const staff = await getStaffBySubject(staffModel, siteId, subjectId)
+  if (!staff) throw new HrServiceError(404, 'STAFF_NOT_FOUND', 'Không tìm thấy hồ sơ nhân sự')
+
+  const payroll = await getPayroll(model, siteId, id)
+  if (payroll.staffId !== staff.id) {
+    throw new HrServiceError(404, 'PAYROLL_NOT_FOUND', 'Không tìm thấy bảng lương')
+  }
+  return { staff, payroll }
 }
 
 interface ComputedPayroll {

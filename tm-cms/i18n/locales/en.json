@@ -1265,6 +1265,25 @@
       "payrollEmpty": "No payroll for this month.",
       "netPay": "Net pay",
       "retry": "Try again",
+      "payslip": {
+        "open": "Payslip",
+        "heading": "PAYSLIP",
+        "employee": "Employee",
+        "position": "Position",
+        "baseSalary": "Monthly salary",
+        "dailyRate": "Daily rate (monthly salary / {days} standard days)",
+        "workPay": "Pay for days worked · {work} worked · {leave} leave · {absent} absent",
+        "allowance": "Allowances",
+        "adjustmentTotal": "Total adjustments",
+        "paidOn": "Paid on {date}.",
+        "draftNote": "This payroll is still a draft: the figures can change when it is approved.",
+        "approvedNote": "Approved and waiting to be paid.",
+        "cancelledNote": "This payroll was cancelled ({reason}).",
+        "footer": "Figures come from this period's attendance and the salary configuration in force; printing does not recalculate them.",
+        "print": "Print / save PDF",
+        "back": "Back to my work",
+        "notFound": "No payslip with this id belongs to your account."
+      },
       "errors": {
         "load": "Could not load your records. Try again."
       }

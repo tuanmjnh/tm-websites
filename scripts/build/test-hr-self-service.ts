@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { createStaff, getStaffBySubject } from '../../tm-cms/server/services/staffService.js'
+import { HrServiceError, createStaff, getStaffBySubject } from '../../tm-cms/server/services/staffService.js'
 import { upsertAttendance } from '../../tm-cms/server/services/attendanceService.js'
-import { setSalaryConfig, calculatePayroll, listPayrolls } from '../../tm-cms/server/services/payrollService.js'
+import { setSalaryConfig, calculatePayroll, getOwnPayroll, listPayrolls } from '../../tm-cms/server/services/payrollService.js'
 import { assignShift, createShiftTemplate, listShiftAssignments } from '../../tm-cms/server/services/shiftService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
@@ -139,6 +139,44 @@ async function run() {
       assert.equal(roster.data.length, 1)
       assert.equal(roster.data[0]!.staffId, colleague.id)
       assert.equal(roster.data[0]!.date, '2026-11-24')
+    })
+
+    await check('a payslip reads only the signed-in member\'s own row', async () => {
+      const own = await listPayrolls(Payroll, SITE, { staffId: staff.id, period: '2026-11' })
+      const ownId = own.data[0]!.id
+
+      const mine = await getOwnPayroll(Payroll, StaffProfile, SITE, ACTOR.id, ownId)
+      assert.equal(mine.payroll.id, ownId)
+      assert.equal(mine.staff.id, staff.id)
+      assert.equal(mine.payroll.employeeCode, 'E001')
+
+      // A colleague's row really exists, so the refusal below is about ownership.
+      await setSalaryConfig(SalaryConfig, StaffProfile, SITE, {
+        staffId: colleague.id,
+        baseSalary: 2000000,
+        standardWorkDays: 22,
+        effectiveFrom: '2026-11-01',
+      }, meta)
+      const colleaguePayroll = await calculatePayroll(
+        Payroll,
+        { attendanceModel: Attendance, salaryModel: SalaryConfig, staffModel: StaffProfile, siteId: SITE },
+        SITE,
+        { period: '2026-11', staffId: colleague.id },
+        meta,
+      )
+      const colleagueId = colleaguePayroll.lines[0]!.payrollId!
+
+      const isHrError = (status: number, code: string) =>
+        (error: unknown) => error instanceof HrServiceError && error.statusCode === status && error.code === code
+
+      await assert.rejects(
+        () => getOwnPayroll(Payroll, StaffProfile, SITE, ACTOR.id, colleagueId),
+        isHrError(404, 'PAYROLL_NOT_FOUND'),
+      )
+      await assert.rejects(
+        () => getOwnPayroll(Payroll, StaffProfile, SITE, 'user_without_profile', ownId),
+        isHrError(404, 'STAFF_NOT_FOUND'),
+      )
     })
 
     await check('an unknown subject has no profile', async () => {

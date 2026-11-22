@@ -1026,6 +1026,17 @@ export const useOperationsAdmin = () => {
     return { staff: payload.data.staff, data: payload.data.payroll.data }
   }
 
+  /**
+   * One own payroll row, for the printable payslip. The row is addressed by id
+   * only: the server checks it belongs to the signed-in staff member.
+   */
+  const myPayslip = async (id: string) => {
+    const payload = await plainFetch(`/api/v1/me/payroll/${encodeURIComponent(id)}`) as {
+      data: { staff: AdminStaff, payroll: AdminPayroll }
+    }
+    return { staff: payload.data.staff, payroll: payload.data.payroll }
+  }
+
   const listShiftTemplates = async (includeInactive = false) => {
     const payload = await plainFetch(`/api/v1/admin/hr/shift-templates${pageQuery({
       includeInactive: includeInactive ? 'true' : undefined,
@@ -1251,6 +1262,7 @@ export const useOperationsAdmin = () => {
     myAttendance,
     myShifts,
     myPayroll,
+    myPayslip,
     listShiftTemplates,
     createShiftTemplate,
     updateShiftTemplate,

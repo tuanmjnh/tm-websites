@@ -192,6 +192,14 @@ await load()
                 <span v-if="entry.cancelReason"> · {{ entry.cancelReason }}</span>
               </p>
             </div>
+            <UButton
+              :to="`/payslip/${entry.id}`"
+              icon="i-lucide-receipt-text"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :label="t('admin.myWork.payslip.open')"
+            />
           </div>
         </div>
       </section>
