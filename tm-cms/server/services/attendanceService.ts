@@ -126,36 +126,85 @@ export interface AttendanceListParams {
   month?: string | null
   staffId?: string | null
   status?: AttendanceStatus | null
+  cursor?: string | null
+  limit?: number
+}
+
+export interface AttendanceListResult {
+  data: AttendanceAdmin[]
+  /** Counts over the whole filter, not just the page on screen. */
+  summary: Record<AttendanceStatus | 'all', number>
+  nextCursor: string | null
+  hasMore: boolean
+}
+
+const DEFAULT_ATTENDANCE_LIMIT = 100
+const MAX_ATTENDANCE_LIMIT = 500
+
+/**
+ * The list sorts by `date` and then `_id`, so one id is not enough to resume: a
+ * cursor is the pair of the last row shown. Anything else would either skip rows
+ * that share a day or repeat them.
+ */
+function parseAttendanceCursor(cursor: string): { date: string, id: Types.ObjectId } {
+  const [date, id] = cursor.split('|')
+  if (!date || !id || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Types.ObjectId.isValid(id)) {
+    throw new HrServiceError(422, 'ATTENDANCE_CURSOR_INVALID', 'Con trỏ trang không hợp lệ')
+  }
+  return { date, id: new Types.ObjectId(id) }
 }
 
 export async function listAttendances(
   model: Model<AttendanceDocument>,
   siteId: string,
   params: AttendanceListParams = {},
-): Promise<{ data: AttendanceAdmin[], summary: Record<AttendanceStatus | 'all', number> }> {
-  const filter: Record<string, unknown> = { siteId }
+): Promise<AttendanceListResult> {
+  const limit = Math.min(Math.max(Math.trunc(params.limit ?? DEFAULT_ATTENDANCE_LIMIT), 1), MAX_ATTENDANCE_LIMIT)
+  const baseFilter: Record<string, unknown> = { siteId }
   if (params.staffId) {
     if (!Types.ObjectId.isValid(params.staffId)) {
       throw new HrServiceError(422, 'STAFF_ID_INVALID', 'Staff id is not valid')
     }
-    filter.staffId = params.staffId
+    baseFilter.staffId = params.staffId
   }
   if (params.month) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(params.month)) {
       throw new HrServiceError(422, 'ATTENDANCE_MONTH_INVALID', 'Tháng không hợp lệ (YYYY-MM)')
     }
-    filter.date = { $gte: `${params.month}-01`, $lte: `${params.month}-31` }
+    baseFilter.date = { $gte: `${params.month}-01`, $lte: `${params.month}-31` }
   }
-  if (params.status) filter.status = params.status
+  if (params.status) baseFilter.status = params.status
 
-  const records = await model.find(filter).sort({ date: -1, _id: -1 }).limit(1000).lean<AttendanceRecord[]>()
+  const filter: Record<string, unknown> = { ...baseFilter }
+  if (params.cursor) {
+    const cursor = parseAttendanceCursor(params.cursor)
+    filter.$or = [
+      { date: { $lt: cursor.date } },
+      { date: cursor.date, _id: { $lt: cursor.id } },
+    ]
+  }
+
+  const records = await model.find(filter).sort({ date: -1, _id: -1 }).limit(limit + 1).lean<AttendanceRecord[]>()
+  const hasMore = records.length > limit
+  const page = hasMore ? records.slice(0, limit) : records
+
   const summary = { all: 0, present: 0, late: 0, leave: 0, absent: 0 } as Record<AttendanceStatus | 'all', number>
-  for (const record of records) {
-    summary[record.status] += 1
-    summary.all += 1
+  const rows = await model.aggregate<{ _id: AttendanceStatus, count: number }>([
+    { $match: baseFilter },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ])
+  for (const row of rows) {
+    if (row._id in summary) summary[row._id] = row.count
+    summary.all += row.count
   }
 
-  return { data: records.map(toAdminAttendance), summary }
+  const last = page[page.length - 1]
+  return {
+    data: page.map(toAdminAttendance),
+    summary,
+    nextCursor: hasMore && last ? `${last.date}|${String(last._id)}` : null,
+    hasMore,
+  }
 }
 
 /**

@@ -208,6 +208,40 @@ async function integration() {
       await assert.rejects(() => deleteAttendance(Attendance, SITE, wrong.attendance.id, meta), isHrError(404, 'ATTENDANCE_NOT_FOUND'))
     })
 
+    await check('attendance pages by cursor while the summary counts the whole month', async () => {
+      for (const day of ['2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13']) {
+        await upsertAttendance(Attendance, StaffProfile, SITE, { staffId: an.id, date: day, status: 'present' }, meta)
+      }
+
+      const first = await listAttendances(Attendance, SITE, { month: '2026-10', limit: 2 })
+      assert.equal(first.data.length, 2)
+      assert.equal(first.hasMore, true)
+      assert.equal(first.data[0]!.date, '2026-10-13')
+      assert.equal(first.summary.all, 5)
+      assert.equal(first.summary.present, 4)
+      assert.equal(first.summary.late, 1)
+
+      const second = await listAttendances(Attendance, SITE, { month: '2026-10', limit: 2, cursor: first.nextCursor })
+      assert.equal(second.data.length, 2)
+      assert.equal(second.hasMore, true)
+      assert.equal(second.data[0]!.date, '2026-10-11')
+      assert.equal(second.summary.all, 5)
+
+      const third = await listAttendances(Attendance, SITE, { month: '2026-10', limit: 2, cursor: second.nextCursor })
+      assert.equal(third.data.length, 1)
+      assert.equal(third.hasMore, false)
+      assert.equal(third.nextCursor, null)
+      assert.equal(third.data[0]!.date, '2026-10-01')
+
+      const seen = [...first.data, ...second.data, ...third.data].map(row => row.id)
+      assert.equal(new Set(seen).size, 5)
+
+      await assert.rejects(
+        () => listAttendances(Attendance, SITE, { month: '2026-10', cursor: 'nonsense' }),
+        isHrError(422, 'ATTENDANCE_CURSOR_INVALID'),
+      )
+    })
+
     await check('attendance of another site cannot be recorded or listed', async () => {
       await assert.rejects(
         () => upsertAttendance(Attendance, StaffProfile, OTHER_SITE, { staffId: an.id, date: '2026-10-05', status: 'present' }, meta),

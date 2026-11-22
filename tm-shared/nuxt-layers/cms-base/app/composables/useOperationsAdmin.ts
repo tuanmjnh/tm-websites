@@ -918,15 +918,28 @@ export const useOperationsAdmin = () => {
   const restoreStaff = async (id: string, revision: number, reason?: string) =>
     one<AdminStaff>(await write(`/api/v1/admin/hr/staff/${id}/restore`, 'POST', { revision }, reason))
 
-  const listAttendances = async (params: { month?: string, staffId?: string, status?: string } = {}) => {
+  const listAttendances = async (params: {
+    month?: string
+    staffId?: string
+    status?: string
+    cursor?: string | null
+    limit?: number
+  } = {}) => {
     const payload = await plainFetch(`/api/v1/admin/hr/attendances${pageQuery({
       month: params.month,
       staffId: params.staffId,
       status: params.status,
-    })}`) as { data: AdminAttendance[], meta?: { counts?: Record<string, number> } }
+      cursor: params.cursor ?? undefined,
+      limit: params.limit,
+    })}`) as {
+      data: AdminAttendance[]
+      meta?: { counts?: Record<string, number>, nextCursor?: string | null, hasMore?: boolean }
+    }
     return {
       data: payload.data,
       summary: { all: 0, present: 0, late: 0, leave: 0, absent: 0, ...(payload.meta?.counts ?? {}) } as Record<string, number>,
+      nextCursor: payload.meta?.nextCursor ?? null,
+      hasMore: payload.meta?.hasMore === true,
     }
   }
 

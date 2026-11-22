@@ -188,6 +188,8 @@ const attendanceStatus = ref('all')
 const attendanceSummary = ref<Record<string, number>>({ all: 0, present: 0, late: 0, leave: 0, absent: 0 })
 const attendanceLoading = ref(false)
 const attendanceError = ref<string | null>(null)
+const attendanceCursor = ref<string | null>(null)
+const attendanceHasMore = ref(false)
 
 const attendanceStatusOptions = computed(() => [
   { label: t('admin.hr.attendance.allStatuses'), value: 'all' },
@@ -197,7 +199,7 @@ const attendanceStatusOptions = computed(() => [
 const attendanceStatusItems = computed<{ label: string, value: string }[]>(() =>
   ATTENDANCE_STATUSES.map(status => ({ label: t(`admin.hr.attendance.statuses.${status}`), value: status })))
 
-async function loadAttendances() {
+async function loadAttendances(reset = true) {
   if (!canRead.value) return
   attendanceLoading.value = true
   attendanceError.value = null
@@ -206,8 +208,12 @@ async function loadAttendances() {
       month: attendanceMonth.value || undefined,
       staffId: attendanceStaff.value === 'all' ? undefined : attendanceStaff.value,
       status: attendanceStatus.value === 'all' ? undefined : attendanceStatus.value,
+      cursor: reset ? null : attendanceCursor.value,
+      limit: 50,
     })
-    attendances.value = page.data
+    attendances.value = reset ? page.data : [...attendances.value, ...page.data]
+    attendanceCursor.value = page.nextCursor
+    attendanceHasMore.value = page.hasMore
     attendanceSummary.value = page.summary
   } catch (e) {
     attendanceError.value = describeError(e)
@@ -927,6 +933,10 @@ resetOnClose(staffFormOpen, attendanceFormOpen, templateFormOpen, assignFormOpen
                 <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" :title="t('admin.hr.attendance.delete')" @click="askAttendance(entry)" />
               </div>
             </div>
+          </div>
+
+          <div v-if="attendanceHasMore" class="flex justify-center">
+            <UButton color="neutral" variant="ghost" size="sm" :loading="attendanceLoading" :label="t('admin.hr.loadMore')" @click="loadAttendances(false)" />
           </div>
         </template>
 
