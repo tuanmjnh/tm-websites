@@ -976,6 +976,31 @@ export const useOperationsAdmin = () => {
   const cancelPayroll = async (id: string, revision: number, cancelReason: string, reason?: string) =>
     one<AdminPayroll>(await write(`/api/v1/admin/hr/payrolls/${id}/cancel`, 'POST', { revision, reason: cancelReason }, reason))
 
+  /* ----------------------------- self-service ---------------------------- */
+
+  /**
+   * Self-service reads carry no staff id on purpose: the server resolves the
+   * staff profile from the verified Hub subject, so one person can never ask
+   * for another person's attendance or pay.
+   */
+  const myAttendance = async (month?: string) => {
+    const payload = await plainFetch(`/api/v1/me/attendance${pageQuery({ month })}`) as {
+      data: { staff: AdminStaff, attendance: { data: AdminAttendance[], summary?: Record<string, number> } }
+    }
+    return {
+      staff: payload.data.staff,
+      data: payload.data.attendance.data,
+      summary: { all: 0, present: 0, late: 0, leave: 0, absent: 0, ...(payload.data.attendance.summary ?? {}) } as Record<string, number>,
+    }
+  }
+
+  const myPayroll = async (period?: string) => {
+    const payload = await plainFetch(`/api/v1/me/payroll${pageQuery({ period })}`) as {
+      data: { staff: AdminStaff, payroll: { data: AdminPayroll[], counts?: Record<string, number>, totals?: { netPay?: number, workDays?: number } } }
+    }
+    return { staff: payload.data.staff, data: payload.data.payroll.data }
+  }
+
   const listShiftTemplates = async (includeInactive = false) => {
     const payload = await plainFetch(`/api/v1/admin/hr/shift-templates${pageQuery({
       includeInactive: includeInactive ? 'true' : undefined,
@@ -1198,6 +1223,8 @@ export const useOperationsAdmin = () => {
     approvePayroll,
     payPayroll,
     cancelPayroll,
+    myAttendance,
+    myPayroll,
     listShiftTemplates,
     createShiftTemplate,
     updateShiftTemplate,

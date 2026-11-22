@@ -19,6 +19,10 @@ const navItems = computed(() => [
   ...gatedModuleItems('inventory'),
   ...gatedModuleItems('purchaseOrders'),
   ...gatedModuleItems('hr'),
+  // Self-service is not an entitlement: anyone whose Hub account is linked to a
+  // staff profile reads their own attendance and pay here, even without admin
+  // capabilities. The page explains the unlinked case.
+  { label: t('nav.myWork'), icon: 'i-lucide-badge-check', to: '/my-work' },
   ...gatedModuleItems('finance'),
   ...gatedModuleItems('reports'),
   ...gatedModuleItems('media'),

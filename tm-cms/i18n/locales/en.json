@@ -69,6 +69,7 @@
     "inventory": "Inventory & Stock",
     "purchaseOrders": "Purchasing & Suppliers",
     "hr": "People & Payroll",
+    "myWork": "My work",
     "finance": "Finance & Accounting",
     "reports": "Reports & Analytics",
     "media": "Media Library",
@@ -1247,6 +1248,21 @@
           "bank": "Bank transfer",
           "credit": "Store credit"
         }
+      }
+    },
+    "myWork": {
+      "title": "My work",
+      "description": "Your own attendance and payroll — each person sees only their own rows.",
+      "noProfileTitle": "No staff profile yet",
+      "noProfile": "This sign-in is not linked to a staff profile, so there is nothing to show. Ask an HR administrator to link your account, then reload.",
+      "attendanceTitle": "My attendance",
+      "attendanceEmpty": "No attendance recorded for this month.",
+      "payrollTitle": "My payroll",
+      "payrollEmpty": "No payroll for this month.",
+      "netPay": "Net pay",
+      "retry": "Try again",
+      "errors": {
+        "load": "Could not load your records. Try again."
       }
     },
     "hr": {
