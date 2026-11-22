@@ -22,6 +22,57 @@ const text = ref('')
 const reason = ref('')
 const parsed = computed(() => parseImportRows(text.value))
 
+const fileInput = ref<HTMLInputElement | null>(null)
+const dragging = ref(false)
+const dragDepth = ref(0)
+const fileName = ref<string | null>(null)
+
+async function readFile(file: File) {
+  // Only text-ish files make sense here; the dialog still parses the result.
+  try {
+    text.value = await file.text()
+    fileName.value = file.name
+  } catch {
+    // Ignore unreadable files; the textarea keeps its previous content.
+  }
+}
+
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const file = input?.files?.[0]
+  if (file) void readFile(file)
+  if (input) input.value = ''
+}
+
+function onDragEnter(event: DragEvent) {
+  event.preventDefault()
+  dragDepth.value += 1
+  dragging.value = true
+}
+
+function onDragOver(event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+}
+
+function onDragLeave(event: DragEvent) {
+  event.preventDefault()
+  dragDepth.value = Math.max(0, dragDepth.value - 1)
+  if (dragDepth.value === 0) dragging.value = false
+}
+
+function onDrop(event: DragEvent) {
+  event.preventDefault()
+  dragDepth.value = 0
+  dragging.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (file) void readFile(file)
+}
+
+function openFilePicker() {
+  fileInput.value?.click()
+}
+
 const parseMessage = computed(() => {
   if (parsed.value.error === 'invalid') return t('admin.import.invalid')
   if (parsed.value.error === 'no-rows') return t('admin.import.noRows')
@@ -59,6 +110,9 @@ watch(() => props.open, (open) => {
   if (!open) return
   text.value = ''
   reason.value = ''
+  fileName.value = null
+  dragDepth.value = 0
+  dragging.value = false
 })
 </script>
 
@@ -73,6 +127,21 @@ watch(() => props.open, (open) => {
       <div class="flex max-h-[70vh] flex-col gap-3 overflow-y-auto scroll-thin">
         <p class="text-xs text-muted">{{ hint }}</p>
         <pre class="overflow-x-auto rounded-[4px] border border-default/60 bg-elevated/40 p-2 text-xs text-muted">{{ example }}</pre>
+        <div
+          class="flex flex-col items-center justify-center gap-2 rounded-[4px] border border-dashed p-4 text-center transition-colors"
+          :class="dragging ? 'border-primary bg-primary/5' : 'border-default/60 bg-elevated/40'"
+          @dragenter="onDragEnter"
+          @dragover="onDragOver"
+          @dragleave="onDragLeave"
+          @drop="onDrop"
+        >
+          <UIcon name="i-lucide-upload" class="size-6 text-muted" />
+          <p class="text-xs text-muted">{{ t('admin.import.fileHint') }}</p>
+          <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-file-up" :label="t('admin.import.file')" @click="openFilePicker" />
+          <p v-if="fileName" class="truncate text-xs text-highlighted">{{ fileName }}</p>
+          <input ref="fileInput" type="file" accept=".csv,.json,text/csv,application/json" class="hidden" @change="onFileChange" />
+        </div>
+
         <UFormField :label="t('admin.import.source')">
           <UTextarea v-model="text" :rows="8" class="w-full" :placeholder="t('admin.import.placeholder')" />
         </UFormField>

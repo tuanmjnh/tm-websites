@@ -133,6 +133,8 @@
       "hint": "Dán một JSON array hoặc CSV có dòng tiêu đề — tối đa 500 dòng. Dòng trùng khoá sẽ cập nhật bản ghi đó; ô CSV để trống bị bỏ qua và giá trị phức tạp (như tiêu đề đa ngôn ngữ) ghi dạng JSON trong ô.",
       "source": "Dữ liệu",
       "placeholder": "Dán JSON hoặc CSV vào đây…",
+      "file": "Chọn file",
+      "fileHint": "hoặc kéo-thả file .csv / .json vào đây",
       "preview": "{count} dòng sẵn sàng",
       "invalid": "Không đọc được dữ liệu: kiểm tra JSON/CSV và giới hạn 500 dòng",
       "noRows": "Cần dòng tiêu đề và ít nhất một dòng dữ liệu",

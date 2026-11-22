@@ -23,6 +23,20 @@ const error = ref<string | null>(null)
 const money = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)} ₫`
 const asDay = (value: string | null) => (value ? value.slice(0, 10) : '—')
 
+function statusOf(e: unknown): number | null {
+  const err = e as { statusCode?: number, status?: number, response?: { status?: number } }
+  return err?.statusCode ?? err?.status ?? err?.response?.status ?? null
+}
+
+function describeError(e: unknown) {
+  const status = statusOf(e)
+  if (status === 401) return t('admin.errors.unauthorized')
+  if (status === 403) return t('admin.errors.forbidden')
+  if (!status) return t('admin.errors.network')
+  if (status === 503) return t('admin.errors.unavailable')
+  return t('admin.myWork.errors.load')
+}
+
 async function load() {
   loading.value = true
   error.value = null
@@ -32,9 +46,18 @@ async function load() {
     payroll.value = result.payroll
     staff.value = result.staff
   } catch (e) {
-    error.value = ops.errorCode(e) === 'STAFF_NOT_FOUND'
-      ? t('admin.myWork.noProfile')
-      : t('admin.myWork.payslip.notFound')
+    const code = ops.errorCode(e)
+    const status = statusOf(e)
+    // Only a real 404 (or the service's not-found codes, which are 404s)
+    // reads as "no payslip"; everything else is a load failure the operator
+    // can retry, so it keeps its message and the retry button.
+    if (status === 404 || code === 'PAYROLL_NOT_FOUND' || code === 'STAFF_NOT_FOUND') {
+      error.value = code === 'STAFF_NOT_FOUND'
+        ? t('admin.myWork.noProfile')
+        : t('admin.myWork.payslip.notFound')
+    } else {
+      error.value = describeError(e)
+    }
   } finally {
     loading.value = false
   }
