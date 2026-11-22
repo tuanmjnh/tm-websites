@@ -1334,6 +1334,8 @@
         "allStaff": "Mọi nhân sự",
         "allStatuses": "Mọi trạng thái",
         "summary": "Tất cả {all} · Có mặt {present} · Trễ {late} · Nghỉ phép {leave} · Vắng {absent}",
+        "export": "Xuất CSV",
+        "exportHint": "Xuất toàn bộ tháng theo bộ lọc đang chọn, không chỉ trang đang xem.",
         "correct": "Sửa ngày công",
         "delete": "Xoá ngày công",
         "deleteHint": "Xoá ngày công {date} của {name}? Ngày này sẽ không còn được tính lương.",

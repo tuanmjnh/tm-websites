@@ -6,6 +6,7 @@ import type {
   AdminAuditResourceType,
 } from '@tm/flow-contracts/audit-admin'
 import type { AuditEntryDocument } from '../models/audit'
+import { csvCell } from '../utils/csv'
 
 /**
  * Read side of the business audit trail.
@@ -122,12 +123,6 @@ export async function listAuditEntries(
 }
 
 const MAX_EXPORT_ROWS = 5000
-
-function csvCell(value: string | number): string {
-  let text = String(value)
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`
-  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-}
 
 export async function exportAuditCsv(
   model: Model<AuditEntryDocument>,

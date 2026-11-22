@@ -3,6 +3,7 @@ import type { Model } from 'mongoose'
 import type { OrderDocument } from '../models/order'
 import type { PaymentDocument } from '../models/payment'
 import type { PurchaseOrderDocument } from '../models/purchaseOrder'
+import { csvCell } from '../utils/csv'
 import {
   CUSTOMER_DAY_MS,
   CUSTOMER_TIME_ZONE,
@@ -400,17 +401,7 @@ export async function financeLedger(
 
 const CSV_COLUMNS = ['Ngày', 'Mã phiếu', 'Loại', 'Phương thức', 'Số tiền', 'Trạng thái', 'Chứng từ'] as const
 
-/**
- * One CSV cell, safe to open in a spreadsheet: quotes doubled, and a value that
- * starts with `=`, `+`, `-` or `@` is prefixed with an apostrophe so Excel treats
- * it as text instead of a formula. Payment codes come from operators, and a code
- * like `=HYPERLINK(...)` must never become executable in a finance export.
- */
-export function csvCell(value: string | number): string {
-  let text = String(value)
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`
-  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-}
+export { csvCell }
 
 export function ledgerToCsv(rows: LedgerRow[], range: ReportRange): string {
   const lines: string[] = [

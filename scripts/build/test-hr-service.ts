@@ -9,7 +9,9 @@ import {
   updateStaff,
 } from '../../tm-cms/server/services/staffService.js'
 import {
+  attendanceToCsv,
   deleteAttendance,
+  exportAttendancesCsv,
   listAttendances,
   upsertAttendance,
 } from '../../tm-cms/server/services/attendanceService.js'
@@ -240,6 +242,41 @@ async function integration() {
         () => listAttendances(Attendance, SITE, { month: '2026-10', cursor: 'nonsense' }),
         isHrError(422, 'ATTENDANCE_CURSOR_INVALID'),
       )
+    })
+
+    await check('the attendance export answers the filter, with staff code and name', async () => {
+      const exported = await exportAttendancesCsv(Attendance, StaffProfile, SITE, { month: '2026-10' })
+      const lines = exported.csv.trimEnd().split('\n')
+      assert.equal(exported.rows, 5)
+      assert.equal(exported.truncated, false)
+      assert.equal(lines[0], '# Chấm công 2026-10 (5 dòng)')
+      assert.equal(lines[1], 'Ngày,Mã nhân sự,Họ tên,Trạng thái,Giờ vào,Giờ ra,Kho,Ghi chú')
+      assert.equal(lines.length, 7, 'a comment line, a header line and one line per row')
+      assert.ok(lines.includes('2026-10-01,NV-001,Nguyễn Văn An (đã sửa),Trễ,08:35,17:30,,Kẹt xe'), `the staff code and name travel with the row\n${exported.csv}`)
+
+      const late = await exportAttendancesCsv(Attendance, StaffProfile, SITE, { month: '2026-10', status: 'late' })
+      assert.equal(late.rows, 1)
+      assert.ok(late.csv.includes('Nguyễn Văn An') && !late.csv.includes('2026-10-10'))
+      assert.equal((await exportAttendancesCsv(Attendance, StaffProfile, OTHER_SITE, { month: '2026-10' })).rows, 0)
+      await assert.rejects(
+        () => exportAttendancesCsv(Attendance, StaffProfile, SITE, { month: '2026-13' }),
+        isHrError(422, 'ATTENDANCE_MONTH_INVALID'),
+      )
+
+      // A note an operator typed must not become a formula when Excel opens the file,
+      // and a comma in it must stay inside one cell.
+      const guarded = attendanceToCsv([{
+        date: '2026-10-09',
+        employeeCode: 'NV-9',
+        fullName: 'Thử',
+        status: 'leave',
+        checkIn: null,
+        checkOut: null,
+        warehouseId: null,
+        note: '=HYPERLINK("x"), Nghỉ',
+      }], '2026-10')
+      assert.ok(guarded.includes(`"'=HYPERLINK(""x""), Nghỉ"`), `got: ${guarded}`)
+      assert.ok(guarded.includes(',Nghỉ phép,,,,'), 'the status is written as words, not as the stored code')
     })
 
     await check('attendance of another site cannot be recorded or listed', async () => {

@@ -8,6 +8,7 @@ import {
 } from '../models/attendance'
 import type { StaffProfileDocument } from '../models/staffProfile'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
+import { csvCell } from '../utils/csv'
 import { HrServiceError } from './staffService'
 
 /**
@@ -154,26 +155,35 @@ function parseAttendanceCursor(cursor: string): { date: string, id: Types.Object
   return { date, id: new Types.ObjectId(id) }
 }
 
+/**
+ * The month/staff/status filter both the list and the export read, so the file
+ * cannot answer a different question from the table it was downloaded from.
+ */
+function attendanceFilter(siteId: string, params: AttendanceListParams): Record<string, unknown> {
+  const filter: Record<string, unknown> = { siteId }
+  if (params.staffId) {
+    if (!Types.ObjectId.isValid(params.staffId)) {
+      throw new HrServiceError(422, 'STAFF_ID_INVALID', 'Staff id is not valid')
+    }
+    filter.staffId = params.staffId
+  }
+  if (params.month) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(params.month)) {
+      throw new HrServiceError(422, 'ATTENDANCE_MONTH_INVALID', 'Tháng không hợp lệ (YYYY-MM)')
+    }
+    filter.date = { $gte: `${params.month}-01`, $lte: `${params.month}-31` }
+  }
+  if (params.status) filter.status = params.status
+  return filter
+}
+
 export async function listAttendances(
   model: Model<AttendanceDocument>,
   siteId: string,
   params: AttendanceListParams = {},
 ): Promise<AttendanceListResult> {
   const limit = Math.min(Math.max(Math.trunc(params.limit ?? DEFAULT_ATTENDANCE_LIMIT), 1), MAX_ATTENDANCE_LIMIT)
-  const baseFilter: Record<string, unknown> = { siteId }
-  if (params.staffId) {
-    if (!Types.ObjectId.isValid(params.staffId)) {
-      throw new HrServiceError(422, 'STAFF_ID_INVALID', 'Staff id is not valid')
-    }
-    baseFilter.staffId = params.staffId
-  }
-  if (params.month) {
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(params.month)) {
-      throw new HrServiceError(422, 'ATTENDANCE_MONTH_INVALID', 'Tháng không hợp lệ (YYYY-MM)')
-    }
-    baseFilter.date = { $gte: `${params.month}-01`, $lte: `${params.month}-31` }
-  }
-  if (params.status) baseFilter.status = params.status
+  const baseFilter = attendanceFilter(siteId, params)
 
   const filter: Record<string, unknown> = { ...baseFilter }
   if (params.cursor) {
@@ -205,6 +215,95 @@ export async function listAttendances(
     nextCursor: hasMore && last ? `${last.date}|${String(last._id)}` : null,
     hasMore,
   }
+}
+
+export interface AttendanceExportRow {
+  date: string
+  employeeCode: string
+  fullName: string
+  status: AttendanceStatus
+  checkIn: string | null
+  checkOut: string | null
+  warehouseId: string | null
+  note: string
+}
+
+const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
+  present: 'Có mặt',
+  late: 'Trễ',
+  leave: 'Nghỉ phép',
+  absent: 'Vắng',
+}
+
+const EXPORT_COLUMNS = ['Ngày', 'Mã nhân sự', 'Họ tên', 'Trạng thái', 'Giờ vào', 'Giờ ra', 'Kho', 'Ghi chú'] as const
+
+/**
+ * The attendance sheet a bookkeeper opens, not a database dump: the staff code
+ * and name travel with the row (an id means nothing outside the CMS), the status
+ * is written as the words the screen shows, and the month is named once at the
+ * top so a saved file still says which period it covers.
+ */
+export function attendanceToCsv(rows: AttendanceExportRow[], label: string): string {
+  const lines: string[] = [`# Chấm công ${label} (${rows.length} dòng)`, EXPORT_COLUMNS.join(',')]
+  for (const row of rows) {
+    lines.push([
+      row.date,
+      row.employeeCode,
+      row.fullName,
+      ATTENDANCE_STATUS_LABEL[row.status] ?? row.status,
+      row.checkIn ?? '',
+      row.checkOut ?? '',
+      row.warehouseId ?? '',
+      row.note,
+    ].map(csvCell).join(','))
+  }
+  return `${lines.join('\n')}\n`
+}
+
+const MAX_EXPORT_ROWS = 5000
+
+/**
+ * The export answers the whole filter, not the page on screen: an attendance
+ * sheet that silently stopped at 50 rows would be worse than no export. Past the
+ * cap the file is truncated and says so, instead of quietly losing people.
+ */
+export async function exportAttendancesCsv(
+  model: Model<AttendanceDocument>,
+  staffModel: Model<StaffProfileDocument>,
+  siteId: string,
+  params: AttendanceListParams = {},
+): Promise<{ csv: string, rows: number, truncated: boolean }> {
+  const filter = attendanceFilter(siteId, params)
+  const records = await model.find(filter).sort({ date: -1, _id: -1 }).limit(MAX_EXPORT_ROWS + 1).lean<AttendanceRecord[]>()
+  const truncated = records.length > MAX_EXPORT_ROWS
+  const page = truncated ? records.slice(0, MAX_EXPORT_ROWS) : records
+
+  const staffIds = [...new Set(page.map(record => record.staffId))]
+    .filter(id => Types.ObjectId.isValid(id))
+    .map(id => new Types.ObjectId(id))
+  const staff = staffIds.length
+    ? await staffModel
+        .find({ siteId, _id: { $in: staffIds } })
+        .select({ employeeCode: 1, fullName: 1 })
+        .lean<{ _id: Types.ObjectId, employeeCode: string, fullName: string }[]>()
+    : []
+  const byId = new Map(staff.map(row => [String(row._id), row]))
+
+  const csv = attendanceToCsv(page.map(record => {
+    const profile = byId.get(record.staffId)
+    return {
+      date: record.date,
+      employeeCode: profile?.employeeCode ?? '',
+      fullName: profile?.fullName ?? '',
+      status: record.status,
+      checkIn: record.checkIn ?? null,
+      checkOut: record.checkOut ?? null,
+      warehouseId: record.warehouseId ?? null,
+      note: record.note ?? '',
+    }
+  }), params.month ?? 'tất cả các tháng')
+
+  return { csv, rows: page.length, truncated }
 }
 
 /**

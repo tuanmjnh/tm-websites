@@ -224,6 +224,19 @@ async function loadAttendances(reset = true) {
 
 watch([attendanceMonth, attendanceStaff, attendanceStatus], () => loadAttendances())
 
+/**
+ * The export is the filter, not the page: the server answers the whole month, so
+ * a bookkeeper does not have to press *Load more* until the table is complete.
+ */
+const attendanceExportHref = computed(() => {
+  const query = new URLSearchParams()
+  if (attendanceMonth.value) query.set('month', attendanceMonth.value)
+  if (attendanceStaff.value !== 'all') query.set('staffId', attendanceStaff.value)
+  if (attendanceStatus.value !== 'all') query.set('status', attendanceStatus.value)
+  const search = query.toString()
+  return `/api/v1/admin/hr/attendances/export.csv${search ? `?${search}` : ''}`
+})
+
 const attendanceFormOpen = ref(false)
 const attendanceSaving = ref(false)
 const attendanceFormError = ref<string | null>(null)
@@ -908,6 +921,16 @@ resetOnClose(staffFormOpen, attendanceFormOpen, templateFormOpen, assignFormOpen
             <p class="text-xs text-muted">
               {{ t('admin.hr.attendance.summary', { all: attendanceSummary.all, present: attendanceSummary.present, late: attendanceSummary.late, leave: attendanceSummary.leave, absent: attendanceSummary.absent }) }}
             </p>
+            <UButton
+              v-if="canWrite"
+              :href="attendanceExportHref"
+              icon="i-lucide-download"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              :title="t('admin.hr.attendance.exportHint')"
+              :label="t('admin.hr.attendance.export')"
+            />
           </div>
 
           <p v-if="attendanceError" class="text-xs text-error">{{ attendanceError }}</p>

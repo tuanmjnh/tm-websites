@@ -1332,6 +1332,8 @@
         "allStaff": "All staff",
         "allStatuses": "All statuses",
         "summary": "All {all} · Present {present} · Late {late} · Leave {leave} · Absent {absent}",
+        "export": "Export CSV",
+        "exportHint": "Exports the whole month under the current filters, not just the page on screen.",
         "correct": "Correct day",
         "delete": "Delete day",
         "deleteHint": "Delete {date} for {name}? The day will no longer count for payroll.",
