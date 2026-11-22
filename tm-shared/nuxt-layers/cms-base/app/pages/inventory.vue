@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminStocktake, AdminTransfer, AdminWarehouse } from '../composables/useOperationsAdmin'
+import type { AdminSerialNumber, AdminStocktake, AdminTransfer, AdminWarehouse } from '../composables/useOperationsAdmin'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -9,7 +9,7 @@ const ops = useOperationsAdmin()
 const canRead = computed(() => hasCapability('content.read'))
 const canWrite = computed(() => hasCapability('content.write'))
 
-type Tab = 'balances' | 'warehouses' | 'transfers' | 'stocktakes'
+type Tab = 'balances' | 'warehouses' | 'transfers' | 'stocktakes' | 'serials'
 const tab = ref<Tab>('balances')
 
 const { reason: auditReason, resetOnClose } = useAuditReason()
@@ -24,7 +24,8 @@ const describeError = (e: unknown) => {
   if (/_CODE_EXISTS$|_CODE_TAKEN$/.test(code)) return t('admin.inventory.errors.codeExists')
   if (/_STOCK_FAILED$/.test(code)) return t('admin.inventory.errors.stockFailed')
   if (/_SAME_WAREHOUSE$/.test(code)) return t('admin.inventory.errors.sameWarehouse')
-  if (/_LOCKED$|_NOT_DRAFT$|_NOT_IN_TRANSIT$/.test(code)) return t('admin.inventory.errors.locked')
+  if (/_LOCKED$|_NOT_DRAFT$|_NOT_IN_TRANSIT$|_NOT_IN_STOCK$|_NOT_SOLD$/.test(code)) return t('admin.inventory.errors.locked')
+  if (/_DUPLICATE$/.test(code)) return t('admin.inventory.errors.duplicate')
   if (/_PAYLOAD_INVALID$|_INVALID$|_DUPLICATE_LINE$/.test(code)) return t('admin.inventory.errors.invalid')
   const status = (e as { statusCode?: number, status?: number })?.statusCode ?? (e as { status?: number })?.status
   if (status === 401) return t('admin.errors.unauthorized')
@@ -353,6 +354,170 @@ async function submitStocktake() {
   }
 }
 
+/* ---------------------------- serial numbers ---------------------------- */
+
+const serials = ref<AdminSerialNumber[]>([])
+const serialStatus = ref('all')
+const serialQuery = ref('')
+const serialWarehouse = ref('all')
+const serialIncludeDeleted = ref(false)
+const serialCounts = ref<Record<string, number>>({ all: 0, in_stock: 0, sold: 0, returned: 0, scrapped: 0, deleted: 0 })
+const serialCursor = ref<string | null>(null)
+const serialHasMore = ref(false)
+const serialLoading = ref(false)
+const serialError = ref<string | null>(null)
+
+const serialStatusOptions = computed(() => [
+  { label: t('admin.inventory.serials.allStatuses'), value: 'all' },
+  ...['in_stock', 'sold', 'returned', 'scrapped'].map(status => ({ label: t(`admin.inventory.serials.statuses.${status}`), value: status })),
+])
+
+const serialStatusColor = (status: string) => {
+  if (status === 'in_stock') return 'success'
+  if (status === 'sold') return 'primary'
+  if (status === 'returned') return 'warning'
+  return 'error'
+}
+
+const serialItemLabel = (itemId: string) =>
+  itemOptions.value.find(option => option.value === itemId)?.label ?? itemId
+
+async function loadSerials(reset = true) {
+  if (!canRead.value) return
+  serialLoading.value = true
+  serialError.value = null
+  try {
+    const page = await ops.listSerialNumbers({
+      status: serialStatus.value === 'all' ? undefined : serialStatus.value,
+      q: serialQuery.value.trim() || undefined,
+      warehouseId: serialWarehouse.value === 'all' ? undefined : serialWarehouse.value,
+      includeDeleted: serialIncludeDeleted.value,
+      cursor: reset ? null : serialCursor.value,
+    })
+    serials.value = reset ? page.data : [...serials.value, ...page.data]
+    serialCursor.value = page.nextCursor
+    serialHasMore.value = page.hasMore
+    serialCounts.value = { ...serialCounts.value, ...page.counts }
+  } catch (e) {
+    serialError.value = describeError(e)
+  } finally {
+    serialLoading.value = false
+  }
+}
+
+watchDebounced(serialQuery, () => loadSerials(), { debounce: 300 })
+watch([serialStatus, serialWarehouse, serialIncludeDeleted], () => loadSerials())
+
+const serialFormOpen = ref(false)
+const serialSaving = ref(false)
+const serialFormError = ref<string | null>(null)
+const pickedSerialItem = ref('')
+// USelect rejects an option whose value is '', so "no warehouse" needs its own sentinel.
+const NO_WAREHOUSE = '__none__'
+const serialForm = reactive({ warehouseId: NO_WAREHOUSE, note: '', serials: '' })
+
+function openSerialCreate() {
+  Object.assign(serialForm, { warehouseId: NO_WAREHOUSE, note: '', serials: '' })
+  pickedSerialItem.value = ''
+  auditReason.value = ''
+  serialFormError.value = null
+  void searchItems('')
+  serialFormOpen.value = true
+}
+
+async function submitSerials() {
+  if (serialSaving.value) return
+  const rows = serialForm.serials.split(/[\n,;]+/).map(value => value.trim()).filter(Boolean)
+  if (!pickedSerialItem.value || !rows.length) {
+    serialFormError.value = t('admin.inventory.errors.serialIncomplete')
+    return
+  }
+  serialSaving.value = true
+  serialFormError.value = null
+  try {
+    const result = await ops.registerSerialNumbers(rows.map(serial => ({
+      serial,
+      itemId: pickedSerialItem.value,
+      warehouseId: serialForm.warehouseId === NO_WAREHOUSE ? null : serialForm.warehouseId,
+      note: serialForm.note.trim(),
+    })), auditReason.value.trim() || undefined)
+    toast.add({ title: t('admin.inventory.serials.registered', { count: result.data.length }), color: 'success' })
+    serialFormOpen.value = false
+    await loadSerials()
+  } catch (e) {
+    serialFormError.value = describeError(e)
+  } finally {
+    serialSaving.value = false
+  }
+}
+
+type SerialAction = 'sold' | 'returned' | 'scrap' | 'move' | 'hide' | 'restore'
+
+const serialActionOpen = ref(false)
+const serialActionBusy = ref(false)
+const serialActionError = ref<string | null>(null)
+const serialActionKind = ref<SerialAction>('sold')
+const serialTarget = ref<AdminSerialNumber | null>(null)
+const serialActionOrderId = ref('')
+const serialActionWarehouse = ref('')
+
+const serialActionTitle = computed(() => t(`admin.inventory.serials.actions.${serialActionKind.value}`))
+
+function askSerial(serial: AdminSerialNumber, kind: SerialAction) {
+  serialTarget.value = serial
+  serialActionKind.value = kind
+  serialActionOrderId.value = serial.orderId ?? ''
+  serialActionWarehouse.value = ''
+  auditReason.value = ''
+  serialActionError.value = null
+  serialActionOpen.value = true
+}
+
+async function runSerialAction() {
+  if (serialActionBusy.value || !serialTarget.value) return
+  const target = serialTarget.value
+  if (serialActionKind.value === 'sold' && !serialActionOrderId.value.trim()) {
+    serialActionError.value = t('admin.inventory.errors.orderRequired')
+    return
+  }
+  if (serialActionKind.value === 'move' && !serialActionWarehouse.value) {
+    serialActionError.value = t('admin.inventory.errors.warehouseRequired')
+    return
+  }
+  serialActionBusy.value = true
+  serialActionError.value = null
+  try {
+    const note = auditReason.value.trim() || undefined
+    switch (serialActionKind.value) {
+      case 'sold':
+        await ops.markSerialSold(target.id, serialActionOrderId.value.trim(), target.revision, note)
+        break
+      case 'returned':
+        await ops.markSerialReturned(target.id, target.revision, note)
+        break
+      case 'scrap':
+        await ops.scrapSerialNumber(target.id, target.revision, note)
+        break
+      case 'move':
+        await ops.moveSerialNumber(target.id, serialActionWarehouse.value, target.revision, note)
+        break
+      case 'hide':
+        await ops.deleteSerialNumber(target.id, target.revision, note)
+        break
+      case 'restore':
+        await ops.restoreSerialNumber(target.id, target.revision, note)
+        break
+    }
+    toast.add({ title: t(`admin.inventory.serials.done.${serialActionKind.value}`), color: 'success' })
+    serialActionOpen.value = false
+    await loadSerials()
+  } catch (e) {
+    serialActionError.value = describeError(e)
+  } finally {
+    serialActionBusy.value = false
+  }
+}
+
 /* ---------------------------- confirm actions --------------------------- */
 
 type ConfirmKind =
@@ -488,14 +653,15 @@ const tabs = computed(() => [
   { key: 'warehouses' as Tab, label: t('admin.inventory.tabs.warehouses'), icon: 'i-lucide-warehouse' },
   { key: 'transfers' as Tab, label: t('admin.inventory.tabs.transfers'), icon: 'i-lucide-arrow-left-right' },
   { key: 'stocktakes' as Tab, label: t('admin.inventory.tabs.stocktakes'), icon: 'i-lucide-clipboard-check' },
+  { key: 'serials' as Tab, label: t('admin.inventory.tabs.serials'), icon: 'i-lucide-barcode' },
 ])
 
 if (canRead.value) {
   await loadWarehouses()
-  await Promise.all([loadBalances(), loadTransfers(), loadStocktakes()])
+  await Promise.all([loadBalances(), loadTransfers(), loadStocktakes(), loadSerials()])
 }
 
-resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, confirmOpen)
+resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, serialFormOpen, serialActionOpen, confirmOpen)
 </script>
 
 <template>
@@ -534,6 +700,15 @@ resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, confirmOpen
           size="sm"
           :label="t('admin.inventory.stocktakes.create')"
           @click="openStocktakeCreate"
+        />
+        <UButton
+          v-if="canWrite && tab === 'serials'"
+          icon="i-lucide-plus"
+          color="primary"
+          variant="soft"
+          size="sm"
+          :label="t('admin.inventory.serials.create')"
+          @click="openSerialCreate"
         />
       </template>
 
@@ -667,7 +842,7 @@ resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, confirmOpen
         </div>
 
         <!-- Stocktakes -->
-        <div v-else class="flex flex-col gap-3">
+        <div v-else-if="tab === 'stocktakes'" class="flex flex-col gap-3">
           <div class="flex flex-wrap items-center gap-3">
             <USelect v-model="stocktakeStatus" :items="stocktakeStatusOptions" value-key="value" size="sm" class="w-full sm:w-48" />
             <p class="text-xs text-muted">{{ t('admin.inventory.stocktakes.summary', { draft: stocktakeCounts.draft, completed: stocktakeCounts.completed }) }}</p>
@@ -692,6 +867,58 @@ resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, confirmOpen
                 <UButton icon="i-lucide-x" color="error" variant="ghost" size="xs" :title="t('admin.inventory.stocktakes.cancel')" @click="askStocktake(stocktake, 'stocktake-cancel')" />
               </div>
             </div>
+          </div>
+        </div>
+        <!-- Serials / IMEI -->
+        <div v-else class="flex flex-col gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <UInput v-model="serialQuery" icon="i-lucide-search" size="sm" class="w-full sm:w-56" :placeholder="t('admin.inventory.serials.searchPlaceholder')" />
+            <USelect v-model="serialStatus" :items="serialStatusOptions" value-key="value" size="sm" class="w-full sm:w-44" />
+            <USelect v-model="serialWarehouse" :items="[{ label: t('admin.inventory.allWarehouses'), value: 'all' }, ...warehouseOptions]" value-key="value" size="sm" class="w-full sm:w-52" />
+            <UCheckbox v-model="serialIncludeDeleted" :label="t('admin.inventory.serials.includeDeleted')" />
+          </div>
+          <p class="text-xs text-muted">
+            {{ t('admin.inventory.serials.summary', { all: serialCounts.all, inStock: serialCounts.in_stock, sold: serialCounts.sold, returned: serialCounts.returned, scrapped: serialCounts.scrapped }) }}
+          </p>
+
+          <p v-if="serialError" class="text-xs text-error">{{ serialError }}</p>
+          <p v-else-if="serialLoading && !serials.length" class="text-xs text-muted">{{ t('common.loading') }}</p>
+          <p v-else-if="!serials.length" class="text-xs text-muted">{{ t('admin.inventory.serials.empty') }}</p>
+
+          <div v-else class="overflow-hidden rounded-[4px] border border-default/60">
+            <div v-for="serial in serials" :key="serial.id" class="flex flex-wrap items-center gap-3 border-b border-default/40 px-3 py-2 text-sm last:border-b-0">
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-mono text-xs font-medium text-highlighted">{{ serial.serial }}</span>
+                  <UBadge :color="serialStatusColor(serial.status)" variant="subtle" size="sm">
+                    {{ t(`admin.inventory.serials.statuses.${serial.status}`) }}
+                  </UBadge>
+                  <UBadge v-if="serial.isDeleted" color="error" variant="subtle" size="sm">{{ t('admin.inventory.warehouses.hiddenBadge') }}</UBadge>
+                </div>
+                <p class="mt-0.5 truncate text-xs text-muted">
+                  {{ serialItemLabel(serial.itemId) }} · {{ warehouseName(serial.warehouseId) }}
+                  <span v-if="serial.orderId"> · {{ t('admin.inventory.serials.order', { order: serial.orderId }) }}</span>
+                  <span> · {{ t('admin.inventory.warehouses.revision', { revision: serial.revision }) }}</span>
+                </p>
+                <p v-if="serial.note" class="mt-0.5 truncate text-xs text-muted">{{ serial.note }}</p>
+              </div>
+              <div v-if="canWrite" class="flex items-center gap-1">
+                <template v-if="serial.isDeleted">
+                  <UButton icon="i-lucide-rotate-ccw" color="neutral" variant="ghost" size="xs" :title="t('admin.inventory.serials.actions.restore')" @click="askSerial(serial, 'restore')" />
+                </template>
+                <template v-else>
+                  <UButton v-if="serial.status === 'in_stock'" icon="i-lucide-badge-check" color="primary" variant="ghost" size="xs" :title="t('admin.inventory.serials.actions.sold')" @click="askSerial(serial, 'sold')" />
+                  <UButton v-if="serial.status === 'in_stock'" icon="i-lucide-arrow-left-right" color="neutral" variant="ghost" size="xs" :title="t('admin.inventory.serials.actions.move')" @click="askSerial(serial, 'move')" />
+                  <UButton v-if="serial.status === 'sold'" icon="i-lucide-undo-2" color="warning" variant="ghost" size="xs" :title="t('admin.inventory.serials.actions.returned')" @click="askSerial(serial, 'returned')" />
+                  <UButton v-if="serial.status !== 'scrapped'" icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" :title="t('admin.inventory.serials.actions.scrap')" @click="askSerial(serial, 'scrap')" />
+                  <UButton icon="i-lucide-archive" color="error" variant="ghost" size="xs" :title="t('admin.inventory.serials.actions.hide')" @click="askSerial(serial, 'hide')" />
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="serialHasMore" class="flex justify-center">
+            <UButton color="neutral" variant="ghost" size="sm" :loading="serialLoading" :label="t('admin.inventory.loadMore')" @click="loadSerials(false)" />
           </div>
         </div>
       </div>
@@ -839,6 +1066,75 @@ resetOnClose(warehouseFormOpen, transferFormOpen, stocktakeFormOpen, confirmOpen
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="stocktakeFormOpen = false" />
           <UButton color="primary" variant="soft" :loading="stocktakeSaving" :label="t('common.save')" @click="submitStocktake" />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Serial register -->
+    <UModal v-model:open="serialFormOpen" :title="t('admin.inventory.serials.createTitle')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-xl' }">
+      <template #body>
+        <div class="flex max-h-[70vh] flex-col gap-3 overflow-y-auto scroll-thin">
+          <UFormField :label="t('admin.inventory.serials.fields.item')">
+            <USelectMenu
+              v-model="pickedSerialItem"
+              :items="itemOptions"
+              value-key="value"
+              searchable
+              class="w-full"
+              :placeholder="t('admin.inventory.transfers.pickItem')"
+              @update:search-term="searchItems"
+            />
+          </UFormField>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <UFormField :label="t('admin.inventory.serials.fields.warehouse')">
+              <USelect
+                v-model="serialForm.warehouseId"
+                :items="[{ label: t('admin.inventory.serials.noWarehouse'), value: NO_WAREHOUSE }, ...warehouseOptions]"
+                value-key="value"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField :label="t('admin.inventory.serials.fields.note')">
+              <UInput v-model="serialForm.note" class="w-full" />
+            </UFormField>
+          </div>
+          <UFormField :label="t('admin.inventory.serials.fields.serials')">
+            <UTextarea v-model="serialForm.serials" :rows="4" class="w-full" :placeholder="t('admin.inventory.serials.fields.serialsPlaceholder')" />
+          </UFormField>
+          <AuditReasonField v-model="auditReason" />
+          <p v-if="serialFormError" class="text-xs text-error">{{ serialFormError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="serialFormOpen = false" />
+          <UButton color="primary" variant="soft" :loading="serialSaving" :label="t('common.save')" @click="submitSerials" />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Serial status action -->
+    <UModal v-model:open="serialActionOpen" :title="serialActionTitle" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
+      <template #body>
+        <div class="flex flex-col gap-3">
+          <p class="text-sm text-toned">
+            <span class="font-mono">{{ serialTarget?.serial }}</span>
+            <span v-if="serialTarget"> · {{ warehouseName(serialTarget.warehouseId) }}</span>
+          </p>
+          <UFormField v-if="serialActionKind === 'sold'" :label="t('admin.inventory.serials.fields.orderId')">
+            <UInput v-model="serialActionOrderId" class="w-full" />
+          </UFormField>
+          <UFormField v-if="serialActionKind === 'move'" :label="t('admin.inventory.serials.fields.warehouse')">
+            <USelect v-model="serialActionWarehouse" :items="warehouseOptions" value-key="value" class="w-full" />
+          </UFormField>
+          <AuditReasonField v-model="auditReason" />
+          <p v-if="serialActionError" class="text-xs text-error">{{ serialActionError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="serialActionOpen = false" />
+          <UButton color="primary" variant="soft" :loading="serialActionBusy" :label="t('common.confirm')" @click="runSerialAction" />
         </div>
       </template>
     </UModal>

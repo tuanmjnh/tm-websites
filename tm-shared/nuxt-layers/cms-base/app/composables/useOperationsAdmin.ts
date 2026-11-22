@@ -105,6 +105,27 @@ export interface AdminInventoryBalance {
   updatedAt: string | null
 }
 
+export interface AdminSerialNumber {
+  id: string
+  siteId: string
+  serial: string
+  itemId: string
+  variantId: string | null
+  warehouseId: string | null
+  status: string
+  purchaseOrderId: string | null
+  orderId: string | null
+  note: string
+  receivedAt: string | null
+  soldAt: string | null
+  returnedAt: string | null
+  scrappedAt: string | null
+  revision: number
+  isDeleted: boolean
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 export interface AdminWarehouse {
   id: string
   siteId: string
@@ -668,6 +689,51 @@ export const useOperationsAdmin = () => {
   const cancelStocktake = async (id: string, reason?: string) =>
     one<{ id: string }>(await write(`/api/v1/admin/inventory/stocktakes/${id}/cancel`, 'POST', {}, reason))
 
+  /* ---------------------------- serial numbers ---------------------------- */
+
+  const listSerialNumbers = async (params: {
+    status?: string
+    itemId?: string
+    warehouseId?: string
+    q?: string
+    includeDeleted?: boolean
+    cursor?: string | null
+    limit?: number
+  } = {}) => {
+    const payload = await plainFetch(`/api/v1/admin/serial-numbers${pageQuery({
+      status: params.status,
+      itemId: params.itemId,
+      warehouseId: params.warehouseId,
+      q: params.q,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
+      cursor: params.cursor ?? undefined,
+      limit: params.limit,
+    })}`) as ListResponse<AdminSerialNumber>
+    return withMeta(payload, { all: 0, in_stock: 0, sold: 0, returned: 0, scrapped: 0, deleted: 0 })
+  }
+
+  const registerSerialNumbers = async (serials: Record<string, unknown>[], reason?: string) =>
+    (await write('/api/v1/admin/serial-numbers', 'POST', { serials }, reason)) as unknown as { data: AdminSerialNumber[] }
+
+  const markSerialSold = async (id: string, orderId: string, revision: number, reason?: string) =>
+    one<AdminSerialNumber>(await write(`/api/v1/admin/serial-numbers/${id}/mark-sold`, 'POST', { orderId, revision }, reason))
+
+  const markSerialReturned = async (id: string, revision: number, reason?: string) =>
+    one<AdminSerialNumber>(await write(`/api/v1/admin/serial-numbers/${id}/mark-returned`, 'POST', { revision }, reason))
+
+  const scrapSerialNumber = async (id: string, revision: number, reason?: string) =>
+    one<AdminSerialNumber>(await write(`/api/v1/admin/serial-numbers/${id}/scrap`, 'POST', { revision }, reason))
+
+  const moveSerialNumber = async (id: string, warehouseId: string, revision: number, reason?: string) =>
+    one<AdminSerialNumber>(await write(`/api/v1/admin/serial-numbers/${id}/move`, 'POST', { warehouseId, revision }, reason))
+
+  // These two routes read the revision from the query, like the other soft-delete pairs.
+  const deleteSerialNumber = async (id: string, revision: number, reason?: string) =>
+    one<AdminSerialNumber>(await write(`/api/v1/admin/serial-numbers/${id}?revision=${revision}`, 'DELETE', {}, reason))
+
+  const restoreSerialNumber = async (id: string, revision: number, reason?: string) =>
+    one<AdminSerialNumber>(await write(`/api/v1/admin/serial-numbers/${id}/restore?revision=${revision}`, 'POST', {}, reason))
+
   /* ------------------------------- finance ------------------------------- */
 
   const listPayments = async (params: {
@@ -1010,6 +1076,14 @@ export const useOperationsAdmin = () => {
     createStocktake,
     completeStocktake,
     cancelStocktake,
+    listSerialNumbers,
+    registerSerialNumbers,
+    markSerialSold,
+    markSerialReturned,
+    scrapSerialNumber,
+    moveSerialNumber,
+    deleteSerialNumber,
+    restoreSerialNumber,
     listPayments,
     createPayment,
     voidPayment,

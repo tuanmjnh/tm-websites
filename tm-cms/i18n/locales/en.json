@@ -1588,15 +1588,58 @@
     },
     "inventory": {
       "title": "Inventory",
-      "description": "Stock per warehouse, warehouses, transfers and stocktakes",
+      "description": "Stock per warehouse, warehouses, transfers, stocktakes and serials/IMEI",
       "permissionDenied": "You do not have permission to view inventory",
       "loadMore": "Load more",
       "allWarehouses": "All warehouses",
+      "serials": {
+        "create": "Register serials",
+        "createTitle": "Register serials / IMEI",
+        "searchPlaceholder": "Search serial...",
+        "allStatuses": "All statuses",
+        "includeDeleted": "Include hidden serials",
+        "summary": "All {all} · In stock {inStock} · Sold {sold} · Returned {returned} · Scrapped {scrapped}",
+        "empty": "No serials yet",
+        "registered": "Registered {count} serial(s)",
+        "order": "Order {order}",
+        "noWarehouse": "No warehouse assigned",
+        "actions": {
+          "sold": "Mark as sold",
+          "returned": "Mark as returned",
+          "scrap": "Mark as scrapped",
+          "move": "Move to warehouse",
+          "hide": "Hide serial",
+          "restore": "Restore serial"
+        },
+        "done": {
+          "sold": "Marked as sold",
+          "returned": "Marked as returned",
+          "scrap": "Serial scrapped",
+          "move": "Serial moved",
+          "hide": "Serial hidden",
+          "restore": "Serial restored"
+        },
+        "fields": {
+          "item": "Item",
+          "warehouse": "Warehouse",
+          "orderId": "Order code",
+          "note": "Note",
+          "serials": "Serials",
+          "serialsPlaceholder": "One serial per line, or separated by commas"
+        },
+        "statuses": {
+          "in_stock": "In stock",
+          "sold": "Sold",
+          "returned": "Returned",
+          "scrapped": "Scrapped"
+        }
+      },
       "tabs": {
         "balances": "Stock",
         "warehouses": "Warehouses",
         "transfers": "Transfers",
-        "stocktakes": "Stocktakes"
+        "stocktakes": "Stocktakes",
+        "serials": "Serials / IMEI"
       },
       "balances": {
         "searchPlaceholder": "Search SKU...",
@@ -1710,7 +1753,11 @@
         "invalid": "The payload is invalid",
         "titleRequired": "Enter a warehouse name",
         "transferIncomplete": "Pick two different warehouses and at least one line",
-        "stocktakeIncomplete": "Enter a code, pick a warehouse and add at least one line"
+        "stocktakeIncomplete": "Enter a code, pick a warehouse and add at least one line",
+        "serialIncomplete": "Pick an item and enter at least one serial",
+        "orderRequired": "Enter the order code",
+        "warehouseRequired": "Pick a destination warehouse",
+        "duplicate": "This serial is already registered"
       }
     },
     "finance": {

@@ -1590,15 +1590,58 @@
     },
     "inventory": {
       "title": "Kho & Tồn kho",
-      "description": "Tồn kho theo kho, danh mục kho, phiếu chuyển kho và kiểm kê",
+      "description": "Tồn kho theo kho, danh mục kho, phiếu chuyển kho, kiểm kê và serial/IMEI",
       "permissionDenied": "Bạn không có quyền xem tồn kho",
       "loadMore": "Tải thêm",
       "allWarehouses": "Mọi kho",
+      "serials": {
+        "create": "Đăng ký serial",
+        "createTitle": "Đăng ký serial/IMEI",
+        "searchPlaceholder": "Tìm serial...",
+        "allStatuses": "Mọi trạng thái",
+        "includeDeleted": "Gồm serial đã ẩn",
+        "summary": "Tất cả {all} · Trong kho {inStock} · Đã bán {sold} · Trả lại {returned} · Đã hủy {scrapped}",
+        "empty": "Chưa có serial nào",
+        "registered": "Đã đăng ký {count} serial",
+        "order": "Đơn {order}",
+        "noWarehouse": "Chưa gán kho",
+        "actions": {
+          "sold": "Đánh dấu đã bán",
+          "returned": "Đánh dấu trả lại",
+          "scrap": "Đánh dấu hủy",
+          "move": "Chuyển kho",
+          "hide": "Ẩn serial",
+          "restore": "Khôi phục serial"
+        },
+        "done": {
+          "sold": "Đã đánh dấu bán",
+          "returned": "Đã đánh dấu trả lại",
+          "scrap": "Đã hủy serial",
+          "move": "Đã chuyển kho serial",
+          "hide": "Đã ẩn serial",
+          "restore": "Đã khôi phục serial"
+        },
+        "fields": {
+          "item": "Sản phẩm",
+          "warehouse": "Kho",
+          "orderId": "Mã đơn hàng",
+          "note": "Ghi chú",
+          "serials": "Danh sách serial",
+          "serialsPlaceholder": "Mỗi dòng một serial, hoặc cách nhau bằng dấu phẩy"
+        },
+        "statuses": {
+          "in_stock": "Trong kho",
+          "sold": "Đã bán",
+          "returned": "Trả lại",
+          "scrapped": "Đã hủy"
+        }
+      },
       "tabs": {
         "balances": "Tồn kho",
         "warehouses": "Kho",
         "transfers": "Chuyển kho",
-        "stocktakes": "Kiểm kê"
+        "stocktakes": "Kiểm kê",
+        "serials": "Serial/IMEI"
       },
       "balances": {
         "searchPlaceholder": "Tìm SKU...",
@@ -1712,7 +1755,11 @@
         "invalid": "Dữ liệu không hợp lệ",
         "titleRequired": "Nhập tên kho",
         "transferIncomplete": "Chọn hai kho khác nhau và ít nhất một dòng hàng",
-        "stocktakeIncomplete": "Nhập mã, chọn kho và ít nhất một dòng hàng"
+        "stocktakeIncomplete": "Nhập mã, chọn kho và ít nhất một dòng hàng",
+        "serialIncomplete": "Chọn sản phẩm và nhập ít nhất một serial",
+        "orderRequired": "Nhập mã đơn hàng",
+        "warehouseRequired": "Chọn kho đích",
+        "duplicate": "Serial này đã được đăng ký"
       }
     },
     "finance": {
