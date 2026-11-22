@@ -47,6 +47,45 @@ export interface AdminOrder {
   updatedAt: string | null
 }
 
+export interface AdminShipment {
+  id: string
+  siteId: string
+  code: string
+  orderId: string
+  status: string
+  carrier: string
+  trackingNumber: string
+  items: { itemId: string | null, variantId: string | null, itemName: string, sku: string, quantity: number, serials: string[] }[]
+  shippingAddress: Record<string, string>
+  note: string
+  shippedAt: string | null
+  deliveredAt: string | null
+  cancelledAt: string | null
+  revision: number
+  isDeleted: boolean
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface AdminOrderReturn {
+  id: string
+  siteId: string
+  code: string
+  orderId: string
+  status: string
+  items: { itemId: string | null, variantId: string | null, itemName: string, sku: string, quantity: number, unitPrice: number, reason: string }[]
+  refundAmount: number
+  refundMethod: string
+  note: string
+  approvedAt: string | null
+  refundedAt: string | null
+  cancelledAt: string | null
+  revision: number
+  isDeleted: boolean
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 export interface AdminInventoryBalance {
   id: string
   siteId: string
@@ -293,6 +332,46 @@ export const useOperationsAdmin = () => {
   const restoreOrder = async (id: string, revision: number, reason?: string) =>
     one<AdminOrder>(await write(`/api/v1/admin/commerce/orders/${id}/restore?revision=${revision}`, 'POST', {}, reason))
 
+  /* --------------------------- fulfillment ------------------------------ */
+
+  const listShipments = async (params: { orderId: string, status?: string, includeDeleted?: boolean, limit?: number }) => {
+    const payload = await plainFetch(`/api/v1/admin/shipments${pageQuery({
+      orderId: params.orderId,
+      status: params.status,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
+      limit: params.limit ?? 100,
+    })}`) as ListResponse<AdminShipment>
+    return withMeta(payload, { all: 0, deleted: 0 })
+  }
+
+  const createShipment = async (body: Record<string, unknown>, reason?: string) =>
+    one<AdminShipment>(await write('/api/v1/admin/shipments', 'POST', body, reason))
+
+  const updateShipment = async (id: string, body: Record<string, unknown>, reason?: string) =>
+    one<AdminShipment>(await write(`/api/v1/admin/shipments/${id}/update`, 'POST', body, reason))
+
+  const deleteShipment = async (id: string, revision: number, reason?: string) =>
+    one<AdminShipment>(await write(`/api/v1/admin/shipments/${id}?revision=${revision}`, 'DELETE', {}, reason))
+
+  const listOrderReturns = async (params: { orderId: string, status?: string, includeDeleted?: boolean, limit?: number }) => {
+    const payload = await plainFetch(`/api/v1/admin/order-returns${pageQuery({
+      orderId: params.orderId,
+      status: params.status,
+      includeDeleted: params.includeDeleted ? 'true' : undefined,
+      limit: params.limit ?? 100,
+    })}`) as ListResponse<AdminOrderReturn>
+    return withMeta(payload, { all: 0, deleted: 0 })
+  }
+
+  const createOrderReturn = async (body: Record<string, unknown>, reason?: string) =>
+    one<AdminOrderReturn>(await write('/api/v1/admin/order-returns', 'POST', body, reason))
+
+  const updateOrderReturn = async (id: string, body: Record<string, unknown>, reason?: string) =>
+    one<AdminOrderReturn>(await write(`/api/v1/admin/order-returns/${id}/update`, 'POST', body, reason))
+
+  const deleteOrderReturn = async (id: string, revision: number, reason?: string) =>
+    one<AdminOrderReturn>(await write(`/api/v1/admin/order-returns/${id}?revision=${revision}`, 'DELETE', {}, reason))
+
   /* ------------------------------- catalog ------------------------------- */
 
   const listItemOptions = async (q = '') => {
@@ -492,6 +571,14 @@ export const useOperationsAdmin = () => {
     updateOrder,
     deleteOrder,
     restoreOrder,
+    listShipments,
+    createShipment,
+    updateShipment,
+    deleteShipment,
+    listOrderReturns,
+    createOrderReturn,
+    updateOrderReturn,
+    deleteOrderReturn,
     listItemOptions,
     listInventories,
     listWarehouses,

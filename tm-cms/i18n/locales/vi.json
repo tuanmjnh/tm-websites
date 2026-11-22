@@ -1154,7 +1154,82 @@
         "conflict": "Đơn đã bị thay đổi ở phiên khác, hãy tải lại",
         "customerMissing": "Không tìm thấy khách hàng của đơn",
         "codeExists": "Mã đơn này đã được dùng",
-        "itemsRequired": "Đơn cần ít nhất một dòng hàng"
+        "itemsRequired": "Đơn cần ít nhất một dòng hàng",
+        "shipmentExceeds": "Số lượng gửi vượt quá phần còn lại của đơn",
+        "returnExceeds": "Số lượng trả vượt quá phần còn lại của đơn",
+        "shipmentLinesEmpty": "Chọn ít nhất một dòng để gửi",
+        "returnLinesEmpty": "Chọn ít nhất một dòng để trả"
+      },
+      "fulfillment": {
+        "title": "Giao hàng & trả hàng · {code}",
+        "tabs": {
+          "shipments": "Vận đơn",
+          "returns": "Trả hàng"
+        },
+        "emptyShipments": "Đơn này chưa có vận đơn",
+        "emptyReturns": "Đơn này chưa có phiếu trả hàng"
+      },
+      "shipments": {
+        "create": "Tạo vận đơn",
+        "createTitle": "Tạo vận đơn",
+        "editTitle": "Sửa vận đơn",
+        "created": "Đã tạo vận đơn",
+        "updated": "Đã cập nhật vận đơn",
+        "deleted": "Đã ẩn vận đơn",
+        "carrier": "Đơn vị vận chuyển",
+        "tracking": "Mã vận đơn",
+        "note": "Ghi chú",
+        "status": "Trạng thái",
+        "lines": "Dòng gửi",
+        "noLines": "Đơn đã giao hết, không còn dòng để gửi",
+        "remaining": "còn {count}",
+        "ship": "Gửi hàng",
+        "deliver": "Đã giao",
+        "cancel": "Huỷ vận đơn",
+        "delete": "Ẩn vận đơn",
+        "deleteHint": "Ẩn vận đơn {code}? Tồn kho đã xuất sẽ được hoàn lại.",
+        "itemsCount": "{count} dòng",
+        "statuses": {
+          "draft": "Nháp",
+          "shipped": "Đã gửi",
+          "in_transit": "Đang giao",
+          "delivered": "Đã giao",
+          "returned": "Đã trả",
+          "cancelled": "Đã huỷ"
+        }
+      },
+      "returns": {
+        "create": "Tạo phiếu trả",
+        "createTitle": "Tạo phiếu trả hàng",
+        "editTitle": "Sửa phiếu trả",
+        "created": "Đã tạo phiếu trả hàng",
+        "updated": "Đã cập nhật phiếu trả hàng",
+        "deleted": "Đã ẩn phiếu trả hàng",
+        "status": "Trạng thái",
+        "refundAmount": "Số tiền hoàn",
+        "refundMethod": "Hình thức hoàn",
+        "note": "Ghi chú",
+        "lines": "Dòng trả",
+        "noLines": "Đơn đã trả hết, không còn dòng để trả",
+        "quantity": "SL trả",
+        "approve": "Duyệt",
+        "refund": "Đã hoàn tiền",
+        "cancel": "Huỷ phiếu",
+        "delete": "Ẩn phiếu trả",
+        "deleteHint": "Ẩn phiếu trả {code}? Số lượng đã trả sẽ được trừ lại khỏi đơn.",
+        "itemsCount": "{count} dòng",
+        "statuses": {
+          "draft": "Nháp",
+          "approved": "Đã duyệt",
+          "refunded": "Đã hoàn tiền",
+          "cancelled": "Đã huỷ"
+        },
+        "methods": {
+          "cash": "Tiền mặt",
+          "card": "Thẻ",
+          "bank": "Chuyển khoản",
+          "credit": "Ghi có"
+        }
       }
     },
     "inventory": {

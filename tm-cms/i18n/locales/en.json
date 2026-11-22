@@ -1152,7 +1152,82 @@
         "conflict": "The order changed elsewhere; reload before saving",
         "customerMissing": "The order customer was not found",
         "codeExists": "This order code is already in use",
-        "itemsRequired": "An order needs at least one line"
+        "itemsRequired": "An order needs at least one line",
+        "shipmentExceeds": "The shipped quantity exceeds what remains on the order",
+        "returnExceeds": "The returned quantity exceeds what remains on the order",
+        "shipmentLinesEmpty": "Pick at least one line to ship",
+        "returnLinesEmpty": "Pick at least one line to return"
+      },
+      "fulfillment": {
+        "title": "Fulfillment · {code}",
+        "tabs": {
+          "shipments": "Shipments",
+          "returns": "Returns"
+        },
+        "emptyShipments": "This order has no shipments yet",
+        "emptyReturns": "This order has no returns yet"
+      },
+      "shipments": {
+        "create": "Create shipment",
+        "createTitle": "Create shipment",
+        "editTitle": "Edit shipment",
+        "created": "Shipment created",
+        "updated": "Shipment updated",
+        "deleted": "Shipment hidden",
+        "carrier": "Carrier",
+        "tracking": "Tracking number",
+        "note": "Note",
+        "status": "Status",
+        "lines": "Lines to ship",
+        "noLines": "Everything is shipped; there is no line left",
+        "remaining": "{count} left",
+        "ship": "Ship",
+        "deliver": "Delivered",
+        "cancel": "Cancel shipment",
+        "delete": "Hide shipment",
+        "deleteHint": "Hide shipment {code}? The stock it moved is put back.",
+        "itemsCount": "{count} lines",
+        "statuses": {
+          "draft": "Draft",
+          "shipped": "Shipped",
+          "in_transit": "In transit",
+          "delivered": "Delivered",
+          "returned": "Returned",
+          "cancelled": "Cancelled"
+        }
+      },
+      "returns": {
+        "create": "Create return",
+        "createTitle": "Create order return",
+        "editTitle": "Edit order return",
+        "created": "Order return created",
+        "updated": "Order return updated",
+        "deleted": "Order return hidden",
+        "status": "Status",
+        "refundAmount": "Refund amount",
+        "refundMethod": "Refund method",
+        "note": "Note",
+        "lines": "Lines to return",
+        "noLines": "Nothing left to return on this order",
+        "quantity": "Return qty",
+        "approve": "Approve",
+        "refund": "Mark refunded",
+        "cancel": "Cancel return",
+        "delete": "Hide return",
+        "deleteHint": "Hide return {code}? Its returned quantity is removed from the order again.",
+        "itemsCount": "{count} lines",
+        "statuses": {
+          "draft": "Draft",
+          "approved": "Approved",
+          "refunded": "Refunded",
+          "cancelled": "Cancelled"
+        },
+        "methods": {
+          "cash": "Cash",
+          "card": "Card",
+          "bank": "Bank transfer",
+          "credit": "Store credit"
+        }
       }
     },
     "inventory": {
