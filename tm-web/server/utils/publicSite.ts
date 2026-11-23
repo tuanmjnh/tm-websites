@@ -51,9 +51,14 @@ export async function readPublicSite(event: H3Event, locale: string): Promise<Pu
       for (const raw of items) {
         const item = raw as {
           link?: { type?: unknown, target?: unknown }
-          children?: Array<{ link?: { type?: unknown, target?: unknown } }>
+          children?: Array<{ link?: { type?: unknown, target?: unknown }, children?: Array<{ link?: { type?: unknown, target?: unknown } }> }>
         }
-        const links = [item.link, ...(Array.isArray(item.children) ? item.children.map(child => child.link) : [])]
+        const children = Array.isArray(item.children) ? item.children : []
+        const links = [
+          item.link,
+          ...children.map(child => child.link),
+          ...children.flatMap(child => (Array.isArray(child.children) ? child.children.map(grandChild => grandChild.link) : [])),
+        ]
         for (const link of links) {
           if (typeof link?.target !== 'string') continue
           const key = link.target.trim()

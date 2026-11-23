@@ -298,7 +298,7 @@ async function integration() {
       await deleteMenu(Menu, SITE, menu.id, 2, meta)
     })
 
-    await check('children are stored, counted and returned in order', async () => {
+    await check('children and their children are stored, counted and returned in order', async () => {
       const menu = await createMenu(Menu, SITE, { key: 'menu-nested', name: 'Menu nested' }, meta)
       const saved = await updateMenu(Menu, SITE, menu.id, {
         revision: 1,
@@ -307,7 +307,14 @@ async function integration() {
             label: { vi: 'Trang sức', en: 'Jewellery' },
             link: { type: 'url', target: '/trang-suc' },
             children: [
-              { label: { vi: 'Nhẫn', en: 'Rings' }, link: { type: 'url', target: '/trang-suc/nhan' } },
+              {
+                label: { vi: 'Nhẫn', en: 'Rings' },
+                link: { type: 'url', target: '/trang-suc/nhan' },
+                children: [
+                  { label: { vi: 'Nhẫn vàng' }, link: { type: 'url', target: '/trang-suc/nhan/vang' } },
+                  { label: { vi: 'Nhẫn bạc' }, link: { type: 'url', target: '/trang-suc/nhan/bac' } },
+                ],
+              },
               { label: { vi: 'Dây chuyền' }, link: { type: 'url', target: '/trang-suc/day-chuyen' } },
             ],
           },
@@ -315,12 +322,18 @@ async function integration() {
         ],
       }, meta)
 
-      assert.equal(saved.itemCount, 4, 'the count includes children, so the list view is not misleading')
+      assert.equal(saved.itemCount, 6, 'every nested row counts, so the list view is not misleading')
       assert.deepEqual(saved.items[0]!.children.map(child => child.link.target), ['/trang-suc/nhan', '/trang-suc/day-chuyen'])
+      assert.deepEqual(
+        saved.items[0]!.children[0]!.children.map(grandChild => grandChild.link.target),
+        ['/trang-suc/nhan/vang', '/trang-suc/nhan/bac'],
+      )
+      assert.deepEqual(saved.items[0]!.children[1]!.children, [], 'a child without links reads back empty')
       assert.deepEqual(saved.items[1]!.children, [], 'an item without children reads back with an empty list')
 
       const loaded = await getMenu(Menu, SITE, menu.id)
       assert.equal(loaded.items[0]!.children.length, 2)
+      assert.equal(loaded.items[0]!.children[0]!.children.length, 2)
 
       await assert.rejects(
         () => updateMenu(Menu, SITE, menu.id, {
@@ -328,11 +341,19 @@ async function integration() {
           items: [{
             label: { vi: 'Sâu' },
             link: { type: 'url', target: '/a' },
-            children: [{ label: { vi: 'Cấp 2' }, link: { type: 'url', target: '/b' }, children: [{ label: { vi: 'Cấp 3' }, link: { type: 'url', target: '/c' } }] }],
+            children: [{
+              label: { vi: 'Cấp 2' },
+              link: { type: 'url', target: '/b' },
+              children: [{
+                label: { vi: 'Cấp 3' },
+                link: { type: 'url', target: '/c' },
+                children: [{ label: { vi: 'Cấp 4' }, link: { type: 'url', target: '/d' } }],
+              }],
+            }],
           }],
         }, meta),
         isMenuError(422, 'MENU_DEPTH_LIMIT'),
-        'one level of children is the limit',
+        'three levels is the limit, so a fourth is refused',
       )
 
       await assert.rejects(

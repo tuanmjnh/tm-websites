@@ -452,6 +452,12 @@
       "childCount": "{count} mục con",
       "childCreateTitle": "Thêm mục con",
       "childEditTitle": "Sửa mục con",
+      "grandChildCreateTitle": "Thêm mục cấp 3",
+      "grandChildEditTitle": "Sửa mục cấp 3",
+      "addGrandChild": "Thêm mục cấp 3",
+      "removeGrandChild": "Xoá mục cấp 3",
+      "promoteGrandChild": "Chuyển lên cấp 2",
+      "grandChildCount": "{count} mục cấp 3",
       "parentOf": "Nằm trong: {name}",
       "dragHint": "Kéo một dòng để đổi thứ tự, hoặc dùng nút mũi tên.",
       "errors": {

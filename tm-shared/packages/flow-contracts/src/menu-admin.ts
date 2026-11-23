@@ -7,9 +7,10 @@ import { z } from 'zod'
  * A menu is an immutable `key` (`main`, `footer`) plus an ordered list of items.
  * An item carries a per-locale label and one link target: a content key, a
  * content-category key, a product-category key, or a path/URL the editor typed.
- * A top-level item may also carry children, which is the one nesting level a
- * storefront header can render as a dropdown. Only ids and keys are stored, so a
- * renamed record changes its own title without rewriting every menu.
+ * A top-level item may carry children, and a child may carry its own children:
+ * that is the two nesting levels a mega-menu header needs (a column heading whose
+ * rows are links). Only ids and keys are stored, so a renamed record changes its
+ * own title without rewriting every menu.
  *
  * `product-category` exists because the two category stores are different: a
  * content category renders at `/danh-muc/<slug>` and a product category at
@@ -44,10 +45,17 @@ const MenuLinkSchema = z.object({
   target: z.string().trim().max(MENU_TARGET_MAX),
 })
 
-/** A row inside a dropdown: the same label and link, but no children of its own. */
-export const AdminMenuChildItemSchema = z.object({
+/** A row at the deepest level: label and link, no children. */
+export const AdminMenuGrandChildItemSchema = z.object({
   label: LabelSchema,
   link: MenuLinkSchema,
+})
+
+export type AdminMenuGrandChildItem = z.infer<typeof AdminMenuGrandChildItemSchema>
+
+/** A row inside a dropdown: it may own one more level of links. */
+export const AdminMenuChildItemSchema = AdminMenuGrandChildItemSchema.extend({
+  children: z.array(AdminMenuGrandChildItemSchema).max(MENU_MAX_CHILDREN).default([]),
 })
 
 export type AdminMenuChildItem = z.infer<typeof AdminMenuChildItemSchema>
@@ -55,7 +63,8 @@ export type AdminMenuChildItem = z.infer<typeof AdminMenuChildItemSchema>
 export const AdminMenuItemSchema = AdminMenuChildItemSchema.extend({
   /**
    * Always present so the editor never has to tell "no children" from "not
-   * loaded"; one level only, which the model enforces when it normalizes a save.
+   * loaded"; two levels at most, which the model enforces when it normalizes a
+   * save.
    */
   children: z.array(AdminMenuChildItemSchema).max(MENU_MAX_CHILDREN).default([]),
 })
@@ -115,12 +124,19 @@ export function emptyMenuItem(): AdminMenuItem {
 }
 
 export function emptyMenuChildItem(): AdminMenuChildItem {
+  return { label: { vi: '', en: '' }, link: { type: 'url', target: '/' }, children: [] }
+}
+
+export function emptyMenuGrandChildItem(): AdminMenuGrandChildItem {
   return { label: { vi: '', en: '' }, link: { type: 'url', target: '/' } }
 }
 
-/** Top-level rows plus their children: what `itemCount` reports. */
+/** Top-level rows plus every nested row: what `itemCount` reports. */
 export function countMenuItems(items: readonly AdminMenuItem[]): number {
-  return items.reduce((total, item) => total + 1 + (item.children?.length ?? 0), 0)
+  return items.reduce(
+    (total, item) => total + 1 + (item.children ?? []).reduce((sum, child) => sum + 1 + (child.children?.length ?? 0), 0),
+    0,
+  )
 }
 
 /**

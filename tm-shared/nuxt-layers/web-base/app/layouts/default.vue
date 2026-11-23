@@ -96,6 +96,18 @@ onMounted(() => hydrateCart())
                 >
                   {{ child.label }}
                 </NuxtLink>
+                <!-- A mega-menu column heading: its rows are one level deeper. -->
+                <ul v-if="child.children?.length" class="mb-1 ml-2 border-l border-default/50 pl-2">
+                  <li v-for="grandChild in child.children" :key="`${grandChild.to}:${grandChild.label}`">
+                    <NuxtLink
+                      :to="grandChild.to"
+                      class="block rounded-[4px] px-2 py-1.5 text-xs font-normal transition-colors hover:bg-elevated/70 hover:text-primary"
+                      :class="isActive(grandChild.to) ? 'text-primary' : 'text-muted'"
+                    >
+                      {{ grandChild.label }}
+                    </NuxtLink>
+                  </li>
+                </ul>
               </li>
             </ul>
           </div>

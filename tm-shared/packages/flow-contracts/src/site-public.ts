@@ -25,9 +25,16 @@ export const PublicMenuLeafSchema = z.object({
 
 export type PublicMenuLeaf = z.infer<typeof PublicMenuLeafSchema>
 
-/** A header row may own a dropdown; those rows are leaves. */
-export const PublicMenuItemSchema = PublicMenuLeafSchema.extend({
+/** A row inside a dropdown: a column heading whose own rows are leaves. */
+export const PublicMenuChildSchema = PublicMenuLeafSchema.extend({
   children: z.array(PublicMenuLeafSchema).default([]),
+})
+
+export type PublicMenuChild = z.infer<typeof PublicMenuChildSchema>
+
+/** A header row owns a dropdown of children, each of which may own links. */
+export const PublicMenuItemSchema = PublicMenuLeafSchema.extend({
+  children: z.array(PublicMenuChildSchema).default([]),
 })
 
 export type PublicMenuItem = z.infer<typeof PublicMenuItemSchema>
@@ -182,19 +189,42 @@ export function toPublicMenu(
     return { label: { vi, en }, href }
   }
 
+  const childrenOfRaw = (raw: unknown): unknown[] => {
+    const record = readRecord(raw)
+    return Array.isArray(record.children) ? (record.children as unknown[]) : []
+  }
+
+  // Level 2: a row inside a dropdown, plus the links it owns at level 3.
+  const toChild = (raw: unknown): PublicMenuChild | null => {
+    const leaf = toLeaf(raw)
+    if (!leaf) return null
+    const children: PublicMenuLeaf[] = []
+    for (const childRaw of childrenOfRaw(raw)) {
+      const childLeaf = toLeaf(childRaw)
+      if (childLeaf) children.push(childLeaf)
+    }
+    return { ...leaf, children }
+  }
+
+  // Level 1: a header row whose dropdown rows may each own links.
+  const toItem = (raw: unknown): PublicMenuItem | null => {
+    const leaf = toLeaf(raw)
+    if (!leaf) return null
+    const children: PublicMenuChild[] = []
+    for (const childRaw of childrenOfRaw(raw)) {
+      const child = toChild(childRaw)
+      if (child) children.push(child)
+    }
+    return { ...leaf, children }
+  }
+
   const rawItems = Array.isArray(doc.items) ? doc.items : []
   const items: PublicMenuItem[] = []
 
   for (const raw of rawItems) {
-    const leaf = toLeaf(raw)
-    if (!leaf) continue
-
-    const rawChildren = Array.isArray(readRecord(raw).children) ? (readRecord(raw).children as unknown[]) : []
-    const children = rawChildren
-      .map(child => toLeaf(child))
-      .filter((child): child is PublicMenuLeaf => child !== null)
-
-    items.push({ ...leaf, children })
+    const item = toItem(raw)
+    if (!item) continue
+    items.push(item)
   }
 
   return { key, items }

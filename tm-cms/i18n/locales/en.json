@@ -449,6 +449,12 @@
       "childCount": "{count} children",
       "childCreateTitle": "Add a child item",
       "childEditTitle": "Edit child item",
+      "grandChildCreateTitle": "Add a level-3 item",
+      "grandChildEditTitle": "Edit level-3 item",
+      "addGrandChild": "Add a level-3 item",
+      "removeGrandChild": "Remove the level-3 item",
+      "promoteGrandChild": "Move up to level 2",
+      "grandChildCount": "{count} level-3 items",
       "parentOf": "Inside: {name}",
       "dragHint": "Drag a row to reorder it, or use the arrows.",
       "errors": {

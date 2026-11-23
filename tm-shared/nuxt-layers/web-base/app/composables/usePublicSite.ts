@@ -62,7 +62,15 @@ export const usePublicSite = () => {
         label: publicMenuLabel(item.label, locale.value),
         to: item.href,
         children: item.children
-          .map(child => ({ label: publicMenuLabel(child.label, locale.value), to: child.href }))
+          .map(child => ({
+            label: publicMenuLabel(child.label, locale.value),
+            to: child.href,
+            // A mega-menu column heading owns its own links; a plain child row
+            // has none and renders as one link.
+            children: (child.children ?? [])
+              .map(grandChild => ({ label: publicMenuLabel(grandChild.label, locale.value), to: grandChild.href }))
+              .filter(grandChild => grandChild.label),
+          }))
           .filter(child => child.label),
       }))
       .filter(link => link.label)
@@ -92,11 +100,14 @@ export const usePublicSite = () => {
   ])
 
   const headerLinks = computed(() => menuLinks(PUBLIC_MENU_HEADER) ?? fallbackHeaderLinks.value)
-  /** The footer is a flat column, so a parent's children are listed after it. */
-  const footerLinks = computed<PublicSiteLink[]>(() => {
-    const links = menuLinks(PUBLIC_MENU_FOOTER) ?? fallbackFooterLinks.value
-    return links.flatMap(link => [link, ...(link.children ?? [])])
-  })
+  /** The footer is a flat column, so every nested row follows its parent. */
+  const flattenLinks = (links: PublicSiteLink[]): PublicSiteLink[] => links.flatMap(link => [
+    link,
+    ...flattenLinks(link.children ?? []),
+  ])
+
+  const footerLinks = computed<PublicSiteLink[]>(() =>
+    flattenLinks(menuLinks(PUBLIC_MENU_FOOTER) ?? fallbackFooterLinks.value))
 
   return {
     publicSite,

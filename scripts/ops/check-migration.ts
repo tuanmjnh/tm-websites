@@ -176,25 +176,29 @@ try {
     if (v2Count < legacyCount) crmGaps.push(label)
   }
 
-  // Menus: informational, because the counts are not 1:1. `migrate:menus` merges
-  // the three legacy footer blocks into one `footer` menu, and a menu nested
-  // deeper than one dropdown level (the header) stays unmigrated rather than
-  // being truncated. So v2 holds fewer documents than the legacy collection even
-  // when every importable row landed.
-  const legacyMenus = await connection.collection('menus').countDocuments({ ...tenantMatcher, isDeleted: { $ne: true } })
+  // Menus: the counts are not 1:1 in either direction. `migrate:menus` merges the
+  // three legacy footer blocks into one `footer` menu, so the expected v2 count is
+  // the legacy one minus those blocks plus the merged menu; every other legacy
+  // menu, including the 3-level header, lands under its own key.
+  const legacyMenuRows = await connection.collection('menus')
+    .find({ ...tenantMatcher, isDeleted: { $ne: true } }, { projection: { position: 1 } })
+    .toArray()
+  const legacyMenus = legacyMenuRows.length
+  const footerMenus = legacyMenuRows.filter(row => legacyText(row.position) === 'footer').length
+  const expectedMenus = legacyMenus - footerMenus + (footerMenus > 0 ? 1 : 0)
   const v2Menus = await connection.collection('site_menus').countDocuments({ siteId })
   if (legacyMenus || v2Menus) {
-    const ok = v2Menus >= legacyMenus
-    console.log(`  ${ok ? '✅' : '⚠️ '} menus                  legacy ${String(legacyMenus).padStart(4)}  v2 ${String(v2Menus).padStart(4)}${ok ? '' : '  — 3 legacy footer menus become one, and a menu nested 3 levels deep (header) is not imported'}`)
+    const ok = v2Menus >= expectedMenus
+    console.log(`  ${ok ? '✅' : '⚠️ '} menus                  legacy ${String(legacyMenus).padStart(4)}  v2 ${String(v2Menus).padStart(4)}${ok ? `  — ${footerMenus} footer menu(s) merged into one` : `  — expected ${expectedMenus} (${footerMenus} footer menu(s) merged into one)`}`)
   }
 
   console.log(failed ? '\n❌ parity: the database holds fewer migrated rows than the legacy source\n' : '\n✅ parity: every migrated domain holds at least what the source does\n')
   // "Migrated domain" is not "every domain": menus have no importer yet, so a reader
   // must not take the line above as a clean bill for the whole database.
   const pending: string[] = []
-  // The legacy footer blocks are merged and the 3-level header is refused, so a
-  // smaller v2 count is expected; `migrate:menus` names each skipped menu.
-  if (v2Menus < legacyMenus) pending.push('menus (merged footer; the 3-level header needs a model decision)')
+  // The legacy footer blocks are merged, so a smaller v2 count is expected;
+  // `migrate:menus` names each menu it skipped and why.
+  if (v2Menus < expectedMenus) pending.push('menus (run migrate:menus; it names each skipped menu)')
   pending.push(...crmGaps)
   if (missingCompanyFields.length) pending.push('company identity fields')
   if (pending.length) {

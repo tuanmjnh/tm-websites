@@ -37,9 +37,13 @@ export class MenuInvariantError extends Error {
   }
 }
 
-export interface MenuChildItem {
+export interface MenuGrandChildItem {
   label: { vi: string, en: string }
   link: { type: (typeof MENU_LINK_TYPES)[number], target: string }
+}
+
+export interface MenuChildItem extends MenuGrandChildItem {
+  children: MenuGrandChildItem[]
 }
 
 export interface MenuItem extends MenuChildItem {
@@ -101,7 +105,7 @@ function assertTarget(type: MenuChildItem['link']['type'], target: string, path:
  * second top-level item, `2.1` for its first child), so an error names the row
  * that has to change instead of a flat index.
  */
-function normalizeLeaf(input: unknown, path: string): { label: { vi: string, en: string }, link: MenuChildItem['link'] } {
+function normalizeLeaf(input: unknown, path: string): MenuGrandChildItem {
   const source = readRecord(input)
   const label = readRecord(source.label)
   const link = readRecord(source.link)
@@ -134,6 +138,29 @@ function normalizeLeaf(input: unknown, path: string): { label: { vi: string, en:
   return { label: { vi, en }, link: { type, target } }
 }
 
+/**
+ * One row inside a dropdown, plus the links it may own. `path` is the position
+ * the editor sees (`2.1` for a child, `2.1.3` for its child), so an error names
+ * the row that has to change instead of a flat index.
+ */
+function normalizeChild(input: unknown, path: string): AdminMenuChildItem {
+  const record = readRecord(input)
+  const leaf = normalizeLeaf(record, path)
+  const rawChildren = Array.isArray(record.children) ? record.children : []
+  if (rawChildren.length > MENU_MAX_CHILDREN) {
+    throw new MenuInvariantError('MENU_CHILDREN_LIMIT', `Item ${path}: a menu item holds at most ${MENU_MAX_CHILDREN} children`)
+  }
+  const children = rawChildren.map((grandChild, grandIndex) => {
+    const grandPath = `${path}.${grandIndex + 1}`
+    const grandRecord = readRecord(grandChild)
+    if (Array.isArray(grandRecord.children) && grandRecord.children.length > 0) {
+      throw new MenuInvariantError('MENU_DEPTH_LIMIT', `Item ${grandPath}: menus support two levels of children`)
+    }
+    return normalizeLeaf(grandRecord, grandPath)
+  })
+  return { ...leaf, children }
+}
+
 export function normalizeMenuItem(input: unknown, index = 0): AdminMenuItem {
   const source = readRecord(input)
   const path = String(index + 1)
@@ -144,14 +171,8 @@ export function normalizeMenuItem(input: unknown, index = 0): AdminMenuItem {
     throw new MenuInvariantError('MENU_CHILDREN_LIMIT', `Item ${path}: a menu item holds at most ${MENU_MAX_CHILDREN} children`)
   }
 
-  const children: AdminMenuChildItem[] = rawChildren.map((child, childIndex) => {
-    const childPath = `${path}.${childIndex + 1}`
-    const record = readRecord(child)
-    if (Array.isArray(record.children) && record.children.length > 0) {
-      throw new MenuInvariantError('MENU_DEPTH_LIMIT', `Item ${childPath}: menus support one level of children`)
-    }
-    return normalizeLeaf(record, childPath)
-  })
+  const children: AdminMenuChildItem[] = rawChildren.map((child, childIndex) =>
+    normalizeChild(child, `${path}.${childIndex + 1}`))
 
   return { ...leaf, children }
 }
@@ -159,7 +180,10 @@ export function normalizeMenuItem(input: unknown, index = 0): AdminMenuItem {
 export function normalizeMenuItems(input: unknown): AdminMenuItem[] {
   const list = Array.isArray(input) ? input : []
   const items = list.map((entry, index) => normalizeMenuItem(entry, index))
-  const total = items.reduce((sum, item) => sum + 1 + item.children.length, 0)
+  const total = items.reduce(
+    (sum, item) => sum + 1 + item.children.reduce((count, child) => count + 1 + child.children.length, 0),
+    0,
+  )
   if (total > MENU_MAX_ITEMS) {
     throw new MenuInvariantError('MENU_ITEMS_LIMIT', `A menu holds at most ${MENU_MAX_ITEMS} items`)
   }
@@ -182,10 +206,19 @@ const LinkMongooseSchema = new Schema(
   { _id: false },
 )
 
+const MenuGrandChildItemMongooseSchema = new Schema(
+  {
+    label: { type: LabelMongooseSchema, required: true },
+    link: { type: LinkMongooseSchema, required: true },
+  },
+  { _id: false },
+)
+
 const MenuChildItemMongooseSchema = new Schema(
   {
     label: { type: LabelMongooseSchema, required: true },
     link: { type: LinkMongooseSchema, required: true },
+    children: { type: [MenuGrandChildItemMongooseSchema], default: () => [] },
   },
   { _id: false },
 )

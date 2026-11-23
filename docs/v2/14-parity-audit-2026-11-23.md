@@ -120,7 +120,7 @@ counterpart**:
 | --- | --- | --- |
 | catalog | `items` 241 → `catalog_items` 241 | migrated |
 | content | `contents` 8 → `content` 9 | migrated |
-| menus | `menus` 9, `menu_items` 164 | `site_menus` 6 (5 single-level menus + merged footer; header not imported) |
+| menus | `menus` 9, `menu_items` 164 | `site_menus` 7 (includes the header under `main`; three footer menus merged into one) |
 | company identity | `companies` 1 (name, slogan, address[], phone, email, taxCode, social, bankAccounts, openingHours, mapEmbed, gallery, seo) | `settings.company` = `{name, names}` only |
 | CRM | `customers` 3, `customer_segments` 2 | segments migrated 2/2; `crm_customers` **0** (blocked on the Hub identity map, §8) |
 | inventory | `inventories` 49, `warehouses` 3 | migrated 49/49, 3/3 |
@@ -152,7 +152,7 @@ gaps are a consequence of the module gaps in §2, not an independent gap.
 | Content, catalog, categories, media, menus (schema), settings, redirects | Yes, migrated and served |
 | CRM, commerce, inventory, purchasing, finance, HR | Schema and API present, **no migrated data** |
 | Company/system configuration (`system_configs`, `system_datas`, `companies`) | Missing target model and migration |
-| Menus data | Imported except the 3-level header menu (§8) |
+| Menus data | Imported, header and all three levels (§8) |
 | Attributes, keywords, options, document templates, shipping carriers | Missing module |
 | POS, supplier portal, finance report detail, dashboard aggregates | Missing module |
 | Provider settings (`connect`, `mail`, `shipping`) | Missing module (Hub owns connections; mail is env-driven) |
@@ -163,7 +163,7 @@ gaps are a consequence of the module gaps in §2, not an independent gap.
 
 1. **Migrate the missing domains' data**, starting with `site_menus` and `settings.company`: both are
    user-visible on the storefront today and need no new model. `settings.company` landed
-   (`migrate:company`, see §8); `site_menus` is imported except the 3-level header, see §8. Then
+   (`migrate:company`, see §8); `site_menus` is imported in full, including the header, see §8. Then
    CRM/inventory/purchasing (`migrate:crm`, landed — customers still need a reviewed Hub identity map).
 2. **`system_configs` / `system_datas`**: decide the target shape (either a `settings` extension or a
    dedicated collection). A key-by-key read of the 69 config rows shows most are out of scope rather
@@ -203,14 +203,21 @@ the dev server showed the new value, so the staleness was cache, not data.
 `check:migration` now reports the company field count and the menu gap, and prints a separate
 `still to import:` line so the final `✅ parity` line is not read as full coverage.
 
-### Menus — importer landed; only the 3-level header is left
+### Menus — imported, header included
 
-Two contract gaps had to be closed before any menu could be imported.
+Three contract gaps had to be closed before any menu could be imported.
 
 **Caps.** `MENU_MAX_ITEMS` was **30 per menu** and `MENU_MAX_CHILDREN` **10 per parent**, while
-`sen-tuan` holds **76** items in the header menu and **56** in product-categories (one parent with
-20 children). The caps are now **120 / 30** — still bounded, but a real site's navigation fits. The
-gate that asserted the old numbers now reads the constants, so the test moves with the contract.
+`sen-tuan` holds **56** items in product-categories (one parent with 20 children) and a header whose
+rows reach three levels. The caps are now **120 / 30** — still bounded, but a real site's navigation
+fits. The gate that asserted the old numbers now reads the constants, so the test moves with the
+contract.
+
+**Depth.** A dropdown row could not own rows of its own, so the legacy header (5 top rows → 11
+dropdown rows → 34 links) had nowhere to go. The model now stores two nesting levels below an item
+(item → child → link), the editor edits the third level with its own add/edit/remove/move/promote
+buttons, and the storefront header renders a column heading with its links indented under it. A
+fourth level is refused with `MENU_DEPTH_LIMIT`.
 
 **Product-category links.** Legacy items are 130 `item_category` links, but v2's `category` link
 resolves against content categories only (`/danh-muc/<slug>`), and product categories render at
@@ -219,37 +226,33 @@ validation, service reference check (live catalog category only), `link-options`
 list), public href, and the editor's type select + label. It is a reference, so renaming a category
 does not break the menu.
 
-With those, `pnpm migrate:menus --site <customerId> [--apply]` imports everything that fits the
-one-dropdown-level model:
+With those, `pnpm migrate:menus --site <customerId> [--apply]` imports all nine legacy menus:
 
 | Legacy | v2 | Result |
 | --- | --- | --- |
+| `header-menu` | `main` | 50/50 rows (5 top, 6+5 dropdown, 34 links) — the key the storefront header reads |
 | `product-categories` | `product-categories` | 47/56 items (8 point at categories that were deleted before the import) |
 | `post-categories` | `post-categories` | 5/5 |
 | `featured-products` | `featured-products` | 2/3 |
 | `footer-products` + `footer-news` + `footer-resources` | `footer` | 14 items merged, the storefront renders one flat footer column |
 | `customer-sidebar` | `customer-sidebar` | 5 visible rows (1 hidden legacy row dropped) |
 | `supplier-sidebar` | `supplier-sidebar` | 3/3 |
-| `header-menu` | — | **not imported**: 3 nesting levels (5 → 11 → 60 rows) |
 
 Targets resolve through the migrated data, not through the old URL text: a `page` item becomes a
 `content` link via the legacy content id → localized slug → migrated content key, `post_category`
 becomes a `category` link via the slug, `item_category` becomes a `product-category` link via
 `catalog_categories.legacyId`, and a `url` item is kept only when it is a rooted path or an absolute
 URL (a dead dynamic route such as `/customer/orders/[id]` is dropped and counted). Re-running the
-command updates the same six documents; `check:migration` reflects the merge and names what is left.
+command updates the same seven documents and never duplicates them; `check:migration` accounts for
+the footer merge and shows 7/7.
 
-Runtime check (`tm-web` on `:4006`, `sen-tuan`): `GET /api/public/site?locale=vi` returns the six
-menus, and every item resolves — e.g. `product-categories` → `Nội thất gia đình
-/categories/noi-that-gia-dinh` with four children at `/categories/noi-that-gia-dinh-phong-ngu`, and
-`footer` → 14 flat links. No item came back without an `href`. Gates: `test:menus` 16 checks,
-`test:web-site` 27 checks, `pnpm verify:all` **67/67 in 339.9s**.
-
-What still needs an owner decision is the **header**: v2 renders one dropdown level and the model
-refuses a child of a child (`MENU_DEPTH_LIMIT`). Either allow a second nesting level (contract,
-model normalization, editor rows, storefront dropdown) or split/flatten the header. Until then the
-storefront header keeps its fallback navigation, while the footer and both sidebars come from the
-database.
+Runtime check (`tm-web` on `:4006`, `sen-tuan`): `GET /api/public/site?locale=vi` returns all seven
+menus and 126 rows with no missing `href`. `main` comes back as the header the site renders:
+`Sản phẩm → /san-pham` with six product-category rows, each carrying its own links
+(`Chăn ga gối đệm /categories/chan-ga-goi-dem` → `Chăn /categories/chan-ga-goi-dem-chan`, …);
+`footer` is 14 flat links. The server-rendered home page already contains a level-3 `href`, so the
+nested dropdown reaches HTML and not only the JSON. Gates: `test:menus` 16 checks, `test:web-site`
+27 checks, `pnpm verify:all` **67/67**.
 
 ### CRM, inventory, purchasing, quotations, payments — migrated
 

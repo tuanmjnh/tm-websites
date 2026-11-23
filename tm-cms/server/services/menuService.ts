@@ -5,13 +5,13 @@ import type {
   AdminMenuSummary,
   MenuLinkOptions,
 } from '@tm/flow-contracts/menu-admin'
-import { MENU_LINK_OPTIONS_LIMIT } from '@tm/flow-contracts/menu-admin'
+import { MENU_LINK_OPTIONS_LIMIT, countMenuItems } from '@tm/flow-contracts/menu-admin'
 import type { AuditActor, AuditEntryDocument } from '../models/audit'
 import type { CatalogCategoryDocument } from '../models/catalog'
 import type { CategoryDocument } from '../models/category'
 import type { ContentDocument } from '../models/content'
 import {
-  type MenuChildItem,
+  type MenuGrandChildItem,
   type MenuDocument,
   type MenuItem,
   MenuInvariantError,
@@ -131,18 +131,24 @@ export async function listMenuLinkOptions(
 interface PositionedItem {
   /** Top-level position, kept so an old client still understands `details`. */
   index: number
-  /** `2` or `2.1`: the row the editor sees. */
+  /** `2`, `2.1` or `2.1.3`: the row the editor sees. */
   path: string
-  item: MenuChildItem
+  item: MenuGrandChildItem
 }
 
-/** Every row of a menu, children included, with the position it renders at. */
+/**
+ * Every row of a menu, at all three levels, with the position it renders at:
+ * `2` for a top-level row, `2.1` for its child, `2.1.3` for that child's child.
+ */
 function flattenItems(items: MenuItem[]): PositionedItem[] {
   const rows: PositionedItem[] = []
   items.forEach((item, index) => {
     rows.push({ index, path: String(index + 1), item })
     item.children.forEach((child, childIndex) => {
       rows.push({ index, path: `${index + 1}.${childIndex + 1}`, item: child })
+      child.children.forEach((grandChild, grandIndex) => {
+        rows.push({ index, path: `${index + 1}.${childIndex + 1}.${grandIndex + 1}`, item: grandChild })
+      })
     })
   })
   return rows
@@ -213,7 +219,7 @@ function iso(value: Date | null | undefined): string | null {
   return value ? new Date(value).toISOString() : null
 }
 
-function leafOf(item: MenuChildItem) {
+function leafOf(item: MenuGrandChildItem) {
   return {
     label: { vi: item.label?.vi ?? '', en: item.label?.en ?? '' },
     link: { type: item.link?.type, target: item.link?.target ?? '' },
@@ -223,7 +229,10 @@ function leafOf(item: MenuChildItem) {
 function itemsOf(record: MenuRecord) {
   return (record.items ?? []).map(item => ({
     ...leafOf(item),
-    children: (item.children ?? []).map(child => leafOf(child)),
+    children: (item.children ?? []).map(child => ({
+      ...leafOf(child),
+      children: (child.children ?? []).map(grandChild => leafOf(grandChild)),
+    })),
   }))
 }
 
@@ -236,7 +245,7 @@ export function toAdminMenu(record: MenuRecord): AdminMenu {
     name: record.name,
     revision: record.revision,
     items,
-    itemCount: items.reduce((total, item) => total + 1 + item.children.length, 0),
+    itemCount: countMenuItems(items),
     createdAt: iso(record.createdAt),
     updatedAt: iso(record.updatedAt),
   }

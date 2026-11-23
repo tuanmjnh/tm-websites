@@ -27,10 +27,14 @@ import {
  *   category key (`catalog_categories.legacyId`),
  * - `url` → `url` link, kept only when it is a rooted path or an absolute URL.
  *
+ * The legacy header (`position: header`, slug `header-menu`) becomes the `main`
+ * menu, which is the key the storefront header reads; three legacy levels map to
+ * the item → child → grandchild rows the model now stores.
+ *
  * What it refuses, and says so instead of truncating:
  *
- * - a menu nested deeper than the model allows (v2 renders one dropdown level;
- *   `sen-tuan`'s header is three levels deep, 5 → 11 → 60 rows),
+ * - a menu nested deeper than the model allows (three levels, so a fourth has no
+ *   place to go),
  * - a menu over the item or per-parent children cap,
  * - an item whose record was not migrated, or whose target is a dead dynamic
  *   route such as `/customer/orders/[id]`.
@@ -146,6 +150,12 @@ try {
     itemsByMenu.set(menuId, [...(itemsByMenu.get(menuId) ?? []), item])
   }
 
+  const countDraft = (items: DraftItem[]): number =>
+    items.reduce(
+      (sum, item) => sum + 1 + item.children.reduce((count, child) => count + 1 + child.children.length, 0),
+      0,
+    )
+
   const sorted = (rows: Raw[]) => [...rows].sort((left, right) => legacyNumber(left.sort) - legacyNumber(right.sort))
   const childrenOf = (rows: Raw[], parentId: string) =>
     sorted(rows.filter(row => row.pid && String(row.pid) === parentId))
@@ -233,37 +243,41 @@ try {
       continue
     }
 
+    // `maxDepth` counts a top-level row as 1, so the model holds 3.
     const depth = maxDepth(rows)
-    if (depth > 1) {
-      results.push({ legacySlug: slug, skipped: `${depth} nesting levels (v2 renders one dropdown level)` })
+    if (depth > 3) {
+      results.push({ legacySlug: slug, skipped: `${depth} nesting levels (v2 holds three: item, child, link)` })
       continue
     }
 
-    const items: DraftItem[] = []
-    let skippedItems = 0
-    let hiddenItems = 0
-    let roleItems = 0
-    for (const top of topsOf(rows)) {
-      const converted = convert(top)
-      if (converted.hidden) { hiddenItems++; continue }
-      if (!converted.item) { skippedItems++; continue }
-      if (converted.roleScoped) roleItems++
-      const children: DraftItem[] = []
-      for (const childRow of childrenOf(rows, String(top._id))) {
-        const child = convert(childRow)
-        if (child.hidden) { hiddenItems++; continue }
-        if (!child.item) { skippedItems++; continue }
-        if (child.roleScoped) roleItems++
-        children.push(child.item)
+    // Legacy rows are a parent pointer, so the tree is rebuilt level by level:
+    // level 0 is a top-level row, 1 a dropdown row, 2 a link inside a column.
+    const stats = { skipped: 0, hidden: 0, role: 0 }
+    const buildTree = (parentId: string | null, level: number): DraftItem[] => {
+      const source = parentId === null ? topsOf(rows) : childrenOf(rows, parentId)
+      const built: DraftItem[] = []
+      for (const row of source) {
+        const converted = convert(row)
+        if (converted.hidden) { stats.hidden++; continue }
+        if (!converted.item) { stats.skipped++; continue }
+        if (converted.roleScoped) stats.role++
+        let children: DraftItem[] = []
+        if (level < 2) {
+          children = buildTree(String(row._id), level + 1)
+          if (children.length > MENU_MAX_CHILDREN) {
+            stats.skipped += children.length
+            children = []
+          }
+        }
+        built.push({ ...converted.item, children })
       }
-      if (children.length > MENU_MAX_CHILDREN) {
-        skippedItems += children.length
-        continue
-      }
-      items.push({ ...converted.item, children })
+      return built
     }
 
-    const total = items.reduce((sum, item) => sum + 1 + item.children.length, 0)
+    const items = buildTree(null, 0)
+    const { skipped: skippedItems, hidden: hiddenItems, role: roleItems } = stats
+
+    const total = countDraft(items)
     if (!items.length) {
       results.push({ legacySlug: slug, skipped: 'no item had a migrated target' })
       continue
@@ -280,13 +294,15 @@ try {
 
     results.push({
       legacySlug: slug,
-      plan: { key: slug, name, items, skippedItems, hiddenItems, roleItems },
+      // The storefront header reads the `main` key, so the legacy header menu has
+      // to land there; every other menu keeps its legacy slug.
+      plan: { key: legacyText(menu.position) === 'header' ? 'main' : slug, name, items, skippedItems, hiddenItems, roleItems },
     })
   }
 
   if (footerParts.length) {
     const items = footerParts.flatMap(part => part.items)
-    const total = items.reduce((sum, item) => sum + 1 + item.children.length, 0)
+    const total = countDraft(items)
     const stats = footerParts.reduce(
       (acc, part) => ({
         skipped: acc.skipped + part.stats.skipped,
@@ -319,7 +335,7 @@ try {
   console.log('\n  plan')
   for (const entry of planned) {
     const plan = entry.plan
-    const parts = [`key ${plan.key}`, `${plan.items.reduce((sum, item) => sum + 1 + item.children.length, 0)} items`]
+    const parts = [`key ${plan.key}`, `${countDraft(plan.items)} items`]
     if (plan.merged) parts.push(`merged from ${plan.merged.join(', ')}`)
     if (plan.skippedItems) parts.push(`${plan.skippedItems} item(s) skipped (no migrated target)`)
     if (plan.hiddenItems) parts.push(`${plan.hiddenItems} hidden legacy row(s) dropped`)
@@ -330,10 +346,7 @@ try {
     console.log(`    ⏭️  ${entry.legacySlug} skipped: ${entry.skipped}`)
   }
 
-  const totalItems = planned.reduce(
-    (sum, entry) => sum + entry.plan.items.reduce((count, item) => count + 1 + item.children.length, 0),
-    0,
-  )
+  const totalItems = planned.reduce((sum, entry) => sum + countDraft(entry.plan.items), 0)
   console.log(`  ${planned.length} menu(s), ${totalItems} item(s) planned, ${refused.length} skipped`)
 
   if (!apply) {
@@ -359,9 +372,6 @@ try {
     if (found < keys.length) failed = true
   }
 
-  if (refused.some(entry => entry.legacySlug === 'header-menu')) {
-    console.log('  ℹ️  the header menu stays unmigrated until the nesting decision lands (see 14-parity-audit)')
-  }
 } finally {
   await closeDatabaseConnections()
 }
