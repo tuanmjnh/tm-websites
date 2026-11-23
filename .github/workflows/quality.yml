@@ -64,3 +64,41 @@ jobs:
           name: gates-log
           path: .devlogs/gates.log
           if-no-files-found: ignore
+
+  # `verify:all` never builds: `validate:build:cms` and `validate:build:web` are opt-in gates that
+  # need a production build, so a Nuxt/Nitro build break used to merge green. This job runs both
+  # halves for both apps, which is what an operator does before a deploy.
+  builds:
+    name: Production builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      TM_CUSTOMER_ID: sentuan
+      TM_SITE_ID: sentuan
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the CMS and validate its output
+        run: |
+          pnpm build:cms
+          pnpm validate:build:cms
+
+      - name: Build the storefront and validate its output
+        run: |
+          pnpm build:web
+          pnpm validate:build:web
