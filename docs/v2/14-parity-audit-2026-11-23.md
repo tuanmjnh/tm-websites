@@ -166,8 +166,14 @@ gaps are a consequence of the module gaps in §2, not an independent gap.
    (`migrate:company`, see §8); `site_menus` is blocked on the item-limit decision in §8. Then
    CRM/inventory/purchasing (`migrate:crm`, landed — customers still need a reviewed Hub identity map).
 2. **`system_configs` / `system_datas`**: decide the target shape (either a `settings` extension or a
-   dedicated collection) before writing the migration, because 186 rows of typed configuration
-   currently have no home.
+   dedicated collection). A key-by-key read of the 69 config rows shows most are out of scope rather
+   than missing: `jwt_secret`/`jwt_refresh_secret`, `cloudinary_*`, `firebase_*`, `vapid_*`,
+   `revalidate_secret`, `*_mongo_uri`/`*_mongodb_name` and `history_*` are credentials or
+   infrastructure and must not be copied into a site document. The 4 identity keys
+   (`site_name`, `site_description`, `content_locales`, `enabled_modules`) are already imported by
+   `migrate:settings`; what remains is a small set of UI/business toggles (`site_footer_text`,
+   `copyright`, `website_url`, `keywords`, `pagination_type`, `maintenance_mode`, `allow_*` flags)
+   with no v2 field — a settings-model decision, not a migration gap.
 3. **Menus/attributes/keywords/options/document templates**: fill the module gaps listed in §2.
 4. **POS, supplier portal, finance report detail, dashboard aggregates**: the remaining feature work
    from the parity matrix (`COM-01`, `POR-02`, `FIN-02`, `SYS-01`).
@@ -210,6 +216,20 @@ children (v2 menus support one nesting level). Handling that needs a decision, n
 Until then `migrate:*` has no menus importer, `site_menus` stays empty, and the storefront returns
 `menus: []`.
 
+A second, independent blocker surfaced while reading the link types: **a menu item cannot point at a
+product category.** Legacy items are 130 `item_category` links, but v2's `category` link resolves
+against content categories only (`listMenuLinkOptions` reads `CategoryDocument`, and
+`publicMenuHref` renders `/danh-muc/<slug>`), while migrated product categories live at
+`/categories/<fullPath>`. So even the 7 menus that fit the item caps cannot carry their product links
+today. Two ways out, both a change to the menu contract, not to the importer:
+
+- add a `product-category` link type (contract, model validation, service reference check, public
+  DTO/href, storefront and editor) — a reference that follows a rename, or
+- store a literal `/categories/<fullPath>` URL — no model change, but a renamed category leaves a
+  dead link in the menu.
+
+Either one plus the nesting/limit decision above is what `migrate:menus` needs.
+
 ### CRM, inventory, purchasing, quotations, payments — migrated
 
 `pnpm migrate:crm --site <customerId> [--apply] [--identity-map <file>]` copies
@@ -244,6 +264,9 @@ quotation line `importPrice`/`supplierId`).
 
 `check:migration` now counts these domains, so `✅ parity` covers them; a gap prints under
 `still to import:`.
+
+After these changes `pnpm verify:all` on the isolated `tm-websites-audit` database is green again:
+**67/67 gates in 342.7s** (exit 0), and `pnpm typecheck` / `pnpm lint` exit 0.
 
 ### Customers — need a reviewed Hub identity map, not an email guess
 
