@@ -254,6 +254,27 @@ menus and 126 rows with no missing `href`. `main` comes back as the header the s
 nested dropdown reaches HTML and not only the JSON. Gates: `test:menus` 16 checks, `test:web-site`
 27 checks, `pnpm verify:all` **67/67**.
 
+### Dashboard — real business counts
+
+The control centre listed Hub installation facts only, so `SYS-01`'s "real scoped aggregates" had
+no surface at all. `GET /api/v1/admin/dashboard/summary` now answers six counts from the site's own
+collections: content published/draft, catalog published/draft, orders still open
+(`pending|processing|shipped`), quotations still open (`draft|sent`), live customers and inventory
+balances at or below their own threshold (available = on hand − reserved, and a threshold of `0`
+means "not tracked", not "always low"). Every query is site-scoped and skips soft-deleted rows; the
+route reuses the `content.read` capability and answers `no-store`.
+
+The CMS front page renders those as a "Business activity" card grid, each row linking to its module;
+a module the customer is not entitled to (catalog, orders, inventory) is left out instead of shown as
+zero, and a failed read leaves the rest of the dashboard working.
+
+Evidence: `pnpm test:dashboard` (new gate) — 6 checks in a disposable database: empty site answers
+zero, status filters, soft deletes excluded, available quantity vs. threshold, and another site
+contributing nothing. Lint and typecheck pass. A live read against `sen-tuan` returns
+`content 8 published / 1 draft`, `catalog 229 / 3`, `orders 0 open`, `quotations 2 open`,
+`customers 0`, `inventory 0 low`, which matches the collections the migration left there. The card
+grid itself was not clicked through in a browser.
+
 ### Storefront settings — footer, website, hours, social
 
 The remaining legacy configuration that is *content* rather than infrastructure now has a

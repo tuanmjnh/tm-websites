@@ -99,6 +99,23 @@
     "restricted": "Restricted",
     "restrictedHint": "Your account does not have permission to view this section.",
     "viewAll": "View all",
+    "business": {
+      "title": "Business activity",
+      "description": "Real counts for this site, read from the site's own database",
+      "unavailable": "Business counts could not be loaded. Reload the page to retry.",
+      "content": "Published content",
+      "contentHint": "{draft} drafts",
+      "catalog": "Products on sale",
+      "catalogHint": "{draft} draft products",
+      "orders": "Orders to handle",
+      "ordersHint": "Pending, processing or shipped",
+      "quotations": "Quotations waiting",
+      "quotationsHint": "Draft or sent to the customer",
+      "customers": "Customers",
+      "customersHint": "Active records",
+      "inventory": "Items running low",
+      "inventoryHint": "Available stock at or below its threshold"
+    },
     "stats": {
       "installation": "Installation",
       "members": "Members",

@@ -105,6 +105,23 @@
       "roles": "Vai trò",
       "modules": "Phân hệ được cấp"
     },
+    "business": {
+      "title": "Hoạt động kinh doanh",
+      "description": "Số liệu thực tế trên site này, đọc từ cơ sở dữ liệu của chính site",
+      "unavailable": "Không tải được số liệu kinh doanh. Thử tải lại trang.",
+      "content": "Nội dung đã đăng",
+      "contentHint": "{draft} bản nháp",
+      "catalog": "Sản phẩm đang bán",
+      "catalogHint": "{draft} sản phẩm nháp",
+      "orders": "Đơn cần xử lý",
+      "ordersHint": "Chờ xác nhận, đang xử lý hoặc đang giao",
+      "quotations": "Báo giá chờ phản hồi",
+      "quotationsHint": "Nháp hoặc đã gửi khách",
+      "customers": "Khách hàng",
+      "customersHint": "Hồ sơ đang hoạt động",
+      "inventory": "Mặt hàng sắp hết",
+      "inventoryHint": "Tồn khả dụng dưới ngưỡng cảnh báo"
+    },
     "members": {
       "title": "Thành viên ứng dụng",
       "description": "Người dùng có vai trò trong bản cài đặt CMS này"

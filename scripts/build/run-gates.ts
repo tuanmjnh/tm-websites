@@ -53,6 +53,9 @@ const DOMAIN_GATES = [
   // The importers' --apply half: upserts, key/slug collisions and revision
   // preservation, driven through the real CLIs on a disposable fixture.
   'test:migrate-apply',
+  // The dashboard's own business counts: status filters, soft deletes and site
+  // isolation, so the numbers on the front page cannot be invented.
+  'test:dashboard',
   'test:media',
   'test:audit',
   'test:audit-write',
