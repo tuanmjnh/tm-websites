@@ -37,9 +37,13 @@ export const useHub = () => {
 
   const toProxyUrl = (path: string) => `/api/hub/${path.replace(/^\/+/, '')}`
 
+  // The generated route list makes `$fetch`'s typed-route overloads recurse without bound;
+  // the plain signature is used for every call in this composable.
+  const plainFetch = $fetch as unknown as <T>(url: string, options?: Record<string, unknown>) => Promise<T>
+
   const refresh = async () => {
     try {
-      await $fetch('/api/auth/refresh', { method: 'POST' })
+      await plainFetch('/api/auth/refresh', { method: 'POST' })
       return true
     } catch {
       return false
@@ -48,10 +52,7 @@ export const useHub = () => {
 
   const hubFetch = async <T>(path: string, options: HubFetchOptions = {}): Promise<T> => {
     const { retryOnUnauthorized = true, headers, ...requestOptions } = options
-    // A dynamic proxy URL has no route literal to infer, so `$fetch`'s typed-route
-    // overloads recurse without bound; use the plain signature instead.
-    const plainFetch = $fetch as unknown as (url: string, options?: Record<string, unknown>) => Promise<T>
-    const request = () => plainFetch(toProxyUrl(path), {
+    const request = () => plainFetch<T>(toProxyUrl(path), {
       ...requestOptions,
       headers,
     })
@@ -69,7 +70,7 @@ export const useHub = () => {
   const fetchSession = async () => {
     loading.value = true
     try {
-      const payload = await $fetch<SessionPayload>('/api/auth/session')
+      const payload = await plainFetch<SessionPayload>('/api/auth/session')
       user.value = payload?.success && payload.data ? payload.data : null
     } catch {
       user.value = null
@@ -90,7 +91,7 @@ export const useHub = () => {
     totpRequired.value = false
     loading.value = true
     try {
-      const payload = await $fetch<SessionPayload>('/api/auth/login', {
+      const payload = await plainFetch<SessionPayload>('/api/auth/login', {
         method: 'POST',
         body: credentials,
       })
@@ -115,7 +116,7 @@ export const useHub = () => {
     loginError.value = null
     loading.value = true
     try {
-      const payload = await $fetch<SessionPayload>('/api/auth/totp', {
+      const payload = await plainFetch<SessionPayload>('/api/auth/totp', {
         method: 'POST',
         body: { code },
       })
@@ -143,7 +144,7 @@ export const useHub = () => {
 
   const logout = async () => {
     try {
-      await $fetch('/api/auth/logout', { method: 'POST' })
+      await plainFetch('/api/auth/logout', { method: 'POST' })
     } catch {
       // Local state is cleared even if the BFF session teardown fails.
     } finally {

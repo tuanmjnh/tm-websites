@@ -16,6 +16,10 @@ export interface ApiResponseOptions<T> {
     totals?: Record<string, number>
     /** Folder names the current admin list is grouped by (media library). */
     folders?: string[]
+    /** Number of duplicate groups an admin report found (CRM). */
+    groups?: number
+    /** Customer the portal list was resolved to (own orders). */
+    customerId?: string
   }
 }
 
