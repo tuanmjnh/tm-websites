@@ -803,7 +803,15 @@ try {
         { name: { vi: 'Chất liệu' }, value: { vi: 'Cao su non' } },
       ],
       variants: [
-        { sku: 'DEM-1M6', basePrice: 2000000, salePrice: 1800000, stock: 4, name: { vi: '1m6' } },
+        {
+          sku: 'DEM-1M6',
+          basePrice: 2000000,
+          salePrice: 1800000,
+          stock: 4,
+          name: { vi: '1m6' },
+          // The storefront builds its size/colour chips from these pairs.
+          attributes: [{ name: { vi: 'Kích thước' }, value: { vi: '1m6' } }],
+        },
         { sku: 'DEM-1M8', basePrice: 2400000, stock: 0, name: { vi: '1m8' } },
       ],
     })
@@ -811,6 +819,7 @@ try {
     assert.equal(created.variants.length, 2)
     assert.equal(created.variants[0]?.sku, 'DEM-1M6')
     assert.equal(created.variants[0]?.salePrice, 1800000)
+    assert.deepEqual(created.variants[0]?.attributes, [{ name: { vi: 'Kích thước' }, value: { vi: '1m6' } }])
     assert.equal(created.attributes[0]?.value.vi, 'Cao su non')
 
     const listed = await listCatalogItems(CatalogItem, CatalogCategory, SITE, { q: 'dem-bien-the' })
@@ -845,12 +854,24 @@ try {
       attributes: before.attributes,
       variants: [
         { sku: 'DEM-1M6', basePrice: 2000000, stock: 5, isActive: true, manageStock: true },
-        { sku: 'DEM-2M', basePrice: 3000000, stock: 2, isActive: false, manageStock: true },
+        {
+          sku: 'DEM-2M',
+          basePrice: 3000000,
+          stock: 2,
+          isActive: false,
+          manageStock: true,
+          attributes: [
+            { name: { vi: 'Kích thước' }, value: { vi: '2m' } },
+            { name: { vi: 'Màu sắc' }, value: { vi: 'Xám' } },
+          ],
+        },
       ],
     })
     assert.equal(updated.variants.length, 2)
     assert.equal(updated.variants[1]?.sku, 'DEM-2M')
     assert.equal(updated.variants[1]?.isActive, false)
+    assert.deepEqual(updated.variants[1]?.attributes.map(attribute => attribute.value.vi), ['2m', 'Xám'])
+    assert.deepEqual(updated.variants[0]?.attributes, [], 'a variant without options keeps none')
     assert.equal(updated.attributes.length, 1)
     assert.equal(updated.revision, before.revision + 1)
   })

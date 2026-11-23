@@ -278,8 +278,13 @@ does not hold; a product with no options keeps the plain variant list. The chips
 
 Verified over HTTP on `:4006` with real data: `GET /api/public/products/dem-kc-titalium` returns 25
 variants each carrying `attributes`, and the server-rendered page contains both groups, two pressed
-chips and disabled chips for missing combinations. Chip clicks were not exercised in a browser, and
-the CMS still has no option editor — options arrive from the migration.
+chips and disabled chips for missing combinations. Chip clicks were not exercised in a browser.
+
+The CMS catalog editor edits the pairs as well: every variant row carries its own option list
+(name/value with add and remove), blank rows are dropped before the payload, and `test:catalog`
+creates a variant with an option, reads it back and replaces the set on update. A newly created
+variable product can therefore declare its size/colour options instead of inheriting them from the
+migration.
 
 ### Dashboard — real business counts
 

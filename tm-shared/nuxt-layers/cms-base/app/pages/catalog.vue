@@ -400,6 +400,14 @@ function duplicateVariantSku(index: number): boolean {
   return form.variants.some((variant, otherIndex) => otherIndex !== index && variant.sku.trim() === sku)
 }
 
+function addVariantAttribute(index: number) {
+  form.variants[index]?.attributes.push({ name: { vi: '' }, value: { vi: '' } })
+}
+
+function removeVariantAttribute(index: number, attributeIndex: number) {
+  form.variants[index]?.attributes.splice(attributeIndex, 1)
+}
+
 function addAttribute() {
   form.attributes.push({ name: { vi: '' }, value: { vi: '' } })
 }
@@ -514,6 +522,11 @@ function payload(): AdminCatalogItemDraft {
           basePrice: Number(variant.basePrice) || 0,
           salePrice: variant.salePrice === null ? null : Number(variant.salePrice),
           stock: Number(variant.stock) || 0,
+          // Blank rows are how the editor shows "no option yet"; the storefront
+          // builds its size/colour chips from these pairs.
+          attributes: variant.attributes
+            .filter(option => (option.name.vi ?? '').trim() && (option.value.vi ?? '').trim())
+            .map(option => ({ name: option.name, value: option.value })),
         }))
       : [],
     seo: {
@@ -941,6 +954,34 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
                     <span v-if="variant.stock < 0" class="text-error">
                       {{ t('admin.catalog.errors.stockNegative') }}
                     </span>
+                  </div>
+                  <div class="sm:col-span-6 space-y-2 rounded-md border border-dashed border-default/70 p-2">
+                    <p class="text-[11px] font-medium text-muted">
+                      {{ t('admin.catalog.fields.variantOptions') }}
+                    </p>
+                    <div
+                      v-for="(option, optionIndex) in variant.attributes"
+                      :key="optionIndex"
+                      class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+                    >
+                      <UInput v-model="option.name.vi" :placeholder="t('admin.catalog.fields.attributeName')" />
+                      <UInput v-model="option.value.vi" :placeholder="t('admin.catalog.fields.attributeValue')" />
+                      <UButton
+                        icon="i-lucide-trash-2"
+                        color="error"
+                        variant="ghost"
+                        size="xs"
+                        :aria-label="t('admin.catalog.fields.removeAttribute')"
+                        @click="removeVariantAttribute(index, optionIndex)"
+                      />
+                    </div>
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      icon="i-lucide-plus"
+                      :label="t('admin.catalog.fields.addVariantOption')"
+                      @click="addVariantAttribute(index)"
+                    />
                   </div>
                 </div>
                 <p v-if="!form.variants.length" class="text-xs text-muted">

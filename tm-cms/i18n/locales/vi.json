@@ -990,6 +990,8 @@
         "variantsHint": "Sản phẩm có biến thể cần ít nhất một dòng SKU.",
         "addVariant": "Thêm biến thể",
         "removeVariant": "Xoá biến thể",
+        "variantOptions": "Tuỳ chọn của biến thể (size, màu…)",
+        "addVariantOption": "Thêm tuỳ chọn",
         "attributes": "Thuộc tính",
         "attributeName": "Tên thuộc tính",
         "attributeValue": "Giá trị",

@@ -987,6 +987,8 @@
         "variantsHint": "A variable product needs at least one row with a SKU.",
         "addVariant": "Add variant",
         "removeVariant": "Remove variant",
+        "variantOptions": "Variant options (size, colour…)",
+        "addVariantOption": "Add option",
         "attributes": "Attributes",
         "attributeName": "Attribute name",
         "attributeValue": "Value",
