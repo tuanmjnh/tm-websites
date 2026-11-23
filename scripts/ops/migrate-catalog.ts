@@ -54,6 +54,46 @@ const CARRIED_CATEGORY_FIELDS = new Set([
 
 type Raw = Record<string, unknown>
 
+type LegacyAttribute = { name: Record<string, string>, value: Record<string, string> }
+
+/**
+ * A legacy variant names its option by code (`kich-thuoc`) while the item's own
+ * `options` list holds the title and the value labels. Carrying only the code
+ * would make the storefront label a size group "kich-thuoc".
+ */
+function withOptionLabels(
+  attributes: LegacyAttribute[],
+  options: unknown,
+): { attributes: LegacyAttribute[], labelled: number } {
+  const optionsByCode = new Map<string, { title: string, values: Map<string, string> }>()
+  for (const entry of Array.isArray(options) ? options : []) {
+    const option = entry !== null && typeof entry === 'object' ? entry as Raw : {}
+    const code = String(option.code ?? '').trim().toLowerCase()
+    if (!code) continue
+    const values = new Map<string, string>()
+    for (const valueEntry of Array.isArray(option.values) ? option.values : []) {
+      const value = valueEntry !== null && typeof valueEntry === 'object' ? valueEntry as Raw : {}
+      const key = String(value.value ?? '').trim().toLowerCase()
+      const label = String(value.label ?? '').trim()
+      if (key && label) values.set(key, label)
+    }
+    optionsByCode.set(code, { title: String(option.title ?? '').trim(), values })
+  }
+
+  let labelled = 0
+  const mapped = attributes.map((attribute) => {
+    const option = optionsByCode.get(String(attribute.name.vi ?? '').trim().toLowerCase())
+    if (!option) return attribute
+    const valueLabel = option.values.get(String(attribute.value.vi ?? '').trim().toLowerCase())
+    labelled++
+    return {
+      name: option.title ? { vi: option.title } : attribute.name,
+      value: valueLabel ? { vi: valueLabel } : attribute.value,
+    }
+  })
+  return { attributes: mapped, labelled }
+}
+
 /** Counts the legacy fields that carry a value but have no column in the plan. */
 function uncarriedFields(records: Raw[], carried: Set<string>): Record<string, number> {
   const counts: Record<string, number> = {}
@@ -208,6 +248,23 @@ try {
     const title = legacyLocalized(record.title, 200)
     const isActive = record.isActive !== false
     const status = legacyCatalogStatus(record)
+    const itemAttributes = withOptionLabels(legacyAttributeList(record.attributes), record.options)
+    let variantOptionLabels = 0
+    const plannedVariants = (Array.isArray(record.variants) ? record.variants : []).map((entry) => {
+      const variant = asLegacyRecord(entry)
+      const variantAttributes = withOptionLabels(legacyAttributeList(variant.attributes), record.options)
+      variantOptionLabels += variantAttributes.labelled
+      return {
+        sku: legacyText(variant.sku),
+        name: legacyLocalized(variant.name, 200),
+        basePrice: legacyNumber(variant.basePrice),
+        salePrice: variant.salePrice === undefined || variant.salePrice === null ? null : legacyNumber(variant.salePrice),
+        stock: legacyNumber(variant.stock),
+        manageStock: variant.manageStock !== false,
+        isActive: variant.isActive !== false,
+        attributes: variantAttributes.attributes,
+      }
+    }).filter(variant => variant.sku)
 
     return {
       legacyId,
@@ -227,22 +284,10 @@ try {
       stock: legacyNumber(record.stock),
       manageStock: record.manageStock !== false,
       tags: legacyTags(record.tags),
-      attributes: legacyAttributeList(record.attributes),
-      variants: Array.isArray(record.variants)
-        ? record.variants.map((entry) => {
-            const variant = asLegacyRecord(entry)
-            return {
-              sku: legacyText(variant.sku),
-              name: legacyLocalized(variant.name, 200),
-              basePrice: legacyNumber(variant.basePrice),
-              salePrice: variant.salePrice === undefined || variant.salePrice === null ? null : legacyNumber(variant.salePrice),
-              stock: legacyNumber(variant.stock),
-              manageStock: variant.manageStock !== false,
-              isActive: variant.isActive !== false,
-              attributes: legacyAttributeList(variant.attributes),
-            }
-          }).filter(variant => variant.sku)
-        : [],
+      attributes: itemAttributes.attributes,
+      // Option titles read from the item's own options, for item and variant alike.
+      optionLabels: itemAttributes.labelled + variantOptionLabels,
+      variants: plannedVariants,
       seo: {
         title: legacyLocalized(asLegacyRecord(record.seo).title, 200),
         description: legacyLocalized(asLegacyRecord(record.seo).description, 500),
@@ -286,6 +331,9 @@ try {
     // product says how its variants differ; a count of 0 here means the mapper lost them.
     variantAttributes: plannedItems.reduce((total, item) => total + item.variants.filter(variant => variant.attributes.length).length, 0),
     attributes: plannedItems.filter(item => item.attributes.length).length,
+    // How many attribute labels came from the item's own option titles instead of
+    // the raw legacy code.
+    optionLabels: plannedItems.reduce((total, item) => total + item.optionLabels, 0),
     sku: plannedItems.filter(item => item.sku).length,
     barcode: plannedItems.filter(item => item.barcode).length,
     salePrice: plannedItems.filter(item => item.salePrice !== null).length,

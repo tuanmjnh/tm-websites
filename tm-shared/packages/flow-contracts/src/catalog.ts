@@ -77,9 +77,17 @@ export const PublicCatalogCategorySchema = PublicCatalogCategoryRefSchema.extend
 })
 export type PublicCatalogCategory = z.infer<typeof PublicCatalogCategorySchema>
 
+export const PublicCatalogAttributeSchema = z.object({
+  name: LocalizedTextSchema,
+  value: LocalizedTextSchema,
+})
+export type PublicCatalogAttribute = z.infer<typeof PublicCatalogAttributeSchema>
+
 export const PublicCatalogVariantSchema = z.object({
   sku: z.string().optional(),
   name: LocalizedTextSchema.optional(),
+  /** The options that tell this variant apart (`Kích thước = 160X200`). */
+  attributes: z.array(PublicCatalogAttributeSchema).default([]),
   price: z.number().nonnegative(),
   compareAtPrice: z.number().nonnegative().optional(),
   inStock: z.boolean(),
@@ -87,12 +95,6 @@ export const PublicCatalogVariantSchema = z.object({
   maxQuantity: z.number().int().min(1).max(99).optional(),
 })
 export type PublicCatalogVariant = z.infer<typeof PublicCatalogVariantSchema>
-
-export const PublicCatalogAttributeSchema = z.object({
-  name: LocalizedTextSchema,
-  value: LocalizedTextSchema,
-})
-export type PublicCatalogAttribute = z.infer<typeof PublicCatalogAttributeSchema>
 
 export const PublicCatalogItemSummarySchema = z.object({
   id: z.string().min(1),

@@ -59,6 +59,9 @@ watch(gallery, () => {
 const primaryCategory = computed(() => item.value?.categories[0] ?? null)
 const attributes = computed(() => item.value?.attributes ?? [])
 const variants = computed(() => item.value?.variants ?? [])
+// One chip group per option the variants carry (size, colour, ...). A product
+// whose variants have no options keeps the single list of variant buttons.
+const optionGroups = computed(() => buildVariantOptionGroups(variants.value, locale.value))
 const updatedAt = computed(() => (item.value ? formatCatalogDate(item.value.updatedAt, locale.value) : ''))
 
 // Variant-aware purchase panel. The cart only stores the id, the SKU and the
@@ -80,6 +83,7 @@ const defaultVariantSku = computed(() =>
   (variants.value.find(variant => variant.inStock && variant.sku) ?? variants.value[0])?.sku ?? null)
 const activeVariantSku = computed(() => selectedVariantSku.value ?? defaultVariantSku.value)
 const selectedVariant = computed(() => variants.value.find(variant => variant.sku === activeVariantSku.value) ?? null)
+const variantAttributes = computed(() => variantSelection(selectedVariant.value))
 const unitPrice = computed(() => selectedVariant.value?.price ?? item.value?.price ?? 0)
 const unitCompareAtPrice = computed(() => {
   const compareAt = selectedVariant.value?.compareAtPrice ?? item.value?.compareAtPrice ?? 0
@@ -90,6 +94,17 @@ const canAdd = computed(() => {
   if (!variants.value.length) return true
   return Boolean(selectedVariant.value?.sku && selectedVariant.value.inStock)
 })
+
+/**
+ * Follow a chip to the variant that sells that option, keeping the visitor's
+ * other choices. The helper returns null for a combination the catalog does not
+ * hold, which is exactly when the chip is disabled.
+ */
+const chooseVariantOption = (groupKey: string, valueKey: string) => {
+  const next = selectVariantWithOption(variants.value, selectedVariant.value, groupKey, valueKey)
+  if (!next) return
+  selectedVariantSku.value = next.sku ?? null
+}
 
 const addToCart = () => {
   if (!item.value || !canAdd.value) return
@@ -276,24 +291,45 @@ useHead(() => {
 
           <div class="mt-6 rounded-[6px] border border-default/60 bg-elevated/20 p-4">
             <div v-if="variants.length">
-              <p class="text-xs font-medium text-muted">{{ t('cart.selectVariant') }}</p>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <button
-                  v-for="variant in variants"
-                  :key="variant.sku || 'base'"
-                  type="button"
-                  class="rounded-[4px] border px-2.5 py-1.5 text-xs transition-colors"
-                  :class="activeVariantSku === variant.sku ? 'border-primary bg-primary/10 text-primary' : 'border-default/60 text-default hover:border-primary/50'"
-                  :disabled="!variant.sku || !variant.inStock"
-                  :aria-pressed="activeVariantSku === variant.sku"
-                  @click="selectedVariantSku = variant.sku ?? null"
-                >
-                  {{ variant.name ? readLocalized(variant.name, locale) : variant.sku }}
-                  <span class="ml-1 text-dimmed">{{ formatCatalogPrice(variant.price, currency, locale) }}</span>
-                  <span v-if="variant.compareAtPrice && variant.compareAtPrice > variant.price" class="ml-1 text-dimmed line-through">{{ formatCatalogPrice(variant.compareAtPrice, currency, locale) }}</span>
-                  <span v-if="!variant.inStock" class="ml-1 text-dimmed">({{ t('catalog.outOfStock') }})</span>
-                </button>
-              </div>
+              <template v-if="optionGroups.length">
+                <div v-for="group in optionGroups" :key="group.key" class="mt-3 first:mt-0">
+                  <p class="text-xs font-medium text-muted">{{ group.label }}</p>
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <button
+                      v-for="value in group.values"
+                      :key="value.key"
+                      type="button"
+                      class="rounded-[4px] border px-2.5 py-1.5 text-xs transition-colors"
+                      :class="variantAttributes[group.key] === value.key ? 'border-primary bg-primary/10 text-primary' : 'border-default/60 text-default hover:border-primary/50'"
+                      :disabled="!isVariantOptionAvailable(variants, selectedVariant, group.key, value.key)"
+                      :aria-pressed="variantAttributes[group.key] === value.key"
+                      @click="chooseVariantOption(group.key, value.key)"
+                    >
+                      {{ value.label }}
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <p class="text-xs font-medium text-muted">{{ t('cart.selectVariant') }}</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <button
+                    v-for="variant in variants"
+                    :key="variant.sku || 'base'"
+                    type="button"
+                    class="rounded-[4px] border px-2.5 py-1.5 text-xs transition-colors"
+                    :class="activeVariantSku === variant.sku ? 'border-primary bg-primary/10 text-primary' : 'border-default/60 text-default hover:border-primary/50'"
+                    :disabled="!variant.sku || !variant.inStock"
+                    :aria-pressed="activeVariantSku === variant.sku"
+                    @click="selectedVariantSku = variant.sku ?? null"
+                  >
+                    {{ variant.name ? readLocalized(variant.name, locale) : variant.sku }}
+                    <span class="ml-1 text-dimmed">{{ formatCatalogPrice(variant.price, currency, locale) }}</span>
+                    <span v-if="variant.compareAtPrice && variant.compareAtPrice > variant.price" class="ml-1 text-dimmed line-through">{{ formatCatalogPrice(variant.compareAtPrice, currency, locale) }}</span>
+                    <span v-if="!variant.inStock" class="ml-1 text-dimmed">({{ t('catalog.outOfStock') }})</span>
+                  </button>
+                </div>
+              </template>
             </div>
 
             <div class="mt-3 flex flex-wrap items-end gap-2">

@@ -266,8 +266,20 @@ instead of looking like clean data.
 Evidence: `pnpm test:legacy-import` covers both shapes (`{ k, v }` strings and localized maps) and
 `pnpm test:migrate-apply` asserts the migrated variant carries the option. Re-running
 `migrate:catalog --site sentuan --apply` reports `variantAttributes: 626` and the collection now
-holds 626 of 626 variants with attributes; `check:migration` is unchanged (241/241 items). The
-storefront product page still has no variant selector — the data is stored, the picker is not built.
+holds 626 of 626 variants with attributes; `check:migration` is unchanged (241/241 items).
+
+The storefront then gained the picker these options were meant for. Legacy names an option by code
+(`kich-thuoc`) and keeps the readable title on the item's own `options` list, so the importer now
+resolves each attribute through it: the dry run reports `optionLabels: 678` (0 before) and the group
+label reads `Kích thước` instead of `kich-thuoc`. `products/[slug]` renders one chip group per option
+(`Kích thước`, `Độ dầy`), marks the active value, and disables a value whose combination the catalog
+does not hold; a product with no options keeps the plain variant list. The chips are checked by
+`pnpm test:web-variant-options` (8 checks) and the code→title mapping by `test:migrate-apply`.
+
+Verified over HTTP on `:4006` with real data: `GET /api/public/products/dem-kc-titalium` returns 25
+variants each carrying `attributes`, and the server-rendered page contains both groups, two pressed
+chips and disabled chips for missing combinations. Chip clicks were not exercised in a browser, and
+the CMS still has no option editor — options arrive from the migration.
 
 ### Dashboard — real business counts
 

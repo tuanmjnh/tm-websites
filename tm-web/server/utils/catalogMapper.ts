@@ -185,6 +185,9 @@ function toVariants(record: CatalogRecord): PublicCatalogVariant[] {
     variants.push({
       sku: typeof variant.sku === 'string' && variant.sku.trim() ? variant.sku.trim() : undefined,
       ...(label ? { name: { [DEFAULT_LOCALE]: label } } : {}),
+      // The labels above are a display string; the pairs below let the product
+      // page build one chip group per option (size, colour, ...).
+      attributes,
       price,
       compareAtPrice: basePrice > price ? basePrice : undefined,
       inStock: isStocked(variant),

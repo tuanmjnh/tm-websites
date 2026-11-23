@@ -76,6 +76,9 @@ const DOMAIN_GATES = [
   'test:web-content',
   'test:web-site',
   'test:web-cart',
+  // The product page's size/colour chips: variant option mapping and the chip
+  // that resolves to a sellable variant.
+  'test:web-variant-options',
   'test:iam',
   'test:refresh-coordinator',
   'test:revalidate',
