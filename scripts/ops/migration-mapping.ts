@@ -168,6 +168,122 @@ const categoryFields: Field[] = [
   { source: 'item_categories.isDeleted / deletedAt', target: 'isDeleted / deletedAt', transform: 'soft delete preserved', legacy: r => r.isDeleted === true, v2: r => (r as Row).isDeleted === true },
 ]
 
+/**
+ * CRM domains: the legacy collection and the v2 one use the same field names for
+ * almost every column `migrate:crm` writes, so one pair helper covers them. A
+ * field whose names differ (`type` → `direction`) is declared explicitly.
+ *
+ * An ObjectId is not a string but it is a value, so presence has to be checked
+ * separately or every legacy reference would look missing.
+ */
+function presentOrId(value: unknown): boolean {
+  if (value && typeof value === 'object' && typeof (value as { toHexString?: unknown }).toHexString === 'function') return true
+  return present(value)
+}
+
+function pair(domain: string, path: string, transform = 'copied as-is', note?: string): Field {
+  return {
+    source: `${domain}.${path}`,
+    target: `v2 ${path}`,
+    transform,
+    legacy: record => present(get(record, path)),
+    v2: row => present(get(row, path)),
+    note,
+  }
+}
+
+/** A zero is the legacy default, not a value worth carrying. */
+function pairNonZero(domain: string, path: string): Field {
+  const test = (record: Row) => present(get(record, path)) && legacyNumber(get(record, path)) !== 0
+  return { source: `${domain}.${path}`, target: `v2 ${path}`, transform: 'non-zero number', legacy: test, v2: test }
+}
+
+const customerFields: Field[] = [
+  pair('customers', 'code'),
+  { source: 'customers.userId', target: 'crm_customers.subjectId', transform: 'legacy user → reviewed Hub subject', legacy: r => presentOrId(r.userId), v2: r => present(r.subjectId), note: 'needs --identity-map; a row without a mapping is skipped on purpose' },
+  pair('customers', 'addresses'),
+  { source: 'customers.customerSegment', target: 'crm_customers.customerSegmentId', transform: 'legacy id → migrated segment id', legacy: r => presentOrId(r.customerSegment), v2: r => present(r.customerSegmentId), note: 'only when the segment was migrated in the same run' },
+  pairNonZero('customers', 'loyaltyPoints'),
+  pair('customers', 'metrics'),
+  pair('customers', 'note'),
+  pair('customers', 'isActive'),
+  pair('customers', 'isDeleted'),
+]
+
+const supplierFields: Field[] = [
+  pair('suppliers', 'code'),
+  pair('suppliers', 'title'),
+  pair('suppliers', 'email'),
+  pair('suppliers', 'phone'),
+  pairNonZero('suppliers', 'rating'),
+  pair('suppliers', 'status'),
+  pair('suppliers', 'avatar'),
+  pair('suppliers', 'itemsSupplied'),
+  pair('suppliers', 'isDeleted'),
+]
+
+const warehouseFields: Field[] = [
+  pair('warehouses', 'code'),
+  pair('warehouses', 'title'),
+  pair('warehouses', 'address'),
+  pair('warehouses', 'phone'),
+  pair('warehouses', 'description'),
+  pair('warehouses', 'avatar'),
+  pair('warehouses', 'status'),
+  pair('warehouses', 'isDeleted'),
+]
+
+const inventoryFields: Field[] = [
+  pairNonZero('inventories', 'quantityOnHand'),
+  pairNonZero('inventories', 'quantityReserved'),
+  pairNonZero('inventories', 'lowStockThreshold'),
+  pair('inventories', 'sku'),
+  { source: 'inventories.itemId', target: 'v2 itemId', transform: 'legacy item → catalog_items._id', legacy: r => present(r.itemId), v2: r => present(r.itemId), note: 'an item with no migrated catalog row is skipped' },
+  { source: 'inventories.variantId', target: 'v2 variantId', transform: 'legacy variant → variant SKU', legacy: r => present(r.variantId), v2: r => present(r.variantId), note: 'v2 variants keep SKUs, not legacy ids' },
+  { source: 'inventories.warehouseId', target: 'v2 warehouseId', transform: 'legacy warehouse → migrated warehouse id', legacy: r => present(r.warehouseId), v2: r => present(r.warehouseId) },
+]
+
+const purchaseOrderFields: Field[] = [
+  pair('purchase_orders', 'code'),
+  { source: 'purchase_orders.supplierId', target: 'v2 supplierId', transform: 'legacy supplier → migrated supplier id', legacy: r => present(r.supplierId), v2: r => present(r.supplierId), note: 'rows pointing at a supplier that no longer exists keep null' },
+  { source: 'purchase_orders.warehouseId', target: 'v2 warehouseId', transform: 'legacy warehouse → migrated warehouse id', legacy: r => present(r.warehouseId), v2: r => present(r.warehouseId) },
+  pair('purchase_orders', 'status', 'completed → received'),
+  pair('purchase_orders', 'paymentStatus'),
+  pair('purchase_orders', 'paymentMethod'),
+  pairNonZero('purchase_orders', 'totalAmount'),
+  pairNonZero('purchase_orders', 'orderedTotalAmount'),
+  pairNonZero('purchase_orders', 'paidAmount'),
+  pair('purchase_orders', 'expectedDeliveryDate', 'milliseconds → ISO date string'),
+  pair('purchase_orders', 'items'),
+]
+
+const quotationFields: Field[] = [
+  pair('quotations', 'code'),
+  { source: 'quotations.customerId', target: 'v2 customerId', transform: 'legacy customer → migrated customer id', legacy: r => presentOrId(r.customerId), v2: r => present(r.customerId), note: 'null when the customer has no Hub subject mapping' },
+  { source: 'quotations.userId', target: 'v2 userId', transform: 'object id → text (historical reference)', legacy: r => presentOrId(r.userId), v2: r => present(r.userId) },
+  pair('quotations', 'channel'),
+  pair('quotations', 'status', 'submitted → sent, cancelled → rejected'),
+  pair('quotations', 'items'),
+  pair('quotations', 'itemsPrice'),
+  pair('quotations', 'shippingFee'),
+  pair('quotations', 'discountAmount'),
+  pair('quotations', 'totalAmount'),
+  { source: 'quotations.shippingAddress.street', target: 'v2 shippingAddress.street', transform: 'address fields copied', legacy: r => present(get(r, 'shippingAddress.street')), v2: r => present(get(r, 'shippingAddress.street')) },
+  pair('quotations', 'customerNote'),
+  pairNonZero('quotations', 'validUntil'),
+  pair('quotations', 'version'),
+]
+
+const paymentFields: Field[] = [
+  pair('payment_transactions', 'code'),
+  pairNonZero('payment_transactions', 'amount'),
+  pair('payment_transactions', 'method'),
+  pair('payment_transactions', 'note'),
+  pair('payment_transactions', 'referenceCode'),
+  { source: 'payment_transactions.type', target: 'v2 direction', transform: 'in → receivable, out → payable', legacy: r => present(r.type), v2: r => present(r.direction) },
+  { source: 'payment_transactions.status', target: 'v2 state', transform: 'completed → posted', legacy: r => present(r.status), v2: r => present(r.state) },
+]
+
 function render(fields: Field[], source: Row[], target: Row[]): string[] {
   const lines = [
     '| Source field | Target | Transform | Present in source | Carried in v2 | Verdict |',
@@ -205,6 +321,39 @@ try {
   console.log(`\nCatalog categories (${categories.length} source rows, ${v2Categories.length} v2 rows)\n`)
   if (categories.length) console.log(render(categoryFields, categories, v2Categories).join('\n'))
   else console.log('(the source copy holds no categories)')
+
+  const crmDomains: Array<[string, string, string, Field[]]> = [
+    ['Customers', 'customers', 'crm_customers', customerFields],
+    ['Suppliers', 'suppliers', 'crm_suppliers', supplierFields],
+    ['Warehouses', 'warehouses', 'crm_warehouses', warehouseFields],
+    ['Inventory balances', 'inventories', 'crm_inventories', inventoryFields],
+    ['Purchase orders', 'purchase_orders', 'crm_purchase_orders', purchaseOrderFields],
+    ['Quotations', 'quotations', 'crm_quotations', quotationFields],
+    ['Payments', 'payment_transactions', 'crm_payments', paymentFields],
+  ]
+  for (const [label, legacyName, v2Name, fields] of crmDomains) {
+    const source = (await db.collection(legacyName).find(tenantMatcher).toArray()) as Row[]
+    const target = (await db.collection(v2Name).find({ siteId }).toArray()) as Row[]
+    console.log(`\n${label} (${source.length} source rows, ${target.length} v2 rows)\n`)
+    if (!source.length) {
+      console.log('(the source copy holds no rows)')
+      continue
+    }
+    if (!target.length) {
+      console.log(v2Name === 'crm_customers'
+        ? '(no customer was migrated: a customer needs a reviewed Hub subject — pass `--identity-map` to migrate:crm)'
+        : '(no v2 rows yet: run `pnpm migrate:crm --site <customerId> --apply`)')
+      continue
+    }
+    if (target.length < source.length) {
+      // A field count over unequal row sets would read as a lost field. The row
+      // gap itself is reported by migrate:crm and check:migration, so only the
+      // reason is repeated here.
+      console.log(`(field coverage is not comparable: ${source.length - target.length} source row(s) have no v2 counterpart${v2Name === 'crm_customers' ? ' — a customer needs a reviewed Hub subject (--identity-map)' : ''})`)
+      continue
+    }
+    console.log(render(fields, source, target).join('\n'))
+  }
   console.log(`\nSettings identity keys available: ${JSON.stringify(identity)}; settings document ${settings ? 'present' : 'missing'}`)
 } finally {
   await connection.close()

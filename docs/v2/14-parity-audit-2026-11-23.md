@@ -126,6 +126,7 @@ counterpart**:
 | inventory | `inventories` 49, `warehouses` 3 | migrated 49/49, 3/3 |
 | purchasing | `purchase_orders` 6, `suppliers` 3 | migrated 6/6, 3/3 |
 | quotations | `quotations` 3 | migrated 3/3 |
+| payments | `payment_transactions` 1 | migrated 1/1 |
 | attributes / keywords / options | 0 / 0 / 4 | no target collection |
 | system config | `system_configs` 69, `system_datas` 117, `system_routes` 202 | no target collection |
 
@@ -209,12 +210,12 @@ children (v2 menus support one nesting level). Handling that needs a decision, n
 Until then `migrate:*` has no menus importer, `site_menus` stays empty, and the storefront returns
 `menus: []`.
 
-### CRM, inventory, purchasing, quotations — migrated
+### CRM, inventory, purchasing, quotations, payments — migrated
 
 `pnpm migrate:crm --site <customerId> [--apply] [--identity-map <file>]` copies
 `customer_segments` → `crm_customer_segments`, `suppliers` → `crm_suppliers`, `warehouses` →
 `crm_warehouses`, `inventories` → `crm_inventories`, `purchase_orders` → `crm_purchase_orders` and
-`quotations` → `crm_quotations`. Dry run by default, matched on the business key (`code`, or
+`quotations` → `crm_quotations`, `payment_transactions` → `crm_payments`. Dry run by default, matched on the business key (`code`, or
 item+variant+warehouse for a stock balance) so a rerun updates instead of duplicating, and nothing
 legacy is deleted. References resolve through the migrated data: a legacy item id maps to
 `catalog_items.legacyId`, a warehouse/supplier id to the row written in the same run, and a variant to
@@ -225,8 +226,18 @@ quotation `submitted` → `sent`, and a cancelled quotation → `rejected` (v2 h
 `cancelled` state).
 
 Applied to `sen-tuan`: segments 2/2, suppliers 3/3, warehouses 3/3, inventory 49/49, purchase orders
-6/6, quotations 3/3; a second run writes the same rows and the re-read verification passes. The
-command also reported, instead of hiding: 6 purchase orders whose `supplierId` no longer exists in the
+6/6, quotations 3/3, payments 1/1; a second run writes the same rows and the re-read verification
+passes. A legacy payment keeps its purchase order reference (`referenceCode` resolved to the migrated
+`crm_purchase_orders` id), its direction (`out` → `payable`), its allocation list and its posting state.
+
+`migration:mapping` now prints a field-level matrix for the same seven domains (source field, target,
+transform, rows carrying it on each side, verdict). On `sen-tuan` every comparable field is `ok`; the
+two exceptions carry the reason instead of a bare failure — `purchase_orders.supplierId` 6 → 0 (the
+legacy supplier ids no longer exist in `suppliers`) and `quotations.customerId` 3 → 0 (customers have
+no Hub subject yet). A domain whose row counts differ prints "not comparable" rather than a table
+that would read as a lost field.
+
+The command also reported, instead of hiding: 6 purchase orders whose `supplierId` no longer exists in the
 legacy `suppliers` collection (stored `null`), 3 quotations whose customer is not migrated (stored
 `null`), legacy fields with no destination (`purchase_orders.createdBy`, `quotations.history`,
 quotation line `importPrice`/`supplierId`).

@@ -7,6 +7,9 @@ import { normalizeCustomerSegmentCode } from '../../tm-cms/server/models/custome
 import { normalizeSupplierCode } from '../../tm-cms/server/models/supplier.js'
 import { normalizeWarehouseCode } from '../../tm-cms/server/models/warehouse.js'
 import {
+  PAYMENT_METHODS,
+} from '../../tm-cms/server/models/payment.js'
+import {
   PURCHASE_PAYMENT_METHODS,
   PURCHASE_PAYMENT_STATUSES,
   type PurchaseOrderStatus,
@@ -31,8 +34,9 @@ import {
  * Copies the legacy commerce records into the v2 `crm_*` collections:
  * `customer_segments` → `crm_customer_segments`, `customers` → `crm_customers`,
  * `suppliers` → `crm_suppliers`, `warehouses` → `crm_warehouses`,
- * `inventories` → `crm_inventories`, `purchase_orders` → `crm_purchase_orders`
- * and `quotations` → `crm_quotations`.
+ * `inventories` → `crm_inventories`, `purchase_orders` → `crm_purchase_orders`,
+ * `quotations` → `crm_quotations` and `payment_transactions` → `crm_payments`.
+ * `migration:mapping` prints the field-level matrix for the same domains.
  *
  * Dry run unless `--apply`. Every record is matched on its own business key
  * (`code`, or item+variant+warehouse for a stock balance), so a rerun updates
@@ -150,7 +154,7 @@ try {
   const tenantMatcher = { $or: [{ tenantId: tenant }, { tenantId: { $exists: false } }] }
   const legacyCollections = [
     'customer_segments', 'customers', 'users', 'suppliers', 'warehouses',
-    'inventories', 'purchase_orders', 'quotations', 'items',
+    'inventories', 'purchase_orders', 'quotations', 'payment_transactions', 'items',
   ]
   const legacyTenants = await legacyTenantBuckets(connection, legacyCollections)
   const legacyState = await legacyCollectionState(connection, legacyCollections)
@@ -166,6 +170,7 @@ try {
   const inventories = await db.collection('inventories').find(tenantMatcher).toArray()
   const purchaseOrders = await db.collection('purchase_orders').find(tenantMatcher).toArray()
   const quotations = await db.collection('quotations').find(tenantMatcher).toArray()
+  const payments = await db.collection('payment_transactions').find(tenantMatcher).toArray()
   const catalog = await loadCatalogIndex(connection)
   const identityMap = await readIdentityMap(identityMapPath)
 
@@ -325,10 +330,11 @@ try {
     console.log(`    inventories        ${inventories.length} legacy rows (resolved on apply)`)
     console.log(`    purchase orders    ${purchaseOrders.length}`)
     console.log(`    quotations         ${quotations.length}`)
+    console.log(`    payments           ${payments.length}`)
     for (const entry of unmappedCustomers.slice(0, 10)) console.log(`      skipped customer ${entry}`)
     console.log('  nothing was written; rerun with --apply')
   } else {
-    const { CustomerSegment, Customer, Supplier, Warehouse, Inventory, PurchaseOrder, Quotation } = await prepareDatabase(connection)
+    const { CustomerSegment, Customer, Supplier, Warehouse, Inventory, PurchaseOrder, Quotation, Payment } = await prepareDatabase(connection)
 
     const segmentIdByLegacy = new Map<string, Types.ObjectId>()
     for (const row of segmentRows) {
@@ -601,6 +607,69 @@ try {
       quoteWritten++
     }
 
+    // ---------------------------------------------------------------- payments
+    // The legacy ledger stores one row per money movement; v2 keeps the same row
+    // plus an allocation list, so a single-document payment has one entry.
+    const poIdByCode = new Map<string, Types.ObjectId>()
+    for (const row of await connection.collection('crm_purchase_orders')
+      .find({ siteId }, { projection: { _id: 1, code: 1 } })
+      .toArray()) {
+      poIdByCode.set(String(row.code), row._id as Types.ObjectId)
+    }
+    let paymentWritten = 0
+    let skippedPayments = 0
+
+    for (const record of payments) {
+      const code = text(record.code, 32)
+      const referenceCode = text(record.referenceCode, 40)
+      const referenceId = poIdByCode.get(referenceCode)
+      if (!code || legacyText(record.referenceModel) !== 'PurchaseOrder' || !referenceId) {
+        skippedPayments++
+        continue
+      }
+      const amount = Math.max(0, legacyNumber(record.amount))
+      if (amount <= 0) {
+        skippedPayments++
+        continue
+      }
+      const method = PAYMENT_METHODS.includes(legacyText(record.method) as never)
+        ? legacyText(record.method) as (typeof PAYMENT_METHODS)[number]
+        : 'other'
+      const direction = legacyText(record.type) === 'in' ? 'receivable' : 'payable'
+      const paidAt = legacyDateMs(record.createdAt) ?? new Date()
+
+      await Payment.updateOne(
+        { siteId, code },
+        {
+          $set: {
+            siteId,
+            code,
+            direction,
+            referenceModel: 'PurchaseOrder',
+            referenceId,
+            referenceCode,
+            partyId: supplierIdByLegacy.get(String(record.partnerId ?? '')) ?? null,
+            allocations: [{ referenceModel: 'PurchaseOrder', referenceId, referenceCode, amount }],
+            amount,
+            currency: 'VND',
+            method,
+            state: legacyText(record.status) === 'completed' ? 'posted' : 'voided',
+            note: text(record.note, 1000),
+            paidAt,
+            performerId: idText(record.createdBy).slice(0, 128) || null,
+            voidedAt: null,
+            voidedBy: null,
+            voidReason: '',
+            reconciledAt: null,
+            reconciliationRef: '',
+          },
+          $setOnInsert: { revision: 1 },
+        },
+        { upsert: true },
+      )
+      paymentWritten++
+    }
+
     // A write loop can stop half-way and still print a healthy line, so re-read
     // what the plan expects and fail the command when the database lacks it.
     const expected = {
@@ -610,6 +679,7 @@ try {
       warehouses: warehouseRows.map(row => row.doc.code),
       purchaseOrders: purchaseOrders.map(row => text(row.code, 32)).filter(Boolean),
       quotations: quotations.map(row => text(row.code, 32)).filter(Boolean),
+      payments: payments.map(row => text(row.code, 32)).filter(Boolean),
     }
     const found = {
       customers: await Customer.countDocuments({ siteId, code: { $in: expected.customers } }),
@@ -618,11 +688,15 @@ try {
       warehouses: await Warehouse.countDocuments({ siteId, code: { $in: expected.warehouses } }),
       purchaseOrders: await PurchaseOrder.countDocuments({ siteId, code: { $in: expected.purchaseOrders } }),
       quotations: await Quotation.countDocuments({ siteId, code: { $in: expected.quotations } }),
+      payments: await Payment.countDocuments({ siteId, code: { $in: expected.payments } }),
     }
 
-    console.log(`\n  wrote        segments ${segmentRows.length}, customers ${customerRows.length}, suppliers ${supplierRows.length}, warehouses ${warehouseRows.length}, inventory ${inventoryWritten}, purchase orders ${poWritten}, quotations ${quoteWritten}`)
-    console.log(`  verified     segments ${found.segments}/${expected.segments.length}, customers ${found.customers}/${expected.customers.length}, suppliers ${found.suppliers}/${expected.suppliers.length}, warehouses ${found.warehouses}/${expected.warehouses.length}, purchase orders ${found.purchaseOrders}/${expected.purchaseOrders.length}, quotations ${found.quotations}/${expected.quotations.length}`)
+    console.log(`\n  wrote        segments ${segmentRows.length}, customers ${customerRows.length}, suppliers ${supplierRows.length}, warehouses ${warehouseRows.length}, inventory ${inventoryWritten}, purchase orders ${poWritten}, quotations ${quoteWritten}, payments ${paymentWritten}`)
+    console.log(`  verified     segments ${found.segments}/${expected.segments.length}, customers ${found.customers}/${expected.customers.length}, suppliers ${found.suppliers}/${expected.suppliers.length}, warehouses ${found.warehouses}/${expected.warehouses.length}, purchase orders ${found.purchaseOrders}/${expected.purchaseOrders.length}, quotations ${found.quotations}/${expected.quotations.length}, payments ${found.payments}/${expected.payments.length}`)
     if (Object.entries(found).some(([key, value]) => value < expected[key as keyof typeof expected].length)) failed = true
+    if (skippedPayments) {
+      console.log(`  ⚠️  ${skippedPayments} legacy payment row(s) skipped: no migrated reference document, an unknown reference model, or an amount of zero`)
+    }
 
     if (unmappedCustomers.length) {
       console.log(`  ⚠️  ${unmappedCustomers.length} customer(s) not imported without a reviewed Hub subject:`)

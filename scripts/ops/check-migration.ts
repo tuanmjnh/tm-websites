@@ -158,6 +158,7 @@ try {
     ['inventories', 'inventories', 'crm_inventories'],
     ['purchase orders', 'purchase_orders', 'crm_purchase_orders'],
     ['quotations', 'quotations', 'crm_quotations'],
+    ['payments', 'payment_transactions', 'crm_payments'],
   ] as const
   const crmGaps: string[] = []
   for (const [label, legacyName, v2Name] of crmDomains) {
