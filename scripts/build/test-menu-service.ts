@@ -9,6 +9,7 @@ import {
   updateMenu,
 } from '../../tm-cms/server/services/menuService.js'
 import { findMenuReferences } from '../../tm-cms/server/services/menuReferences.js'
+import { MENU_MAX_CHILDREN, MENU_MAX_ITEMS } from '../../tm-shared/packages/flow-contracts/src/menu-admin.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 
@@ -55,7 +56,7 @@ async function integration() {
 
   try {
     await connection.db!.dropDatabase()
-    const { Menu, Audit, Content, Category } = await prepareDatabase(connection)
+    const { Menu, Audit, Content, Category, CatalogCategory } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ADMIN, requestId: 'req_menu' } }
 
     let mainId = ''
@@ -162,8 +163,8 @@ async function integration() {
       assert.equal((await getMenu(Menu, SITE, mainId)).itemCount, 3)
     })
 
-    await check('a menu holds at most 30 items', async () => {
-      const tooMany = Array.from({ length: 31 }, (_, index) => ({
+    await check(`a menu holds at most ${MENU_MAX_ITEMS} items`, async () => {
+      const tooMany = Array.from({ length: MENU_MAX_ITEMS + 1 }, (_, index) => ({
         label: { vi: `Mục ${index}`, en: '' },
         link: { type: 'url' as const, target: `/muc-${index}` },
       }))
@@ -224,8 +225,22 @@ async function integration() {
         locales: [{ locale: 'vi', name: 'Trang sức', slug: 'trang-suc' }],
       })
       await Category.collection.insertOne({ siteId: OTHER_SITE, key: 'bag-post' })
+      await CatalogCategory.collection.insertOne({
+        siteId: SITE,
+        key: 'chan-ga-goi-dem',
+        title: { vi: 'Chăn ga gối đệm', en: 'Bedding' },
+        slug: { vi: 'chan-ga-goi-dem', en: 'bedding' },
+        isDeleted: false,
+      })
+      await CatalogCategory.collection.insertOne({
+        siteId: SITE,
+        key: 'da-xoa',
+        title: { vi: 'Đã xoá' },
+        slug: { vi: 'da-xoa' },
+        isDeleted: true,
+      })
 
-      const withRefs = { ...meta, refs: { content: Content, category: Category } }
+      const withRefs = { ...meta, refs: { content: Content, category: Category, productCategory: CatalogCategory } }
       const menu = await createMenu(Menu, SITE, { key: 'menu-refs', name: 'Menu refs' }, withRefs)
       const saved = await updateMenu(Menu, SITE, menu.id, { revision: 1, items }, withRefs)
       assert.equal(saved.revision, 2, 'existing page, category and path all save')
@@ -260,6 +275,24 @@ async function integration() {
         isMenuError(422, 'MENU_TARGET_NOT_FOUND'),
         'another site\'s category key is not a target',
       )
+
+      const productMenu = await createMenu(Menu, SITE, { key: 'menu-product-links', name: 'Menu product links' }, withRefs)
+      const productSaved = await updateMenu(Menu, SITE, productMenu.id, {
+        revision: 1,
+        items: [{ label: { vi: 'Chăn ga' }, link: { type: 'product-category', target: 'chan-ga-goi-dem' } }],
+      }, withRefs)
+      assert.equal(productSaved.revision, 2, 'a live product category is a valid target')
+      assert.deepEqual(productSaved.items[0]!.link, { type: 'product-category', target: 'chan-ga-goi-dem' })
+
+      await assert.rejects(
+        () => updateMenu(Menu, SITE, productMenu.id, {
+          revision: 2,
+          items: [{ label: { vi: 'Đã xoá' }, link: { type: 'product-category', target: 'da-xoa' } }],
+        }, withRefs),
+        isMenuError(422, 'MENU_TARGET_NOT_FOUND'),
+        'a deleted product category is not a target',
+      )
+      await deleteMenu(Menu, SITE, productMenu.id, 2, meta)
 
       assert.equal((await getMenu(Menu, SITE, menu.id)).revision, 2, 'a refused save writes nothing')
       await deleteMenu(Menu, SITE, menu.id, 2, meta)
@@ -308,7 +341,7 @@ async function integration() {
           items: [{
             label: { vi: 'Quá nhiều' },
             link: { type: 'url', target: '/a' },
-            children: Array.from({ length: 11 }, (_, index) => ({ label: { vi: `Con ${index + 1}` }, link: { type: 'url', target: `/c-${index + 1}` } })),
+            children: Array.from({ length: MENU_MAX_CHILDREN + 1 }, (_, index) => ({ label: { vi: `Con ${index + 1}` }, link: { type: 'url', target: `/c-${index + 1}` } })),
           }],
         }, meta),
         isMenuError(422, 'MENU_CHILDREN_LIMIT'),
@@ -317,7 +350,7 @@ async function integration() {
       await assert.rejects(
         () => updateMenu(Menu, SITE, menu.id, {
           revision: 2,
-          items: Array.from({ length: 31 }, (_, index) => ({ label: { vi: `Dòng ${index + 1}` }, link: { type: 'url', target: `/d-${index + 1}` } })),
+          items: Array.from({ length: MENU_MAX_ITEMS + 1 }, (_, index) => ({ label: { vi: `Dòng ${index + 1}` }, link: { type: 'url', target: `/d-${index + 1}` } })),
         }, meta),
         isMenuError(422, 'MENU_ITEMS_LIMIT'),
         'children count towards the menu limit',

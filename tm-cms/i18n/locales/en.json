@@ -427,12 +427,14 @@
       },
       "types": {
         "content": "Content",
-        "category": "Category",
+        "category": "Post category",
+        "product-category": "Product category",
         "url": "URL"
       },
       "targetHints": {
         "content": "The content key, e.g. gioi-thieu",
-        "category": "The category key, e.g. trang-suc",
+        "category": "The post-category key, e.g. trang-suc",
+        "product-category": "The product-category key, e.g. chan-ga-goi-dem",
         "url": "A path starting with / or a full URL"
       },
       "targetPick": {
@@ -456,7 +458,7 @@
         "revisionConflict": "The menu was changed by someone else; reload before saving",
         "unchanged": "There is nothing to save",
         "keyImmutable": "The key cannot change after creation",
-        "itemsLimit": "A menu holds at most 30 items",
+        "itemsLimit": "A menu holds at most 120 items",
         "labelRequired": "At least one label is required",
         "labelInvalid": "The label is too long",
         "targetInvalid": "The target does not match the link type",
@@ -464,7 +466,7 @@
         "payloadInvalid": "The menu payload is not valid",
         "notFound": "Menu not found",
         "targetNotFound": "A link points at a page or category that does not exist in this site. Pick an existing record and save again.",
-        "childrenLimit": "A menu item holds at most 10 children",
+        "childrenLimit": "A menu item holds at most 30 children",
         "depthLimit": "Menus support one level of children"
       }
     },

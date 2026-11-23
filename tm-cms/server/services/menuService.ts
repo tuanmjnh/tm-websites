@@ -7,6 +7,7 @@ import type {
 } from '@tm/flow-contracts/menu-admin'
 import { MENU_LINK_OPTIONS_LIMIT } from '@tm/flow-contracts/menu-admin'
 import type { AuditActor, AuditEntryDocument } from '../models/audit'
+import type { CatalogCategoryDocument } from '../models/catalog'
 import type { CategoryDocument } from '../models/category'
 import type { ContentDocument } from '../models/content'
 import {
@@ -54,10 +55,15 @@ export type MenuRecord = MenuDocument & { _id: Types.ObjectId }
 
 const NAME_MAX = 120
 
-/** The two collections a menu item may reference by key. */
+/**
+ * The collections a menu item may reference by key. Product categories are a
+ * separate store from content categories: they render at `/categories/<slug>`,
+ * not `/danh-muc/<slug>`, so they need their own link type and their own check.
+ */
 export interface MenuRefModels {
   content: Model<ContentDocument>
   category: Model<CategoryDocument>
+  productCategory?: Model<CatalogCategoryDocument>
 }
 
 /**
@@ -88,7 +94,7 @@ export async function listMenuLinkOptions(
   refs: MenuRefModels,
   siteId: string,
 ): Promise<MenuLinkOptions> {
-  const [content, categories] = await Promise.all([
+  const [content, categories, productCategories] = await Promise.all([
     refs.content
       .find({ siteId, deletedAt: null })
       .sort({ key: 1 })
@@ -101,11 +107,24 @@ export async function listMenuLinkOptions(
       .limit(MENU_LINK_OPTIONS_LIMIT)
       .select('key locales')
       .lean<Array<{ key: string, locales?: LocaleTitle[] }>>(),
+    refs.productCategory
+      ? refs.productCategory
+          .find({ siteId, isDeleted: { $ne: true } })
+          .sort({ key: 1 })
+          .limit(MENU_LINK_OPTIONS_LIMIT)
+          .select('key title')
+          .lean<Array<{ key: string, title?: Record<string, string> }>>()
+      : Promise.resolve<Array<{ key: string, title?: Record<string, string> }>>([]),
   ])
 
   return {
     content: content.map(entry => ({ key: entry.key, label: optionLabel(entry.key, entry.locales) })),
     category: categories.map(entry => ({ key: entry.key, label: optionLabel(entry.key, entry.locales) })),
+    // A catalog category keeps a flat `{ vi, en }` title map, not a locale list.
+    productCategory: productCategories.map(entry => ({
+      key: entry.key,
+      label: entry.title?.vi?.trim() || entry.title?.en?.trim() || entry.key,
+    })),
   }
 }
 
@@ -139,13 +158,15 @@ async function assertLinksExist(
   const rows = flattenItems(items)
   const contentKeys = new Set<string>()
   const categoryKeys = new Set<string>()
+  const productCategoryKeys = new Set<string>()
   for (const { item } of rows) {
     if (item.link.type === 'content') contentKeys.add(item.link.target)
     if (item.link.type === 'category') categoryKeys.add(item.link.target)
+    if (item.link.type === 'product-category') productCategoryKeys.add(item.link.target)
   }
-  if (contentKeys.size === 0 && categoryKeys.size === 0) return
+  if (contentKeys.size === 0 && categoryKeys.size === 0 && productCategoryKeys.size === 0) return
 
-  const [foundContent, foundCategory] = await Promise.all([
+  const [foundContent, foundCategory, foundProductCategory] = await Promise.all([
     contentKeys.size
       ? refs.content
           .find({ siteId, key: { $in: [...contentKeys] }, deletedAt: null })
@@ -154,21 +175,31 @@ async function assertLinksExist(
     categoryKeys.size
       ? refs.category.find({ siteId, key: { $in: [...categoryKeys] } }).distinct('key') as Promise<string[]>
       : Promise.resolve<string[]>([]),
+    productCategoryKeys.size && refs.productCategory
+      ? refs.productCategory
+          .find({ siteId, key: { $in: [...productCategoryKeys] }, isDeleted: { $ne: true } })
+          .distinct('key') as Promise<string[]>
+      : Promise.resolve<string[]>([]),
   ])
 
   const knownContent = new Set(foundContent)
   const knownCategory = new Set(foundCategory)
+  const knownProductCategory = new Set(foundProductCategory)
   const missing = rows
     .filter(({ item }) => (item.link.type === 'content'
       ? !knownContent.has(item.link.target)
       : item.link.type === 'category'
         ? !knownCategory.has(item.link.target)
-        : false))
+        : item.link.type === 'product-category' && refs.productCategory
+          ? !knownProductCategory.has(item.link.target)
+          : false))
     .map(({ item, index, path }) => ({ index, path, type: item.link.type, target: item.link.target }))
 
   if (missing.length > 0) {
     const [first] = missing
-    const kind = first!.type === 'content' ? 'page' : 'category'
+    const kind = first!.type === 'content'
+      ? 'page'
+      : first!.type === 'product-category' ? 'product category' : 'category'
     throw new MenuServiceError(
       422,
       'MENU_TARGET_NOT_FOUND',

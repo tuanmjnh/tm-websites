@@ -26,13 +26,13 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Menu, Audit, Revision, IdempotencyKey, Content, Category }) =>
+    const executed = await withPreparedDb(event, ({ Menu, Audit, Revision, IdempotencyKey, Content, Category, CatalogCategory }) =>
       executeIdempotent(
         { model: IdempotencyKey, siteId, action: 'menu.create', key: idempotencyKey, payload: body },
         async () => {
           const created = await createMenu(Menu, siteId, body, {
             ...writeMetaOf(event, user, Audit, Revision),
-            refs: { content: Content, category: Category },
+            refs: { content: Content, category: Category, productCategory: CatalogCategory },
           })
           return {
             statusCode: 201,

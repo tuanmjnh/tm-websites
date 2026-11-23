@@ -79,6 +79,9 @@ function assertTarget(type: MenuChildItem['link']['type'], target: string, path:
   if (type === 'category' && !KEY_PATTERN.test(target)) {
     throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${path}: the category key looks invalid`)
   }
+  if (type === 'product-category' && !KEY_PATTERN.test(target)) {
+    throw new MenuInvariantError('MENU_TARGET_INVALID', `Item ${path}: the product category key looks invalid`)
+  }
   if (type === 'url') {
     const absolute = /^https?:\/\/[^\s]+$/.test(target)
     const rootedPath = target.startsWith('/') && !target.startsWith('//')

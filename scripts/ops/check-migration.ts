@@ -176,21 +176,25 @@ try {
     if (v2Count < legacyCount) crmGaps.push(label)
   }
 
-  // Menus: informational. A legacy menu can hold more items than v2's 30-item limit
-  // allows, so the importer skips a menu instead of truncating it; that menu shows up
-  // here as a gap rather than as a silent loss.
+  // Menus: informational, because the counts are not 1:1. `migrate:menus` merges
+  // the three legacy footer blocks into one `footer` menu, and a menu nested
+  // deeper than one dropdown level (the header) stays unmigrated rather than
+  // being truncated. So v2 holds fewer documents than the legacy collection even
+  // when every importable row landed.
   const legacyMenus = await connection.collection('menus').countDocuments({ ...tenantMatcher, isDeleted: { $ne: true } })
   const v2Menus = await connection.collection('site_menus').countDocuments({ siteId })
   if (legacyMenus || v2Menus) {
     const ok = v2Menus >= legacyMenus
-    console.log(`  ${ok ? '✅' : '⚠️ '} menus                  legacy ${String(legacyMenus).padStart(4)}  v2 ${String(v2Menus).padStart(4)}${ok ? '' : '  — not migrated (legacy menus can exceed the v2 item limit)'}`)
+    console.log(`  ${ok ? '✅' : '⚠️ '} menus                  legacy ${String(legacyMenus).padStart(4)}  v2 ${String(v2Menus).padStart(4)}${ok ? '' : '  — 3 legacy footer menus become one, and a menu nested 3 levels deep (header) is not imported'}`)
   }
 
   console.log(failed ? '\n❌ parity: the database holds fewer migrated rows than the legacy source\n' : '\n✅ parity: every migrated domain holds at least what the source does\n')
   // "Migrated domain" is not "every domain": menus have no importer yet, so a reader
   // must not take the line above as a clean bill for the whole database.
   const pending: string[] = []
-  if (v2Menus < legacyMenus) pending.push('menus')
+  // The legacy footer blocks are merged and the 3-level header is refused, so a
+  // smaller v2 count is expected; `migrate:menus` names each skipped menu.
+  if (v2Menus < legacyMenus) pending.push('menus (merged footer; the 3-level header needs a model decision)')
   pending.push(...crmGaps)
   if (missingCompanyFields.length) pending.push('company identity fields')
   if (pending.length) {

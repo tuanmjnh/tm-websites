@@ -100,9 +100,15 @@ export function publicMenuLabel(
 /**
  * A menu target is never trusted as a URL. `url` targets were validated by the
  * CMS (rooted path or absolute http(s)); a content key becomes the catch-all
- * path the storefront serves, and a category key becomes its landing page.
+ * path the storefront serves, a content-category key becomes `/danh-muc/<slug>`,
+ * and a product-category key becomes `/categories/<slug>` — two different
+ * landing pages, which is why they are two link types.
  */
-export function publicMenuHref(link: { type: string, target: string }, categorySlug?: string | null): string | null {
+export function publicMenuHref(
+  link: { type: string, target: string },
+  categorySlug?: string | null,
+  productCategorySlug?: string | null,
+): string | null {
   const target = link.target.trim()
   if (!target) return null
 
@@ -115,6 +121,11 @@ export function publicMenuHref(link: { type: string, target: string }, categoryS
   if (link.type === 'category') {
     const slug = (categorySlug || target.split('/').filter(Boolean).pop() || '').trim()
     return slug ? `/danh-muc/${encodeURIComponent(slug)}` : null
+  }
+
+  if (link.type === 'product-category') {
+    const slug = (productCategorySlug || target.split('/').filter(Boolean).pop() || '').trim()
+    return slug ? `/categories/${encodeURIComponent(slug)}` : null
   }
 
   if (link.type === 'url') {
@@ -145,6 +156,7 @@ function readString(value: unknown, fallback = ''): string {
 export function toPublicMenu(
   doc: Record<string, unknown>,
   resolveCategorySlug: (key: string) => string | undefined = () => undefined,
+  resolveProductCategorySlug: (key: string) => string | undefined = () => undefined,
 ): PublicMenu | null {
   const key = readString(doc.key)
   if (!key) return null
@@ -159,6 +171,7 @@ export function toPublicMenu(
     const href = publicMenuHref(
       { type, target },
       type === 'category' ? resolveCategorySlug(target) ?? null : null,
+      type === 'product-category' ? resolveProductCategorySlug(target) ?? null : null,
     )
     if (!href) return null
 
@@ -260,16 +273,16 @@ export function buildPublicSite(input: {
   settings: Record<string, unknown> | null
   menus: readonly Record<string, unknown>[]
   categorySlugs?: ReadonlyMap<string, string> | Record<string, string>
+  productCategorySlugs?: ReadonlyMap<string, string> | Record<string, string>
 }): PublicSite {
   const settings = input.settings ?? {}
   const company = readRecord(settings.company)
   const seo = readRecord(settings.seo)
   const locales = readRecord(settings.locales)
 
-  const slugOf = (key: string): string | undefined => {
-    const map = input.categorySlugs
+  // A Map from the reader, or a plain lookup object from a caller/test.
+  const readMap = (map: ReadonlyMap<string, string> | Record<string, string> | undefined, key: string): string | undefined => {
     if (!map) return undefined
-    // A Map from the reader, or a plain lookup object from a caller/test.
     if (typeof (map as Map<string, string>).get === 'function') {
       return (map as Map<string, string>).get(key)
     }
@@ -277,7 +290,11 @@ export function buildPublicSite(input: {
   }
 
   const menus = input.menus
-    .map(doc => toPublicMenu(doc, slugOf))
+    .map(doc => toPublicMenu(
+      doc,
+      key => readMap(input.categorySlugs, key),
+      key => readMap(input.productCategorySlugs, key),
+    ))
     .filter((menu): menu is PublicMenu => menu !== null)
     .sort((left, right) => left.key.localeCompare(right.key))
 

@@ -53,7 +53,7 @@ const itemForm = reactive({
 
 // Reference choices for the item dialog. Loaded on first use and refreshed
 // whenever another menu is opened, so a page created in the meantime shows up.
-const linkChoices = ref<MenuLinkOptions>({ content: [], category: [] })
+const linkChoices = ref<MenuLinkOptions>({ content: [], category: [], productCategory: [] })
 const choicesLoaded = ref(false)
 const choicesLoading = ref(false)
 const choicesError = ref<string | null>(null)
@@ -99,12 +99,15 @@ const labelOf = (item: { label: { vi: string, en: string } }) =>
 const targetPlaceholder = computed(() => {
   if (itemForm.type === 'content') return 'gioi-thieu'
   if (itemForm.type === 'category') return 'trang-suc'
+  if (itemForm.type === 'product-category') return 'chan-ga-goi-dem'
   return '/gioi-thieu'
 })
 
 const linkIcon = (type: string) => {
   if (type === 'content') return 'i-lucide-file-text'
   if (type === 'category') return 'i-lucide-folder'
+  // A product category (shop) is a different landing page from a content one.
+  if (type === 'product-category') return 'i-lucide-shopping-bag'
   return 'i-lucide-link'
 }
 
@@ -266,7 +269,11 @@ async function ensureLinkChoices() {
  */
 const targetItems = computed(() => {
   if (itemForm.type === 'url') return []
-  const source = itemForm.type === 'content' ? linkChoices.value.content : linkChoices.value.category
+  const source = itemForm.type === 'content'
+    ? linkChoices.value.content
+    : itemForm.type === 'product-category'
+      ? linkChoices.value.productCategory
+      : linkChoices.value.category
   const entries = source.map(entry => ({ value: entry.key, label: `${entry.label} · ${entry.key}` }))
   const current = itemForm.target.trim()
   if (current && !entries.some(entry => entry.value === current)) {

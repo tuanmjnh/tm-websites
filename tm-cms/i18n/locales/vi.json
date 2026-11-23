@@ -430,12 +430,14 @@
       },
       "types": {
         "content": "Nội dung",
-        "category": "Danh mục",
+        "category": "Danh mục bài viết",
+        "product-category": "Danh mục sản phẩm",
         "url": "Đường dẫn"
       },
       "targetHints": {
         "content": "Key của nội dung, ví dụ gioi-thieu",
-        "category": "Key của danh mục, ví dụ trang-suc",
+        "category": "Key của danh mục bài viết, ví dụ trang-suc",
+        "product-category": "Key của danh mục sản phẩm, ví dụ chan-ga-goi-dem",
         "url": "Đường dẫn bắt đầu bằng / hoặc URL đầy đủ"
       },
       "targetPick": {
@@ -459,7 +461,7 @@
         "revisionConflict": "Menu đã được người khác sửa, hãy tải lại",
         "unchanged": "Không có thay đổi nào để lưu",
         "keyImmutable": "Không thể đổi khoá sau khi tạo",
-        "itemsLimit": "Mỗi menu tối đa 30 mục",
+        "itemsLimit": "Mỗi menu tối đa 120 mục",
         "labelRequired": "Cần ít nhất một nhãn cho mục này",
         "labelInvalid": "Nhãn quá dài",
         "targetInvalid": "Đích không hợp lệ với loại liên kết",
@@ -467,7 +469,7 @@
         "payloadInvalid": "Dữ liệu menu không hợp lệ",
         "notFound": "Không tìm thấy menu",
         "targetNotFound": "Liên kết đang trỏ tới một trang hoặc danh mục không tồn tại trong site này. Chọn lại mục có thật rồi lưu.",
-        "childrenLimit": "Mỗi mục menu có tối đa 10 mục con",
+        "childrenLimit": "Mỗi mục menu có tối đa 30 mục con",
         "depthLimit": "Menu chỉ hỗ trợ một cấp mục con"
       }
     },

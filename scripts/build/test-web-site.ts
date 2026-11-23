@@ -79,6 +79,22 @@ check('a category uses the resolved locale slug, then the key', () => {
   assert.equal(publicMenuHref({ type: 'category', target: 'a/b' }, null), '/danh-muc/b')
 })
 
+check('a product category renders on the catalog path, not the content one', () => {
+  assert.equal(publicMenuHref({ type: 'product-category', target: 'chan-ga-goi-dem' }, null, 'chan-ga-goi-dem-vn'), '/categories/chan-ga-goi-dem-vn')
+  assert.equal(publicMenuHref({ type: 'product-category', target: 'chan-ga-goi-dem' }), '/categories/chan-ga-goi-dem')
+  assert.equal(publicMenuHref({ type: 'product-category', target: '  ' }), null)
+})
+
+check('a stored product-category link resolves through the catalog slug map', () => {
+  const menu = toPublicMenu(
+    { key: 'main', items: [{ label: { vi: 'Chăn ga', en: 'Bedding' }, link: { type: 'product-category', target: 'chan-ga-goi-dem' } }] },
+    () => undefined,
+    () => 'chan-ga-goi-dem',
+  )
+  assert.ok(menu)
+  assert.deepEqual(menu.items.map(item => item.href), ['/categories/chan-ga-goi-dem'])
+})
+
 check('url targets keep rooted paths and absolute links only', () => {
   assert.equal(publicMenuHref({ type: 'url', target: '/lien-he' }), '/lien-he')
   assert.equal(publicMenuHref({ type: 'url', target: 'https://example.com/x' }), 'https://example.com/x')

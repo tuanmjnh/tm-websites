@@ -6,22 +6,31 @@ import { z } from 'zod'
  *
  * A menu is an immutable `key` (`main`, `footer`) plus an ordered list of items.
  * An item carries a per-locale label and one link target: a content key, a
- * category key, or a path/URL the editor typed. A top-level item may also carry
- * children, which is the one nesting level a storefront header can render as a
- * dropdown. Only ids and keys are stored, so a renamed record changes its own
- * title without rewriting every menu.
+ * content-category key, a product-category key, or a path/URL the editor typed.
+ * A top-level item may also carry children, which is the one nesting level a
+ * storefront header can render as a dropdown. Only ids and keys are stored, so a
+ * renamed record changes its own title without rewriting every menu.
+ *
+ * `product-category` exists because the two category stores are different: a
+ * content category renders at `/danh-muc/<slug>` and a product category at
+ * `/categories/<slug>`. Without it a menu could not link the shop's own
+ * categories at all (the legacy CMS's 130 such links).
  */
 
 export const MENU_LOCALES = ['vi', 'en'] as const
 export type MenuLocale = (typeof MENU_LOCALES)[number]
 
-export const MENU_LINK_TYPES = ['content', 'category', 'url'] as const
+export const MENU_LINK_TYPES = ['content', 'category', 'product-category', 'url'] as const
 export type MenuLinkType = (typeof MENU_LINK_TYPES)[number]
 
-/** A navigation block is small; the caps keep one document bounded. */
-export const MENU_MAX_ITEMS = 30
+/**
+ * A navigation block stays bounded, but the cap has to fit a real mega menu:
+ * `sen-tuan`'s legacy product-categories menu holds 56 rows, with one parent of
+ * 20. 30/10 silently refused that site its own navigation.
+ */
+export const MENU_MAX_ITEMS = 120
 /** Children a single top-level item may hold. */
-export const MENU_MAX_CHILDREN = 10
+export const MENU_MAX_CHILDREN = 30
 export const MENU_LABEL_MAX = 80
 export const MENU_TARGET_MAX = 300
 
@@ -132,6 +141,8 @@ export type MenuLinkOption = z.infer<typeof MenuLinkOptionSchema>
 export const MenuLinkOptionsSchema = z.object({
   content: z.array(MenuLinkOptionSchema),
   category: z.array(MenuLinkOptionSchema),
+  /** Catalog categories, listed separately because they render on another path. */
+  productCategory: z.array(MenuLinkOptionSchema).default([]),
 })
 
 export type MenuLinkOptions = z.infer<typeof MenuLinkOptionsSchema>

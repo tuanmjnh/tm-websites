@@ -42,6 +42,21 @@ export const PublicSiteMenuModel: Model<PublicMenuDoc> =
   mongoose.models.PublicSiteMenu
   ?? mongoose.model<PublicMenuDoc>('PublicSiteMenu', menuSchema)
 
+const catalogCategorySchema = new mongoose.Schema<Record<string, unknown>>(
+  {
+    siteId: String,
+    key: String,
+    slug: { type: mongoose.Schema.Types.Mixed },
+    isDeleted: Boolean,
+  },
+  { strict: false, versionKey: false, timestamps: false, collection: 'catalog_categories' },
+)
+
+/** Read-only: a menu's `product-category` link resolves through this collection. */
+export const PublicCatalogCategoryModel: Model<Record<string, unknown>> =
+  mongoose.models.PublicCatalogCategory
+  ?? mongoose.model<Record<string, unknown>>('PublicCatalogCategory', catalogCategorySchema)
+
 export const PUBLIC_SETTINGS_PROJECTION = 'company seo locales'
 export const PUBLIC_MENU_PROJECTION = 'key items'
 
@@ -76,6 +91,43 @@ export function buildCategorySlugMap(
         if (entry.locale.toLowerCase().split('-')[0] === code && entry.slug) return entry.slug
       }
       return ''
+    }
+
+    map.set(key, read(wanted) || read(fallback) || key)
+  }
+
+  return map
+}
+
+export interface CatalogCategorySlugDoc {
+  key?: unknown
+  slug?: unknown
+  isDeleted?: unknown
+}
+
+/**
+ * Key to landing-page slug for the product categories a menu links to. A catalog
+ * category stores a flat `{ vi, en }` slug map (not a locale list), so this
+ * reader is separate from the content-category one. A deleted category is left
+ * out on purpose: the menu item is then dropped instead of rendering a dead link.
+ */
+export function buildCatalogCategorySlugMap(
+  docs: readonly CatalogCategorySlugDoc[],
+  locale: string,
+): Map<string, string> {
+  const wanted = locale.toLowerCase().split('-')[0] ?? ''
+  const fallback = DEFAULT_PUBLIC_CONTENT_LOCALE
+  const map = new Map<string, string>()
+
+  for (const doc of docs) {
+    if (doc.isDeleted === true) continue
+    const key = typeof doc.key === 'string' ? doc.key : ''
+    if (!key) continue
+
+    const slug = doc.slug && typeof doc.slug === 'object' ? (doc.slug as Record<string, unknown>) : {}
+    const read = (code: string) => {
+      const value = slug[code]
+      return typeof value === 'string' ? value.trim() : ''
     }
 
     map.set(key, read(wanted) || read(fallback) || key)

@@ -8,12 +8,14 @@ import {
 import {
   PUBLIC_MENU_PROJECTION,
   PUBLIC_SETTINGS_PROJECTION,
+  PublicCatalogCategoryModel,
   PublicSettingsModel,
   PublicSiteMenuModel,
+  buildCatalogCategorySlugMap,
   buildCategorySlugMap,
 } from '#server/models/sitePublic'
 import { PublicCategoryModel } from '#server/models/contentCategoryPublic'
-import type { CategorySlugDoc } from '#server/models/sitePublic'
+import type { CatalogCategorySlugDoc, CategorySlugDoc } from '#server/models/sitePublic'
 import { withSiteDb } from './mongo'
 
 /**
@@ -23,7 +25,8 @@ import { withSiteDb } from './mongo'
  * storefront reads them directly with its own projection. Company identity, SEO
  * defaults and the enabled locales come from the settings document, and every
  * menu item is resolved to a path here — a content key becomes the catch-all
- * path, a category key becomes its landing page slug for the requested locale.
+ * path, a content-category key becomes `/danh-muc/<slug>` for the requested
+ * locale, and a product-category key becomes `/categories/<slug>`.
  */
 
 export function getSiteLocale(event: H3Event): string {
@@ -42,6 +45,7 @@ export async function readPublicSite(event: H3Event, locale: string): Promise<Pu
     // Children resolve to the same landing pages as their parent, so their
     // category keys have to be collected too or a dropdown link loses its slug.
     const categoryKeys = new Set<string>()
+    const productCategoryKeys = new Set<string>()
     for (const menu of menuDocs) {
       const items = Array.isArray(menu.items) ? menu.items : []
       for (const raw of items) {
@@ -51,24 +55,35 @@ export async function readPublicSite(event: H3Event, locale: string): Promise<Pu
         }
         const links = [item.link, ...(Array.isArray(item.children) ? item.children.map(child => child.link) : [])]
         for (const link of links) {
-          if (link?.type !== 'category' || typeof link.target !== 'string') continue
+          if (typeof link?.target !== 'string') continue
           const key = link.target.trim()
-          if (key) categoryKeys.add(key)
+          if (!key) continue
+          if (link.type === 'category') categoryKeys.add(key)
+          if (link.type === 'product-category') productCategoryKeys.add(key)
         }
       }
     }
 
-    const categoryDocs = categoryKeys.size
-      ? await PublicCategoryModel
-          .find({ key: { $in: [...categoryKeys] } })
-          .select('key locales')
-          .lean<CategorySlugDoc[]>()
-      : []
+    const [categoryDocs, productCategoryDocs] = await Promise.all([
+      categoryKeys.size
+        ? PublicCategoryModel
+            .find({ key: { $in: [...categoryKeys] } })
+            .select('key locales')
+            .lean<CategorySlugDoc[]>()
+        : Promise.resolve<CategorySlugDoc[]>([]),
+      productCategoryKeys.size
+        ? PublicCatalogCategoryModel
+            .find({ key: { $in: [...productCategoryKeys] }, isDeleted: { $ne: true } })
+            .select('key slug')
+            .lean<CatalogCategorySlugDoc[]>()
+        : Promise.resolve<CatalogCategorySlugDoc[]>([]),
+    ])
 
     return buildPublicSite({
       settings,
       menus: menuDocs,
       categorySlugs: buildCategorySlugMap(categoryDocs, locale),
+      productCategorySlugs: buildCatalogCategorySlugMap(productCategoryDocs, locale),
     })
   })
 }

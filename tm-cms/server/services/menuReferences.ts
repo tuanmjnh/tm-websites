@@ -18,7 +18,7 @@ export type { MenuReference }
  */
 export function menuLinksTo(
   items: readonly { link?: { type?: string, target?: string }, children?: readonly { link?: { type?: string, target?: string } }[] }[],
-  type: 'content' | 'category',
+  type: 'content' | 'category' | 'product-category',
   target: string,
 ): boolean {
   const matches = (link?: { type?: string, target?: string }) => link?.type === type && link?.target === target
@@ -28,7 +28,7 @@ export function menuLinksTo(
 export async function findMenuReferences(
   model: Model<MenuDocument>,
   siteId: string,
-  type: 'content' | 'category',
+  type: 'content' | 'category' | 'product-category',
   target: string,
 ): Promise<MenuReference[]> {
   const records = await model
