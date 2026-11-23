@@ -16,6 +16,9 @@ const navItems = computed(() => [
   { label: t('nav.dashboard'), icon: 'i-lucide-layout-dashboard', to: '/' },
   ...gatedModuleItems('catalog'),
   ...gatedModuleItems('orders'),
+  ...(isModuleEnabled('orders') && hasCapability('content.read')
+    ? [{ label: t('nav.quotations'), icon: 'i-lucide-file-text', to: '/quotations' }]
+    : []),
   ...gatedModuleItems('inventory'),
   ...gatedModuleItems('purchaseOrders'),
   ...gatedModuleItems('hr'),

@@ -280,6 +280,14 @@ Verified over HTTP on `:4006` with real data: `GET /api/public/products/dem-kc-t
 variants each carrying `attributes`, and the server-rendered page contains both groups, two pressed
 chips and disabled chips for missing combinations. Chip clicks were not exercised in a browser.
 
+Quotations were the flip side of that gap: the module had a service and fifteen admin routes since
+2026-11-19 but no CMS screen, so the three quotations on `sen-tuan` were invisible. `/quotations`
+now lists them (search, status filter, counts) and `/quotations/[id]` renders an A4 sheet — customer
+and address snapshot, lines with their option attributes, subtotal/shipping/discount/total, notes and
+signatures — printed through the browser while the toolbar and navigation stay `print:hidden`. The
+sheet's toolbar re-statuses the quotation with its `revision`, so a stale tab cannot overwrite another
+edit. There is still no create/edit quotation form.
+
 The CMS catalog editor edits the pairs as well: every variant row carries its own option list
 (name/value with add and remove), blank rows are dropped before the payload, and `test:catalog`
 creates a variant with an option, reads it back and replaces the set on update. A newly created
