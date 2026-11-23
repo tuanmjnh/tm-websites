@@ -21,5 +21,5 @@ minimumReleaseAgeExclude:
   - nitropack@2.13.6
   - nuxt@4.6.4
   - unrouting@0.3.2
-  - '@tuanmjnh/tm-hub-client@1.2.0'
+  - '@tuanmjnh/tm-hub-client@1.2.0 || 1.2.1'
   - '@tuanmjnh/tm-ui@0.2.0'

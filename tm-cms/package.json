@@ -24,13 +24,13 @@
     "@tm/flow-config": "workspace:*",
     "@tm/flow-contracts": "workspace:*",
     "@tm/flow-utils": "workspace:*",
+    "@tuanmjnh/tm-hub-client": "^1.2.1",
     "@vueuse/core": "^15.0.0",
     "@vueuse/nuxt": "^15.0.0",
     "date-fns": "^4.4.0",
     "mongoose": "^9.11.4",
     "pinia": "^4.1.0",
-    "zod": "^4.6.7",
-    "@tuanmjnh/tm-hub-client": "^1.2.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
