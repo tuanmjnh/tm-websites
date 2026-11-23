@@ -257,7 +257,7 @@ function catalogFixture() {
       status: 'published',
       isActive: false,
       variants: [
-        { sku: 'V-1', basePrice: 50, salePrice: null, stock: 2 },
+        { sku: 'V-1', basePrice: 50, salePrice: null, stock: 2, attributes: [{ k: 'Kích thước', v: '160x200' }] },
         { basePrice: 60, stock: 1 },
       ],
       fullPath: { vi: 'trang-suc/nhan-bac-hai' },
@@ -359,6 +359,7 @@ async function main() {
         thumbnail: 1,
         gallery: 1,
         variants: 1,
+        variantAttributes: 1,
         attributes: 1,
         sku: 1,
         barcode: 0,
@@ -554,6 +555,7 @@ async function main() {
     await check('a variant without a SKU is dropped, a published but hidden item stays a draft', () => {
       assert.equal(variable?.variants.length, 1)
       assert.equal(variable?.variants[0].sku, 'V-1')
+      assert.deepEqual(variable?.variants[0].attributes, [{ name: { vi: 'Kích thước' }, value: { vi: '160x200' } }])
       assert.equal(variable?.status, 'draft')
       assert.equal(variable?.isActive, false)
     })

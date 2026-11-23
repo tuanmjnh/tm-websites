@@ -254,6 +254,21 @@ menus and 126 rows with no missing `href`. `main` comes back as the header the s
 nested dropdown reaches HTML and not only the JSON. Gates: `test:menus` 16 checks, `test:web-site`
 27 checks, `pnpm verify:all` **67/67**.
 
+### Catalog — variant options that were silently dropped
+
+`migrate:catalog` read attribute labels and values with the locale-map reader, so the plain-text
+shape legacy actually stores (`{ k: 'Kích thước', v: '160X200' }`) mapped to `{}`: all 626 variant
+options of `sen-tuan` were written as `attributes: []`, which made every variant of a variable
+product indistinguishable. The mapper now reads plain text as Vietnamese while still accepting a
+locale map, and the catalog report prints `variantAttributes` so a zero is visible in the dry run
+instead of looking like clean data.
+
+Evidence: `pnpm test:legacy-import` covers both shapes (`{ k, v }` strings and localized maps) and
+`pnpm test:migrate-apply` asserts the migrated variant carries the option. Re-running
+`migrate:catalog --site sentuan --apply` reports `variantAttributes: 626` and the collection now
+holds 626 of 626 variants with attributes; `check:migration` is unchanged (241/241 items). The
+storefront product page still has no variant selector — the data is stored, the picker is not built.
+
 ### Dashboard — real business counts
 
 The control centre listed Hub installation facts only, so `SYS-01`'s "real scoped aggregates" had

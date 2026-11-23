@@ -282,6 +282,9 @@ try {
     thumbnail: plannedItems.filter(item => item.thumbnail).length,
     gallery: plannedItems.filter(item => item.gallery.length).length,
     variants: plannedItems.filter(item => item.variants.length).length,
+    // Per-variant options (`Kích thước = 160X200`) are the only place a variable
+    // product says how its variants differ; a count of 0 here means the mapper lost them.
+    variantAttributes: plannedItems.reduce((total, item) => total + item.variants.filter(variant => variant.attributes.length).length, 0),
     attributes: plannedItems.filter(item => item.attributes.length).length,
     sku: plannedItems.filter(item => item.sku).length,
     barcode: plannedItems.filter(item => item.barcode).length,

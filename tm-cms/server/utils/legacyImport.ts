@@ -172,12 +172,25 @@ export function legacyImageList(value: unknown): string[] {
 }
 
 /** Legacy attributes are `[{ k | key | name | title, v | value | label }]`. */
+/**
+ * Attribute labels and values were free text, not locale maps: a variant carries
+ * `{ k: 'Kích thước', v: '160X200' }`. `legacyLocalized` only reads locale maps, so
+ * plain text is read as Vietnamese here instead of being dropped.
+ */
+function attributeLocaleMap(value: unknown, max: number): Record<string, string> {
+  if (typeof value === 'string' || typeof value === 'number') {
+    const text = legacyText(value)
+    return text ? { vi: text.slice(0, max) } : {}
+  }
+  return legacyLocalized(value, max)
+}
+
 export function legacyAttributeList(value: unknown): { name: Record<string, string>, value: Record<string, string> }[] {
   const list: { name: Record<string, string>, value: Record<string, string> }[] = []
   for (const entry of legacyList(value)) {
     const record = asLegacyRecord(entry)
-    const name = legacyLocalized(record.k ?? record.key ?? record.name ?? record.title, 200)
-    const values = legacyLocalized(record.v ?? record.value ?? record.label, 500)
+    const name = attributeLocaleMap(record.k ?? record.key ?? record.name ?? record.title, 200)
+    const values = attributeLocaleMap(record.v ?? record.value ?? record.label, 500)
     if (Object.keys(name).length && Object.keys(values).length) list.push({ name, value: values })
   }
   return list

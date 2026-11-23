@@ -137,6 +137,23 @@ check('legacyAttributeList reads localized `{ k, v }` and drops an entry with no
   assert.deepEqual(legacyAttributeList('not an array'), [])
 })
 
+// Legacy variant options are plain text: `{ k: 'Kích thước', v: '160X200' }`. Reading
+// them only as locale maps dropped every variant option in `sen-tuan` (626 of 626).
+check('legacyAttributeList reads plain-text attribute labels as Vietnamese', () => {
+  assert.deepEqual(
+    legacyAttributeList([
+      { k: 'Kích thước', v: '160X200' },
+      { k: ' Màu sắc ', v: ' Trắng ' },
+      { k: { vi: 'Chất liệu' }, v: 'Bạc' },
+    ]),
+    [
+      { name: { vi: 'Kích thước' }, value: { vi: '160X200' } },
+      { name: { vi: 'Màu sắc' }, value: { vi: 'Trắng' } },
+      { name: { vi: 'Chất liệu' }, value: { vi: 'Bạc' } },
+    ],
+  )
+})
+
 check('legacyContentAttributes keeps a `{ url }` thumbnail — the silent drop', () => {
   assert.deepEqual(
     legacyContentAttributes({ thumbnail: { url: 'https://cdn/thumb.png' } }),
