@@ -1,7 +1,6 @@
 <script setup lang="ts">
 const { t, locale, locales, setLocale } = useI18n()
 const route = useRoute()
-const { socialLinks } = useSiteConfig()
 
 // Brand, contact details and both menus come from the CMS-owned settings and
 // site menus; the composable keeps the static navigation and Hub identity as the
@@ -11,6 +10,9 @@ const {
   contactEmail,
   contactPhone,
   contactAddress,
+  openingHours,
+  footerText,
+  socialLinks,
   headerLinks: navLinks,
   footerLinks,
 } = usePublicSite()
@@ -182,6 +184,10 @@ onMounted(() => hydrateCart())
                 <UIcon name="i-lucide-mail" class="size-3.5 shrink-0" aria-hidden="true" />
                 <span>{{ contactEmail }}</span>
               </li>
+              <li v-if="openingHours" class="flex items-center gap-2">
+                <UIcon name="i-lucide-clock" class="size-3.5 shrink-0" aria-hidden="true" />
+                <span>{{ openingHours }}</span>
+              </li>
             </ul>
           </div>
 
@@ -217,7 +223,7 @@ onMounted(() => hydrateCart())
         </div>
 
         <div class="mt-8 border-t border-default/40 pt-4 text-center text-xs text-muted">
-          © {{ new Date().getFullYear() }} {{ brandName }}. {{ t('site.rights') }}
+          {{ footerText || `© ${new Date().getFullYear()} ${brandName}. ${t('site.rights')}` }}
         </div>
       </div>
     </footer>

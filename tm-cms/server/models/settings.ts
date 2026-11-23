@@ -45,6 +45,25 @@ export interface SiteSettingsLocales {
 
 export type SiteSettingsModules = Record<string, boolean>
 
+/** A social profile rendered in the storefront footer. */
+export interface SiteSettingsSocialLink {
+  code: string
+  label: string
+  url: string
+}
+
+/** Storefront-owned text that is not part of the company identity. */
+export interface SiteSettingsSite {
+  footerText: string
+  copyright: string
+  websiteUrl: string
+  keywords: string
+  maintenanceMode: boolean
+  /** locale -> opening hours; a missing entry is simply not shown. */
+  openingHours: Record<string, string>
+  social: SiteSettingsSocialLink[]
+}
+
 export interface SiteSettingsDocument {
   siteId: string
   revision: number
@@ -52,6 +71,7 @@ export interface SiteSettingsDocument {
   seo: SiteSettingsSeo
   locales: SiteSettingsLocales
   modules: SiteSettingsModules
+  site: SiteSettingsSite
   updatedBy: AuditActor | null
   createdAt: Date
   updatedAt: Date
@@ -96,6 +116,28 @@ const ModulesSchema = new Schema<SiteSettingsModules>(
   { _id: false },
 )
 
+const SocialLinkSchema = new Schema<SiteSettingsSocialLink>(
+  {
+    code: { type: String, default: '' },
+    label: { type: String, default: '' },
+    url: { type: String, default: '' },
+  },
+  { _id: false },
+)
+
+const SiteSchema = new Schema<SiteSettingsSite>(
+  {
+    footerText: { type: String, default: '' },
+    copyright: { type: String, default: '' },
+    websiteUrl: { type: String, default: '' },
+    keywords: { type: String, default: '' },
+    maintenanceMode: { type: Boolean, default: false },
+    openingHours: { type: Schema.Types.Mixed, default: () => ({}) },
+    social: { type: [SocialLinkSchema], default: () => [] },
+  },
+  { _id: false },
+)
+
 const ActorSchema = new Schema<AuditActor>(
   {
     id: { type: String, required: true },
@@ -113,6 +155,7 @@ export const settingsSchema = new Schema<SiteSettingsDocument>(
     seo: { type: SeoSchema, default: () => ({}) },
     locales: { type: LocalesSchema, default: () => ({}) },
     modules: { type: ModulesSchema, default: () => ({}) },
+    site: { type: SiteSchema, default: () => ({}) },
     updatedBy: { type: ActorSchema, default: null },
   },
   {

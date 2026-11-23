@@ -70,6 +70,38 @@ const ModulesSchema = z.object(
   Object.fromEntries(SITE_MODULES.map(module => [module, z.boolean()])) as Record<SiteModule, z.ZodBoolean>,
 )
 
+/**
+ * A social profile the footer links to. `code` is the platform key the importer
+ * derives from the legacy label (`facebook`, `zalo`, …); it is not an enum, so a
+ * platform the list does not know yet still has a place.
+ */
+export const AdminSocialLinkSchema = z.object({
+  code: trimmed(40),
+  label: trimmed(80),
+  url: z.union([z.literal(''), z.string().trim().url().max(300)]),
+})
+
+export type AdminSocialLink = z.infer<typeof AdminSocialLinkSchema>
+
+/**
+ * The storefront skin: text the customer owns outside the company identity.
+ * Opening hours stay localized because the legacy document kept them per locale.
+ */
+const SiteInfoSchema = z.object({
+  footerText: trimmed(300),
+  copyright: trimmed(200),
+  websiteUrl: z.union([z.literal(''), z.string().trim().url().max(300)]),
+  keywords: trimmed(500),
+  maintenanceMode: z.boolean(),
+  openingHours: z.object({
+    vi: trimmed(200),
+    en: trimmed(200),
+  }).partial(),
+  social: z.array(AdminSocialLinkSchema).max(12),
+})
+
+export type AdminSiteInfo = z.infer<typeof SiteInfoSchema>
+
 export const AdminSiteSettingsSchema = z.object({
   siteId: z.string(),
   /** `0` means the site still runs on defaults and was never saved. */
@@ -78,6 +110,7 @@ export const AdminSiteSettingsSchema = z.object({
   seo: SeoSchema,
   locales: LocalesSchema,
   modules: ModulesSchema,
+  site: SiteInfoSchema,
   updatedAt: z.string().nullable(),
   updatedBy: z
     .object({ id: z.string(), name: z.string(), email: z.string() })
@@ -93,6 +126,7 @@ export const AdminSiteSettingsPatchSchema = z.object({
   seo: SeoSchema.partial().optional(),
   locales: LocalesSchema.partial().optional(),
   modules: ModulesSchema.partial().optional(),
+  site: SiteInfoSchema.partial().optional(),
 })
 
 export type AdminSiteSettingsPatch = z.infer<typeof AdminSiteSettingsPatchSchema>
@@ -121,6 +155,15 @@ export function defaultSiteSettings(siteId: string): AdminSiteSettings {
     },
     locales: { default: 'vi', enabled: ['vi'] },
     modules: { content: true, catalog: false, orders: false, inventory: false },
+    site: {
+      footerText: '',
+      copyright: '',
+      websiteUrl: '',
+      keywords: '',
+      maintenanceMode: false,
+      openingHours: {},
+      social: [],
+    },
     updatedAt: null,
     updatedBy: null,
   }

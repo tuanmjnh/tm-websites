@@ -630,11 +630,11 @@ async function main() {
 
     await check('the settings dry run maps only the allowlisted keys', () => {
       assert.equal(drySettings.code, 0, drySettings.output)
-      assert.match(drySettings.output, /mapped 4 \["site_name","site_description","content_locales","enabled_modules"\]/)
+      assert.match(drySettings.output, /mapped 5 \["site_name","site_description","content_locales","enabled_modules","maintenance_mode"\]/)
       assert.match(drySettings.output, /"locales.enabled":\["vi","en"\]/)
       assert.match(drySettings.output, /"modules":\{"content":true,"catalog":true\}/)
       assert.match(drySettings.output, /legacy modules without a v2 switch \["cart"\]/)
-      assert.match(drySettings.output, /not carried 1 \["maintenance_mode"\]/)
+      assert.match(drySettings.output, /"site.maintenanceMode":true/, 'the storefront toggle is planned, not reported as not carried')
     })
     await check('the settings report names the credential keys and never prints a value', () => {
       assert.match(drySettings.output, /2 legacy keys hold credentials in plaintext and are NOT imported/)

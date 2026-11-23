@@ -28,10 +28,12 @@ import {
  *   name ("Sen Tuấn CMS") rather than the registered company. Pass `--replace-name`
  *   to take the legacy company name instead.
  *
+ * `settings.site` (the footer/public website section) now carries what used to have no
+ * destination: the public website, opening hours and social links.
+ *
  * Never written: `logo` (an inline SVG string with no media record to point at),
- * social links, bank accounts, gallery, opening hours, map embed, favicon and banner —
- * `settings.company` has no field for them. They are counted in the report so the
- * owner knows the storefront still lacks them.
+ * bank accounts, gallery, map embed, favicon and banner — no v2 field holds them.
+ * They are counted in the report so the owner knows the storefront still lacks them.
  */
 
 function flag(name: string): string | undefined {
@@ -54,6 +56,36 @@ const MAX_TEXT = 500
 
 function trimmed(value: unknown, max = MAX_TEXT): string {
   return legacyText(value).slice(0, max)
+}
+
+/** `Twitter (X)` becomes `twitter-x`: a stable, readable platform key. */
+function socialCode(label: string): string {
+  return label
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+}
+
+/**
+ * The legacy social list, reduced to what the footer can render: a label and an
+ * absolute address. A row without an http(s) URL is dropped, and `showInFloat`
+ * has no v2 field (the storefront renders the footer list only).
+ */
+function readSocial(value: unknown): Array<{ code: string, label: string, url: string }> {
+  const rows = Array.isArray(value) ? value : []
+  const result: Array<{ code: string, label: string, url: string }> = []
+  for (const raw of rows) {
+    const entry = (raw ?? {}) as Record<string, unknown>
+    const label = legacyText(entry.platform).slice(0, 80)
+    const url = legacyText(entry.url).slice(0, 300)
+    if (!label || !/^https?:\/\/[^\s]+$/.test(url)) continue
+    result.push({ code: socialCode(label), label, url })
+    if (result.length >= 12) break
+  }
+  return result
 }
 
 /** The default address, else the first one: the same choice the storefront makes. */
@@ -148,8 +180,25 @@ try {
       patch['seo.defaultDescription'] = carried['seo.defaultDescription']
     }
 
+    // Storefront section: website, opening hours (per locale) and social links.
+    const currentSite = (settings?.site ?? {}) as Record<string, unknown>
+    const website = legacyText(company.website).slice(0, 300)
+    if (website && /^https?:\/\/[^\s]+$/.test(website) && empty(currentSite.websiteUrl)) {
+      patch['site.websiteUrl'] = website
+    }
+    const hours = legacyLocalized(company.openingHours, 200)
+    const currentHours = (currentSite.openingHours ?? {}) as Record<string, unknown>
+    for (const [locale, value] of Object.entries(hours)) {
+      if (!value) continue
+      if (empty(currentHours[locale])) patch[`site.openingHours.${locale}`] = value
+    }
+    const social = readSocial(company.social)
+    const socialPresent = Array.isArray(currentSite.social) && currentSite.social.length > 0
+    if (social.length && !socialPresent) patch['site.social'] = social
+
     console.log(`  company document found: ${Boolean(name)}`)
     console.log(`  fields with a v2 destination ${JSON.stringify(Object.keys(carried))}`)
+    console.log(`  storefront section: website ${Boolean(website)}, opening hours ${JSON.stringify(Object.keys(hours))}, social ${social.length}`)
     console.log(`  planned writes ${JSON.stringify(patch)}`)
 
     const notCarried: string[] = []
@@ -159,15 +208,12 @@ try {
     if (carried['company.shortName']) notCarried.push('company.shortName')
     const counts: Array<[string, unknown]> = [
       ['company.slogan/badge/desc', company.slogan ?? company.badge ?? company.desc],
-      ['company.website', company.website],
       ['company.fax', company.fax],
       ['company.logo (inline SVG, no media record)', company.logo],
       ['company.favicon', company.favicon],
       ['company.banner', company.banner],
       ['company.gallery', Array.isArray(company.gallery) ? company.gallery.length : 0],
-      ['company.social', Array.isArray(company.social) ? company.social.length : 0],
       ['company.bankAccounts', Array.isArray(company.bankAccounts) ? company.bankAccounts.length : 0],
-      ['company.openingHours', company.openingHours],
       ['company.mapEmbed', company.mapEmbed],
       ['company.seo.keywords/image', seo.keywords ?? seo.image],
     ]

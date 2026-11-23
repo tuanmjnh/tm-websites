@@ -19,6 +19,7 @@ const settingsSchema = new mongoose.Schema<PublicSettingsDoc>(
     company: { type: mongoose.Schema.Types.Mixed },
     seo: { type: mongoose.Schema.Types.Mixed },
     locales: { type: mongoose.Schema.Types.Mixed },
+    site: { type: mongoose.Schema.Types.Mixed },
   },
   { strict: false, versionKey: false, timestamps: false, collection: 'settings' },
 )
@@ -57,7 +58,7 @@ export const PublicCatalogCategoryModel: Model<Record<string, unknown>> =
   mongoose.models.PublicCatalogCategory
   ?? mongoose.model<Record<string, unknown>>('PublicCatalogCategory', catalogCategorySchema)
 
-export const PUBLIC_SETTINGS_PROJECTION = 'company seo locales'
+export const PUBLIC_SETTINGS_PROJECTION = 'company seo locales site'
 export const PUBLIC_MENU_PROJECTION = 'key items'
 
 export interface CategorySlugDoc {

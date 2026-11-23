@@ -189,6 +189,61 @@ async function integration() {
       const entry = await Audit.findOne({ siteId: OTHER_SITE, requestId: 'req_reason' }).lean()
       assert.equal(entry?.reason, 'Cập nhật theo yêu cầu', 'trimmed and collapsed like every other domain')
     })
+
+    await check('the storefront section keeps its own text, hours and social links', async () => {
+      const current = await getSiteSettings(Settings, OTHER_SITE)
+      assert.deepEqual(current.site, {
+        footerText: '',
+        copyright: '',
+        websiteUrl: '',
+        keywords: '',
+        maintenanceMode: false,
+        openingHours: {},
+        social: [],
+      }, 'a site that never saved the section reads the defaults')
+
+      const saved = await updateSiteSettings(Settings, OTHER_SITE, {
+        revision: current.revision,
+        site: {
+          footerText: '  © 2026 Bạg Post  ',
+          copyright: 'Bạg Post',
+          websiteUrl: 'https://bagpost.vn',
+          maintenanceMode: true,
+          openingHours: { vi: 'T2-T7: 8:00-17:00', en: 'Mon-Sat: 8:00-17:00' },
+          social: [
+            { code: 'facebook', label: 'Facebook', url: 'https://facebook.com/bagpost' },
+            { code: 'empty', label: 'Hỏng', url: '' },
+          ],
+        },
+      }, meta)
+
+      assert.equal(saved.site.footerText, '© 2026 Bạg Post', 'stored trimmed')
+      assert.equal(saved.site.maintenanceMode, true)
+      assert.deepEqual(saved.site.openingHours, { vi: 'T2-T7: 8:00-17:00', en: 'Mon-Sat: 8:00-17:00' })
+      assert.deepEqual(saved.site.social.map(row => row.code), ['facebook'], 'a link without an address is dropped')
+      assert.equal(saved.revision, current.revision + 1)
+
+      const auditEntry = await Audit.findOne({ siteId: OTHER_SITE, revision: saved.revision }).lean()
+      assert.deepEqual(auditEntry?.changedFields, ['site'])
+
+      // A partial patch keeps the hours saved above and only replaces the list.
+      const merged = await updateSiteSettings(Settings, OTHER_SITE, {
+        revision: saved.revision,
+        site: { social: [{ code: 'zalo', label: 'Zalo', url: 'https://zalo.me/bagpost' }] },
+      }, meta)
+      assert.equal(merged.site.footerText, '© 2026 Bạg Post')
+      assert.deepEqual(merged.site.openingHours, { vi: 'T2-T7: 8:00-17:00', en: 'Mon-Sat: 8:00-17:00' })
+      assert.deepEqual(merged.site.social.map(row => row.code), ['zalo'])
+
+      await assert.rejects(
+        () => updateSiteSettings(Settings, OTHER_SITE, {
+          revision: merged.revision,
+          site: { websiteUrl: 'bagpost.vn' },
+        }, meta),
+        isSettingsError(422, 'SETTINGS_PAYLOAD_INVALID'),
+        'the public website must be an absolute URL',
+      )
+    })
   } finally {
     await closeDatabaseConnections()
   }

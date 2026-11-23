@@ -49,7 +49,17 @@ if (!siteId) throw new Error('Pass --site <customerId> or set TM_CUSTOMER_ID')
 if (!database) throw new Error('Set TM_MONGO_DB to the customer database name')
 
 /** The only keys this command may write. Everything else is reported. */
-const ALLOWED_KEYS = ['site_name', 'site_description', 'content_locales', 'enabled_modules'] as const
+const ALLOWED_KEYS = [
+  'site_name',
+  'site_description',
+  'content_locales',
+  'enabled_modules',
+  'site_footer_text',
+  'copyright',
+  'website_url',
+  'keywords',
+  'maintenance_mode',
+] as const
 
 /** A key is treated as a credential on its name, regardless of `isPublic`. */
 const SECRET_KEY_PATTERN = /secret|password|passwd|private|token|credential|api_key|apikey|jwt|uri|preset|vapid/i
@@ -96,6 +106,18 @@ try {
   const description = legacyText(byKey.get('site_description')?.value).slice(0, 500)
   const locales = readList(byKey.get('content_locales')?.value)
     .filter(locale => (SETTINGS_LOCALES as readonly string[]).includes(locale))
+  // The storefront skin: text and toggles the business owns. A URL is only kept
+  // when it is an absolute http(s) address, because the storefront renders it as
+  // the public website link.
+  const footerText = legacyText(byKey.get('site_footer_text')?.value).slice(0, 300)
+  const copyright = legacyText(byKey.get('copyright')?.value).slice(0, 200)
+  const websiteUrl = (() => {
+    const value = legacyText(byKey.get('website_url')?.value).slice(0, 300)
+    return /^https?:\/\/[^\s]+$/.test(value) ? value : ''
+  })()
+  const keywords = legacyText(byKey.get('keywords')?.value).slice(0, 500)
+  const maintenanceMode = byKey.get('maintenance_mode')?.value === true
+
   const modules: Record<string, boolean> = {}
   const unmappedModules: string[] = []
   for (const entry of readList(byKey.get('enabled_modules')?.value)) {
@@ -112,6 +134,9 @@ try {
     'seo.defaultDescription': Boolean(description),
     'locales.enabled': locales,
     modules,
+    'site.footerText': Boolean(footerText),
+    'site.websiteUrl': Boolean(websiteUrl),
+    'site.maintenanceMode': maintenanceMode,
   })}`)
   if (unmappedModules.length) {
     console.log(`  legacy modules without a v2 switch ${JSON.stringify(unmappedModules.sort())}`)
@@ -135,7 +160,28 @@ try {
     await syncSettingsIndexes(connection)
     const existing = await connection.collection('settings').findOne({ siteId })
     if (existing) {
-      console.log('  kept the existing settings document (an editor or an earlier import owns it)')
+      // An existing document is still owned by the editor, so nothing is replaced.
+      // The storefront section is filled only where it is empty, the same rule
+      // `migrate:company` uses for the company identity.
+      const current = (existing.site ?? {}) as Record<string, unknown>
+      const empty = (value: unknown) => typeof value !== 'string' || value.trim() === ''
+      const patch: Record<string, unknown> = {}
+      if (footerText && empty(current.footerText)) patch['site.footerText'] = footerText
+      if (copyright && empty(current.copyright)) patch['site.copyright'] = copyright
+      if (websiteUrl && empty(current.websiteUrl)) patch['site.websiteUrl'] = websiteUrl
+      if (keywords && empty(current.keywords)) patch['site.keywords'] = keywords
+      if (maintenanceMode && current.maintenanceMode !== true) {
+        patch['site.maintenanceMode'] = true
+      }
+      if (!Object.keys(patch).length) {
+        console.log('  kept the existing settings document (every storefront field already has a value)')
+      } else {
+        await connection.collection('settings').updateOne(
+          { siteId },
+          { $set: { ...patch, updatedAt: new Date() }, $inc: { revision: 1 } },
+        )
+        console.log(`  filled ${Object.keys(patch).length} empty storefront field(s) on the existing settings document`)
+      }
     } else {
       await connection.collection('settings').updateOne(
         { siteId },
@@ -147,6 +193,15 @@ try {
             seo: description ? { defaultDescription: description } : {},
             locales: locales.length ? { enabled: locales } : {},
             modules,
+            site: {
+              footerText,
+              copyright,
+              websiteUrl,
+              keywords,
+              maintenanceMode,
+              openingHours: {},
+              social: [],
+            },
             updatedBy: null,
             createdAt: new Date(),
             updatedAt: new Date(),

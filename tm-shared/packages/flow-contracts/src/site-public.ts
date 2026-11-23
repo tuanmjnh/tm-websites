@@ -71,6 +71,24 @@ export const PublicSiteSchema = z.object({
     default: z.string(),
     enabled: z.array(z.string()),
   }),
+  /**
+   * Storefront text and links the customer owns: footer copy, the public
+   * website, opening hours and social profiles. Never a credential.
+   */
+  site: z.object({
+    footerText: z.string(),
+    copyright: z.string(),
+    websiteUrl: z.string(),
+    keywords: z.string(),
+    maintenanceMode: z.boolean(),
+    /** locale -> opening hours; a missing entry is not shown. */
+    openingHours: z.record(z.string(), z.string()),
+    social: z.array(z.object({
+      code: z.string(),
+      label: z.string(),
+      url: z.string(),
+    })),
+  }),
   menus: z.array(PublicMenuSchema),
 })
 
@@ -81,6 +99,7 @@ export function emptyPublicSite(): PublicSite {
     company: { name: '', names: {}, email: '', phone: '', address: '', logoMediaId: '' },
     seo: { titleTemplate: '%s', titleTemplates: {}, defaultDescriptions: {}, defaultImageMediaIds: {}, defaultDescription: '', defaultImageMediaId: '' },
     locales: { default: 'vi', enabled: ['vi'] },
+    site: { footerText: '', copyright: '', websiteUrl: '', keywords: '', maintenanceMode: false, openingHours: {}, social: [] },
     menus: [],
   }
 }
@@ -236,6 +255,39 @@ export function toPublicMenu(
  * to the slug the storefront serves for the requested locale.
  */
 /**
+ * Opening hours are published for enabled locales only; a locale that kept the
+ * legacy copy but is not enabled is not shown on the storefront.
+ */
+function readHours(input: unknown, enabled: readonly string[]): Record<string, string> {
+  if (!input || typeof input !== 'object') return {}
+  const source = input as Record<string, unknown>
+  const allowed = enabled.length ? enabled : ['vi']
+  const result: Record<string, string> = {}
+  for (const locale of allowed) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
+/**
+ * A social row without an absolute http(s) address is dropped: the footer only
+ * ever renders it as an external link, so a relative or scheme-less value has no
+ * meaning there.
+ */
+function readSocial(input: unknown): Array<{ code: string, label: string, url: string }> {
+  if (!Array.isArray(input)) return []
+  const result: Array<{ code: string, label: string, url: string }> = []
+  for (const raw of input.slice(0, 12)) {
+    const entry = readRecord(raw)
+    const url = readString(entry.url).trim()
+    if (!/^https?:\/\/[^\s]+$/.test(url)) continue
+    result.push({ code: readString(entry.code).trim(), label: readString(entry.label).trim(), url })
+  }
+  return result
+}
+
+/**
  * Locale templates are advisory: only enabled locales with a non-empty string are
  * published, and the storefront falls back to `titleTemplate` for the rest.
  */
@@ -309,6 +361,7 @@ export function buildPublicSite(input: {
   const company = readRecord(settings.company)
   const seo = readRecord(settings.seo)
   const locales = readRecord(settings.locales)
+  const site = readRecord(settings.site)
 
   // A Map from the reader, or a plain lookup object from a caller/test.
   const readMap = (map: ReadonlyMap<string, string> | Record<string, string> | undefined, key: string): string | undefined => {
@@ -352,6 +405,15 @@ export function buildPublicSite(input: {
     locales: {
       default: readString(locales.default, 'vi'),
       enabled: enabled.length ? enabled : ['vi'],
+    },
+    site: {
+      footerText: readString(site.footerText).trim(),
+      copyright: readString(site.copyright).trim(),
+      websiteUrl: readString(site.websiteUrl).trim(),
+      keywords: readString(site.keywords).trim(),
+      maintenanceMode: site.maintenanceMode === true,
+      openingHours: readHours(site.openingHours, enabled),
+      social: readSocial(site.social),
     },
     menus,
   }

@@ -207,7 +207,7 @@
       },
       "site": {
         "title": "Cấu hình site",
-        "description": "Thông tin công ty, SEO mặc định, ngôn ngữ và module bật cho site này",
+        "description": "Thông tin công ty, SEO mặc định, chân trang, mạng xã hội, ngôn ngữ và module bật cho site này",
         "save": "Lưu cấu hình",
         "saved": "Đã lưu cấu hình site.",
         "savedNotRevalidated": "Đã lưu cấu hình site. Chưa xoá được cache trang web, nên thay đổi sẽ hiện sau khoảng một phút.",
@@ -231,7 +231,17 @@
           "modules": "Module",
           "logo": "Logo",
           "seoImage": "Ảnh SEO mặc định",
-          "seoImageLocale": "Ảnh SEO ({locale})"
+          "seoImageLocale": "Ảnh SEO ({locale})",
+          "footerText": "Dòng chân trang",
+          "copyright": "Bản quyền",
+          "websiteUrl": "Website công khai",
+          "keywords": "Từ khoá",
+          "openingHours": "Giờ mở cửa ({locale})",
+          "maintenanceMode": "Chế độ bảo trì",
+          "social": "Mạng xã hội",
+          "socialAdd": "Thêm liên kết",
+          "socialLabel": "Tên hiển thị",
+          "socialEmpty": "Chưa có liên kết mạng xã hội."
         },
         "modules": {
           "content": "Nội dung",

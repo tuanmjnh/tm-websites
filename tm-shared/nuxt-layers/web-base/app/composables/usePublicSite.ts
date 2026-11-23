@@ -23,7 +23,7 @@ export interface PublicSiteLink {
  */
 export const usePublicSite = () => {
   const { t, locale } = useI18n()
-  const { companyName, siteConfig } = useSiteConfig()
+  const { companyName, siteConfig, socialLinks: configuredSocialLinks } = useSiteConfig()
 
   const { data } = useAsyncData<PublicSite | null>(
     'public-site',
@@ -53,6 +53,21 @@ export const usePublicSite = () => {
   const contactEmail = computed(() => company.value?.email || siteConfig.value.supportEmail || '')
   const contactPhone = computed(() => company.value?.phone || siteConfig.value.supportPhone || '')
   const contactAddress = computed(() => company.value?.address || siteConfig.value.address || '')
+
+  /** Footer text, copyright and social profiles the customer saved in the CMS. */
+  const siteInfo = computed(() => publicSite.value?.site ?? null)
+  const footerText = computed(() => siteInfo.value?.footerText || siteInfo.value?.copyright || '')
+  const openingHours = computed(() => {
+    const code = String(locale.value || '')
+    return siteInfo.value?.openingHours?.[code] || siteInfo.value?.openingHours?.vi || ''
+  })
+  // The CMS list wins when it has rows; a site that never saved one keeps the
+  // customer-layer links the build already shipped.
+  const socialLinks = computed<Array<[string, string]>>(() => {
+    const rows = siteInfo.value?.social ?? []
+    if (!rows.length) return configuredSocialLinks.value as Array<[string, string]>
+    return rows.map(row => [row.label || row.code, row.url] as [string, string])
+  })
 
   const menuLinks = (key: string): PublicSiteLink[] | null => {
     const menu = findPublicMenu(publicSite.value?.menus ?? [], key)
@@ -117,6 +132,10 @@ export const usePublicSite = () => {
     contactEmail,
     contactPhone,
     contactAddress,
+    siteInfo,
+    footerText,
+    openingHours,
+    socialLinks,
     headerLinks,
     footerLinks,
   }

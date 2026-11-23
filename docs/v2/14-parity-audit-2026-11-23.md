@@ -254,6 +254,39 @@ menus and 126 rows with no missing `href`. `main` comes back as the header the s
 nested dropdown reaches HTML and not only the JSON. Gates: `test:menus` 16 checks, `test:web-site`
 27 checks, `pnpm verify:all` **67/67**.
 
+### Storefront settings — footer, website, hours, social
+
+The remaining legacy configuration that is *content* rather than infrastructure now has a
+destination: `settings.site`. It holds `footerText`, `copyright`, `websiteUrl`, `keywords`,
+`maintenanceMode`, per-locale `openingHours` and up to twelve `social` links (`{code,label,url}`).
+The storefront reads it through `/api/public/site` and renders the footer line, the opening
+hours and the social buttons from it; a site without the section keeps the built-in footer.
+
+The same review rule as before applies: a `system_configs` key is imported only if it is on
+the allowlist **and** does not look like a credential. `migrate:settings` now also carries
+`site_footer_text`, `copyright`, `website_url`, `keywords` and `maintenance_mode`; it still
+never overwrites an existing settings document, and on an existing one it fills only the
+storefront fields that are empty. `migrate:company` adds `website`, `openingHours` and
+`social` from the legacy `companies` document — five profiles on `sen-tuan`, each kept only
+when its address is an absolute `http(s)` URL. `company.shortName`, `fax`, `logo`, `favicon`,
+`banner` and `mapEmbed` still have no v2 field and are reported by name.
+
+Applied to `sen-tuan`: `websiteUrl`, both opening-hour locales and five social links written,
+then `migrate:settings --apply` filled the remaining empty fields — `footerText`, `copyright`
+and `keywords` — while the website URL kept the company document's real site rather than the
+CMS domain in `system_configs.website_url`.
+`check:migration` prints `✅ storefront settings 4/4 groups filled`.
+
+Runtime check on `:4006` against `sen-tuan`: `GET /api/public/site?locale=vi` returns the
+`site` block (`footerText: "© 2026 Sen Tuấn CMS. All rights reserved."`, both opening-hour
+strings, five social links), and the server-rendered home page contains that footer line, the
+Vietnamese opening hours and `https://zalo.me/0901593666`, so the data reaches HTML and not
+only the JSON. The CMS settings page gained the matching fields; its social list is edited by
+a small `SocialLinksEditor` component, because a type-generic Nuxt UI field repeated inside a
+`v-for` loses the row scope in `vue-tsc` (the component uses plain inputs instead).
+
+Gates: `pnpm typecheck`, `pnpm lint`, `test:web-site` **28 checks**, `test:settings` **11 checks**.
+
 ### CRM, inventory, purchasing, quotations, payments — migrated
 
 `pnpm migrate:crm --site <customerId> [--apply] [--identity-map <file>]` copies
@@ -308,5 +341,6 @@ all landed, then the database was dropped. What remains is an owner input, not c
 
 ### Not yet migrated
 
-`menus` (see above), `system_configs` 69 / `system_datas` 117 / `system_routes` 202 (no target model),
-finance, HR, `document_templates` and `connects` (Hub-owned).
+`system_configs` 69 / `system_datas` 117 / `system_routes` 202 (no target model; the content
+keys now land in `settings.site`, the rest are credentials, infrastructure or UI toggles v2 does
+not model), finance, HR, `document_templates` and `connects` (Hub-owned).

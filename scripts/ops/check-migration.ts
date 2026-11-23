@@ -123,7 +123,7 @@ try {
   console.log(`  ℹ️  redirects            nested legacy paths ${nestedPaths.size}, v2 301 rows ${redirectRows}`)
 
   // Settings identity, without reading any value: only whether the keys exist.
-  const settings = await connection.collection('settings').findOne({ siteId }, { projection: { company: 1, locales: 1 } })
+  const settings = await connection.collection('settings').findOne({ siteId }, { projection: { company: 1, locales: 1, site: 1 } })
   const configs = await connection.collection('system_configs').find(tenantMatcher, { projection: { key: 1 } }).toArray()
   const configKeys = new Set(configs.map(row => legacyText(row.key)))
   const identityKeys = ['site_name', 'site_description', 'content_locales', 'enabled_modules'].filter(key => configKeys.has(key))
@@ -147,6 +147,23 @@ try {
       + (missingCompanyFields.length ? ` — missing ${JSON.stringify(missingCompanyFields)}; run migrate:company --apply` : ''),
     )
   }
+
+  // The storefront section (`settings.site`): footer text, public website, hours and
+  // social links. Presence only, same as above.
+  const siteInfo = (settings?.site ?? {}) as Record<string, unknown>
+  const siteFields: Array<[string, boolean]> = [
+    ['footerText', typeof siteInfo.footerText === 'string' && siteInfo.footerText.trim() !== ''],
+    ['websiteUrl', typeof siteInfo.websiteUrl === 'string' && siteInfo.websiteUrl.trim() !== ''],
+    ['openingHours', Object.keys((siteInfo.openingHours ?? {}) as object).length > 0],
+    ['social', Array.isArray(siteInfo.social) && siteInfo.social.length > 0],
+  ]
+  const siteFilled = siteFields.filter(([, filled]) => filled)
+  console.log(
+    `  ${siteFilled.length === siteFields.length ? '✅' : '⚠️ '} storefront settings    ${siteFilled.length}/${siteFields.length} groups filled`
+    + (siteFilled.length < siteFields.length
+      ? ` — missing ${JSON.stringify(siteFields.filter(([, filled]) => !filled).map(([name]) => name))}; run migrate:settings --apply and migrate:company --apply`
+      : ''),
+  )
 
   // CRM, inventory, purchasing and quotations. Every domain is counted on its own
   // collection pair; `migrate:crm` is the importer behind these numbers.

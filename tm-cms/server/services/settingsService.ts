@@ -67,6 +67,15 @@ function toAdminSettings(record: SettingsRecord): AdminSiteSettings {
     modules: Object.fromEntries(
       SITE_MODULES.map(module => [module, record.modules?.[module] ?? module === 'content']),
     ) as AdminSiteSettings['modules'],
+    site: {
+      footerText: record.site?.footerText ?? '',
+      copyright: record.site?.copyright ?? '',
+      websiteUrl: record.site?.websiteUrl ?? '',
+      keywords: record.site?.keywords ?? '',
+      maintenanceMode: record.site?.maintenanceMode ?? false,
+      openingHours: normalizeOpeningHours(record.site?.openingHours),
+      social: normalizeSocialLinks(record.site?.social),
+    },
     updatedAt: record.updatedAt ? new Date(record.updatedAt).toISOString() : null,
     updatedBy: record.updatedBy
       ? { id: record.updatedBy.id, name: record.updatedBy.name ?? '', email: record.updatedBy.email ?? '' }
@@ -119,6 +128,33 @@ function normalizeDefaultImageMediaIds(input: unknown): Partial<Record<SettingsL
   for (const locale of SETTINGS_LOCALES) {
     const value = source[locale]
     if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
+function normalizeOpeningHours(input: unknown): Partial<Record<SettingsLocale, string>> {
+  const source = (input && typeof input === 'object') ? input as Record<string, unknown> : {}
+  const result: Partial<Record<SettingsLocale, string>> = {}
+  for (const locale of SETTINGS_LOCALES) {
+    const value = source[locale]
+    if (typeof value === 'string' && value.trim()) result[locale] = value.trim()
+  }
+  return result
+}
+
+/** A link with no address is dropped rather than rendered as a dead footer row. */
+function normalizeSocialLinks(input: unknown): AdminSiteSettings['site']['social'] {
+  if (!Array.isArray(input)) return []
+  const result: AdminSiteSettings['site']['social'] = []
+  for (const raw of input.slice(0, 12)) {
+    const entry = (raw && typeof raw === 'object') ? raw as Record<string, unknown> : {}
+    const url = typeof entry.url === 'string' ? entry.url.trim() : ''
+    if (!url) continue
+    result.push({
+      code: typeof entry.code === 'string' ? entry.code.trim() : '',
+      label: typeof entry.label === 'string' ? entry.label.trim() : '',
+      url,
+    })
   }
   return result
 }
@@ -194,6 +230,28 @@ function mergeSeoSettings(
   return next
 }
 
+/**
+ * `site` is merged field by field and `openingHours` key by key, so saving only
+ * the English hours keeps the Vietnamese ones. `social` is a list: a patch that
+ * sends it replaces the list, which is how the editor adds and removes rows.
+ */
+function mergeSiteSettings(
+  current: AdminSiteSettings['site'],
+  patch: AdminSiteSettingsPatch['site'],
+): AdminSiteSettings['site'] {
+  const next: AdminSiteSettings['site'] = { ...current, ...(patch ?? {}) }
+  if (patch?.openingHours) {
+    const merged: Partial<Record<SettingsLocale, string>> = {}
+    for (const locale of SETTINGS_LOCALES) {
+      const value = locale in patch.openingHours ? patch.openingHours[locale] : current.openingHours[locale]
+      if (typeof value === 'string' && value.trim()) merged[locale] = value.trim()
+    }
+    next.openingHours = merged
+  }
+  if (patch?.social) next.social = normalizeSocialLinks(patch.social)
+  return next
+}
+
 function sameSection<T>(left: T, right: T): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
 }
@@ -221,9 +279,10 @@ export async function updateSiteSettings(
     seo: mergeSeoSettings(current.seo, patch.seo),
     locales: normalizeLocales({ ...current.locales, ...(patch.locales ?? {}) }),
     modules: { ...current.modules, ...(patch.modules ?? {}) },
+    site: mergeSiteSettings(current.site, patch.site),
   }
 
-  const changedFields = (['company', 'seo', 'locales', 'modules'] as const)
+  const changedFields = (['company', 'seo', 'locales', 'modules', 'site'] as const)
     .filter(field => !sameSection(current[field], merged[field]))
 
   if (changedFields.length === 0) {
@@ -243,6 +302,7 @@ export async function updateSiteSettings(
           seo: merged.seo,
           locales: merged.locales,
           modules: merged.modules,
+          site: merged.site,
           revision: nextRevision,
           updatedBy: actor,
         },

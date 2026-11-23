@@ -128,7 +128,7 @@ check('the projection exposes the public allowlist only', () => {
   assert.equal(site.company.logoMediaId, 'logo1')
   assert.equal(site.seo.titleTemplate, '%s | Sen Tuấn')
   assert.deepEqual(site.locales, { default: 'vi', enabled: ['vi', 'en'] })
-  assert.deepEqual(Object.keys(site).sort(), ['company', 'locales', 'menus', 'seo'])
+  assert.deepEqual(Object.keys(site).sort(), ['company', 'locales', 'menus', 'seo', 'site'])
   assert.equal((site as Record<string, unknown>).modules, undefined)
   assert.equal((site as Record<string, unknown>).revision, undefined)
   assert.equal((site as Record<string, unknown>).updatedBy, undefined)
@@ -173,6 +173,36 @@ check('locale company names are published for enabled locales only', () => {
 
   const plain = buildPublicSite({ settings, menus: [] })
   assert.deepEqual(plain.company.names, {}, 'a site without overrides publishes an empty map')
+})
+
+check('the storefront section publishes its text, hours and usable social links', () => {
+  const site = buildPublicSite({
+    settings: {
+      ...settings,
+      site: {
+        footerText: '  © 2026 Sen Tuấn  ',
+        copyright: 'Sen Tuấn',
+        websiteUrl: 'https://sentuan.vn',
+        keywords: 'nội thất, chăn ga',
+        maintenanceMode: true,
+        openingHours: { vi: '  T2-T7: 8:00-20:00  ', en: '', fr: 'x' },
+        social: [
+          { code: 'facebook', label: 'Facebook', url: ' https://facebook.com/noithattinsen ' },
+          { code: 'zalo', label: 'Zalo', url: 'zalo.me/0901' },
+          { code: 'bad', label: 'Hỏng', url: '' },
+        ],
+      },
+    },
+    menus: [],
+  })
+  assert.equal(site.site.footerText, '© 2026 Sen Tuấn')
+  assert.equal(site.site.maintenanceMode, true)
+  assert.deepEqual(site.site.openingHours, { vi: 'T2-T7: 8:00-20:00' }, 'only enabled locales with a value are published')
+  assert.deepEqual(site.site.social, [{ code: 'facebook', label: 'Facebook', url: 'https://facebook.com/noithattinsen' }], 'a relative or empty address is dropped')
+  assert.equal(PublicSiteSchema.safeParse(site).success, true)
+
+  const plain = buildPublicSite({ settings, menus: [] })
+  assert.deepEqual(plain.site, { footerText: '', copyright: '', websiteUrl: '', keywords: '', maintenanceMode: false, openingHours: {}, social: [] })
 })
 
 check('menus keep both keys, sorted, and an empty menu survives', () => {

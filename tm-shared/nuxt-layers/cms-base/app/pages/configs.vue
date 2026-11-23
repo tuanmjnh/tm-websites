@@ -38,7 +38,15 @@ const form = reactive({
   defaultLocale: 'vi' as (typeof SETTINGS_LOCALES)[number],
   enabled: ['vi'] as Array<(typeof SETTINGS_LOCALES)[number]>,
   modules: { content: true, catalog: false, orders: false, inventory: false } as Record<string, boolean>,
+  footerText: '',
+  copyright: '',
+  websiteUrl: '',
+  keywords: '',
+  maintenanceMode: false,
+  openingHours: { vi: '', en: '' } as Record<string, string>,
 })
+// Kept outside `form` so the editor owns a plain array it can add to and remove from.
+const social = ref<Array<{ code: string, label: string, url: string }>>([])
 const settingsLoaded = ref(false)
 const saving = ref(false)
 const settingsMessage = ref<string | null>(null)
@@ -76,6 +84,13 @@ function applySettings(settings: AdminSiteSettings) {
   form.defaultLocale = settings.locales.default
   form.enabled = [...settings.locales.enabled]
   form.modules = { ...settings.modules }
+  form.footerText = settings.site.footerText
+  form.copyright = settings.site.copyright
+  form.websiteUrl = settings.site.websiteUrl
+  form.keywords = settings.site.keywords
+  form.maintenanceMode = settings.site.maintenanceMode
+  form.openingHours = { vi: settings.site.openingHours?.vi ?? '', en: settings.site.openingHours?.en ?? '' }
+  social.value = (settings.site.social ?? []).map(row => ({ ...row }))
   settingsLoaded.value = true
 }
 
@@ -155,6 +170,17 @@ async function saveSite() {
     },
     locales: { default: form.defaultLocale, enabled: [...form.enabled] },
     modules: { ...form.modules },
+    site: {
+      footerText: form.footerText,
+      copyright: form.copyright,
+      websiteUrl: form.websiteUrl.trim(),
+      keywords: form.keywords,
+      maintenanceMode: form.maintenanceMode,
+      openingHours: { vi: form.openingHours.vi ?? '', en: form.openingHours.en ?? '' },
+      social: social.value
+        .map(row => ({ code: row.code.trim(), label: row.label.trim(), url: row.url.trim() }))
+        .filter(row => row.url),
+    },
   }
   try {
     const saved = await saveSettings(patch, auditReason.value.trim() || undefined)
@@ -416,7 +442,37 @@ onMounted(load)
             </div>
           </div>
 
+          <div class="grid gap-3 border-t border-default/40 pt-3 sm:grid-cols-2 lg:grid-cols-3">
+            <UFormField :label="t('admin.configs.site.fields.footerText')" class="sm:col-span-2">
+              <UInput v-model="form.footerText" size="sm" :disabled="!canWrite" :maxlength="300" />
+            </UFormField>
+            <UFormField :label="t('admin.configs.site.fields.copyright')">
+              <UInput v-model="form.copyright" size="sm" :disabled="!canWrite" :maxlength="200" />
+            </UFormField>
+            <UFormField :label="t('admin.configs.site.fields.websiteUrl')">
+              <UInput v-model="form.websiteUrl" size="sm" :disabled="!canWrite" :maxlength="300" />
+            </UFormField>
+            <UFormField :label="t('admin.configs.site.fields.keywords')" class="sm:col-span-2">
+              <UInput v-model="form.keywords" size="sm" :disabled="!canWrite" :maxlength="500" />
+            </UFormField>
+            <UFormField
+              v-for="locale in SETTINGS_LOCALES"
+              :key="`opening-hours-${locale}`"
+              :label="t('admin.configs.site.fields.openingHours', { locale: locale.toUpperCase() })"
+            >
+              <UInput v-model="form.openingHours[locale]" size="sm" :disabled="!canWrite" :maxlength="200" />
+            </UFormField>
+            <div class="sm:col-span-2 lg:col-span-3">
+              <SocialLinksEditor v-model="social" :disabled="!canWrite" />
+            </div>
+          </div>
+
           <div class="flex flex-wrap items-center gap-5 border-t border-default/40 pt-3">
+            <USwitch
+              v-model="form.maintenanceMode"
+              :label="t('admin.configs.site.fields.maintenanceMode')"
+              :disabled="!canWrite"
+            />
             <span class="text-xs font-medium text-muted">{{ t('admin.configs.site.fields.modules') }}</span>
             <USwitch
               v-for="module in SITE_MODULES"
