@@ -123,7 +123,7 @@ try {
   console.log(`  ℹ️  redirects            nested legacy paths ${nestedPaths.size}, v2 301 rows ${redirectRows}`)
 
   // Settings identity, without reading any value: only whether the keys exist.
-  const settings = await connection.collection('settings').findOne({ siteId }, { projection: { 'company.name': 1, 'locales.enabled': 1 } })
+  const settings = await connection.collection('settings').findOne({ siteId }, { projection: { company: 1, locales: 1 } })
   const configs = await connection.collection('system_configs').find(tenantMatcher, { projection: { key: 1 } }).toArray()
   const configKeys = new Set(configs.map(row => legacyText(row.key)))
   const identityKeys = ['site_name', 'site_description', 'content_locales', 'enabled_modules'].filter(key => configKeys.has(key))
@@ -132,7 +132,41 @@ try {
     console.log(`     legacy identity keys available ${JSON.stringify(identityKeys)}`)
   }
 
+  // Company identity from the legacy `companies` document. Presence only: the values
+  // are customer data, so they are counted, never printed.
+  const company = (settings?.company ?? {}) as Record<string, unknown>
+  const companyFields = ['name', 'legalName', 'taxId', 'email', 'phone', 'address'] as const
+  const missingCompanyFields = companyFields.filter((field) => {
+    const value = company[field]
+    return typeof value !== 'string' || value.trim() === ''
+  })
+  const legacyCompany = await connection.collection('companies').countDocuments(tenantMatcher)
+  if (legacyCompany) {
+    console.log(
+      `  ${missingCompanyFields.length === 0 ? '✅' : '⚠️ '} company identity        ${companyFields.length - missingCompanyFields.length}/${companyFields.length} fields filled`
+      + (missingCompanyFields.length ? ` — missing ${JSON.stringify(missingCompanyFields)}; run migrate:company --apply` : ''),
+    )
+  }
+
+  // Menus: informational. A legacy menu can hold more items than v2's 30-item limit
+  // allows, so the importer skips a menu instead of truncating it; that menu shows up
+  // here as a gap rather than as a silent loss.
+  const legacyMenus = await connection.collection('menus').countDocuments({ ...tenantMatcher, isDeleted: { $ne: true } })
+  const v2Menus = await connection.collection('site_menus').countDocuments({ siteId })
+  if (legacyMenus || v2Menus) {
+    const ok = v2Menus >= legacyMenus
+    console.log(`  ${ok ? '✅' : '⚠️ '} menus                  legacy ${String(legacyMenus).padStart(4)}  v2 ${String(v2Menus).padStart(4)}${ok ? '' : '  — not migrated (legacy menus can exceed the v2 item limit)'}`)
+  }
+
   console.log(failed ? '\n❌ parity: the database holds fewer migrated rows than the legacy source\n' : '\n✅ parity: every migrated domain holds at least what the source does\n')
+  // "Migrated domain" is not "every domain": menus have no importer yet, so a reader
+  // must not take the line above as a clean bill for the whole database.
+  const pending: string[] = []
+  if (v2Menus < legacyMenus) pending.push('menus')
+  if (missingCompanyFields.length) pending.push('company identity fields')
+  if (pending.length) {
+    console.log(`ℹ️  still to import: ${pending.join(', ')} — see 14-parity-audit-2026-11-23.md\n`)
+  }
   if (failed) process.exitCode = 1
 } finally {
   await connection.close()

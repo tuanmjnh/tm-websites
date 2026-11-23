@@ -89,6 +89,7 @@
     "migrate:catalog": "tsx scripts/ops/migrate-catalog.ts",
     "migrate:redirects": "tsx scripts/ops/migrate-redirects.ts",
     "migrate:settings": "tsx scripts/ops/migrate-settings.ts",
+    "migrate:company": "tsx scripts/ops/migrate-company.ts",
     "check:migration": "tsx scripts/ops/check-migration.ts",
     "migration:mapping": "tsx scripts/ops/migration-mapping.ts",
     "rehearse": "tsx scripts/ops/rehearse.ts",

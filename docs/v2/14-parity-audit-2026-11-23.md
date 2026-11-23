@@ -161,8 +161,9 @@ gaps are a consequence of the module gaps in §2, not an independent gap.
 ## 7. Recommended order
 
 1. **Migrate the missing domains' data**, starting with `site_menus` and `settings.company`: both are
-   user-visible on the storefront today and need no new model. Then CRM/inventory/purchasing, which
-   need legacy→`crm_*` mappers and a `check:migration` extension.
+   user-visible on the storefront today and need no new model. `settings.company` landed
+   (`migrate:company`, see §8); `site_menus` is blocked on the item-limit decision in §8. Then
+   CRM/inventory/purchasing, which need legacy→`crm_*` mappers and a `check:migration` extension.
 2. **`system_configs` / `system_datas`**: decide the target shape (either a `settings` extension or a
    dedicated collection) before writing the migration, because 186 rows of typed configuration
    currently have no home.
@@ -171,3 +172,39 @@ gaps are a consequence of the module gaps in §2, not an independent gap.
    from the parity matrix (`COM-01`, `POR-02`, `FIN-02`, `SYS-01`).
 
 Adding a production-build job to CI is independent of this list and was done in the same change.
+
+## 8. Follow-up (2026-11-23, same day)
+
+### Company identity — migrated
+
+`pnpm migrate:company --site <customerId> [--apply] [--replace-name]` carries the legacy `companies`
+document into `settings.company`. It is dry-run by default, fills only empty destinations, bumps
+`revision`, and names every legacy field that has no v2 destination (`shortName`, `website`, `fax`,
+`logo` — an inline SVG with no media record, `favicon`, `banner`, `mapEmbed`, `gallery`, `social`,
+`bankAccounts`, `openingHours`, SEO `keywords`/`image`).
+
+Applied to `sen-tuan` with `--replace-name`, because `migrate:settings` had seeded
+`company.name`/`names.vi` from `system_configs.site_name`, which held the CMS name. Result:
+`company identity 6/6 fields filled`, and a rerun reports `nothing to fill`.
+
+Runtime check after the migration: `GET :4006/api/public/site` returns
+`name: "Doanh nghiệp tư nhân nội thất Sen Tuấn"`, the legacy email, phone and address, and both
+locale names. The first request after the write still served the old value because the storefront
+cache is only purged by a CMS write or a revalidate call, not by a direct database write; restarting
+the dev server showed the new value, so the staleness was cache, not data.
+
+`check:migration` now reports the company field count and the menu gap, and prints a separate
+`still to import:` line so the final `✅ parity` line is not read as full coverage.
+
+### Menus — blocked on a model limit, not on data
+
+A menu import cannot be a 1:1 copy: `MENU_MAX_ITEMS` is **30 per menu** and `MENU_MAX_CHILDREN` is
+**10 per parent** (`tm-shared/packages/flow-contracts/src/menu-admin.ts`), while `sen-tuan` holds
+**76** items in the header menu and **56** in product-categories, and many items are children of
+children (v2 menus support one nesting level). Handling that needs a decision, not a script:
+
+- raise `MENU_MAX_ITEMS` / allow a second nesting level, accepting the editor and rendering cost, or
+- split each oversized menu into `header` + `header-more`, which changes the site's navigation shape.
+
+Until then `migrate:*` has no menus importer, `site_menus` stays empty, and the storefront returns
+`menus: []`.
