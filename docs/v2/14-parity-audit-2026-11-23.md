@@ -122,19 +122,19 @@ counterpart**:
 | content | `contents` 8 → `content` 9 | migrated |
 | menus | `menus` 9, `menu_items` 164 | `site_menus` **0** |
 | company identity | `companies` 1 (name, slogan, address[], phone, email, taxCode, social, bankAccounts, openingHours, mapEmbed, gallery, seo) | `settings.company` = `{name, names}` only |
-| CRM | `customers` 3, `customer_segments` 2 | `crm_customers` **0**, `crm_customer_segments` **0** |
-| inventory | `inventories` 49, `warehouses` 3 | `crm_inventories` **0**, `crm_warehouses` **0** |
-| purchasing | `purchase_orders` 6, `suppliers` 3 | `crm_purchase_orders` **0**, `crm_suppliers` **0** |
-| quotations | `quotations` 3 | `crm_quotations` **0** |
+| CRM | `customers` 3, `customer_segments` 2 | segments migrated 2/2; `crm_customers` **0** (blocked on the Hub identity map, §8) |
+| inventory | `inventories` 49, `warehouses` 3 | migrated 49/49, 3/3 |
+| purchasing | `purchase_orders` 6, `suppliers` 3 | migrated 6/6, 3/3 |
+| quotations | `quotations` 3 | migrated 3/3 |
 | attributes / keywords / options | 0 / 0 / 4 | no target collection |
 | system config | `system_configs` 69, `system_datas` 117, `system_routes` 202 | no target collection |
 
 Visible consequences in the live app: `/api/public/site` returns `menus: []` and empty
 `email`/`phone`/`address`, although the legacy company document has all of them.
 
-`check:migration` does not cover these domains: `scripts/ops` has `migrate:catalog`, `migrate:content`,
-`migrate:redirects`, `migrate:settings` only. There is no migration for CRM, inventory, purchasing,
-quotations, finance, HR, menus or the `system_*` configuration.
+`scripts/ops` now has `migrate:catalog`, `migrate:content`, `migrate:redirects`, `migrate:settings`,
+`migrate:company`, `migrate:crm` and `check:migration`. There is still no migration for menus,
+finance, HR or the `system_*` configuration.
 
 ## 5. Zod and validation
 
@@ -163,7 +163,7 @@ gaps are a consequence of the module gaps in §2, not an independent gap.
 1. **Migrate the missing domains' data**, starting with `site_menus` and `settings.company`: both are
    user-visible on the storefront today and need no new model. `settings.company` landed
    (`migrate:company`, see §8); `site_menus` is blocked on the item-limit decision in §8. Then
-   CRM/inventory/purchasing, which need legacy→`crm_*` mappers and a `check:migration` extension.
+   CRM/inventory/purchasing (`migrate:crm`, landed — customers still need a reviewed Hub identity map).
 2. **`system_configs` / `system_datas`**: decide the target shape (either a `settings` extension or a
    dedicated collection) before writing the migration, because 186 rows of typed configuration
    currently have no home.
@@ -208,3 +208,47 @@ children (v2 menus support one nesting level). Handling that needs a decision, n
 
 Until then `migrate:*` has no menus importer, `site_menus` stays empty, and the storefront returns
 `menus: []`.
+
+### CRM, inventory, purchasing, quotations — migrated
+
+`pnpm migrate:crm --site <customerId> [--apply] [--identity-map <file>]` copies
+`customer_segments` → `crm_customer_segments`, `suppliers` → `crm_suppliers`, `warehouses` →
+`crm_warehouses`, `inventories` → `crm_inventories`, `purchase_orders` → `crm_purchase_orders` and
+`quotations` → `crm_quotations`. Dry run by default, matched on the business key (`code`, or
+item+variant+warehouse for a stock balance) so a rerun updates instead of duplicating, and nothing
+legacy is deleted. References resolve through the migrated data: a legacy item id maps to
+`catalog_items.legacyId`, a warehouse/supplier id to the row written in the same run, and a variant to
+its SKU (v2 keeps variant SKUs, not legacy variant ids).
+
+Status vocabularies differ, and the mapping is printed: purchase order `completed` → `received`,
+quotation `submitted` → `sent`, and a cancelled quotation → `rejected` (v2 has no quotation
+`cancelled` state).
+
+Applied to `sen-tuan`: segments 2/2, suppliers 3/3, warehouses 3/3, inventory 49/49, purchase orders
+6/6, quotations 3/3; a second run writes the same rows and the re-read verification passes. The
+command also reported, instead of hiding: 6 purchase orders whose `supplierId` no longer exists in the
+legacy `suppliers` collection (stored `null`), 3 quotations whose customer is not migrated (stored
+`null`), legacy fields with no destination (`purchase_orders.createdBy`, `quotations.history`,
+quotation line `importPrice`/`supplierId`).
+
+`check:migration` now counts these domains, so `✅ parity` covers them; a gap prints under
+`still to import:`.
+
+### Customers — need a reviewed Hub identity map, not an email guess
+
+A v2 customer carries `subjectId` (the Hub subject) and the migration plan requires legacy local user
+ids to be joined to Hub subjects **through a reviewed identity table**, explicitly not by email. So the
+importer takes `--identity-map <file>` = `{ "<legacy userId or customer id>": "<Hub subject>" }`.
+Without it the 3 customers in `sen-tuan` are reported as skipped and no row is written, because a
+placeholder subject would occupy the unique `(site, subject)` slot and could never be relinked
+(`CUSTOMER_SUBJECT_IMMUTABLE`).
+
+The mapped path was verified on a throwaway database built from the same 3 legacy customers: code,
+subject, email/full name/phone from the legacy user, addresses, segment link, loyalty points and note
+all landed, then the database was dropped. What remains is an owner input, not code: the reviewed
+`legacy userId → Hub subject` table.
+
+### Not yet migrated
+
+`menus` (see above), `system_configs` 69 / `system_datas` 117 / `system_routes` 202 (no target model),
+finance, HR, `document_templates` and `connects` (Hub-owned).

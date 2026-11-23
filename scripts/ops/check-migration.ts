@@ -148,6 +148,33 @@ try {
     )
   }
 
+  // CRM, inventory, purchasing and quotations. Every domain is counted on its own
+  // collection pair; `migrate:crm` is the importer behind these numbers.
+  const crmDomains = [
+    ['customer segments', 'customer_segments', 'crm_customer_segments'],
+    ['customers', 'customers', 'crm_customers'],
+    ['suppliers', 'suppliers', 'crm_suppliers'],
+    ['warehouses', 'warehouses', 'crm_warehouses'],
+    ['inventories', 'inventories', 'crm_inventories'],
+    ['purchase orders', 'purchase_orders', 'crm_purchase_orders'],
+    ['quotations', 'quotations', 'crm_quotations'],
+  ] as const
+  const crmGaps: string[] = []
+  for (const [label, legacyName, v2Name] of crmDomains) {
+    const legacyCount = await connection.collection(legacyName).countDocuments(tenantMatcher)
+    const v2Count = await connection.collection(v2Name).countDocuments({ siteId })
+    if (!legacyCount && !v2Count) continue
+    // A customer cannot be migrated without a reviewed Hub subject
+    // (`--identity-map`), so that row is a reported gap, not a parity failure.
+    if (label === 'customers') {
+      if (v2Count < legacyCount) crmGaps.push(`customers ${v2Count}/${legacyCount} (needs --identity-map: a legacy user id has no Hub subject by default)`)
+      console.log(`  ${v2Count >= legacyCount ? '✅' : '⚠️ '} customers              legacy ${String(legacyCount).padStart(4)}  v2 ${String(v2Count).padStart(4)}`)
+      continue
+    }
+    compare(label, legacyCount, v2Count)
+    if (v2Count < legacyCount) crmGaps.push(label)
+  }
+
   // Menus: informational. A legacy menu can hold more items than v2's 30-item limit
   // allows, so the importer skips a menu instead of truncating it; that menu shows up
   // here as a gap rather than as a silent loss.
@@ -163,6 +190,7 @@ try {
   // must not take the line above as a clean bill for the whole database.
   const pending: string[] = []
   if (v2Menus < legacyMenus) pending.push('menus')
+  pending.push(...crmGaps)
   if (missingCompanyFields.length) pending.push('company identity fields')
   if (pending.length) {
     console.log(`ℹ️  still to import: ${pending.join(', ')} — see 14-parity-audit-2026-11-23.md\n`)
