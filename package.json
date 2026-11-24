@@ -93,6 +93,7 @@
     "migrate:settings": "tsx scripts/ops/migrate-settings.ts",
     "migrate:company": "tsx scripts/ops/migrate-company.ts",
     "migrate:document-templates": "tsx scripts/ops/migrate-document-templates.ts",
+    "migrate:options": "tsx scripts/ops/migrate-options.ts",
     "migrate:crm": "tsx scripts/ops/migrate-crm.ts",
     "migrate:menus": "tsx scripts/ops/migrate-menus.ts",
     "check:migration": "tsx scripts/ops/check-migration.ts",

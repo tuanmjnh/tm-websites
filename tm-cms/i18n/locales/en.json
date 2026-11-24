@@ -91,7 +91,8 @@
     "redirects": "Redirects",
     "documentTemplates": "Document templates",
     "customers": "Customers",
-    "pos": "POS"
+    "pos": "POS",
+    "variantOptions": "Variant options"
   },
   "dashboard": {
     "title": "Control Center",
@@ -1238,6 +1239,22 @@
         "showSignatures": "Signature block"
       }
     },
+    "variantOptions": {
+      "title": "Variant options",
+      "create": "Add",
+      "edit": "Edit",
+      "code": "Code",
+      "titleCol": "Title",
+      "uiType": "UI type",
+      "values": "Values",
+      "valuesHint": "Values (one per line: Label | value | meta)",
+      "sort": "Sort",
+      "empty": "No variant options",
+      "created": "Created",
+      "updated": "Updated",
+      "deleted": "Deleted",
+      "restored": "Restored"
+    },
     "pos": {
       "title": "Point of sale (POS)",
       "description": "Create an in-store order",
@@ -2232,6 +2249,13 @@
         "conflict": "The segment changed in another session; reload before saving.",
         "inUse": "Customers still belong to this segment; move them to another segment first."
       }
+    },
+    "common": {
+      "includeDeleted": "Include deleted",
+      "loadMore": "Load more",
+      "cancel": "Cancel",
+      "save": "Save",
+      "active": "Active"
     }
   },
   "modules": {

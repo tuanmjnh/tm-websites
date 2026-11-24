@@ -91,7 +91,8 @@
     "redirects": "Chuyển hướng",
     "documentTemplates": "Mẫu tài liệu",
     "customers": "Khách hàng",
-    "pos": "POS bán tại quầy"
+    "pos": "POS bán tại quầy",
+    "variantOptions": "Thuộc tính biến thể"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -1240,6 +1241,22 @@
         "showSignatures": "Khối chữ ký"
       }
     },
+    "variantOptions": {
+      "title": "Thuộc tính biến thể",
+      "create": "Thêm",
+      "edit": "Sửa",
+      "code": "Mã",
+      "titleCol": "Tên",
+      "uiType": "Kiểu hiển thị",
+      "values": "Số giá trị",
+      "valuesHint": "Giá trị (mỗi dòng: Nhãn | giá trị | meta)",
+      "sort": "Thứ tự",
+      "empty": "Chưa có thuộc tính",
+      "created": "Đã tạo",
+      "updated": "Đã cập nhật",
+      "deleted": "Đã xoá",
+      "restored": "Đã khôi phục"
+    },
     "pos": {
       "title": "Bán tại quầy (POS)",
       "description": "Tạo đơn bán tại quầy",
@@ -2234,6 +2251,13 @@
         "conflict": "Nhóm đã bị thay đổi ở phiên khác, hãy tải lại.",
         "inUse": "Vẫn còn khách hàng thuộc nhóm này, hãy chuyển họ sang nhóm khác trước."
       }
+    },
+    "common": {
+      "includeDeleted": "Bao gồm đã xoá",
+      "loadMore": "Tải thêm",
+      "cancel": "Huỷ",
+      "save": "Lưu",
+      "active": "Kích hoạt"
     }
   },
   "modules": {

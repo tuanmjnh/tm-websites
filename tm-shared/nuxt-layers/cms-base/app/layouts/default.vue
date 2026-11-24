@@ -22,6 +22,9 @@ const navItems = computed(() => [
   ...(isModuleEnabled('orders') && hasCapability('content.write')
     ? [{ label: t('nav.pos'), icon: 'i-lucide-shopping-cart', to: '/pos' }]
     : []),
+  ...(hasCapability('content.read')
+    ? [{ label: t('nav.variantOptions'), icon: 'i-lucide-sliders-horizontal', to: '/variant-options' }]
+    : []),
   ...gatedModuleItems('inventory'),
   ...gatedModuleItems('purchaseOrders'),
   ...gatedModuleItems('hr'),
