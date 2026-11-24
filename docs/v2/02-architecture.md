@@ -42,7 +42,15 @@ Business media metadata belongs in MongoDB; binaries need not be stored as BSON 
 | `tm-shared/packages/flow-utils/` | Reusable pure helpers; server-only or browser-only exports must stay separated |
 | `tm-shared/packages/design-system/` | Shared CSS tokens and design primitives |
 
-Introduce a server-only domain package under `tm-shared/packages/` during Phase 2, after selecting and testing its export map. Its final name is not yet an existing import. It owns Mongoose schema factories, shared business commands and invariants. Host adapters own authorization, public/admin projections and endpoint contracts. Do not import CMS endpoint implementations into Web.
+## Business API and server ownership
+
+The CMS Nitro application is the single owner of canonical business writes, MongoDB models, business invariants and command services. Keep these under `tm-cms/server/models/`, `tm-cms/server/services/` and `tm-cms/server/utils/`. Do not extract them into a shared server-only workspace package.
+
+The Web host owns SSR rendering and narrow public read/projection endpoints. It must not import `tm-cms/server/**` or implement a competing version of canonical business mutations. Storefront or portal commands that mutate canonical business records must call the CMS-owned business API through a server-side authorization path bound to the verified app, tenant and site context. Preserve public endpoint contracts where possible; if an authorization contract is missing, block that write path rather than bypassing the boundary.
+
+Shared workspace packages remain limited to browser-safe contracts, pure configuration/helpers and design primitives. `flow-contracts` must not import MongoDB/Mongoose or server code. Reconsider a separate business service only through a new ADR with an explicit owner decision, separate security boundary and migration plan.
+
+Domain modules initially belong in explicit domain folders. Add optional Nuxt module layers only when customer composition requires them; do not create dozens of empty layers or rely on automatic discovery to install optional modules. A future module manifest must define dependencies, routes, permissions and customer enablement. Enablement controls product composition, not authorization.
 
 Domain modules initially belong in explicit domain folders. Add optional Nuxt module layers only when customer composition requires them; do not create dozens of empty layers or rely on automatic discovery to install optional modules. A future module manifest must define dependencies, routes, permissions and customer enablement. Enablement controls product composition, not authorization.
 

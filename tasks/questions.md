@@ -30,7 +30,7 @@
 
 | ID | Câu hỏi | Mặc định nếu không trả lời | Ảnh hưởng |
 | --- | --- | --- | --- |
-| Q11 | Có được tạo package server-only dùng chung `@tm/flow-server` (Mongoose schema factory + invariants + commands) không? Hiện `mongoose` mới chỉ là dependency của host. **Đã làm P2.b trong `tm-cms/server/models/` theo mặc định này** — nếu bạn duyệt tạo package, tôi sẽ chuyển nguyên khối sang, không đổi hành vi. | Chưa tạo; logic đặt trong `tm-cms/server` cho tới khi bạn duyệt | P2/P3 |
+| Q11 | **Đã chốt 2026-11-24:** CMS Nitro là business API owner duy nhất; models, invariants và command services ở `tm-cms/server/`. Web gọi CMS-owned API cho canonical business writes; shared packages chỉ giữ contracts/pure utilities. | Không tạo package server-only dùng chung; không import CMS server internals vào Web | P2/P3 |
 | Q12 | Cache invalidation bền vững (publish → Web) chạy bằng gì: cron Vercel, Redis/BullMQ, hay job trong Mongo? Máy local chưa có Redis nên mail/import queue của Hub đang tắt. | Tạm dùng purge endpoint hiện có; chưa thêm hạ tầng | P3/WEB-09 |
 | Q13 | Media đi tiếp bằng Cloudinary (Hub đang thiếu credential) hay chuyển sang R2/S3? | Giữ Cloudinary, chờ credential | MED-01 |
 | Q14 | Deploy: ai cấp Vercel token + domain cho từng customer? Có cần tôi chuẩn bị `vercel.json`/CI trước không? | Không deploy; chỉ build local | P10 |
@@ -43,7 +43,7 @@
 2. **App binding**: session trả về `appId` khác cấu hình → 403 `APP_MISMATCH`; thiếu `TM_TENANT_ID` → 503, không tự bịa tenant.
 3. **DB binding**: tên database do registry quyết định; `TM_MONGO_DB` chỉ được lặp lại đúng tên đó, lệch → 503 `DATABASE_BINDING_MISMATCH`.
 4. **Health endpoint** `GET /api/health`: chỉ trả `status/hub/database`, không lộ URI/tenant/credential.
-5. **Chưa** tạo package `@tm/flow-server`, **chưa** ghi/xoá dữ liệu Hub, **chưa** migrate dữ liệu, **chưa** commit.
+5. **Chưa** tách một package server-only dùng chung, **chưa** ghi/xoá dữ liệu Hub, **chưa** migrate dữ liệu, **chưa** commit. Quyết định kiến trúc được owner xác nhận lại ngày 2026-11-24: CMS Nitro giữ quyền sở hữu business writes.
 
 ## E. Điều kiện môi trường đã quan sát
 
@@ -72,7 +72,7 @@
 | Q2 | `sentuan` chạy với DB `sen-tuan`; `default`/`thanhtung`/`hoangvi` vẫn chưa có database nên chưa bật được module nghiệp vụ. |
 | Q3 | Giữ tên cũ (`sen-tuan`, `bag-post`) theo mặc định; chưa có migration nào đụng tới. |
 | Q5 | Chưa import gì từ Hub; xem Q22. |
-| Q11 | Theo mặc định: chưa tạo package `@tm/flow-server`, model/service nằm trong `tm-cms/server/`. Muốn chuyển thì nói, hành vi không đổi. |
+| Q11 | Đã chốt ngày 2026-11-24: CMS Nitro sở hữu canonical models/services/business writes; Web gọi CMS-owned API cho các thao tác ghi dữ liệu nghiệp vụ. Không tách package server-only dùng chung. |
 | Q12 | Đã có purge endpoint dùng chung secret, purge toàn bộ handler cache của storefront khi lưu settings/menu; chưa ký, chưa scoped theo tenant/tag, chưa có job bền vững. Xem Q21. |
 | Q13 | Vẫn chờ credential Cloudinary; media đang lưu đĩa local của CMS. Xem Q19. |
 | Q14 | Không deploy gì; chỉ build và chạy local. |
@@ -94,7 +94,7 @@ Mỗi câu đã chốt theo **mặc định ghi ở bảng gốc**, và quyết 
 | Q8 | RESOLVED | CSRF bằng `Origin` + `SameSite=Lax`, không double-submit token. |
 | Q9 | RESOLVED | `TM_AUTH_MODE=mock` bị chặn ở production (`503 AUTH_MODE_FORBIDDEN`); không có kịch bản production cần mock. |
 | Q10 | RESOLVED (deferred) | Không làm UI passkey/OAuth trong đợt này; để sau P9. |
-| Q11 | RESOLVED | Không tạo `@tm/flow-server`; model/invariant/command ở lại `tm-cms/server/` đúng phạm vi đã duyệt. |
+| Q11 | RESOLVED (owner reaffirmed 2026-11-24) | CMS Nitro owns canonical business models, invariants and write commands; Web calls the CMS-owned API for canonical writes. No shared server-only package and no imports from `tm-cms/server/**` into Web. |
 | Q12 | RESOLVED | Không queue bền vững/cron/worker; invalidation vẫn là purge endpoint có secret, publish content dựa vào handler không cache + TTL CDN của sitemap. |
 | Q13 | **WAITING_INPUT** | Media đi Cloudinary; chưa có credential nên vẫn dùng adapter local, chưa chọn public origin. |
 | Q14 | **WAITING_INPUT** | Không deploy, không chuẩn bị `vercel.json`/CI/domain. Xem mục I. |
@@ -133,3 +133,12 @@ Chỉ cần trả lời ngắn; mỗi mục đã có khuyến nghị để mặc
 | J2 | URL category legacy một segment (`/<slug>`) có 301 sang `/categories/<slug>` không? | `sen-tuan`: 6 path như vậy; `/<slug>` cũng là URL content nên ghi mù sẽ che trang | **Không** redirect; nếu cần thì chỉ redirect sau khi đối chiếu danh sách 6 path với URL legacy thật |
 | J3 | Có cho phép **apply migration content** trên bản local/khách (không phải production) để `check:migration` xanh? | `check:migration`: content `sen-tuan` 8 record dùng được / 2 row v2 / 0 category; `bag-post` 18 / 0; catalog đã khớp 241/67 | Đồng ý apply trên bản local trước, rồi mới bàn snapshot thật |
 | J4 (bảo mật) | Rotate credential đang nằm plaintext trong legacy `system_configs` trước khi launch? | 18 key ở bản local: JWT/refresh/revalidate secret, Google client secret, Firebase private key, VAPID private key, Cloudinary API secret, 2 Mongo URI có username/password, một giá trị password-reset. `migrate:settings` không import và không in giá trị nào | Có — rotate toàn bộ, và đừng copy collection này sang môi trường mới |
+
+
+## K. Quyết định bổ sung — local development và test database (2026-11-24)
+
+- Local CMS/Web development và kiểm tra dữ liệu của customer `sentuan` dùng trực tiếp MongoDB database `sen-tuan`; `TM_SITE_ID=sentuan`. Registry vẫn là nguồn xác định database, `TM_MONGO_DB` chỉ được phép khớp với registry.
+- GitHub Actions chạy MongoDB service/container riêng, không kết nối MongoDB local; database logic trong container cũng đặt tên `sen-tuan` để dùng cùng cấu hình và gate runner.
+- Không được reset/drop database `sen-tuan` để làm test pass. Test ghi dữ liệu phải dùng fixture có định danh duy nhất và chỉ cleanup đúng bản ghi của run đó. Backup/restore, destructive migration và test cần database rỗng phải dùng database fixture tạm riêng.
+- MongoDB chỉ được truy cập từ server-side Nitro; tuyệt đối không đưa URI/credential/client vào browser.
+- CMS Nitro là nơi sở hữu canonical business writes. Web dùng public read projections và gọi CMS-owned API khi cần ghi canonical business data.
