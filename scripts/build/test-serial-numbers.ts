@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { registerSerialNumbers, getSerialNumber, listSerialNumbers, markSerialSold, markSerialReturned, scrapSerialNumber, softDeleteSerialNumber, moveSerialNumber, moveSerialNumbers, SerialNumberServiceError } from '../../tm-cms/server/services/serialNumberService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
@@ -29,7 +30,7 @@ const ACTOR = { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example
 console.log('Serial numbers — IMEI tracking\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_serial_numbers' }
+const binding = testDatabaseBinding('tm_test_serial_numbers')
 
 async function run() {
   let connection
@@ -42,7 +43,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { SerialNumber, Audit } = models
     const meta = { audit: { model: Audit, actor: ACTOR } }

@@ -18,6 +18,7 @@ import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/u
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 import { AUTO_CATEGORY_SLUG_REDIRECT_NOTE } from '../../tm-cms/server/services/catalogSlugRedirects.js'
 import { buildCatalogCategoryDraft } from '../../tm-shared/nuxt-layers/cms-base/app/utils/catalog-category-draft.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 
@@ -37,8 +38,8 @@ function isServiceError(status: number, code: string) {
   return (error: unknown) => error instanceof CatalogServiceError && error.statusCode === status && error.code === code
 }
 
-const connection = await connectDatabase({ uri: 'mongodb://127.0.0.1:27017', database: 'tm_test_catalog_service' })
-await connection.dropDatabase()
+const connection = await connectDatabase(testDatabaseBinding('tm_test_catalog_service'))
+await dropTestDatabase(connection)
 const { CatalogItem, CatalogCategory, Redirect } = await prepareDatabase(connection)
 
 const SITE = 'sentuan'
@@ -1049,7 +1050,7 @@ try {
   })
 
 } finally {
-  await connection.dropDatabase()
+  await dropTestDatabase(connection)
   await closeDatabaseConnections()
 }
 

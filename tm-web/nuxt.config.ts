@@ -13,6 +13,17 @@ const selected = resolveCustomerLayers({
   repoRoot,
 })
 
+// The customer registry owns the database name. TM_MONGO_DB may repeat it for
+// an operator's convenience but must never point this deployment at another
+// database; a disagreement fails the build instead of leaking another tenant.
+const registryDatabase = selected.mongoDbName || ''
+const configuredDatabase = process.env.TM_MONGO_DB || ''
+if (configuredDatabase && registryDatabase && configuredDatabase !== registryDatabase) {
+  throw new Error(
+    `[TM Config Error] TM_MONGO_DB "${configuredDatabase}" does not match the registry database "${registryDatabase}" for customer "${selected.customerId}"`,
+  )
+}
+
 if (process.env.TM_APP_KIND && process.env.TM_APP_KIND !== 'web') {
   throw new Error(`[TM Config Error] TM_APP_KIND must be "web" for tm-web host, received: "${process.env.TM_APP_KIND}"`)
 }
@@ -81,7 +92,10 @@ export default defineNuxtConfig({
     // Server-only. Never exposed to the browser: the website reads its catalog
     // through the BFF, so credentials and the database name stay on the server.
     mongoUri: process.env.TM_MONGO_URI || (process.env.NODE_ENV === 'production' ? '' : 'mongodb://127.0.0.1:27017'),
-    catalogDbName: process.env.TM_MONGO_DB || selected.mongoDbName || '',
+    // Registry database first; the override is validated above and in getMongoTarget.
+    catalogDbName: registryDatabase || configuredDatabase,
+    catalogDbDeclared: registryDatabase,
+    catalogDbOverride: configuredDatabase,
     revalidateSecret: process.env.REVALIDATE_SECRET || '',
 
     public: {

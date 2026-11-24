@@ -103,6 +103,9 @@ const STATIC_GATES = [
   'lint',
   'validate:registry',
   'verify:scaffold',
+  // Reads every test suite and refuses an unguarded or un-dropped fixture database:
+  // local development runs on the real sen-tuan database (policy doc 15).
+  'verify:test-safety',
   // Reads the admin routes as source: no build, no database, so it belongs in the
   // default run and fails fast when a route forgets the audit reason.
   'verify:audit-meta',
@@ -170,6 +173,17 @@ process.env.TM_MONGO_DB = DEV_DATABASE
 process.env.TM_MONGO_URI ||= 'mongodb://127.0.0.1:27017'
 process.env.TM_SITE_ID ||= 'sentuan'
 
+/** Host only: a connection string may carry credentials and a query, neither belongs in a log. */
+function describeMongoEndpoint(uri: string): string {
+  try {
+    const parsed = new URL(uri)
+    const auth = parsed.username || parsed.password ? 'credentials:redacted@' : ''
+    return `${parsed.protocol}//${auth}${parsed.host}`
+  } catch {
+    return '(invalid TM_MONGO_URI)'
+  }
+}
+
 const env = ['TM_MONGO_URI', 'TM_MONGO_DB', 'TM_SITE_ID']
   .map(name => `${name}=${process.env[name] || '(unset)'}`)
   .join(' ')
@@ -177,6 +191,9 @@ const env = ['TM_MONGO_URI', 'TM_MONGO_DB', 'TM_SITE_ID']
 log(`# Gates — ${new Date().toISOString()}`)
 log(`# cwd: ${process.cwd()}`)
 log(`# database env: ${env}`)
+log(`# target: customer=${process.env.TM_CUSTOMER_ID || '(default)'} site=${process.env.TM_SITE_ID} database=${process.env.TM_MONGO_DB}`)
+log(`# mongo endpoint: ${describeMongoEndpoint(process.env.TM_MONGO_URI)}`)
+console.log(`database: ${process.env.TM_MONGO_DB} at ${describeMongoEndpoint(process.env.TM_MONGO_URI)} (site ${process.env.TM_SITE_ID})`)
 log(`# steps: ${GATES.map(gate => gate.name).join(', ')}`)
 log('')
 

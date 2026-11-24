@@ -23,6 +23,7 @@ import { createContent, updateContent } from '../../tm-cms/server/services/conte
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 import { mediaRoot } from '../../tm-cms/server/utils/mediaStorage.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 let notRun = 0
@@ -88,7 +89,7 @@ await check('storage keys are site-scoped, dated and safe', () => {
 })
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_media_service' }
+const binding = testDatabaseBinding('tm_test_media_service')
 const previousMediaDir = process.env.TM_MEDIA_DIR
 const mediaDir = await mkdtemp(join(tmpdir(), 'tm-media-test-'))
 process.env.TM_MEDIA_DIR = mediaDir
@@ -104,7 +105,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Media, Content, Audit, Revision } = await prepareDatabase(connection)
     const meta = { model: Audit, actor: { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example.com' } }
 
@@ -378,6 +379,7 @@ async function integration() {
     await Audit.deleteMany({ siteId: SITE })
     await Revision.deleteMany({ siteId: SITE })
   } finally {
+    await dropTestDatabase(connection)
     await closeDatabaseConnections()
   }
 }

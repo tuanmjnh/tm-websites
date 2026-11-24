@@ -11,6 +11,7 @@ import {
 } from '../../tm-cms/server/services/backupBundleService.js'
 import { archiveMedia } from '../../tm-cms/server/services/mediaBackupService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 /**
  * The bundle exists because the two halves are dangerous apart. This test proves the
@@ -51,8 +52,8 @@ async function expectRefusal(name: string, expected: string, fn: () => Promise<u
 
 const uri = process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:27017'
 const suffix = Date.now().toString(36)
-const SOURCE_DB = `tm-ci-bundle-source-${suffix}`
-const TARGET_DB = `tm-ci-bundle-target-${suffix}`
+const SOURCE_DB = `tm_test_bundle_source_${suffix}`
+const TARGET_DB = `tm_test_bundle_target_${suffix}`
 const CUSTOMER = 'bundletest'
 
 const workspace = await mkdtemp(join(tmpdir(), 'tm-bundle-'))
@@ -61,8 +62,8 @@ const out = join(workspace, '.backups')
 const restoreMediaRoot = join(workspace, 'restored-media')
 const plan = planBundle(CUSTOMER, SOURCE_DB, { out, mediaRoot: liveMedia })
 
-const source = await connectDatabase({ uri, database: SOURCE_DB })
-const target = await connectDatabase({ uri, database: TARGET_DB })
+const source = await connectDatabase(testDatabaseBinding(SOURCE_DB))
+const target = await connectDatabase(testDatabaseBinding(TARGET_DB))
 
 try {
   await source.db!.collection('catalog_items').insertMany([
@@ -187,8 +188,8 @@ try {
     })
   })
 } finally {
-  await source.db?.dropDatabase().catch(() => {})
-  await target.db?.dropDatabase().catch(() => {})
+  await dropTestDatabase(source).catch(() => undefined)
+  await dropTestDatabase(target).catch(() => undefined)
   await closeDatabaseConnections()
   await rm(workspace, { recursive: true, force: true })
   console.log(`\n${checks}/${checks + failed} checks passed`)

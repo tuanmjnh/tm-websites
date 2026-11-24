@@ -7,6 +7,7 @@ import { AUTO_SLUG_REDIRECT_NOTE } from '../../tm-cms/server/services/contentSlu
 import { AdminContentBulkRequestSchema } from '../../tm-shared/packages/flow-contracts/src/content-admin.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 let notRun = 0
@@ -39,7 +40,7 @@ function pageDraft(key: string, slug: string) {
 console.log('Content — bulk publish/archive/delete (live MongoDB)\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_bulk_service' }
+const binding = testDatabaseBinding('tm_test_bulk_service')
 
 async function integration() {
   let connection
@@ -53,7 +54,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Content, Audit, Revision, Redirect } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR }, revision: { model: Revision, actor: ACTOR } }
     const metaR = { ...meta, redirects: Redirect }
@@ -212,6 +213,7 @@ async function integration() {
       assert.equal(AdminContentBulkRequestSchema.safeParse({ action: 'delete', items: [{ id: 'a', revision: 1 }] }).success, true)
     })
   } finally {
+    await dropTestDatabase(connection)
     await closeDatabaseConnections()
   }
 }

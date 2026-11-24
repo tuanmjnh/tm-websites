@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readDashboardSummary } from '../../tm-cms/server/services/dashboardService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 let notRun = 0
@@ -21,7 +22,7 @@ async function check(name: string, fn: () => Promise<void> | void) {
 const SITE = 'sentuan'
 const OTHER_SITE = 'bagpost'
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_dashboard' }
+const binding = testDatabaseBinding('tm_test_dashboard')
 
 async function integration() {
   let connection
@@ -34,7 +35,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
 
     await check('an empty site answers zero everywhere', async () => {
@@ -157,6 +158,7 @@ async function integration() {
       assert.equal(other.inventory.lowStock, 1)
     })
   } finally {
+    await dropTestDatabase(connection)
     await closeDatabaseConnections()
   }
 }

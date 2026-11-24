@@ -10,6 +10,7 @@ import {
   verifyBackup,
 } from '../../tm-cms/server/services/backupService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 /**
  * The backup path is only worth having if a restore proves it: this test seeds a
@@ -36,11 +37,11 @@ async function check(name: string, fn: () => Promise<void> | void) {
 
 const uri = process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:27017'
 const suffix = Date.now().toString(36)
-const SOURCE_DB = `tm-ci-backup-source-${suffix}`
-const TARGET_DB = `tm-ci-backup-target-${suffix}`
+const SOURCE_DB = `tm_test_backup_source_${suffix}`
+const TARGET_DB = `tm_test_backup_target_${suffix}`
 
-const source = await connectDatabase({ uri, database: SOURCE_DB })
-const target = await connectDatabase({ uri, database: TARGET_DB })
+const source = await connectDatabase(testDatabaseBinding(SOURCE_DB))
+const target = await connectDatabase(testDatabaseBinding(TARGET_DB))
 const directoryRoot = await mkdtemp(join(tmpdir(), 'tm-backup-'))
 
 try {
@@ -155,8 +156,8 @@ try {
 
   console.log(`\n${checks}/${checks + failed} checks passed.`)
 } finally {
-  await source.db?.dropDatabase()
-  await target.db?.dropDatabase()
+  await dropTestDatabase(source)
+  await dropTestDatabase(target)
   await closeDatabaseConnections()
   await rm(directoryRoot, { recursive: true, force: true })
   await rm(`${directoryRoot}-tampered`, { recursive: true, force: true })

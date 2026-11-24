@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { createOrder } from '../../tm-cms/server/services/orderService.js'
 import { createShipment, getShipment, updateShipment, softDeleteShipment } from '../../tm-cms/server/services/shipmentService.js'
@@ -26,7 +27,7 @@ const ACTOR = { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example
 console.log('Shipment stock movements — ship/cancel/return/delete + serial sync\\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_shipment_movements' }
+const binding = testDatabaseBinding('tm_test_shipment_movements')
 
 async function run() {
   let connection
@@ -39,7 +40,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { Order, Shipment, Inventory, InventoryTransaction, SerialNumber, Audit } = models
     const meta = { audit: { model: Audit, actor: ACTOR } }

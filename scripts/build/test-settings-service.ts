@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import {
   SettingsServiceError,
@@ -30,7 +31,7 @@ const SITE = 'sentuan'
 const OTHER_SITE = 'bagpost'
 const ADMIN = { id: 'user_admin', name: 'Quản trị A', email: 'admin@example.com' }
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_settings_service' }
+const binding = testDatabaseBinding('tm_test_settings_service')
 
 async function integration() {
   let connection
@@ -43,7 +44,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Settings, Audit } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ADMIN, requestId: 'req_settings' } }
 
@@ -250,6 +251,7 @@ async function integration() {
       )
     })
   } finally {
+    await dropTestDatabase(connection)
     await closeDatabaseConnections()
   }
 }

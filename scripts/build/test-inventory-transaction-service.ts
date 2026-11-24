@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import {
   WarehouseServiceError,
@@ -43,7 +44,7 @@ const ACTOR = { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example
 console.log('Inventory transactions — stock ledger (live MongoDB)\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_inventory_transaction_service' }
+const binding = testDatabaseBinding('tm_test_inventory_transaction_service')
 
 async function integration() {
   let connection
@@ -56,7 +57,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Warehouse, Inventory, InventoryTransaction, Audit } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR } }
 

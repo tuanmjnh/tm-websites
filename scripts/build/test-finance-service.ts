@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { createCustomer } from '../../tm-cms/server/services/customerService.js'
 import { createOrder, getOrder } from '../../tm-cms/server/services/orderService.js'
@@ -41,7 +42,7 @@ const ACTOR = { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example
 console.log('Finance — payments against orders and purchase orders (live MongoDB)\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_finance_service' }
+const binding = testDatabaseBinding('tm_test_finance_service')
 
 async function integration() {
   let connection
@@ -54,7 +55,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Payment, Order, PurchaseOrder, Customer, CustomerSegment, Supplier, Audit } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR } }
     const targets = { order: Order, purchaseOrder: PurchaseOrder }

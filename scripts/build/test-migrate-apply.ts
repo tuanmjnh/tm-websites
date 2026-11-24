@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
@@ -11,7 +12,7 @@ import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/u
  * existing v2 record) already owns. A dry run cannot show any of that, and a
  * broken rule there overwrites live editorial data instead of failing.
  *
- * The fixture is synthetic and disposable (`tm_import_gate`): every legacy
+ * The fixture is synthetic and disposable (`tm_test_import_gate`): every legacy
  * shape the mappers accept, every collision branch, and one unusable record.
  * The CLIs are spawned exactly as an operator runs them, so the test covers the
  * flags and the wiring too, not a re-implementation of them.
@@ -48,7 +49,7 @@ function reportJson(output: string, label: string): Record<string, unknown> {
 }
 
 const URI = process.env.TM_TEST_MONGO_URI || process.env.TM_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const DATABASE = 'tm_import_gate'
+const DATABASE = 'tm_test_import_gate'
 const SITE = 'import-fixture'
 
 function run(
@@ -300,13 +301,13 @@ function catalogFixture() {
 }
 
 async function main() {
-  const connection = await connectDatabase({ uri: URI, database: DATABASE })
+  const connection = await connectDatabase(testDatabaseBinding(DATABASE))
   const db = connection.db!
   const content = contentFixture()
   const catalog = catalogFixture()
 
   try {
-    await db.dropDatabase()
+    await dropTestDatabase(connection)
     await db.collection('content_categories').insertMany(content.categories)
     await db.collection('contents').insertMany(content.contents)
     await db.collection('system_configs').insertMany([
@@ -381,9 +382,9 @@ async function main() {
       const content = run('migrate:content', false, { database: emptyDatabase })
       const catalog = run('migrate:catalog', false, { database: emptyDatabase })
       assert.equal(content.code, 0, content.output)
-      assert.match(content.output, /found no legacy contents\/content_categories collections in tm_import_gate_empty/)
-      assert.match(catalog.output, /found no legacy items\/item_categories collections in tm_import_gate_empty/)
-      await connectDatabase({ uri: URI, database: emptyDatabase }).then(connection => connection.db?.dropDatabase())
+      assert.match(content.output, /found no legacy contents\/content_categories collections in tm_test_import_gate_empty/)
+      assert.match(catalog.output, /found no legacy items\/item_categories collections in tm_test_import_gate_empty/)
+      await connectDatabase(testDatabaseBinding(emptyDatabase)).then(connection => dropTestDatabase(connection))
     })
     await check('an empty legacy collection is reported as an empty copy, not as the wrong database', async () => {
       // `bag-post` has `items` and `item_categories` that hold no documents: the
@@ -391,14 +392,14 @@ async function main() {
       const hollowDatabase = `${DATABASE}_hollow`
       // Left open on purpose: `connectDatabase` caches by binding, and opening the
       // same database again after `close()` returns the closed connection.
-      const hollow = await connectDatabase({ uri: URI, database: hollowDatabase })
+      const hollow = await connectDatabase(testDatabaseBinding(hollowDatabase))
       await hollow.db!.createCollection('items')
       await hollow.db!.createCollection('item_categories')
       const catalog = run('migrate:catalog', false, { database: hollowDatabase })
       assert.equal(catalog.code, 0, catalog.output)
-      assert.match(catalog.output, /the legacy items\/item_categories collections exist in tm_import_gate_hollow but hold no documents/)
+      assert.match(catalog.output, /the legacy items\/item_categories collections exist in tm_test_import_gate_hollow but hold no documents/)
       assert.equal(catalog.output.includes('customer-named database'), false, 'the database name is correct here')
-      await hollow.db!.dropDatabase()
+      await dropTestDatabase(hollow)
     })
     await check('an unknown --tenant names the tenants the database does hold', async () => {
       const mismatch = run('migrate:content', false, { args: ['--tenant', 'khong-co'] })
@@ -754,7 +755,7 @@ async function main() {
       assert.match(broken.output, /fewer rows than the source/)
     })
   } finally {
-    await db.dropDatabase().catch(() => undefined)
+    await dropTestDatabase(connection).catch(() => undefined)
     await closeDatabaseConnections()
   }
 }

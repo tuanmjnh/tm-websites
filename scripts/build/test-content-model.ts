@@ -12,6 +12,7 @@ import type { ContentRevisionState } from '../../tm-cms/server/models/content.js
 import { MIGRATIONS, planMigrations, readAppliedMigrations } from '../../tm-cms/server/models/migrations.js'
 import { connectDatabase, closeDatabaseConnections } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 let notRun = 0
@@ -270,7 +271,7 @@ check('a migration numbered below an applied version is a conflict', () => {
 console.log('\n   Prepared database (live MongoDB)')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_content' }
+const binding = testDatabaseBinding('tm_test_content')
 
 function contentFixture(key: string, slug: string) {
   const draft = normalizeContentInput({
@@ -294,7 +295,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
 
     const models = await prepareDatabase(connection, NOW)
     checks++

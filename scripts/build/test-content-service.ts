@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import {
   ContentServiceError,
@@ -58,7 +59,7 @@ function pageDraft(key: string, slug: string, extra: Record<string, unknown> = {
 console.log('Content — admin commands and public read (live MongoDB)\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_content_service' }
+const binding = testDatabaseBinding('tm_test_content_service')
 
 async function integration() {
   let connection
@@ -72,7 +73,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Content, Audit, Revision, IdempotencyKey, Menu, Redirect } = await prepareDatabase(connection)
     const meta = (actor = ACTOR) => ({
       audit: { model: Audit, actor },

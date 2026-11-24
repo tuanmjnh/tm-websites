@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { importSuppliers } from '../../tm-cms/server/services/supplierService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
@@ -24,7 +25,7 @@ const ACTOR = { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example
 console.log('Supplier import — bounded upsert with per-row results\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_supplier_import' }
+const binding = testDatabaseBinding('tm_test_supplier_import')
 
 async function run() {
   let connection
@@ -37,7 +38,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { Supplier, Audit } = models
     const meta = { audit: { model: Audit, actor: ACTOR } }

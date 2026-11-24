@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { createCustomer, findDuplicateCustomers } from '../../tm-cms/server/services/customerService.js'
 import { createCustomerSegment } from '../../tm-cms/server/services/customerSegmentService.js'
@@ -25,7 +26,7 @@ const ACTOR = { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example
 console.log('Customer dedup — read-only duplicate report\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_customer_dedup' }
+const binding = testDatabaseBinding('tm_test_customer_dedup')
 
 async function run() {
   let connection
@@ -38,7 +39,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { Customer, CustomerSegment } = models
     const meta = { audit: { model: models.Audit, actor: ACTOR } }

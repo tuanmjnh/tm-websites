@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import {
   FinanceReportError,
@@ -38,7 +39,7 @@ const OTHER_SITE = 'bagpost'
 console.log('Finance reports — money in/out, aging, ledger and a safe CSV (live MongoDB)\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_finance_reports' }
+const binding = testDatabaseBinding('tm_test_finance_reports')
 
 async function integration() {
   let connection
@@ -51,7 +52,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Payment, Order, PurchaseOrder } = await prepareDatabase(connection)
     const models = { Payment, Order, PurchaseOrder }
 

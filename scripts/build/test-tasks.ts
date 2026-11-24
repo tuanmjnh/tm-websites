@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import {
   TaskServiceError,
@@ -34,7 +35,7 @@ const ASSIGNEE = 'hub-subject-task'
 console.log('Tasks — CRUD, status, soft delete/restore, revision\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_tasks' }
+const binding = testDatabaseBinding('tm_test_tasks')
 
 async function run() {
   let connection
@@ -47,7 +48,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { Task, Audit } = models
     const meta = { audit: { model: Audit, actor: ACTOR } }

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { testDatabaseBinding } from './testDatabase.js'
+import { dropTestDatabase } from './testDatabase.js'
 import {
   DatabaseBindingError,
   bindingKey,
@@ -76,8 +78,8 @@ check('binding keys separate tenants on the same server', () => {
 console.log('\n   Two-database isolation (live MongoDB)')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const bindingA = { uri: URI, database: 'tm_test_iso_a' }
-const bindingB = { uri: URI, database: 'tm_test_iso_b' }
+const bindingA = testDatabaseBinding('tm_test_iso_a')
+const bindingB = testDatabaseBinding('tm_test_iso_b')
 
 async function integration() {
   let connectionA
@@ -113,9 +115,9 @@ async function integration() {
     checks++
     console.log('   ✅ the same binding reuses its connection')
   } finally {
-    await connectionA.db?.dropDatabase().catch(() => undefined)
+    await dropTestDatabase(connectionA).catch(() => undefined)
     const connectionB = await connectDatabase(bindingB).catch(() => null)
-    await connectionB?.db?.dropDatabase().catch(() => undefined)
+    if (connectionB) await dropTestDatabase(connectionB).catch(() => undefined)
     await closeDatabaseConnections()
   }
 }

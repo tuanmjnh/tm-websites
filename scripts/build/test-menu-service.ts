@@ -12,6 +12,7 @@ import { findMenuReferences } from '../../tm-cms/server/services/menuReferences.
 import { MENU_MAX_CHILDREN, MENU_MAX_ITEMS } from '../../tm-shared/packages/flow-contracts/src/menu-admin.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 let notRun = 0
@@ -36,7 +37,7 @@ const SITE = 'sentuan'
 const OTHER_SITE = 'bagpost'
 const ADMIN = { id: 'user_admin', name: 'Quản trị A', email: 'admin@example.com' }
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_menu_service' }
+const binding = testDatabaseBinding('tm_test_menu_service')
 
 const items = [
   { label: { vi: 'Giới thiệu', en: 'About us' }, link: { type: 'content', target: 'gioi-thieu' } },
@@ -55,7 +56,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Menu, Audit, Content, Category, CatalogCategory } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ADMIN, requestId: 'req_menu' } }
 
@@ -423,6 +424,7 @@ async function integration() {
       assert.equal(options.category[0]!.label, 'Trang sức', 'the `vi` name is the label')
     })
   } finally {
+    await dropTestDatabase(connection)
     await closeDatabaseConnections()
   }
 }

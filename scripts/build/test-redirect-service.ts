@@ -11,6 +11,7 @@ import {
 } from '../../tm-cms/server/services/redirectService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 
@@ -30,8 +31,8 @@ function isServiceError(status: number, code: string) {
   return (error: unknown) => error instanceof RedirectServiceError && error.statusCode === status && error.code === code
 }
 
-const connection = await connectDatabase({ uri: 'mongodb://127.0.0.1:27017', database: 'tm_test_redirect_service' })
-await connection.dropDatabase()
+const connection = await connectDatabase(testDatabaseBinding('tm_test_redirect_service'))
+await dropTestDatabase(connection)
 const { Redirect, Audit } = await prepareDatabase(connection)
 
 const SITE = 'sentuan'
@@ -222,7 +223,7 @@ try {
     )
   })
 } finally {
-  await connection.dropDatabase()
+  await dropTestDatabase(connection)
   await closeDatabaseConnections()
 }
 

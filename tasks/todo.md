@@ -1025,7 +1025,12 @@ The cross-customer asset isolation check this audit pointed at landed on 2026-11
 | `/danh-muc` index leaves the index while it has no category | `tm-shared/nuxt-layers/web-base/app/pages/danh-muc/index.vue` |
 | Limits: `/bai-viet` has no page URLs (cursor pagination) | — |
 
-## Queue — the next slices, in order
+## Queue
+
+### In progress: local development and test policy (2026-11-24)
+
+`docs/v2/15-local-development-and-test-policy.md` is now the source of truth for the local/CI database name (`sen-tuan` for customer `sentuan`), safe use of the real development database, CMS-vs-Web ownership and the test-safety phases. Landed with it: registry-owned Web binding that fails closed on a `TM_MONGO_DB` mismatch, CI using its own MongoDB service under the same logical name, the guarded `scripts/build/testDatabase.ts` fixture helper (every suite drops its `tm_test_*` database), the `verify:test-safety` gate, and the classification in `docs/v2/16-test-data-safety.md`. Remaining: [§6 Phase D](../docs/v2/15-local-development-and-test-policy.md#phase-d--application-verification-on-real-data) smoke checks on real data and [Phase E](../docs/v2/15-local-development-and-test-policy.md#phase-e--ci-and-evidence) CI evidence from GitHub Actions.
+ — the next slices, in order
 
 Each item is sized for one session, needs no new decision or credential, and carries its own verification. Work top to bottom; if an item uncovers a defect, finish that fix inside the item rather than opening a new one.
 

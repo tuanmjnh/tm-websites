@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { Types } from 'mongoose'
 import { StocktakeServiceError } from '../../tm-cms/server/services/stocktakeService.js'
@@ -36,7 +37,7 @@ const OTHER_SITE = 'bagpost'
 console.log('Stocktake — count a warehouse, explain the adjustment, keep the record\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_stocktake' }
+const binding = testDatabaseBinding('tm_test_stocktake')
 
 async function run() {
   let connection
@@ -49,7 +50,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { Stocktake, Inventory, InventoryTransaction, Audit } = models
     const audit = { model: Audit, actor: { id: 'test-operator', name: 'Test operator', email: '' } }

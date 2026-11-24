@@ -31,10 +31,15 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+    # The job-local MongoDB service is physically isolated from any developer's
+    # MongoDB. It uses the same logical database name as local development, so the
+    # registry binding and the gate command need no CI-only code path
+    # (docs/v2/15-local-development-and-test-policy.md §4).
     env:
       TM_MONGO_URI: mongodb://127.0.0.1:27017
-      TM_MONGO_DB: tm-ci-gates
+      TM_MONGO_DB: sen-tuan
       TM_SITE_ID: sentuan
+      TM_CUSTOMER_ID: sentuan
 
     steps:
       - name: Checkout
@@ -51,6 +56,21 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Preflight: prove the service is reachable and the selected database is
+      # exactly the registry name. Prints the logical name only, never the URI.
+      - name: Preflight database binding
+        run: |
+          node --input-type=module -e "
+            import net from 'node:net'
+            const name = process.env.TM_MONGO_DB
+            if (name !== 'sen-tuan') { console.error('expected sen-tuan, got ' + name); process.exit(1) }
+            console.log('database: ' + name)
+            const socket = net.connect(27017, '127.0.0.1')
+            socket.setTimeout(5000, () => { console.error('mongodb service timeout'); process.exit(1) })
+            socket.on('connect', () => { console.log('mongodb service reachable'); socket.end() })
+            socket.on('error', (error) => { console.error(error.message); process.exit(1) })
+          "
 
       # One step on purpose: the same command that runs locally, so a gate cannot be added in
       # package.json and quietly left out of CI (which is how verify:scaffold stayed red).

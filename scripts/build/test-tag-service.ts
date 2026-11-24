@@ -8,6 +8,7 @@ import {
 import { createContent } from '../../tm-cms/server/services/contentService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 let notRun = 0
@@ -44,7 +45,7 @@ function page(key: string, title: string, tags: string[]) {
 console.log('Tags — rename, merge and detach (live MongoDB)\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_tag_service' }
+const binding = testDatabaseBinding('tm_test_tag_service')
 
 async function integration() {
   let connection
@@ -57,7 +58,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Content, Audit, Revision } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR }, revision: { model: Revision, actor: ACTOR } }
 

@@ -8,6 +8,7 @@ import { listAuditEntries } from '../../tm-cms/server/services/auditService.js'
 import { normalizeAuditReason } from '../../tm-cms/server/services/contentAudit.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 /**
  * Write side of the audit trail for the two domains that had only a read-side
@@ -53,7 +54,7 @@ const mediaDir = await mkdtemp(join(tmpdir(), 'tm-audit-write-'))
 process.env.TM_MEDIA_DIR = mediaDir
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_audit_write' }
+const binding = testDatabaseBinding('tm_test_audit_write')
 
 await check('normalises an operator note instead of storing it raw', () => {
   assert.equal(normalizeAuditReason(`  ${REASON}  `), REASON)
@@ -75,7 +76,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Category, Content, Media, Audit } = await prepareDatabase(connection)
 
     const meta = { audit: { model: Audit, actor: ACTOR, requestId: REQUEST_ID, reason: REASON } }
@@ -211,6 +212,7 @@ async function integration() {
       assert.deepEqual(other.data, [])
     })
   } finally {
+    await dropTestDatabase(connection)
     await closeDatabaseConnections()
   }
 }

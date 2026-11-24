@@ -28,7 +28,7 @@ These are source-observed inputs, not a new `.env` template and not proof that s
 | `TM_TENANT_ID` | Current override; not authorization and must not bypass registry/app consistency |
 | `TM_HUB_SECRET` | Current CMS server-only legacy integration input; do not assume it is the Hub JWT signing key or a verified service identity |
 | `TM_CONTENT_APP_ID` | Current paired Hub content ownership override; transitional, remove only when business consumers/data migrate |
-| `TM_MONGO_URI`, `TM_MONGO_DB` | Current Web-only server DB connection/binding; CMS business binding is target work |
+| `TM_MONGO_URI`, `TM_MONGO_DB` | Server-only, in both hosts. The registry owns the database name (`sen-tuan` for `sentuan`); `TM_MONGO_DB` may only repeat it and a mismatch fails closed (`DATABASE_BINDING_MISMATCH`). See [policy 15](15-local-development-and-test-policy.md) |
 | `TM_SITE_ID`, `TM_SITE_URL`, `TM_SITE_INDEXABLE` | Web site identity/domain/indexability; ensure preview noindex and correct production canonical URL |
 | `TM_CURRENCY` | Current Web public currency default; domain money rules still need implementation |
 | `TM_IMAGE_DOMAINS` | Current image host list; maintain a deliberate allowlist |
@@ -37,6 +37,23 @@ These are source-observed inputs, not a new `.env` template and not proof that s
 | `TM_PWA_DISABLED` | Any non-empty value disables current PWA, including the string `false`; unset to allow production PWA |
 
 Current custom `TM_*` values are read in configuration/build paths. Do not assume changing an environment variable after deploying a built artifact updates it: verify Nitro runtime override behavior and generated output for each hosting mode. Never put secrets into `runtimeConfig.public` or customer assets.
+
+## Local development database policy (2026-11-24)
+
+[Policy 15](15-local-development-and-test-policy.md) is the source of truth for database naming and test safety:
+
+- Local CMS/Web development and `pnpm verify:all` use the existing `sen-tuan` database for customer `sentuan`. Do not create a second everyday development database.
+- `TM_MONGO_DB=sen-tuan` confirms the registry binding; any other value is refused by both hosts and by the gate runner.
+- Suites that need a clean database use a guarded `tm_test_*` fixture ([`testDatabase.ts`](../../scripts/build/testDatabase.ts)) and drop it in their own `finally` path. `pnpm verify:test-safety` fails on an unguarded drop, an un-dropped fixture or a `sen-tuan` fixture literal; [doc 16](16-test-data-safety.md) lists the classes.
+- Backup/restore, migration-apply and other destructive drills never run against `sen-tuan`. Migrations are dry-run by default; `--apply` is a separate, deliberate operation.
+
+Local command:
+
+```sh
+TM_MONGO_URI=mongodb://127.0.0.1:27017 TM_MONGO_DB=sen-tuan TM_SITE_ID=sentuan pnpm verify:all
+```
+
+The runner prints the target (`customer`, `site`, `database`) and the Mongo host only, never credentials or a full URI.
 
 Provider secret names and provisioning steps must be documented with each implemented adapter. Do not invent unsupported env flags or copy embedded legacy defaults.
 
@@ -89,7 +106,7 @@ The lesson to keep: when a gate's assertion is about *how* a requirement was met
 
 `pnpm verify:all` runs every gate the repository has, in order, from one command: 21 domain scripts (`test:layers`, `test:hub`, `test:content`, `test:categories`, `test:catalog`, `test:media`, `test:audit`, `test:settings`, `test:menus`, `test:bulk`, `test:tags`, `test:redirects`, `test:category-order`, `test:retention`, `test:db`, `test:web-content`, `test:web-site`, `test:web-cart`, `test:iam`, `test:revalidate`, `test:web-site-db`) then `typecheck`, `lint`, `validate:registry` and `verify:scaffold` — 25 steps. Three gates still cannot run from a clean checkout (`test:empty-listing`, `validate:build:cms`, `validate:build:web`) and are declared in the runner's `OPT_IN_GATES` with their precondition instead of being left out.
 
-Each step's complete output and exit code are appended to `.devlogs/gates.log` (override with `--log=<path>`), and the file ends with how many gates passed and which failed. The run continues past a failing gate so one invocation reports everything that is broken, then exits 1. The header records the database environment variables in use, which matters because the domain scripts talk to a real MongoDB.
+Each step's complete output and exit code are appended to `.devlogs/gates.log` (override with `--log=<path>`), and the file ends with how many gates passed and which failed. The header records the selected customer/site/database and the Mongo host (credentials redacted). The run continues past a failing gate so one invocation reports everything that is broken, then exits 1. The header records the database environment variables in use, which matters because the domain scripts talk to a real MongoDB.
 
 Measured on 2026-11-12 with `TM_MONGO_DB=sentuan`: 25/25 gates in 84–88s (the first run, before the three extra gates above joined, was 22/22 in 79.4s).
 
@@ -97,7 +114,7 @@ Measured on 2026-11-12 with `TM_MONGO_DB=sentuan`: 25/25 gates in 84–88s (the 
 
 ### CI (2026-11-12)
 
-`.github/workflows/quality.yml` starts a `mongo:7` service and runs the single `pnpm verify:all` step, then uploads `.devlogs/gates.log` as an artifact on every run. It used to list gates individually, which is how `verify:scaffold` stayed red in CI-adjacent local work while the workflow itself kept passing only the gates somebody remembered to add. The job runs against a disposable database (`TM_MONGO_DB=tm-ci-gates`) so no developer data is needed, and the storefront's `TM_SITE_ID` stays `sentuan`.
+`.github/workflows/quality.yml` starts a `mongo:7` service and runs the single `pnpm verify:all` step, then uploads `.devlogs/gates.log` as an artifact on every run. It used to list gates individually, which is how `verify:scaffold` stayed red in CI-adjacent local work while the workflow itself kept passing only the gates somebody remembered to add. The job starts its own `mongo:7` service, physically isolated from any developer's MongoDB, and uses the same logical database name as local development (`TM_MONGO_DB=sen-tuan`) with `TM_SITE_ID=sentuan`, so the registry binding and the gate command need no CI-only code path ([policy §4](15-local-development-and-test-policy.md#4-ci-database-alignment)). A preflight step pings that service and refuses any name other than `sen-tuan`, printing only the logical name.
 
 The suite was verified locally against an empty database of that name: 22/22 gates in 77.7s with the runner of that day (25 steps now), then the database was dropped. The workflow change itself is validated as YAML only — the first real run on GitHub is what certifies it.
 

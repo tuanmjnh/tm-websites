@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import {
   MailServiceError,
@@ -45,7 +46,7 @@ const ACTOR = { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example
 console.log('Mail — templates, a delivery queue and an explicit provider boundary (live MongoDB)\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_mail_service' }
+const binding = testDatabaseBinding('tm_test_mail_service')
 
 async function integration() {
   let connection
@@ -58,7 +59,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { MailTemplate, MailDelivery, Audit } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR } }
 

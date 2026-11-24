@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { HrServiceError, createStaff, getStaffBySubject } from '../../tm-cms/server/services/staffService.js'
 import { upsertAttendance } from '../../tm-cms/server/services/attendanceService.js'
@@ -28,7 +29,7 @@ const ACTOR = { id: 'user_mock_admin', name: 'Test Admin', email: 'admin@example
 console.log('HR self-service — own attendance and payroll\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_hr_self_service' }
+const binding = testDatabaseBinding('tm_test_hr_self_service')
 
 // Shifts may only be assigned for today or later, so the fixture follows the
 // clock instead of a fixed date that goes stale the next day.
@@ -46,7 +47,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { StaffProfile, Attendance, SalaryConfig, Payroll, Audit, ShiftTemplate, ShiftAssignment } = models
     const meta = { audit: { model: Audit, actor: ACTOR } }

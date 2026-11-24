@@ -42,7 +42,7 @@ Business media metadata belongs in MongoDB; binaries need not be stored as BSON 
 | `tm-shared/packages/flow-utils/` | Reusable pure helpers; server-only or browser-only exports must stay separated |
 | `tm-shared/packages/design-system/` | Shared CSS tokens and design primitives |
 
-Introduce a server-only domain package under `tm-shared/packages/` during Phase 2, after selecting and testing its export map. Its final name is not yet an existing import. It owns Mongoose schema factories, shared business commands and invariants. Host adapters own authorization, public/admin projections and endpoint contracts. Do not import CMS endpoint implementations into Web.
+Business ownership is deliberately not packaged separately. `tm-cms` Nitro owns the canonical Mongo models, business commands and invariants under `tm-cms/server/{models,services,utils}`; `tm-web` reads narrow public projections and calls the CMS-owned business API when it must mutate a canonical record. Do not import `tm-cms/server/**` into `tm-web`, and do not create a shared server-only domain package as a shortcut for cross-host imports: that proposal was withdrawn in favour of this ownership boundary ([policy §5](15-local-development-and-test-policy.md#5-server-ownership-and-package-boundaries)). A separate business service would need its own ADR, security boundary and migration plan.
 
 Domain modules initially belong in explicit domain folders. Add optional Nuxt module layers only when customer composition requires them; do not create dozens of empty layers or rely on automatic discovery to install optional modules. A future module manifest must define dependencies, routes, permissions and customer enablement. Enablement controls product composition, not authorization.
 

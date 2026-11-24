@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { checkSupplierPrice, supplierPriceHistory, SupplierPriceError } from '../../tm-cms/server/services/supplierPriceService.js'
 import { createPurchaseOrder } from '../../tm-cms/server/services/purchaseOrderService.js'
@@ -37,7 +38,7 @@ const daysAgo = (days: number) => new Date(NOW.getTime() - days * DAY)
 console.log('Supplier price history — what was actually paid, per receipt\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_supplier_prices' }
+const binding = testDatabaseBinding('tm_test_supplier_prices')
 
 async function run() {
   let connection
@@ -50,7 +51,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Warehouse, Inventory, InventoryTransaction, PurchaseOrder, Supplier, Audit } = await prepareDatabase(connection)
     const models = { PurchaseOrder, InventoryTransaction }
     const meta = { audit: { model: Audit, actor: ACTOR } }

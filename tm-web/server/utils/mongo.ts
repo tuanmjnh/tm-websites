@@ -22,8 +22,22 @@ export function getMongoTarget(event: H3Event): MongoTarget | null {
   const config = useRuntimeConfig(event)
   const uri = String(config.mongoUri || '').trim()
   const database = String(config.catalogDbName || '').trim()
+  const declared = String(config.catalogDbDeclared || '').trim()
+  const override = String(config.catalogDbOverride || '').trim()
+
+  // The registry owns the database name; the environment may only repeat it.
+  // Refusing here, at request time, keeps a stale runtime override from serving
+  // another customer's data even when the build was correct.
+  if (declared && override && override !== declared) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'error.catalogUnavailable',
+      data: { code: 'DATABASE_BINDING_MISMATCH' },
+    })
+  }
+
   if (!uri || !database) return null
-  return { uri, database }
+  return { uri, database: declared || database }
 }
 
 export function requireMongoTarget(event: H3Event): MongoTarget {

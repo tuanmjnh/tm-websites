@@ -7,6 +7,7 @@ import {
 } from '../../tm-cms/server/services/categoryService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 
 let checks = 0
 let notRun = 0
@@ -55,7 +56,7 @@ function orderOf(tree: { key: string, children: { key: string }[] }[], parent: s
 console.log('Categories — drag-and-drop ordering (live MongoDB)\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_category_reorder' }
+const binding = testDatabaseBinding('tm_test_category_reorder')
 
 async function integration() {
   let connection
@@ -68,7 +69,7 @@ async function integration() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const { Category, Audit, Revision } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR }, revision: { model: Revision, actor: ACTOR } }
 

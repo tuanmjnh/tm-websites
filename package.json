@@ -18,6 +18,7 @@
     "validate:build:cms": "tsx scripts/build/validate-build.ts cms",
     "validate:build:web": "tsx scripts/build/validate-build.ts web",
     "verify:scaffold": "tsx scripts/verify-scaffold.ts",
+    "verify:test-safety": "tsx scripts/build/verify-test-safety.ts",
     "verify:audit-meta": "tsx scripts/build/verify-audit-meta.ts",
     "verify:modules": "tsx scripts/build/verify-modules.ts",
     "verify:audit-reason-ui": "tsx scripts/build/verify-audit-reason-ui.ts",

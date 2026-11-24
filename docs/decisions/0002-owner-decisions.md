@@ -101,3 +101,17 @@ These block specific slices. Work continues on everything else; no placeholder c
 - [`tasks/todo.md`](../../tasks/todo.md) — slice queue and phase status.
 - [ADR 0001](0001-rebuild-ownership.md) — ownership and layer boundary.
 - [`docs/v2/05-feature-parity.md`](../v2/05-feature-parity.md) — which parity rows each decision affects.
+
+## 6. Local development database policy (2026-11-24)
+
+The owner approved [docs/v2/15-local-development-and-test-policy.md](../v2/15-local-development-and-test-policy.md) as the source of truth for local development and CI:
+
+| Decision | Effect |
+| --- | --- |
+| `sen-tuan` is the single local development/test database for customer `sentuan` | No second everyday database; the real migrated data stays usable during development |
+| `TM_MONGO_DB` may only confirm the registry binding | Both hosts and the gate runner fail closed on a mismatch |
+| CI runs its own MongoDB service under the same logical name `sen-tuan` | Same binding and command locally and in CI; the service, not the name, provides isolation |
+| Destructive tests use guarded `tm_test_*` fixtures | `scripts/build/testDatabase.ts` refuses `sen-tuan`; suites drop their own fixture |
+| `tm-cms` Nitro owns canonical business writes | The earlier shared server-package proposal is withdrawn; Web consumes the CMS API for canonical mutations |
+
+This supersedes any earlier statement that the CMS business binding was unbuilt target work or that CI used `tm-ci-gates`.

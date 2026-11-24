@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { MailAnalyticsError } from '../../tm-cms/server/services/mailAnalyticsService.js'
 import { mailDeliveryAnalytics, resolveMailRange } from '../../tm-cms/server/services/mailAnalyticsService.js'
@@ -30,7 +31,7 @@ const NOW = new Date('2026-11-15T05:00:00.000Z')
 console.log('Mail analytics — the queue, the templates, the failures, and what is stuck\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_mail_analytics' }
+const binding = testDatabaseBinding('tm_test_mail_analytics')
 
 async function run() {
   let connection
@@ -43,7 +44,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { MailDelivery } = models
 

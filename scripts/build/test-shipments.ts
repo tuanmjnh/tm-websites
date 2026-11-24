@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 import { createMailTemplate } from '../../tm-cms/server/services/mailService.js'
 import { ORDER_STATUS_TEMPLATE } from '../../tm-cms/server/services/orderStatusMail.js'
@@ -32,7 +33,7 @@ const ACTOR = { id: 'user_test_admin', name: 'Test Admin', email: 'admin@example
 console.log('Shipments — partial fulfillment against the order\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_shipments' }
+const binding = testDatabaseBinding('tm_test_shipments')
 
 async function run() {
   let connection
@@ -45,7 +46,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { Order, Shipment, Audit, MailTemplate, MailDelivery, Customer } = models
     const meta = { audit: { model: Audit, actor: ACTOR } }

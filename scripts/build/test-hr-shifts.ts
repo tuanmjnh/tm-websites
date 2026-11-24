@@ -1,3 +1,4 @@
+import { dropTestDatabase, testDatabaseBinding } from './testDatabase.js'
 import assert from 'node:assert/strict'
 type LeanId = { _id: string }
 import { HrServiceError } from '../../tm-cms/server/services/staffService.js'
@@ -42,7 +43,7 @@ const TODAY = '2026-11-15'
 console.log('HR shifts — templates, a one-shift-per-day roster, and a past that stays put\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
-const binding = { uri: URI, database: 'tm_test_hr_shifts' }
+const binding = testDatabaseBinding('tm_test_hr_shifts')
 
 async function run() {
   let connection
@@ -55,7 +56,7 @@ async function run() {
   }
 
   try {
-    await connection.db!.dropDatabase()
+    await dropTestDatabase(connection)
     const models = await prepareDatabase(connection)
     const { ShiftTemplate, ShiftAssignment, StaffProfile, Audit } = models
     const audit = { model: Audit, actor: { id: 'test-operator', name: 'Test operator', email: '' } }

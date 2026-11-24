@@ -14,6 +14,7 @@ import {
   buildCategorySlugMap,
 } from '../../tm-web/server/models/sitePublic.js'
 import { PublicCategoryModel } from '../../tm-web/server/models/contentCategoryPublic.js'
+import { dropTestMongooseDatabase } from './testDatabase.js'
 
 /**
  * Live checks for the storefront's public site read path: the projections must
@@ -66,7 +67,7 @@ const menus = [
 ]
 
 async function load(connection: Awaited<ReturnType<typeof connectMongo>>) {
-  await connection.connection.dropDatabase()
+  await dropTestMongooseDatabase(connection)
   await connection.connection.collection('settings').insertOne({ ...settingsDoc })
   await connection.connection.collection('site_menus').insertMany(menus.map(menu => ({ ...menu })))
   await connection.connection.collection('categories').insertMany([
@@ -173,7 +174,7 @@ async function integration() {
     })
 
     await check('an empty database reads defaults rather than failing', async () => {
-      await connection.connection.dropDatabase()
+      await dropTestMongooseDatabase(connection)
       const site = await readSite('vi')
       assert.equal(site.company.name, '')
       assert.equal(site.seo.titleTemplate, '%s')
@@ -181,7 +182,7 @@ async function integration() {
       assert.equal(PublicSiteSchema.safeParse(site).success, true)
     })
   } finally {
-    await connection.connection.dropDatabase().catch(() => undefined)
+    await dropTestMongooseDatabase(connection).catch(() => undefined)
     await connection.disconnect()
   }
 }

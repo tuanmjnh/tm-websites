@@ -17,6 +17,7 @@ import {
   buildCategorySlugFilter,
   toPublicContentCategory,
 } from '../../tm-web/server/models/contentCategoryPublic.js'
+import { dropTestMongooseDatabase } from './testDatabase.js'
 
 /**
  * Live checks for the storefront public read policy against a real MongoDB.
@@ -361,7 +362,7 @@ async function main() {
       assert.equal(await findCategoryBySlug('khong-ton-tai'), null)
     })
   } finally {
-    await connection.connection.dropDatabase().catch(() => undefined)
+    await dropTestMongooseDatabase(connection).catch(() => undefined)
     await connection.disconnect().catch(() => undefined)
   }
 
