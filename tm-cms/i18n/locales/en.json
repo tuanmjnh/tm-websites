@@ -1166,7 +1166,12 @@
       "notes": "Notes",
       "signatureSender": "Prepared by",
       "signatureCustomer": "Customer confirmation",
+      "signatureAccountant": "Chief accountant",
       "signatureHint": "(sign and print full name)",
+      "taxCode": "Tax code",
+      "bankAccounts": "Bank accounts",
+      "bankAccountsHint": "No bank account information",
+      "totalInWords": "In words"
       "statuses": {
         "draft": "Draft",
         "sent": "Sent",

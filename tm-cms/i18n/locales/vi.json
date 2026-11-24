@@ -1168,7 +1168,12 @@
       "notes": "Ghi chú",
       "signatureSender": "Người lập báo giá",
       "signatureCustomer": "Khách hàng xác nhận",
+      "signatureAccountant": "Kế toán trưởng",
       "signatureHint": "(Ký, ghi rõ họ tên)",
+      "taxCode": "MST",
+      "bankAccounts": "Thông tin tài khoản",
+      "bankAccountsHint": "Chưa có thông tin tài khoản",
+      "totalInWords": "Bằng chữ"
       "statuses": {
         "draft": "Nháp",
         "sent": "Đã gửi",
