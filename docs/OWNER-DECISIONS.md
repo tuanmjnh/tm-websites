@@ -2,24 +2,16 @@
 
 Prepared from local source (`nuxt4-cms`, `nuxt4-website`) and read-only local MongoDB (`sen-tuan`, `bag-post`). No secrets, raw customer data or production credentials are included. Each item lists evidence, options, recommendation and the exact information needed from the owner.
 
-## Q11 — shared server domain package vs single business API owner
+## Q11 — business API and server ownership
 
-Evidence:
+**Owner decision confirmed 2026-11-24: choose one business API owner (Option B).**
 
-- `docs/v2/02-architecture.md` proposes a future server-only domain package shared by CMS and Web.
-- Current ADR default (old) was no `@tm/flow-server`; models/invariants/commands live in `tm-cms/server`.
-- `tm-web` currently reads Mongo directly for public content/catalog and has no business write BFF.
-- Cross-host media and portal writes require a clear ownership boundary.
+- CMS Nitro is the canonical owner of business MongoDB models, invariants, validation and write commands. Keep them in `tm-cms/server/`.
+- Web remains a consumer: SSR and narrow public read projections may stay in `tm-web/server/`, but canonical business mutations must go through the CMS-owned API using server-side authorization bound to the verified app, tenant and site.
+- Do not create or plan a shared server-only workspace package. Shared packages remain browser-safe contracts and pure utilities.
+- Do not import `tm-cms/server/**` into Web and do not duplicate business write rules across hosts.
 
-Options:
-
-- A. Allow a private server-only workspace package (`@tm/flow-server`) with model factories, invariants, command services and a safe export map (no browser bundle).
-- B. Keep one business API owner (CMS/Nitro or separate service); Web calls server-to-server through app identity/service authorization with site/customer scope and public/private DTOs.
-
-Recommendation: B for now, unless portal writes become frequent enough to justify A. B keeps a single transactional owner and avoids duplicating Mongo models.
-
-Needed from owner: confirm whether Web/customer/supplier portal writes are in scope for the first replacement, and preferred ownership boundary.
-
+This closes Q11. Future extraction into a separately deployed service would require a new ADR and explicit owner approval.
 ## Q17 — checkout/order/payment scope
 
 Evidence:
