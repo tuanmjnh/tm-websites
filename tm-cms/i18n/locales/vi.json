@@ -93,7 +93,8 @@
     "customers": "Khách hàng",
     "pos": "POS bán tại quầy",
     "variantOptions": "Thuộc tính biến thể",
-    "keywords": "Từ khoá"
+    "keywords": "Từ khoá",
+    "financeReport": "Báo cáo tài chính"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -2040,6 +2041,17 @@
         "warehouseRequired": "Chọn kho đích",
         "duplicate": "Serial này đã được đăng ký"
       }
+    },
+    "financeReport": {
+      "title": "Báo cáo tài chính",
+      "refresh": "Tải lại",
+      "totalOrders": "Số đơn",
+      "totalRevenue": "Doanh thu",
+      "receivablePosted": "Đã thu",
+      "payablePosted": "Đã chi",
+      "itemsPrice": "Tiền hàng",
+      "openPayables": "Phải trả còn mở",
+      "ordersByStatus": "Đơn theo trạng thái"
     },
     "finance": {
       "title": "Tài chính & Thu chi",

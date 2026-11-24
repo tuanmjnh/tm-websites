@@ -28,6 +28,9 @@ const navItems = computed(() => [
   ...(hasCapability('content.read')
     ? [{ label: t('nav.keywords'), icon: 'i-lucide-tag', to: '/keywords' }]
     : []),
+  ...(hasCapability('content.read')
+    ? [{ label: t('nav.financeReport'), icon: 'i-lucide-bar-chart-3', to: '/finance-report' }]
+    : []),
   ...gatedModuleItems('inventory'),
   ...gatedModuleItems('purchaseOrders'),
   ...gatedModuleItems('hr'),

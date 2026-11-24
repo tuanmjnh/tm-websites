@@ -93,7 +93,8 @@
     "customers": "Customers",
     "pos": "POS",
     "variantOptions": "Variant options",
-    "keywords": "Keywords"
+    "keywords": "Keywords",
+    "financeReport": "Finance report"
   },
   "dashboard": {
     "title": "Control Center",
@@ -2038,6 +2039,17 @@
         "warehouseRequired": "Pick a destination warehouse",
         "duplicate": "This serial is already registered"
       }
+    },
+    "financeReport": {
+      "title": "Finance report",
+      "refresh": "Refresh",
+      "totalOrders": "Orders",
+      "totalRevenue": "Revenue",
+      "receivablePosted": "Received",
+      "payablePosted": "Paid out",
+      "itemsPrice": "Items price",
+      "openPayables": "Open payables",
+      "ordersByStatus": "Orders by status"
     },
     "finance": {
       "title": "Finance",
