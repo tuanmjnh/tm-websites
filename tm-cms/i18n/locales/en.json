@@ -263,7 +263,12 @@
           "social": "Social profiles",
           "socialAdd": "Add link",
           "socialLabel": "Display name",
-          "socialEmpty": "No social links yet."
+          "socialEmpty": "No social links yet.",
+          "paginationType": "Pagination type",
+          "syncKeywordsMode": "Sync keywords mode",
+          "allowSkuEditAfterSave": "Allow SKU edit after save",
+          "allowEditStock": "Allow edit stock",
+          "allowManualImportPrice": "Allow manual import price"
         },
         "modules": {
           "content": "Content",

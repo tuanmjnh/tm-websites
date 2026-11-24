@@ -59,6 +59,11 @@ const ALLOWED_KEYS = [
   'website_url',
   'keywords',
   'maintenance_mode',
+  'pagination_type',
+  'sync_keywords_mode',
+  'allow_sku_edit_after_save',
+  'allow_edit_stock',
+  'allow_manual_import_price',
 ] as const
 
 /** A key is treated as a credential on its name, regardless of `isPublic`. */
@@ -117,6 +122,11 @@ try {
   })()
   const keywords = legacyText(byKey.get('keywords')?.value).slice(0, 500)
   const maintenanceMode = byKey.get('maintenance_mode')?.value === true
+  const paginationType = legacyText(byKey.get('pagination_type')?.value).slice(0, 20) || 'cursor'
+  const syncKeywordsMode = legacyText(byKey.get('sync_keywords_mode')?.value).slice(0, 20) || 'local'
+  const allowSkuEditAfterSave = byKey.get('allow_sku_edit_after_save')?.value === true
+  const allowEditStock = byKey.get('allow_edit_stock')?.value === true
+  const allowManualImportPrice = byKey.get('allow_manual_import_price')?.value === true
 
   const modules: Record<string, boolean> = {}
   const unmappedModules: string[] = []
@@ -173,6 +183,11 @@ try {
       if (maintenanceMode && current.maintenanceMode !== true) {
         patch['site.maintenanceMode'] = true
       }
+      if (paginationType && empty(current.paginationType)) patch['site.paginationType'] = paginationType
+      if (syncKeywordsMode && empty(current.syncKeywordsMode)) patch['site.syncKeywordsMode'] = syncKeywordsMode
+      if (allowSkuEditAfterSave && current.allowSkuEditAfterSave !== true) patch['site.allowSkuEditAfterSave'] = true
+      if (allowEditStock && current.allowEditStock !== true) patch['site.allowEditStock'] = true
+      if (allowManualImportPrice && current.allowManualImportPrice !== true) patch['site.allowManualImportPrice'] = true
       if (!Object.keys(patch).length) {
         console.log('  kept the existing settings document (every storefront field already has a value)')
       } else {
@@ -199,6 +214,11 @@ try {
               websiteUrl,
               keywords,
               maintenanceMode,
+              paginationType,
+              syncKeywordsMode,
+              allowSkuEditAfterSave,
+              allowEditStock,
+              allowManualImportPrice,
               openingHours: {},
               social: [],
             },

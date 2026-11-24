@@ -43,6 +43,11 @@ const form = reactive({
   websiteUrl: '',
   keywords: '',
   maintenanceMode: false,
+  paginationType: 'cursor',
+  syncKeywordsMode: 'local',
+  allowSkuEditAfterSave: false,
+  allowEditStock: false,
+  allowManualImportPrice: false,
   openingHours: { vi: '', en: '' } as Record<string, string>,
 })
 // Kept outside `form` so the editor owns a plain array it can add to and remove from.
@@ -89,6 +94,11 @@ function applySettings(settings: AdminSiteSettings) {
   form.websiteUrl = settings.site.websiteUrl
   form.keywords = settings.site.keywords
   form.maintenanceMode = settings.site.maintenanceMode
+  form.paginationType = settings.site.paginationType ?? 'cursor'
+  form.syncKeywordsMode = settings.site.syncKeywordsMode ?? 'local'
+  form.allowSkuEditAfterSave = settings.site.allowSkuEditAfterSave ?? false
+  form.allowEditStock = settings.site.allowEditStock ?? false
+  form.allowManualImportPrice = settings.site.allowManualImportPrice ?? false
   form.openingHours = { vi: settings.site.openingHours?.vi ?? '', en: settings.site.openingHours?.en ?? '' }
   social.value = (settings.site.social ?? []).map(row => ({ ...row }))
   settingsLoaded.value = true
@@ -176,6 +186,11 @@ async function saveSite() {
       websiteUrl: form.websiteUrl.trim(),
       keywords: form.keywords,
       maintenanceMode: form.maintenanceMode,
+      paginationType: form.paginationType,
+      syncKeywordsMode: form.syncKeywordsMode,
+      allowSkuEditAfterSave: form.allowSkuEditAfterSave,
+      allowEditStock: form.allowEditStock,
+      allowManualImportPrice: form.allowManualImportPrice,
       openingHours: { vi: form.openingHours.vi ?? '', en: form.openingHours.en ?? '' },
       social: social.value
         .map(row => ({ code: row.code.trim(), label: row.label.trim(), url: row.url.trim() }))
@@ -455,6 +470,12 @@ onMounted(load)
             <UFormField :label="t('admin.configs.site.fields.keywords')" class="sm:col-span-2">
               <UInput v-model="form.keywords" size="sm" :disabled="!canWrite" :maxlength="500" />
             </UFormField>
+            <UFormField :label="t('admin.configs.site.fields.paginationType')">
+              <USelect v-model="form.paginationType" :items="[{label:'Cursor',value:'cursor'},{label:'Offset',value:'offset'}]" value-key="value" size="sm" :disabled="!canWrite" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('admin.configs.site.fields.syncKeywordsMode')">
+              <USelect v-model="form.syncKeywordsMode" :items="[{label:'Local',value:'local'},{label:'Remote',value:'remote'}]" value-key="value" size="sm" :disabled="!canWrite" class="w-full" />
+            </UFormField>
             <UFormField
               v-for="locale in SETTINGS_LOCALES"
               :key="`opening-hours-${locale}`"
@@ -471,6 +492,21 @@ onMounted(load)
             <USwitch
               v-model="form.maintenanceMode"
               :label="t('admin.configs.site.fields.maintenanceMode')"
+              :disabled="!canWrite"
+            />
+            <USwitch
+              v-model="form.allowSkuEditAfterSave"
+              :label="t('admin.configs.site.fields.allowSkuEditAfterSave')"
+              :disabled="!canWrite"
+            />
+            <USwitch
+              v-model="form.allowEditStock"
+              :label="t('admin.configs.site.fields.allowEditStock')"
+              :disabled="!canWrite"
+            />
+            <USwitch
+              v-model="form.allowManualImportPrice"
+              :label="t('admin.configs.site.fields.allowManualImportPrice')"
               :disabled="!canWrite"
             />
             <span class="text-xs font-medium text-muted">{{ t('admin.configs.site.fields.modules') }}</span>

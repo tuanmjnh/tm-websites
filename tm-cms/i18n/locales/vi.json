@@ -265,7 +265,12 @@
           "social": "Mạng xã hội",
           "socialAdd": "Thêm liên kết",
           "socialLabel": "Tên hiển thị",
-          "socialEmpty": "Chưa có liên kết mạng xã hội."
+          "socialEmpty": "Chưa có liên kết mạng xã hội.",
+          "paginationType": "Kiểu phân trang",
+          "syncKeywordsMode": "Đồng bộ từ khoá",
+          "allowSkuEditAfterSave": "Cho phép sửa SKU sau lưu",
+          "allowEditStock": "Cho phép sửa tồn kho",
+          "allowManualImportPrice": "Cho phép nhập giá thủ công"
         },
         "modules": {
           "content": "Nội dung",

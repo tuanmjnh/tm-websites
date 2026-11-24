@@ -59,6 +59,11 @@ export interface SiteSettingsSite {
   websiteUrl: string
   keywords: string
   maintenanceMode: boolean
+  paginationType: string
+  syncKeywordsMode: string
+  allowSkuEditAfterSave: boolean
+  allowEditStock: boolean
+  allowManualImportPrice: boolean
   /** locale -> opening hours; a missing entry is simply not shown. */
   openingHours: Record<string, string>
   social: SiteSettingsSocialLink[]
@@ -132,6 +137,11 @@ const SiteSchema = new Schema<SiteSettingsSite>(
     websiteUrl: { type: String, default: '' },
     keywords: { type: String, default: '' },
     maintenanceMode: { type: Boolean, default: false },
+    paginationType: { type: String, default: 'cursor' },
+    syncKeywordsMode: { type: String, default: 'local' },
+    allowSkuEditAfterSave: { type: Boolean, default: false },
+    allowEditStock: { type: Boolean, default: false },
+    allowManualImportPrice: { type: Boolean, default: false },
     openingHours: { type: Schema.Types.Mixed, default: () => ({}) },
     social: { type: [SocialLinkSchema], default: () => [] },
   },
