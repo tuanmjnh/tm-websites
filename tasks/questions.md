@@ -43,7 +43,7 @@
 2. **App binding**: session trả về `appId` khác cấu hình → 403 `APP_MISMATCH`; thiếu `TM_TENANT_ID` → 503, không tự bịa tenant.
 3. **DB binding**: tên database do registry quyết định; `TM_MONGO_DB` chỉ được lặp lại đúng tên đó, lệch → 503 `DATABASE_BINDING_MISMATCH`.
 4. **Health endpoint** `GET /api/health`: chỉ trả `status/hub/database`, không lộ URI/tenant/credential.
-5. **Chưa** tạo package `@tm/flow-server`, **chưa** ghi/xoá dữ liệu Hub, **chưa** migrate dữ liệu, **chưa** commit.
+5. **Chưa** tách một package server-only dùng chung, **chưa** ghi/xoá dữ liệu Hub, **chưa** migrate dữ liệu, **chưa** commit. Quyết định kiến trúc được owner xác nhận lại ngày 2026-11-24: CMS Nitro giữ quyền sở hữu business writes.
 
 ## E. Điều kiện môi trường đã quan sát
 
@@ -72,7 +72,7 @@
 | Q2 | `sentuan` chạy với DB `sen-tuan`; `default`/`thanhtung`/`hoangvi` vẫn chưa có database nên chưa bật được module nghiệp vụ. |
 | Q3 | Giữ tên cũ (`sen-tuan`, `bag-post`) theo mặc định; chưa có migration nào đụng tới. |
 | Q5 | Chưa import gì từ Hub; xem Q22. |
-| Q11 | Theo mặc định: chưa tạo package `@tm/flow-server`, model/service nằm trong `tm-cms/server/`. Muốn chuyển thì nói, hành vi không đổi. |
+| Q11 | Đã chốt ngày 2026-11-24: CMS Nitro sở hữu canonical models/services/business writes; Web gọi CMS-owned API cho các thao tác ghi dữ liệu nghiệp vụ. Không tách package server-only dùng chung. |
 | Q12 | Đã có purge endpoint dùng chung secret, purge toàn bộ handler cache của storefront khi lưu settings/menu; chưa ký, chưa scoped theo tenant/tag, chưa có job bền vững. Xem Q21. |
 | Q13 | Vẫn chờ credential Cloudinary; media đang lưu đĩa local của CMS. Xem Q19. |
 | Q14 | Không deploy gì; chỉ build và chạy local. |
