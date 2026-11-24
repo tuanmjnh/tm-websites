@@ -32,7 +32,7 @@ Adopting the documented defaults converts "unanswered" into "decided, with a kno
 
 | ID | Decision | Status | Effect |
 | --- | --- | --- | --- |
-| Q1 | Local MongoDB only. No production URI is configured, and no deploy target is assumed. | **WAITING_INPUT** (production `TM_MONGO_URI`) | `/api/health` reports `database: unconfigured` where the registry has no database; disposable test databases are used as before. |
+| Q1 | Local MongoDB only. Customer `sentuan` uses the existing local `sen-tuan` database for app development and safe verification; no production URI is configured and no deploy target is assumed. CI uses its own temporary MongoDB service with the same logical database name. | **WAITING_INPUT** (production `TM_MONGO_URI`) | `/api/health` reports `database: unconfigured` where the registry has no database; destructive/empty-database fixtures remain separate and disposable. |
 | Q2 | `default`, `thanhtung` and `hoangvi` stay without a business database until names are supplied, so their business modules stay disabled. `sentuan` keeps `sen-tuan`. | **WAITING_INPUT** (database names) | No registry entries invented; those customers keep `database: unconfigured`. |
 | Q3 | Keep the legacy database names (`sen-tuan`, `bag-post`). No renaming migration. | RESOLVED | Registry and data stay compatible with existing records. |
 | Q4 | No legacy snapshot is available, so no migration dry-run exists. Migration code must not be written against invented fixtures. | **WAITING_INPUT** (legacy snapshot) | P10 stays Planned. |
