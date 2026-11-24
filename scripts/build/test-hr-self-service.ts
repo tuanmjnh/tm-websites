@@ -4,6 +4,7 @@ import { upsertAttendance } from '../../tm-cms/server/services/attendanceService
 import { setSalaryConfig, calculatePayroll, getOwnPayroll, listPayrolls } from '../../tm-cms/server/services/payrollService.js'
 import { assignShift, createShiftTemplate, listShiftAssignments } from '../../tm-cms/server/services/shiftService.js'
 import { closeDatabaseConnections, connectDatabase } from '../../tm-cms/server/utils/database.js'
+import { CUSTOMER_DAY_MS, localDayOf, localDayStartUtc, todayInCustomerTime } from '../../tm-cms/server/utils/customerTime.js'
 import { prepareDatabase } from '../../tm-cms/server/utils/modelRegistry.js'
 
 let checks = 0
@@ -28,6 +29,11 @@ console.log('HR self-service — own attendance and payroll\n')
 
 const URI = process.env.TM_TEST_MONGO_URI || 'mongodb://127.0.0.1:27017'
 const binding = { uri: URI, database: 'tm_test_hr_self_service' }
+
+// Shifts may only be assigned for today or later, so the fixture follows the
+// clock instead of a fixed date that goes stale the next day.
+const SHIFT_DATE = todayInCustomerTime(new Date())
+const NEXT_SHIFT_DATE = localDayOf(new Date(localDayStartUtc(SHIFT_DATE).getTime() + CUSTOMER_DAY_MS))
 
 async function run() {
   let connection
@@ -101,7 +107,7 @@ async function run() {
     await assignShift({ ShiftTemplate, ShiftAssignment, StaffProfile }, SITE, {
       staffId: staff.id,
       templateId: template.template.id,
-      date: '2026-11-23',
+      date: SHIFT_DATE,
     }, {}, meta)
 
     const colleague = await createStaff(StaffProfile, SITE, {
@@ -115,14 +121,14 @@ async function run() {
     await assignShift({ ShiftTemplate, ShiftAssignment, StaffProfile }, SITE, {
       staffId: colleague.id,
       templateId: template.template.id,
-      date: '2026-11-24',
+      date: NEXT_SHIFT_DATE,
     }, {}, meta)
 
     await check('the roster lists only the signed-in staff member shifts', async () => {
       const roster = await listShiftAssignments(
         { ShiftAssignment, StaffProfile },
         SITE,
-        { staffId: staff.id, from: '2026-11-01', to: '2026-11-30' },
+        { staffId: staff.id, from: SHIFT_DATE, to: NEXT_SHIFT_DATE },
       )
       assert.equal(roster.data.length, 1)
       assert.equal(roster.data[0]!.staffId, staff.id)
@@ -134,11 +140,11 @@ async function run() {
       const roster = await listShiftAssignments(
         { ShiftAssignment, StaffProfile },
         SITE,
-        { staffId: colleague.id, from: '2026-11-01', to: '2026-11-30' },
+        { staffId: colleague.id, from: SHIFT_DATE, to: NEXT_SHIFT_DATE },
       )
       assert.equal(roster.data.length, 1)
       assert.equal(roster.data[0]!.staffId, colleague.id)
-      assert.equal(roster.data[0]!.date, '2026-11-24')
+      assert.equal(roster.data[0]!.date, NEXT_SHIFT_DATE)
     })
 
     await check('a payslip reads only the signed-in member\'s own row', async () => {

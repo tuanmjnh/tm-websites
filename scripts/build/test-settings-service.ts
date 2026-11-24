@@ -193,13 +193,18 @@ async function integration() {
     await check('the storefront section keeps its own text, hours and social links', async () => {
       const current = await getSiteSettings(Settings, OTHER_SITE)
       assert.deepEqual(current.site, {
+        allowEditStock: false,
+        allowManualImportPrice: false,
+        allowSkuEditAfterSave: false,
         footerText: '',
         copyright: '',
         websiteUrl: '',
         keywords: '',
         maintenanceMode: false,
         openingHours: {},
+        paginationType: 'cursor',
         social: [],
+        syncKeywordsMode: 'local',
       }, 'a site that never saved the section reads the defaults')
 
       const saved = await updateSiteSettings(Settings, OTHER_SITE, {
