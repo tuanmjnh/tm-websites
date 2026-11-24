@@ -37,7 +37,7 @@ Adopting the documented defaults converts "unanswered" into "decided, with a kno
 | Q3 | Keep the legacy database names (`sen-tuan`, `bag-post`). No renaming migration. | RESOLVED | Registry and data stay compatible with existing records. |
 | Q4 | No legacy snapshot is available, so no migration dry-run exists. Migration code must not be written against invented fixtures. | **WAITING_INPUT** (legacy snapshot) | P10 stays Planned. |
 | Q5 / Q22 | TM Hub stays the transitional source for the existing content/config/media records; nothing is exported or imported. | RESOLVED (deferred) | Hub-backed pages remain read-only references. Import becomes a P10 slice only if the owner later authorises an export. |
-| Q11 | Do not create a shared `@tm/flow-server` package in this round. Models, invariants and commands stay in `tm-cms/server/`, which is the approved scope. | RESOLVED | No package, no move, no behaviour change. Reconsider only with an explicit request. |
+| Q11 | CMS Nitro is the canonical business API owner. Models, invariants and commands stay in `tm-cms/server/`; Web calls the CMS-owned API for canonical business writes. | RESOLVED | No shared server-only package, no imports from CMS server internals into Web, and no duplicate canonical write rules. |
 | Q15 | AI Workspace is out of v2 scope. | RESOLVED | No AI surface is planned; existing Hub AI endpoints are untouched. |
 | Q16 | Retention keeps 50 revision snapshots per record and 365 days of `audit_logs`; the command stays dry-run unless `--apply` is passed. | RESOLVED | Matches `retentionService.ts` defaults; limits 1–500 and 1–3650 days stay as guard rails. |
 | Q14 | No deploy, no `vercel.json`/CI preparation, no domain work. Builds stay local. | **WAITING_INPUT** (Vercel token + domains) | Deploy remains out of scope; local builds are the only gate. |
@@ -60,7 +60,7 @@ Adopting the documented defaults converts "unanswered" into "decided, with a kno
 | D2 | App binding: a session whose `appId` differs from the configured app is `403 APP_MISMATCH`; a missing `TM_TENANT_ID` is `503`, never a guessed tenant. | RESOLVED | Unchanged. |
 | D3 | DB binding: the registry owns the database name; `TM_MONGO_DB` may only repeat it, otherwise `503 DATABASE_BINDING_MISMATCH`. | RESOLVED | Unchanged. |
 | D4 | `GET /api/health` exposes only `status`, `hub`, `database` — no URI, tenant or credential. | RESOLVED | Unchanged. |
-| D5 | Original wording: no `@tm/flow-server` package, no Hub writes, no data migration, no commit. | RESOLVED, with two notes | The package and Hub/migration parts still hold (see Q11, Q5). The "no commit" part is historical: the owner later authorised commits on `main`, and that authority is per-request — no commit or deploy happens without a current request. |
+| D5 | Original wording: no shared server-only package, no Hub writes, no data migration, no commit. | RESOLVED, with two notes | The no-package and Hub/migration decisions still hold (see Q11, Q5). The "no commit" part is historical: the owner later authorised commits on `main`, and that authority is per-request — no commit or deploy happens without a current request. |
 
 ## 3. Reconciliation with the implementation
 
