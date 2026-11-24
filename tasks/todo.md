@@ -95,7 +95,7 @@ Deliberate limits of P2.a: no shared model package yet, no schema validation, no
 | One preparation step per connection (migrations + models), cached, failed preparation not cached; endpoint helper `withPreparedDb` | `tm-cms/server/utils/modelRegistry.ts` |
 | Pure + live suite (normalization, transitions, projection, planning, unique indexes, idempotent re-run) | `scripts/build/test-content-model.ts` (`pnpm test:content`, 25 checks) |
 
-Deliberate limits of P2.b: no HTTP endpoints and no CMS editor yet (that is P3), no rich-format renderers, no revision-history collection, no optimistic-concurrency check against `revision` in a command path, no audit/idempotency collections, single-node MongoDB only (no transaction test). The model lives in `tm-cms/server` because Q11 (shared package naming) is unanswered; Web keeps its loose reader until P3.
+Deliberate limits recorded when P2.b first landed: no HTTP endpoints and no CMS editor yet (that was P3), no rich-format renderers, no revision-history collection, no optimistic-concurrency check against `revision` in a command path, no audit/idempotency collections, single-node MongoDB only (no transaction test). The model remains in `tm-cms/server`; Q11 was reaffirmed on 2026-11-24 with CMS Nitro as the canonical business API owner, and Web must not import CMS server internals.
 
 ### Landed: slice P3.a — CMS content module (2026-11-06)
 
