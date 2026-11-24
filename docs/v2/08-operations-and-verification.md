@@ -12,7 +12,7 @@ TM_CUSTOMER_ID=sentuan TM_AUTH_MODE=hub pnpm dev:cms
 TM_CUSTOMER_ID=sentuan pnpm dev:web
 ```
 
-Use separate terminals for dev servers. Local Hub must be configured explicitly; starting a server that inherits production credentials can affect shared systems. Prefer a local Hub stub and disposable MongoDB fixtures for tests. Do not execute target-controlled code during a security audit unless the audit's required sandbox controls are available.
+Use separate terminals for dev servers. Local Hub must be configured explicitly; starting a server that inherits production credentials can affect shared systems. For the `sentuan` customer, local app development and safe data checks use the existing local MongoDB database `sen-tuan` (`TM_SITE_ID=sentuan`); do not create a second everyday development database. Use disposable MongoDB fixtures only for tests that require an empty database or destructive operations, and never reset `sen-tuan`. Follow [the local development and database policy](15-local-development-and-test-policy.md). Do not execute target-controlled code during a security audit unless the audit's required sandbox controls are available.
 
 ## Current configuration inventory
 
@@ -97,7 +97,7 @@ Measured on 2026-11-12 with `TM_MONGO_DB=sentuan`: 25/25 gates in 84–88s (the 
 
 ### CI (2026-11-12)
 
-`.github/workflows/quality.yml` starts a `mongo:7` service and runs the single `pnpm verify:all` step, then uploads `.devlogs/gates.log` as an artifact on every run. It used to list gates individually, which is how `verify:scaffold` stayed red in CI-adjacent local work while the workflow itself kept passing only the gates somebody remembered to add. The job runs against a disposable database (`TM_MONGO_DB=tm-ci-gates`) so no developer data is needed, and the storefront's `TM_SITE_ID` stays `sentuan`.
+`.github/workflows/quality.yml` starts a `mongo:7` service and runs the single `pnpm verify:all` step, then uploads `.devlogs/gates.log` as an artifact on every run. It used to list gates individually, which is how `verify:scaffold` stayed red in CI-adjacent local work while the workflow itself kept passing only the gates somebody remembered to add. Historical configuration used `TM_MONGO_DB=tm-ci-gates`; the owner-approved target from 2026-11-24 is to use logical database name `sen-tuan` inside the job's own disposable MongoDB service, with `TM_SITE_ID=sentuan`. This service is physically isolated from the developer's local MongoDB. The workflow file must be updated and the first GitHub run must pass before this target is marked verified.
 
 The suite was verified locally against an empty database of that name: 22/22 gates in 77.7s with the runner of that day (25 steps now), then the database was dropped. The workflow change itself is validated as YAML only — the first real run on GitHub is what certifies it.
 
