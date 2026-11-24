@@ -90,7 +90,8 @@
     "tags": "Thẻ nội dung",
     "redirects": "Chuyển hướng",
     "documentTemplates": "Mẫu tài liệu",
-    "customers": "Khách hàng"
+    "customers": "Khách hàng",
+    "pos": "POS bán tại quầy"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -1238,6 +1239,27 @@
         "showBankAccounts": "Thông tin tài khoản",
         "showSignatures": "Khối chữ ký"
       }
+    },
+    "pos": {
+      "title": "Bán tại quầy (POS)",
+      "description": "Tạo đơn bán tại quầy",
+      "searchPlaceholder": "Tìm sản phẩm...",
+      "item": "Hàng hoá",
+      "price": "Đơn giá",
+      "qty": "SL",
+      "amount": "Thành tiền",
+      "emptyCart": "Chưa có hàng trong giỏ",
+      "customerName": "Tên khách",
+      "customerPhone": "Số điện thoại",
+      "paymentMethod": "Phương thức thanh toán",
+      "discount": "Giảm giá",
+      "shipping": "Phí giao hàng",
+      "subtotal": "Tạm tính",
+      "total": "Tổng tiền",
+      "checkout": "Thanh toán",
+      "created": "Đã tạo đơn {code}",
+      "createFailed": "Không tạo được đơn",
+      "lastOrder": "Đơn vừa tạo"
     },
     "orders": {
       "title": "Đơn hàng",

@@ -90,7 +90,8 @@
     "tags": "Content tags",
     "redirects": "Redirects",
     "documentTemplates": "Document templates",
-    "customers": "Customers"
+    "customers": "Customers",
+    "pos": "POS"
   },
   "dashboard": {
     "title": "Control Center",
@@ -1236,6 +1237,27 @@
         "showBankAccounts": "Bank accounts",
         "showSignatures": "Signature block"
       }
+    },
+    "pos": {
+      "title": "Point of sale (POS)",
+      "description": "Create an in-store order",
+      "searchPlaceholder": "Search product...",
+      "item": "Item",
+      "price": "Price",
+      "qty": "Qty",
+      "amount": "Amount",
+      "emptyCart": "Cart is empty",
+      "customerName": "Customer name",
+      "customerPhone": "Phone",
+      "paymentMethod": "Payment method",
+      "discount": "Discount",
+      "shipping": "Shipping",
+      "subtotal": "Subtotal",
+      "total": "Total",
+      "checkout": "Checkout",
+      "created": "Order created {code}",
+      "createFailed": "Could not create order",
+      "lastOrder": "Last order"
     },
     "orders": {
       "title": "Orders",
