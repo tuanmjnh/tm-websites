@@ -89,6 +89,7 @@
     "menus": "Menu điều hướng",
     "tags": "Thẻ nội dung",
     "redirects": "Chuyển hướng",
+    "documentTemplates": "Mẫu tài liệu",
     "customers": "Khách hàng"
   },
   "dashboard": {
@@ -1173,7 +1174,7 @@
       "taxCode": "MST",
       "bankAccounts": "Thông tin tài khoản",
       "bankAccountsHint": "Chưa có thông tin tài khoản",
-      "totalInWords": "Bằng chữ"
+      "totalInWords": "Bằng chữ",
       "statuses": {
         "draft": "Nháp",
         "sent": "Đã gửi",
@@ -1181,6 +1182,61 @@
         "rejected": "Từ chối",
         "expired": "Hết hạn",
         "converted": "Đã chuyển đơn"
+      }
+    },
+    "documentTemplates": {
+      "title": "Mẫu tài liệu",
+      "description": "Mẫu in báo giá: tiêu đề, cột hiển thị, chữ ký, màu sắc",
+      "name": "Tên mẫu",
+      "code": "Mã mẫu",
+      "type": "Loại",
+      "default": "Mặc định",
+      "color": "Màu",
+      "nameRequired": "Tên mẫu không được để trống",
+      "loadFailed": "Không tải được danh sách mẫu",
+      "noAccess": "Bạn không có quyền đọc mẫu tài liệu.",
+      "empty": "Chưa có mẫu nào",
+      "create": "Tạo mẫu",
+      "createTitle": "Tạo mẫu mới",
+      "editTitle": "Sửa mẫu",
+      "updated": "Đã cập nhật mẫu",
+      "created": "Đã tạo mẫu",
+      "deleted": "Đã xoá mẫu",
+      "deleteFailed": "Không xoá được mẫu",
+      "saveFailed": "Không lưu được mẫu",
+      "confirmDelete": "Xoá mẫu này?",
+      "includeDeleted": "Hiện mẫu đã xoá",
+      "titleField": "Tiêu đề văn bản",
+      "subtitle": "Phụ đề",
+      "showLogo": "Hiện logo công ty",
+      "companyInfo": "Thông tin công ty",
+      "companyName": "Tên công ty",
+      "companyAddress": "Địa chỉ",
+      "companyPhone": "Điện thoại",
+      "companyTaxCode": "Mã số thuế",
+      "companyEmail": "Email",
+      "companyWebsite": "Website",
+      "terms": "Điều khoản",
+      "notes": "Ghi chú",
+      "primaryColor": "Màu chủ đạo",
+      "senderTitle": "Chức danh người lập",
+      "receiverTitle": "Chức danh khách hàng",
+      "accountantTitle": "Chức danh kế toán",
+      "tabs": {
+        "header": "Header",
+        "table": "Bảng",
+        "footer": "Footer",
+        "style": "Màu sắc"
+      },
+      "flags": {
+        "showSku": "Cột mã hàng (SKU)",
+        "showThumbnail": "Cột hình ảnh",
+        "showUom": "Cột đơn vị tính",
+        "showUnitPrice": "Cột đơn giá",
+        "showDiscount": "Giảm giá",
+        "showTotalInWords": "Đọc số tiền bằng chữ",
+        "showBankAccounts": "Thông tin tài khoản",
+        "showSignatures": "Khối chữ ký"
       }
     },
     "orders": {

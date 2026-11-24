@@ -34,6 +34,7 @@ const navItems = computed(() => [
   ...(hasCapability('content.read') ? [{ label: t('nav.tags'), icon: 'i-lucide-tags', to: '/tags' }] : []),
   ...(hasCapability('content.read') ? [{ label: t('nav.customers'), icon: 'i-lucide-users-round', to: '/customers' }] : []),
   ...(hasCapability('content.read') ? [{ label: t('nav.redirects'), icon: 'i-lucide-corner-down-right', to: '/redirects' }] : []),
+  ...(hasCapability('content.read') ? [{ label: t('nav.documentTemplates'), icon: 'i-lucide-layout-template', to: '/document-templates' }] : []),
   ...gatedModuleItems('aiWorkspace'),
   ...(hasCapability('users.read') ? [{ label: t('nav.users'), icon: 'i-lucide-users', to: '/users' }] : []),
   ...(hasCapability('roles.read') ? [{ label: t('nav.roles'), icon: 'i-lucide-shield-check', to: '/roles' }] : []),

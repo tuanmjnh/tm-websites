@@ -89,6 +89,7 @@
     "menus": "Menus",
     "tags": "Content tags",
     "redirects": "Redirects",
+    "documentTemplates": "Document templates",
     "customers": "Customers"
   },
   "dashboard": {
@@ -1171,7 +1172,7 @@
       "taxCode": "Tax code",
       "bankAccounts": "Bank accounts",
       "bankAccountsHint": "No bank account information",
-      "totalInWords": "In words"
+      "totalInWords": "In words",
       "statuses": {
         "draft": "Draft",
         "sent": "Sent",
@@ -1179,6 +1180,61 @@
         "rejected": "Rejected",
         "expired": "Expired",
         "converted": "Converted"
+      }
+    },
+    "documentTemplates": {
+      "title": "Document templates",
+      "description": "Quotation print templates: title, visible columns, signatures, colors",
+      "name": "Name",
+      "code": "Code",
+      "type": "Type",
+      "default": "Default",
+      "color": "Color",
+      "nameRequired": "Template name is required",
+      "loadFailed": "Could not load templates",
+      "noAccess": "You do not have permission to read document templates.",
+      "empty": "No templates yet",
+      "create": "Create template",
+      "createTitle": "Create template",
+      "editTitle": "Edit template",
+      "updated": "Template updated",
+      "created": "Template created",
+      "deleted": "Template deleted",
+      "deleteFailed": "Could not delete template",
+      "saveFailed": "Could not save template",
+      "confirmDelete": "Delete this template?",
+      "includeDeleted": "Show deleted",
+      "titleField": "Document title",
+      "subtitle": "Subtitle",
+      "showLogo": "Show company logo",
+      "companyInfo": "Company info",
+      "companyName": "Company name",
+      "companyAddress": "Address",
+      "companyPhone": "Phone",
+      "companyTaxCode": "Tax code",
+      "companyEmail": "Email",
+      "companyWebsite": "Website",
+      "terms": "Terms",
+      "notes": "Notes",
+      "primaryColor": "Primary color",
+      "senderTitle": "Prepared by title",
+      "receiverTitle": "Customer title",
+      "accountantTitle": "Accountant title",
+      "tabs": {
+        "header": "Header",
+        "table": "Table",
+        "footer": "Footer",
+        "style": "Style"
+      },
+      "flags": {
+        "showSku": "SKU column",
+        "showThumbnail": "Thumbnail column",
+        "showUom": "Unit column",
+        "showUnitPrice": "Unit price column",
+        "showDiscount": "Discount",
+        "showTotalInWords": "Amount in words",
+        "showBankAccounts": "Bank accounts",
+        "showSignatures": "Signature block"
       }
     },
     "orders": {
