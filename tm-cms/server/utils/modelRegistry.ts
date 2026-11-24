@@ -13,6 +13,7 @@ import type { CustomerDocument } from '../models/customer'
 import type { CustomerSegmentDocument } from '../models/customerSegment'
 import type { OrderDocument } from '../models/order'
 import type { QuotationDocument } from '../models/quotation'
+import type { DocumentTemplateDocument } from '../models/documentTemplate'
 import type { WarehouseDocument } from '../models/warehouse'
 import type { InventoryDocument } from '../models/inventory'
 import type { InventoryTransactionDocument } from '../models/inventoryTransaction'
@@ -47,6 +48,7 @@ import { customerModel, syncCustomerIndexes } from '../models/customer'
 import { customerSegmentModel, syncCustomerSegmentIndexes } from '../models/customerSegment'
 import { orderModel, syncOrderIndexes } from '../models/order'
 import { quotationModel, syncQuotationIndexes } from '../models/quotation'
+import { documentTemplateModel, syncDocumentTemplateIndexes } from '../models/documentTemplate'
 import { warehouseModel, syncWarehouseIndexes } from '../models/warehouse'
 import { inventoryModel, syncInventoryIndexes } from '../models/inventory'
 import { inventoryTransactionModel, syncInventoryTransactionIndexes } from '../models/inventoryTransaction'
@@ -110,6 +112,7 @@ export interface PreparedModels {
   CustomerSegment: Model<CustomerSegmentDocument>
   Order: Model<OrderDocument>
   Quotation: Model<QuotationDocument>
+  DocumentTemplate: Model<DocumentTemplateDocument>
   Warehouse: Model<WarehouseDocument>
   Inventory: Model<InventoryDocument>
   InventoryTransaction: Model<InventoryTransactionDocument>
@@ -159,6 +162,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncCustomerSegmentIndexes(connection)
   await syncOrderIndexes(connection)
   await syncQuotationIndexes(connection)
+  await syncDocumentTemplateIndexes(connection)
   await syncWarehouseIndexes(connection)
   await syncInventoryIndexes(connection)
   await syncInventoryTransactionIndexes(connection)
@@ -207,6 +211,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     CustomerSegment: customerSegmentModel(connection),
     Order: orderModel(connection),
     Quotation: quotationModel(connection),
+    DocumentTemplate: documentTemplateModel(connection),
     Warehouse: warehouseModel(connection),
     Inventory: inventoryModel(connection),
     InventoryTransaction: inventoryTransactionModel(connection),

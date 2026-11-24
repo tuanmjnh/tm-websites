@@ -386,6 +386,17 @@ quotation line `importPrice`/`supplierId`).
 After these changes `pnpm verify:all` on the isolated `tm-websites-audit` database is green again:
 **67/67 gates in 342.7s** (exit 0), and `pnpm typecheck` / `pnpm lint` exit 0.
 
+### Document templates — migrated (2026-11-24)
+
+`pnpm migrate:document-templates --site <customerId> [--apply]` carries the legacy
+`document_templates` collection (quotation print templates) into
+`crm_document_templates`: name, code, type, isDefault, primaryColor, showLogo,
+all show* flags, company block, terms and signature titles. Dry run by default,
+upsert by (siteId, code), and keeps a single default per type. Model, service
+(CRUD + soft delete/restore + `getDefault`), admin API routes under
+`/api/v1/admin/commerce/document-templates`, and model registration landed.
+Quotation print still uses its built-in sheet; template selection is open.
+
 ### Customers — need a reviewed Hub identity map, not an email guess
 
 A v2 customer carries `subjectId` (the Hub subject) and the migration plan requires legacy local user

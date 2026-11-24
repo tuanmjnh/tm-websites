@@ -24,6 +24,7 @@ export const ADMIN_AUDIT_RESOURCE_TYPES = [
   'order',
   'order_return',
   'quotation',
+  'document_template',
   'warehouse',
   'inventory',
   'inventory_transaction',
