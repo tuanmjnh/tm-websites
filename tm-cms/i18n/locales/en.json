@@ -92,7 +92,8 @@
     "documentTemplates": "Document templates",
     "customers": "Customers",
     "pos": "POS",
-    "variantOptions": "Variant options"
+    "variantOptions": "Variant options",
+    "keywords": "Keywords"
   },
   "dashboard": {
     "title": "Control Center",
@@ -1238,6 +1239,21 @@
         "showBankAccounts": "Bank accounts",
         "showSignatures": "Signature block"
       }
+    },
+    "keywords": {
+      "title": "Keywords",
+      "create": "Add",
+      "edit": "Edit",
+      "slug": "Slug",
+      "titleCol": "Title",
+      "color": "Color",
+      "count": "Count",
+      "scope": "Scope",
+      "empty": "No keywords",
+      "created": "Created",
+      "updated": "Updated",
+      "deleted": "Deleted",
+      "restored": "Restored"
     },
     "variantOptions": {
       "title": "Variant options",

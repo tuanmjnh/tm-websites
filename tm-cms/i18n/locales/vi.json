@@ -92,7 +92,8 @@
     "documentTemplates": "Mẫu tài liệu",
     "customers": "Khách hàng",
     "pos": "POS bán tại quầy",
-    "variantOptions": "Thuộc tính biến thể"
+    "variantOptions": "Thuộc tính biến thể",
+    "keywords": "Từ khoá"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -1240,6 +1241,21 @@
         "showBankAccounts": "Thông tin tài khoản",
         "showSignatures": "Khối chữ ký"
       }
+    },
+    "keywords": {
+      "title": "Từ khoá",
+      "create": "Thêm",
+      "edit": "Sửa",
+      "slug": "Slug",
+      "titleCol": "Tên",
+      "color": "Màu",
+      "count": "Số lượng",
+      "scope": "Phạm vi",
+      "empty": "Chưa có từ khoá",
+      "created": "Đã tạo",
+      "updated": "Đã cập nhật",
+      "deleted": "Đã xoá",
+      "restored": "Đã khôi phục"
     },
     "variantOptions": {
       "title": "Thuộc tính biến thể",

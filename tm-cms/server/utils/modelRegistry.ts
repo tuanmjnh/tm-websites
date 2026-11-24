@@ -15,6 +15,7 @@ import type { OrderDocument } from '../models/order'
 import type { QuotationDocument } from '../models/quotation'
 import type { DocumentTemplateDocument } from '../models/documentTemplate'
 import type { VariantOptionDocument } from '../models/variantOption'
+import type { KeywordDocument } from '../models/keyword'
 import type { WarehouseDocument } from '../models/warehouse'
 import type { InventoryDocument } from '../models/inventory'
 import type { InventoryTransactionDocument } from '../models/inventoryTransaction'
@@ -51,6 +52,7 @@ import { orderModel, syncOrderIndexes } from '../models/order'
 import { quotationModel, syncQuotationIndexes } from '../models/quotation'
 import { documentTemplateModel, syncDocumentTemplateIndexes } from '../models/documentTemplate'
 import { variantOptionModel, syncVariantOptionIndexes } from '../models/variantOption'
+import { keywordModel, syncKeywordIndexes } from '../models/keyword'
 import { warehouseModel, syncWarehouseIndexes } from '../models/warehouse'
 import { inventoryModel, syncInventoryIndexes } from '../models/inventory'
 import { inventoryTransactionModel, syncInventoryTransactionIndexes } from '../models/inventoryTransaction'
@@ -116,6 +118,7 @@ export interface PreparedModels {
   Quotation: Model<QuotationDocument>
   DocumentTemplate: Model<DocumentTemplateDocument>
   VariantOption: Model<VariantOptionDocument>
+  Keyword: Model<KeywordDocument>
   Warehouse: Model<WarehouseDocument>
   Inventory: Model<InventoryDocument>
   InventoryTransaction: Model<InventoryTransactionDocument>
@@ -167,6 +170,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncQuotationIndexes(connection)
   await syncDocumentTemplateIndexes(connection)
   await syncVariantOptionIndexes(connection)
+  await syncKeywordIndexes(connection)
   await syncWarehouseIndexes(connection)
   await syncInventoryIndexes(connection)
   await syncInventoryTransactionIndexes(connection)
@@ -217,6 +221,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     Quotation: quotationModel(connection),
     DocumentTemplate: documentTemplateModel(connection),
     VariantOption: variantOptionModel(connection),
+    Keyword: keywordModel(connection),
     Warehouse: warehouseModel(connection),
     Inventory: inventoryModel(connection),
     InventoryTransaction: inventoryTransactionModel(connection),
