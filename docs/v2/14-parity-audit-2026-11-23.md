@@ -395,7 +395,7 @@ all show* flags, company block, terms and signature titles. Dry run by default,
 upsert by (siteId, code), and keeps a single default per type. Model, service
 (CRUD + soft delete/restore + `getDefault`), admin API routes under
 `/api/v1/admin/commerce/document-templates`, and model registration landed.
-Quotation print still uses its built-in sheet; template selection is open.
+Quotation print now fetches the default quotation template and applies primaryColor, title/subtitle, company block, show* flags, terms/notes and signature titles; a CMS management page (/document-templates) edits templates with header/table/footer/style tabs.
 
 ### Customers — need a reviewed Hub identity map, not an email guess
 
