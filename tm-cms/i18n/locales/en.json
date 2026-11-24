@@ -94,7 +94,8 @@
     "pos": "POS",
     "variantOptions": "Variant options",
     "keywords": "Keywords",
-    "financeReport": "Finance report"
+    "financeReport": "Finance report",
+    "supplierPortal": "Supplier portal"
   },
   "dashboard": {
     "title": "Control Center",
@@ -2039,6 +2040,15 @@
         "warehouseRequired": "Pick a destination warehouse",
         "duplicate": "This serial is already registered"
       }
+    },
+    "supplierPortal": {
+      "title": "Supplier portal",
+      "refresh": "Refresh",
+      "code": "PO code",
+      "status": "Status",
+      "total": "Total",
+      "receive": "Receive",
+      "empty": "No purchase orders"
     },
     "financeReport": {
       "title": "Finance report",

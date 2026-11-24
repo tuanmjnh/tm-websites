@@ -94,7 +94,8 @@
     "pos": "POS bán tại quầy",
     "variantOptions": "Thuộc tính biến thể",
     "keywords": "Từ khoá",
-    "financeReport": "Báo cáo tài chính"
+    "financeReport": "Báo cáo tài chính",
+    "supplierPortal": "Portal nhà cung cấp"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -2041,6 +2042,15 @@
         "warehouseRequired": "Chọn kho đích",
         "duplicate": "Serial này đã được đăng ký"
       }
+    },
+    "supplierPortal": {
+      "title": "Portal nhà cung cấp",
+      "refresh": "Tải lại",
+      "code": "Mã PO",
+      "status": "Trạng thái",
+      "total": "Tổng tiền",
+      "receive": "Nhận hàng",
+      "empty": "Chưa có đơn mua"
     },
     "financeReport": {
       "title": "Báo cáo tài chính",
