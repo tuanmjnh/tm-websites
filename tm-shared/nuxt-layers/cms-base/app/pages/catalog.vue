@@ -36,6 +36,11 @@ const {
 const canRead = computed(() => hasCapability('content.read'))
 const canWrite = computed(() => hasCapability('content.write'))
 
+// Site policy from settings.site; defaults keep the editor usable when the
+// settings read fails rather than silently locking every field.
+const { fetchSettings } = useSettingsAdmin()
+const sitePolicy = reactive({ allowSkuEditAfterSave: true, allowEditStock: true })
+
 const loading = ref(false)
 const saving = ref(false)
 const busyId = ref<string | null>(null)
@@ -332,7 +337,16 @@ watch(search, () => {
 })
 watch([status, typeFilter, tagFilter], () => load())
 onMounted(async () => {
-  await Promise.all([load(), loadReferenceData()])
+  await Promise.all([
+    load(),
+    loadReferenceData(),
+    fetchSettings()
+      .then((settings) => {
+        sitePolicy.allowSkuEditAfterSave = settings.site.allowSkuEditAfterSave ?? true
+        sitePolicy.allowEditStock = settings.site.allowEditStock ?? true
+      })
+      .catch(() => undefined),
+  ])
 })
 
 // ---------------------------------------------------------------- item editor
@@ -904,7 +918,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
               <UInput v-model.number="form.salePrice" type="number" class="w-full" />
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.sku')">
-              <UInput v-model="form.sku" class="w-full" />
+              <UInput v-model="form.sku" class="w-full" :disabled="Boolean(editingId) && !sitePolicy.allowSkuEditAfterSave" />
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.barcode')" :hint="t('admin.catalog.fields.barcodeHint')">
               <UInput v-model="form.barcode" class="w-full" />
@@ -913,7 +927,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
               <UInput v-model="form.uom" class="w-full" />
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.stock')">
-              <UInput v-model.number="form.stock" type="number" class="w-full" />
+              <UInput v-model.number="form.stock" type="number" class="w-full" :disabled="!sitePolicy.allowEditStock" />
             </UFormField>
             <UFormField :label="t('admin.catalog.fields.manageStock')">
               <USwitch v-model="form.manageStock" />
@@ -929,7 +943,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
                   <UInput v-model="variant.name.vi" :placeholder="t('admin.catalog.fields.variantName')" />
                   <UInput v-model.number="variant.basePrice" type="number" :placeholder="t('admin.catalog.fields.basePrice')" />
                   <UInput v-model.number="variant.salePrice" type="number" :placeholder="t('admin.catalog.fields.salePrice')" />
-                  <UInput v-model.number="variant.stock" type="number" :placeholder="t('admin.catalog.fields.stock')" />
+                  <UInput v-model.number="variant.stock" type="number" :placeholder="t('admin.catalog.fields.stock')" :disabled="!sitePolicy.allowEditStock" />
                   <div class="flex items-center justify-between gap-2">
                     <USwitch v-model="variant.isActive" />
                     <UButton

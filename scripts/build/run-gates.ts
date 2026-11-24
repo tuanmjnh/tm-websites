@@ -144,6 +144,19 @@ function duration(ms: number) {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
+// The project runs dev and gates on one customer database. Refuse any other
+// name instead of writing into a stray database; the suites that need a
+// disposable fixture still create and drop their own short-lived database.
+const DEV_DATABASE = 'sen-tuan'
+const configuredDatabase = process.env.TM_MONGO_DB || DEV_DATABASE
+if (configuredDatabase !== DEV_DATABASE) {
+  console.error(`TM_MONGO_DB="${configuredDatabase}" is not "${DEV_DATABASE}"; this repo runs dev and gates on ${DEV_DATABASE} only.`)
+  process.exit(1)
+}
+process.env.TM_MONGO_DB = DEV_DATABASE
+process.env.TM_MONGO_URI ||= 'mongodb://127.0.0.1:27017'
+process.env.TM_SITE_ID ||= 'sentuan'
+
 const env = ['TM_MONGO_URI', 'TM_MONGO_DB', 'TM_SITE_ID']
   .map(name => `${name}=${process.env[name] || '(unset)'}`)
   .join(' ')
