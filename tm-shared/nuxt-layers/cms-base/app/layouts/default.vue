@@ -34,6 +34,9 @@ const navItems = computed(() => [
   ...(hasCapability('content.read')
     ? [{ label: t('nav.supplierPortal'), icon: 'i-lucide-truck', to: '/supplier-portal' }]
     : []),
+  ...(hasCapability('content.read')
+    ? [{ label: t('nav.shippingCarriers'), icon: 'i-lucide-package', to: '/shipping-carriers' }]
+    : []),
   ...gatedModuleItems('inventory'),
   ...gatedModuleItems('purchaseOrders'),
   ...gatedModuleItems('hr'),

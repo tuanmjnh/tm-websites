@@ -16,6 +16,7 @@ import type { QuotationDocument } from '../models/quotation'
 import type { DocumentTemplateDocument } from '../models/documentTemplate'
 import type { VariantOptionDocument } from '../models/variantOption'
 import type { KeywordDocument } from '../models/keyword'
+import type { ShippingCarrierDocument } from '../models/shippingCarrier'
 import type { WarehouseDocument } from '../models/warehouse'
 import type { InventoryDocument } from '../models/inventory'
 import type { InventoryTransactionDocument } from '../models/inventoryTransaction'
@@ -53,6 +54,7 @@ import { quotationModel, syncQuotationIndexes } from '../models/quotation'
 import { documentTemplateModel, syncDocumentTemplateIndexes } from '../models/documentTemplate'
 import { variantOptionModel, syncVariantOptionIndexes } from '../models/variantOption'
 import { keywordModel, syncKeywordIndexes } from '../models/keyword'
+import { shippingCarrierModel, syncShippingCarrierIndexes } from '../models/shippingCarrier'
 import { warehouseModel, syncWarehouseIndexes } from '../models/warehouse'
 import { inventoryModel, syncInventoryIndexes } from '../models/inventory'
 import { inventoryTransactionModel, syncInventoryTransactionIndexes } from '../models/inventoryTransaction'
@@ -119,6 +121,7 @@ export interface PreparedModels {
   DocumentTemplate: Model<DocumentTemplateDocument>
   VariantOption: Model<VariantOptionDocument>
   Keyword: Model<KeywordDocument>
+  ShippingCarrier: Model<ShippingCarrierDocument>
   Warehouse: Model<WarehouseDocument>
   Inventory: Model<InventoryDocument>
   InventoryTransaction: Model<InventoryTransactionDocument>
@@ -171,6 +174,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
   await syncDocumentTemplateIndexes(connection)
   await syncVariantOptionIndexes(connection)
   await syncKeywordIndexes(connection)
+  await syncShippingCarrierIndexes(connection)
   await syncWarehouseIndexes(connection)
   await syncInventoryIndexes(connection)
   await syncInventoryTransactionIndexes(connection)
@@ -222,6 +226,7 @@ async function prepare(connection: Connection, now: Date): Promise<PreparedModel
     DocumentTemplate: documentTemplateModel(connection),
     VariantOption: variantOptionModel(connection),
     Keyword: keywordModel(connection),
+    ShippingCarrier: shippingCarrierModel(connection),
     Warehouse: warehouseModel(connection),
     Inventory: inventoryModel(connection),
     InventoryTransaction: inventoryTransactionModel(connection),

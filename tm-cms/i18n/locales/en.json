@@ -95,7 +95,8 @@
     "variantOptions": "Variant options",
     "keywords": "Keywords",
     "financeReport": "Finance report",
-    "supplierPortal": "Supplier portal"
+    "supplierPortal": "Supplier portal",
+    "shippingCarriers": "Shipping carriers"
   },
   "dashboard": {
     "title": "Control Center",
@@ -1246,6 +1247,23 @@
         "showBankAccounts": "Bank accounts",
         "showSignatures": "Signature block"
       }
+    },
+    "shippingCarriers": {
+      "title": "Shipping carriers",
+      "create": "Create",
+      "edit": "Edit",
+      "saved": "Saved",
+      "deleted": "Deleted",
+      "restored": "Restored",
+      "code": "Code",
+      "name": "Name",
+      "trackingUrl": "Tracking URL",
+      "phone": "Phone",
+      "note": "Note",
+      "status": "Status",
+      "empty": "No shipping carriers",
+      "active": "Active",
+      "sort": "Sort"
     },
     "keywords": {
       "title": "Keywords",

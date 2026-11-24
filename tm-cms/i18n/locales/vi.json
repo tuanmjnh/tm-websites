@@ -95,7 +95,8 @@
     "variantOptions": "Thuộc tính biến thể",
     "keywords": "Từ khoá",
     "financeReport": "Báo cáo tài chính",
-    "supplierPortal": "Portal nhà cung cấp"
+    "supplierPortal": "Portal nhà cung cấp",
+    "shippingCarriers": "Đơn vị vận chuyển"
   },
   "dashboard": {
     "title": "Trung tâm điều khiển",
@@ -1248,6 +1249,24 @@
         "showBankAccounts": "Thông tin tài khoản",
         "showSignatures": "Khối chữ ký"
       }
+    },
+    "shippingCarriers": {
+      "title": "Đơn vị vận chuyển",
+      "create": "Thêm",
+      "edit": "Sửa",
+      "saved": "Đã lưu",
+      "deleted": "Đã xoá",
+      "restored": "Đã khôi phục",
+      "code": "Mã",
+      "name": "Tên",
+      "trackingUrl": "URL theo dõi",
+      "phone": "Điện thoại",
+      "note": "Ghi chú",
+      "status": "Trạng thái",
+      "trackingUrl2": "",
+      "empty": "Chưa có đơn vị vận chuyển",
+      "active": "Hoạt động",
+      "sort": "Thứ tự"
     },
     "keywords": {
       "title": "Từ khoá",
