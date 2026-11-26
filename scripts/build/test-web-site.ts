@@ -202,7 +202,29 @@ check('the storefront section publishes its text, hours and usable social links'
   assert.equal(PublicSiteSchema.safeParse(site).success, true)
 
   const plain = buildPublicSite({ settings, menus: [] })
-  assert.deepEqual(plain.site, { footerText: '', copyright: '', websiteUrl: '', keywords: '', maintenanceMode: false, openingHours: {}, social: [] })
+  assert.deepEqual(plain.site, {
+    footerText: '',
+    copyright: '',
+    websiteUrl: '',
+    keywords: '',
+    maintenanceMode: false,
+    paginationType: 'cursor',
+    openingHours: {},
+    social: [],
+  })
+})
+
+check('the storefront pagination mode follows settings, legacy skip_limit included', () => {
+  const offset = buildPublicSite({ settings: { ...settings, site: { paginationType: 'skip_limit' } }, menus: [] })
+  assert.equal(offset.site.paginationType, 'offset', 'the legacy value means numbered pages')
+  assert.equal(PublicSiteSchema.safeParse(offset).success, true)
+
+  const explicit = buildPublicSite({ settings: { ...settings, site: { paginationType: 'offset' } }, menus: [] })
+  assert.equal(explicit.site.paginationType, 'offset')
+
+  const unknown = buildPublicSite({ settings: { ...settings, site: { paginationType: 'bogus' } }, menus: [] })
+  assert.equal(unknown.site.paginationType, 'cursor', 'an unknown value keeps the default')
+  assert.equal(buildPublicSite({ settings, menus: [] }).site.paginationType, 'cursor')
 })
 
 check('menus keep both keys, sorted, and an empty menu survives', () => {

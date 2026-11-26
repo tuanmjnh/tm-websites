@@ -38,6 +38,14 @@ export interface SettingsWriteMeta {
 
 type SettingsRecord = SiteSettingsDocument & { _id: unknown }
 
+/**
+ * `skip_limit` is the legacy spelling of numbered pages; anything unknown keeps
+ * the cursor default, so an old document never ships an unusable value.
+ */
+function normalizePaginationType(value: unknown): 'cursor' | 'offset' {
+  return value === 'offset' || value === 'skip_limit' ? 'offset' : 'cursor'
+}
+
 function toAdminSettings(record: SettingsRecord): AdminSiteSettings {
   return {
     siteId: record.siteId,
@@ -73,7 +81,7 @@ function toAdminSettings(record: SettingsRecord): AdminSiteSettings {
       websiteUrl: record.site?.websiteUrl ?? '',
       keywords: record.site?.keywords ?? '',
       maintenanceMode: record.site?.maintenanceMode ?? false,
-      paginationType: record.site?.paginationType ?? 'cursor',
+      paginationType: normalizePaginationType(record.site?.paginationType),
       syncKeywordsMode: record.site?.syncKeywordsMode ?? 'local',
       allowSkuEditAfterSave: record.site?.allowSkuEditAfterSave ?? false,
       allowEditStock: record.site?.allowEditStock ?? false,
@@ -254,6 +262,7 @@ function mergeSiteSettings(
     next.openingHours = merged
   }
   if (patch?.social) next.social = normalizeSocialLinks(patch.social)
+  next.paginationType = normalizePaginationType(next.paginationType)
   return next
 }
 

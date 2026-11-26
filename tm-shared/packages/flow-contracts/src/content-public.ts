@@ -126,6 +126,9 @@ export const PublicContentListSchema = z.object({
     nextCursor: z.string().nullable(),
     hasMore: z.boolean(),
     limit: z.number(),
+    /** Present only when the listing was read page by page. */
+    page: z.number().optional(),
+    total: z.number().optional(),
   }),
 })
 

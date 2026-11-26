@@ -21,7 +21,6 @@ const config = useRuntimeConfig()
 const requestUrl = useRequestURL()
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
-const canonical = buildCanonicalUrl(baseUrl, '/bai-viet')
 
 const readQuery = (key: string) => {
   const raw = route.query[key]
@@ -32,6 +31,35 @@ const readQuery = (key: string) => {
 const tag = computed(() => readQuery('tag'))
 const category = computed(() => readQuery('category'))
 const q = computed(() => readQuery('q'))
+
+/**
+ * The site owner chooses the list affordance in Settings: `offset` renders
+ * numbered pages (a real `?page=` URL), `cursor` keeps the load-more button.
+ */
+const { paginationType } = usePublicSite()
+const paged = computed(() => paginationType.value === 'offset')
+const page = computed(() => {
+  if (!paged.value) return 1
+  const parsed = Number(readQuery('page'))
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.trunc(parsed) : 1
+})
+const total = ref(0)
+
+const canonical = computed(() => {
+  const base = buildCanonicalUrl(baseUrl, '/bai-viet')
+  const filtered = Boolean(q.value || tag.value || category.value)
+  return paged.value && page.value > 1 && !filtered ? `${base}?page=${page.value}` : base
+})
+
+const pageModel = computed({
+  get: () => page.value,
+  set: (value: number) => {
+    const query = { ...route.query }
+    if (value > 1) query.page = String(value)
+    else delete query.page
+    router.push({ query })
+  },
+})
 
 /**
  * The listing filters on the stored category `key`, but a visitor must read the
@@ -60,7 +88,7 @@ async function load(reset = true) {
     const response = await $fetch<{
       success: boolean
       data: PublicContentListItem[]
-      meta: { nextCursor: string | null, hasMore: boolean }
+      meta: { nextCursor: string | null, hasMore: boolean, page?: number, total?: number }
     }>('/api/public/content', {
       query: {
         type: 'post',
@@ -69,15 +97,17 @@ async function load(reset = true) {
         q: q.value || undefined,
         tag: tag.value || undefined,
         category: category.value || undefined,
-        cursor: reset ? undefined : cursor.value ?? undefined,
+        page: paged.value ? page.value : undefined,
+        cursor: paged.value ? undefined : (reset ? undefined : cursor.value ?? undefined),
       },
     })
 
-    items.value = reset
+    items.value = reset || paged.value
       ? response.data
       : [...items.value, ...response.data.filter(item => !items.value.some(existing => existing.key === item.key))]
     cursor.value = response.meta.nextCursor
     hasMore.value = response.meta.hasMore
+    total.value = response.meta.total ?? items.value.length
   } catch {
     if (reset) items.value = []
     loadError.value = true
@@ -100,9 +130,9 @@ function clearFilters() {
 }
 
 await load()
-watch([tag, category, q, locale], () => load())
+watch([tag, category, q, locale, paged, page], () => load())
 
-const robots = usePageRobots({ empty: () => !items.value.length })
+const robots = usePageRobots({ keepQuery: paged.value ? ['page'] : [], empty: () => !items.value.length })
 
 useSeoMeta({
   title: () => (q.value ? t('post.searchTitle', { q: q.value }) : t('post.indexTitle')),
@@ -192,9 +222,22 @@ useHead({
       :items="items"
       :loading="loading"
       :error="loadError"
-      :has-more="hasMore"
+      :has-more="!paged && hasMore"
       :empty-text="q ? t('post.searchEmpty', { q }) : t('post.empty')"
       @load-more="load(false)"
     />
+
+    <div v-if="paged && total > PAGE_SIZE" class="mt-8 flex justify-center">
+      <UPagination
+        v-model:page="pageModel"
+        :aria-label="t('a11y.pagination')"
+        class="w-full"
+        :ui="{ list: 'flex-wrap justify-center' }"
+        :total="total"
+        :items-per-page="PAGE_SIZE"
+        :sibling-count="1"
+        show-edges
+      />
+    </div>
   </div>
 </template>

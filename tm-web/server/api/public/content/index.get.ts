@@ -15,6 +15,8 @@ const ContentListQuerySchema = z.object({
   sort: z.enum(['newest', 'oldest']).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
   cursor: z.string().regex(/^[a-f0-9]{24}$/i).optional(),
+  /** Numbered pages, used when the site's pagination mode is `offset`. */
+  page: z.coerce.number().int().min(1).max(500).optional(),
 })
 
 export default defineEventHandler(async (event) => {

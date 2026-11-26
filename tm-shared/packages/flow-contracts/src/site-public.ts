@@ -16,6 +16,19 @@ export type PublicMenuLocale = (typeof PUBLIC_MENU_LOCALES)[number]
 export const PUBLIC_MENU_HEADER = 'main'
 export const PUBLIC_MENU_FOOTER = 'footer'
 
+/**
+ * How a storefront list moves to its next page: a cursor "load more" or
+ * numbered pages. The legacy setting value was `skip_limit`, so both spellings
+ * are read and anything unknown keeps the cursor default.
+ */
+export const PUBLIC_PAGINATION_TYPES = ['cursor', 'offset'] as const
+export type PublicPaginationType = (typeof PUBLIC_PAGINATION_TYPES)[number]
+
+export function normalizePublicPaginationType(value: unknown): PublicPaginationType {
+  const raw = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return raw === 'offset' || raw === 'skip_limit' ? 'offset' : 'cursor'
+}
+
 export const PublicMenuLeafSchema = z.object({
   /** Both labels are kept so the client can fall back without a second call. */
   label: z.object({ vi: z.string(), en: z.string() }),
@@ -81,6 +94,8 @@ export const PublicSiteSchema = z.object({
     websiteUrl: z.string(),
     keywords: z.string(),
     maintenanceMode: z.boolean(),
+    /** `cursor` renders "load more"; `offset` renders numbered pages. */
+    paginationType: z.enum(PUBLIC_PAGINATION_TYPES),
     /** locale -> opening hours; a missing entry is not shown. */
     openingHours: z.record(z.string(), z.string()),
     social: z.array(z.object({
@@ -99,7 +114,7 @@ export function emptyPublicSite(): PublicSite {
     company: { name: '', names: {}, email: '', phone: '', address: '', logoMediaId: '' },
     seo: { titleTemplate: '%s', titleTemplates: {}, defaultDescriptions: {}, defaultImageMediaIds: {}, defaultDescription: '', defaultImageMediaId: '' },
     locales: { default: 'vi', enabled: ['vi'] },
-    site: { footerText: '', copyright: '', websiteUrl: '', keywords: '', maintenanceMode: false, openingHours: {}, social: [] },
+    site: { footerText: '', copyright: '', websiteUrl: '', keywords: '', maintenanceMode: false, paginationType: 'cursor', openingHours: {}, social: [] },
     menus: [],
   }
 }
@@ -412,6 +427,7 @@ export function buildPublicSite(input: {
       websiteUrl: readString(site.websiteUrl).trim(),
       keywords: readString(site.keywords).trim(),
       maintenanceMode: site.maintenanceMode === true,
+      paginationType: normalizePublicPaginationType(site.paginationType),
       openingHours: readHours(site.openingHours, enabled),
       social: readSocial(site.social),
     },

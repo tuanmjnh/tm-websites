@@ -172,8 +172,9 @@ gaps are a consequence of the module gaps in §2, not an independent gap.
    infrastructure and must not be copied into a site document. The 4 identity keys
    (`site_name`, `site_description`, `content_locales`, `enabled_modules`) are already imported by
    `migrate:settings`; what remains is a small set of UI/business toggles (`site_footer_text`,
-   `copyright`, `website_url`, `keywords`, `pagination_type`, `maintenance_mode`, `allow_*` flags)
-   with no v2 field — a settings-model decision, not a migration gap.
+   `copyright`, `website_url`, `keywords`, `maintenance_mode`, `allow_*` flags) with no v2 field — a
+   settings-model decision, not a migration gap. `pagination_type` left that list on 2026-11-26: it
+   is a settings field and now drives the post listing (`05`, P2.d pagination record).
 3. **Menus/attributes/keywords/options/document templates**: fill the module gaps listed in §2.
 4. **POS, supplier portal, finance report detail, dashboard aggregates**: the remaining feature work
    from the parity matrix (`COM-01`, `POR-02`, `FIN-02`, `SYS-01`).

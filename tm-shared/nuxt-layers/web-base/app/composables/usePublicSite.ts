@@ -56,6 +56,8 @@ export const usePublicSite = () => {
 
   /** Footer text, copyright and social profiles the customer saved in the CMS. */
   const siteInfo = computed(() => publicSite.value?.site ?? null)
+  /** `offset` means numbered pages, `cursor` means a load-more button. */
+  const paginationType = computed(() => siteInfo.value?.paginationType ?? 'cursor')
   const footerText = computed(() => siteInfo.value?.footerText || siteInfo.value?.copyright || '')
   const openingHours = computed(() => {
     const code = String(locale.value || '')
@@ -133,6 +135,7 @@ export const usePublicSite = () => {
     contactPhone,
     contactAddress,
     siteInfo,
+    paginationType,
     footerText,
     openingHours,
     socialLinks,

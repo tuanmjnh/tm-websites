@@ -11,6 +11,7 @@ import {
   DEFAULT_PUBLIC_CONTENT_LOCALE,
   PUBLIC_CONTENT_SEARCH_MAX,
   PublicContentCategorySchema,
+  PublicContentListSchema,
   PublicContentSchema,
   normalizePublicLocale,
 } from '../../tm-shared/packages/flow-contracts/src/content-public.js'
@@ -72,6 +73,22 @@ check('public content list validates the paginated payload', () => {
   assert.equal(payload.data[0]?.key, 'about')
   assert.equal(payload.nextCursor, 'abc')
   assert.equal(HubPublicContentListSchema.safeParse({ success: true, data: [{ key: 'x' }] }).success, false)
+})
+
+check('a paged listing carries its page and total, a cursor listing does not have to', () => {
+  const paged = PublicContentListSchema.parse({
+    data: [],
+    meta: { nextCursor: null, hasMore: true, limit: 12, page: 2, total: 25 },
+  })
+  assert.equal(paged.meta.page, 2)
+  assert.equal(paged.meta.total, 25)
+
+  const cursorOnly = PublicContentListSchema.parse({
+    data: [],
+    meta: { nextCursor: null, hasMore: false, limit: 12 },
+  })
+  assert.equal(cursorOnly.meta.page, undefined)
+  assert.equal(cursorOnly.meta.total, undefined)
 })
 
 console.log('\n1b. CMS public content contract')

@@ -124,13 +124,15 @@ export interface PublicContentListOptions {
   /** Bounded literal search, validated by the route before it reaches here. */
   q?: string
   cursor?: string
+  /** Numbered page instead of a cursor; both are bounded by the route. */
+  page?: number
   sort?: 'newest' | 'oldest'
   limit?: number
 }
 
 export interface PublicContentListResult {
   data: PublicContentListItem[]
-  meta: { nextCursor: string | null, hasMore: boolean, limit: number }
+  meta: { nextCursor: string | null, hasMore: boolean, limit: number, page?: number, total?: number }
 }
 
 /**
@@ -146,23 +148,28 @@ export async function fetchPublicContentList(
   const limit = Math.min(Math.max(Math.trunc(options.limit ?? 12), 1), 50)
   const candidates = [...new Set(contentLocaleCandidates(options.locale))]
   const sortDirection = options.sort === 'oldest' ? 1 : -1
+  // A numbered page needs the total for its pager; a cursor page never pays for
+  // that count. A page read ignores a cursor so the two modes cannot mix.
+  const pageNumber = options.page === undefined ? null : Math.max(1, Math.trunc(options.page))
 
   return withSiteDb(event, async () => {
-    const docs = await PublicContentModel.find(
-      buildPublishedListFilter({
-        type: options.type,
-        tag: options.tag,
-        category: options.category,
-        q: options.q,
-        cursor: options.cursor,
-        sort: options.sort,
-        localeIn: candidates,
-      }),
-      PUBLIC_CONTENT_LIST_PROJECTION,
-    )
-      .sort({ _id: sortDirection })
-      .limit(limit + 1)
-      .lean()
+    const filter = buildPublishedListFilter({
+      type: options.type,
+      tag: options.tag,
+      category: options.category,
+      q: options.q,
+      cursor: pageNumber === null ? options.cursor : undefined,
+      sort: options.sort,
+      localeIn: candidates,
+    })
+
+    const query = PublicContentModel.find(filter, PUBLIC_CONTENT_LIST_PROJECTION).sort({ _id: sortDirection })
+    if (pageNumber !== null) query.skip((pageNumber - 1) * limit)
+
+    const [docs, total] = await Promise.all([
+      query.limit(limit + 1).lean(),
+      pageNumber === null ? Promise.resolve(0) : PublicContentModel.countDocuments(filter),
+    ])
 
     const hasMore = docs.length > limit
     const page = (hasMore ? docs.slice(0, limit) : docs) as unknown as PublicContentDoc[]
@@ -183,7 +190,9 @@ export async function fetchPublicContentList(
 
     return {
       data,
-      meta: { nextCursor: hasMore ? lastId : null, hasMore, limit },
+      meta: pageNumber === null
+        ? { nextCursor: hasMore ? lastId : null, hasMore, limit }
+        : { nextCursor: null, hasMore, limit, page: pageNumber, total },
     }
   })
 }
