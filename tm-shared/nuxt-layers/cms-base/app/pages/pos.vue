@@ -4,16 +4,48 @@ import type { AdminOrder } from '../composables/useOperationsAdmin'
 const { t } = useI18n()
 const toast = useToast()
 const { hasCapability } = useHub()
-const { createOrder, listItemOptions } = useOperationsAdmin()
+const { createOrder, listItemOptions, listWarehouses } = useOperationsAdmin()
 
 const canWrite = computed(() => hasCapability('content.write'))
 
+interface CatalogVariant {
+  sku: string
+  name?: Record<string, string>
+  basePrice: number
+  salePrice: number | null
+  stock: number
+  isActive?: boolean
+}
+
+interface CatalogOption {
+  id: string
+  type: string
+  sku: string
+  title: Record<string, string>
+  basePrice: number
+  salePrice: number | null
+  stock: number
+  variants?: CatalogVariant[]
+}
+
+interface SearchRow {
+  itemId: string
+  variantId: string | null
+  sku: string
+  label: string
+  price: number
+  stock: number
+}
+
 const query = ref('')
-const results = ref<{ id: string, sku: string, title: Record<string, string>, basePrice: number, salePrice: number | null, stock: number }[]>([])
+const results = ref<SearchRow[]>([])
 const searching = ref(false)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
-const cart = ref<{ itemId: string, sku: string, name: string, price: number, quantity: number }[]>([])
+const warehouses = ref<{ id: string, code: string, title: string }[]>([])
+const warehouseId = ref('')
+
+const cart = ref<{ itemId: string, variantId: string | null, sku: string, name: string, price: number, quantity: number }[]>([])
 
 const customerName = ref('')
 const customerPhone = ref('')
@@ -28,11 +60,44 @@ const lineTotal = (line: { price: number, quantity: number }) => line.price * li
 const itemsPrice = computed(() => cart.value.reduce((s, l) => s + l.price * l.quantity, 0))
 const totalAmount = computed(() => Math.max(0, itemsPrice.value + shippingFee.value - discountAmount.value))
 
+// A variable product is sold by variant (its SKU is the inventory key), a
+// simple product has no variant and is keyed by the item alone.
+const toSearchRows = (items: CatalogOption[]): SearchRow[] => {
+  const rows: SearchRow[] = []
+  for (const item of items) {
+    const title = item.title?.vi || item.title?.en || item.sku
+    if (item.type === 'variable' && item.variants?.length) {
+      for (const variant of item.variants) {
+        if (variant.isActive === false) continue
+        rows.push({
+          itemId: item.id,
+          variantId: variant.sku,
+          sku: variant.sku,
+          label: `${title} · ${variant.name?.vi || variant.name?.en || variant.sku}`,
+          price: variant.salePrice ?? variant.basePrice ?? item.basePrice ?? 0,
+          stock: variant.stock ?? 0,
+        })
+      }
+      continue
+    }
+    rows.push({
+      itemId: item.id,
+      variantId: null,
+      sku: item.sku,
+      label: title,
+      price: item.salePrice ?? item.basePrice ?? 0,
+      stock: item.stock ?? 0,
+    })
+  }
+  return rows
+}
+
 const searchProducts = async () => {
   if (!query.value.trim()) { results.value = []; return }
   searching.value = true
   try {
-    results.value = await listItemOptions(query.value.trim(), 20)
+    const items = await listItemOptions(query.value.trim(), 20) as unknown as CatalogOption[]
+    results.value = toSearchRows(items)
   } catch {
     results.value = []
   } finally {
@@ -40,17 +105,25 @@ const searchProducts = async () => {
   }
 }
 
+onMounted(async () => {
+  try {
+    const page = await listWarehouses({ status: 'active', limit: 50 })
+    warehouses.value = page.data.map(w => ({ id: w.id, code: w.code, title: w.title }))
+    warehouseId.value = warehouses.value[0]?.id ?? ''
+  } catch {
+    warehouses.value = []
+  }
+})
+
 watch(query, () => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => { void searchProducts() }, 300)
 })
 
-const addToCart = (item: { id: string, sku: string, title: Record<string, string>, basePrice: number, salePrice: number | null }) => {
-  const price = item.salePrice ?? item.basePrice ?? 0
-  const name = item.title?.vi || item.title?.en || item.sku
-  const existing = cart.value.find(l => l.itemId === item.id)
+const addToCart = (row: SearchRow) => {
+  const existing = cart.value.find(l => l.itemId === row.itemId && l.variantId === row.variantId)
   if (existing) existing.quantity += 1
-  else cart.value.push({ itemId: item.id, sku: item.sku, name, price, quantity: 1 })
+  else cart.value.push({ itemId: row.itemId, variantId: row.variantId, sku: row.sku, name: row.label, price: row.price, quantity: 1 })
   query.value = ''
   results.value = []
 }
@@ -59,6 +132,10 @@ const removeLine = (index: number) => { cart.value.splice(index, 1) }
 
 const submitOrder = async () => {
   if (!canWrite.value || submitting.value || !cart.value.length) return
+  if (!warehouseId.value) {
+    toast.add({ title: t('admin.pos.warehouseRequired'), color: 'error' })
+    return
+  }
   submitting.value = true
   lastOrderCode.value = null
   try {
@@ -72,7 +149,8 @@ const submitOrder = async () => {
       shippingFee: shippingFee.value,
       discountAmount: discountAmount.value,
       shippingAddress: { fullName: customerName.value || 'Khách lẻ', phone: customerPhone.value, street: '', ward: '', district: '', city: '', country: 'Vietnam' },
-      items: cart.value.map(l => ({ itemId: l.itemId, itemName: l.name, sku: l.sku, price: l.price, quantity: l.quantity, attributes: {} })),
+      warehouseId: warehouseId.value || null,
+      items: cart.value.map(l => ({ itemId: l.itemId, variantId: l.variantId, itemName: l.name, sku: l.sku, price: l.price, quantity: l.quantity, attributes: {} })),
       note: 'POS',
     }
     const order = await createOrder(body)
@@ -99,13 +177,16 @@ const submitOrder = async () => {
         <div v-if="results.length" class="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-default bg-default shadow">
           <button
             v-for="item in results"
-            :key="item.id"
+            :key="`${item.itemId}-${item.variantId ?? ''}`"
             type="button"
             class="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-elevated/40"
             @click="addToCart(item)"
           >
-            <span class="font-medium text-highlighted">{{ item.title?.vi || item.title?.en || item.sku }}</span>
-            <span class="text-xs text-muted">{{ item.sku }} · {{ money(item.salePrice ?? item.basePrice ?? 0) }}</span>
+            <span class="text-left">
+              <span class="block font-medium text-highlighted">{{ item.label }}</span>
+              <span class="block text-xs text-muted">{{ item.sku }} · {{ t('admin.pos.stockLeft', { count: item.stock }) }}</span>
+            </span>
+            <span class="text-xs text-muted">{{ money(item.price) }}</span>
           </button>
         </div>
       </div>
@@ -144,6 +225,9 @@ const submitOrder = async () => {
 
     <div class="space-y-3">
       <div class="rounded-md border border-default p-4 space-y-3">
+        <UFormField :label="t('admin.pos.warehouse')">
+          <USelect v-model="warehouseId" :items="warehouses.map(w => ({ label: `${w.title} (${w.code})`, value: w.id }))" value-key="value" class="w-full" />
+        </UFormField>
         <UFormField :label="t('admin.pos.customerName')"><UInput v-model="customerName" class="w-full" /></UFormField>
         <UFormField :label="t('admin.pos.customerPhone')"><UInput v-model="customerPhone" class="w-full" /></UFormField>
         <UFormField :label="t('admin.pos.paymentMethod')">
@@ -167,7 +251,7 @@ const submitOrder = async () => {
           size="lg"
           block
           :loading="submitting"
-          :disabled="!canWrite || !cart.length"
+          :disabled="!canWrite || !cart.length || !warehouseId"
           :label="t('admin.pos.checkout')"
           @click="submitOrder"
         />

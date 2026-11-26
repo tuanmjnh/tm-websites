@@ -23,13 +23,14 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ Order, Customer, Audit, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ Order, Customer, Audit, IdempotencyKey, Inventory, InventoryTransaction }) =>
       executeIdempotent(
         { model: IdempotencyKey, siteId, action: 'order.create', key: idempotencyKey, payload: body },
         async () => {
           const created = await createOrder(Order, Customer, siteId, body, {
             audit: auditMetaOf(event, user, Audit),
             actorId: user.id,
+            stock: { inventory: Inventory, transactions: InventoryTransaction },
           })
           return {
             statusCode: 201,

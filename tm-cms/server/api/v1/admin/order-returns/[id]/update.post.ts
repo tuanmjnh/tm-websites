@@ -28,9 +28,10 @@ export default defineEventHandler(async (event) => {
   const input = parseInput(OrderReturnUpdateBodySchema, body, 'ORDER_RETURN_UPDATE_INVALID', 'Dữ liệu cập nhật không hợp lệ')
 
   try {
-    const result = await withPreparedDb(event, ({ OrderReturn, Order, Audit }) =>
+    const result = await withPreparedDb(event, ({ OrderReturn, Order, Audit, Inventory, InventoryTransaction }) =>
       updateOrderReturn(OrderReturn, Order, siteId, id, input, {
         audit: auditMetaOf(event, user, Audit),
+        stock: { inventory: Inventory, transactions: InventoryTransaction },
       }))
 
     setHeader(event, 'cache-control', 'no-store')

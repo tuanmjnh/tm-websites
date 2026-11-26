@@ -1317,7 +1317,10 @@
       "checkout": "Thanh toán",
       "created": "Đã tạo đơn {code}",
       "createFailed": "Không tạo được đơn",
-      "lastOrder": "Đơn vừa tạo"
+      "lastOrder": "Đơn vừa tạo",
+      "warehouse": "Kho xuất hàng",
+      "warehouseRequired": "Chọn kho xuất hàng trước khi thanh toán",
+      "stockLeft": "Tồn: {count}"
     },
     "orders": {
       "title": "Đơn hàng",

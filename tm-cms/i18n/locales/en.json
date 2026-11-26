@@ -1315,7 +1315,10 @@
       "checkout": "Checkout",
       "created": "Order created {code}",
       "createFailed": "Could not create order",
-      "lastOrder": "Last order"
+      "lastOrder": "Last order",
+      "warehouse": "Fulfilment warehouse",
+      "warehouseRequired": "Choose a warehouse before checkout",
+      "stockLeft": "Stock: {count}"
     },
     "orders": {
       "title": "Orders",

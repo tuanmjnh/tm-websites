@@ -54,6 +54,7 @@
     "test:shipments": "tsx scripts/build/test-shipments.ts",
     "test:shipment-movements": "tsx scripts/build/test-shipment-movements.ts",
     "test:order-returns": "tsx scripts/build/test-order-returns.ts",
+    "test:order-stock": "tsx scripts/build/test-order-stock.ts",
     "test:serial-numbers": "tsx scripts/build/test-serial-numbers.ts",
     "test:serial-sync": "tsx scripts/build/test-serial-sync.ts",
     "test:serial-import": "tsx scripts/build/test-serial-import.ts",

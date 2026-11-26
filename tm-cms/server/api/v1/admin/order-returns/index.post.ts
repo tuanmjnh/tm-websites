@@ -39,9 +39,10 @@ export default defineEventHandler(async (event) => {
   const input = parseInput(OrderReturnCreateBodySchema, body, 'ORDER_RETURN_PAYLOAD_INVALID', 'Dữ liệu trả hàng không hợp lệ')
 
   try {
-    const result = await withPreparedDb(event, ({ OrderReturn, Order, Audit }) =>
+    const result = await withPreparedDb(event, ({ OrderReturn, Order, Audit, Inventory, InventoryTransaction }) =>
       createOrderReturn(OrderReturn, Order, siteId, input, {
         audit: auditMetaOf(event, user, Audit),
+        stock: { inventory: Inventory, transactions: InventoryTransaction },
       }))
 
     setHeader(event, 'cache-control', 'no-store')

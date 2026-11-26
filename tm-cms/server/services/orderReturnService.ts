@@ -10,6 +10,7 @@ import {
   ORDER_RETURN_STATUSES,
 } from '../models/orderReturn'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
+import { applyOrderReturnStock, type OrderStockDeps } from './orderStockService'
 
 export class OrderReturnServiceError extends Error {
   statusCode: number
@@ -25,6 +26,11 @@ export class OrderReturnServiceError extends Error {
 }
 
 const RESOURCE = 'order_return' as const
+
+export interface OrderReturnMeta {
+  audit?: ContentAuditMeta
+  stock?: OrderStockDeps
+}
 
 type ReturnRecord = OrderReturnDocument & { _id: Types.ObjectId }
 
@@ -163,7 +169,7 @@ export async function createOrderReturn(
   orderModel: Model<OrderDocument>,
   siteId: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: OrderReturnMeta,
 ): Promise<OrderReturnAdmin> {
   let draft
   try {
@@ -202,6 +208,23 @@ export async function createOrderReturn(
 
   if (record.status === 'approved' || record.status === 'refunded') {
     await adjustOrderReturned(orderModel, siteId, draft.orderId, draft.items, 1)
+
+    if (meta?.stock) {
+      try {
+        await applyOrderReturnStock(
+          meta.stock,
+          siteId,
+          order,
+          draft.items,
+          1,
+          { id: String(record._id), code: record.code, model: 'OrderReturn' },
+        )
+      } catch (error) {
+        await adjustOrderReturned(orderModel, siteId, draft.orderId, draft.items, -1)
+        await returnModel.deleteOne({ _id: record._id, siteId }).catch(() => undefined)
+        throw error
+      }
+    }
   }
 
   await recordContentAudit(meta?.audit, {
@@ -225,7 +248,7 @@ export async function updateOrderReturn(
   siteId: string,
   id: string,
   input: { status?: string, note?: string, refundAmount?: number, refundMethod?: string, revision: number },
-  meta?: { audit?: ContentAuditMeta },
+  meta?: OrderReturnMeta,
 ): Promise<OrderReturnAdmin> {
   if (!Number.isInteger(input.revision) || input.revision < 1) {
     throw new OrderReturnServiceError(422, 'ORDER_RETURN_REVISION_REQUIRED', 'Revision is required')
@@ -260,17 +283,41 @@ export async function updateOrderReturn(
     changed.push('refundMethod')
   }
 
-  // Adjust order returned quantities on transitions.
+  // Adjust order returned quantities and stock on transitions.
   const wasActive = previousStatus === 'approved' || previousStatus === 'refunded'
   const isActive = nextStatus === 'approved' || nextStatus === 'refunded'
+  let stockDirection: 1 | -1 | 0 = 0
   if (nextStatus !== previousStatus) {
     if (!wasActive && isActive) {
       const order = await loadOrder(orderModel, siteId, record.orderId)
       await validateReturnLines(order, returnModel, siteId, record.items, String(record._id))
       await adjustOrderReturned(orderModel, siteId, record.orderId, record.items, 1)
+      stockDirection = 1
+      if (meta?.stock) {
+        await applyOrderReturnStock(
+          meta.stock,
+          siteId,
+          order,
+          record.items,
+          1,
+          { id: String(record._id), code: record.code, model: 'OrderReturn' },
+        )
+      }
     }
     if (wasActive && !isActive) {
       await adjustOrderReturned(orderModel, siteId, record.orderId, record.items, -1)
+      stockDirection = -1
+      if (meta?.stock) {
+        const order = await orderModel.findOne({ _id: Types.ObjectId.isValid(record.orderId) ? new Types.ObjectId(record.orderId) : null, siteId }).lean<OrderDocument | null>()
+        await applyOrderReturnStock(
+          meta.stock,
+          siteId,
+          order,
+          record.items,
+          -1,
+          { id: String(record._id), code: record.code, model: 'OrderReturn' },
+        )
+      }
     }
   }
 
@@ -281,7 +328,23 @@ export async function updateOrderReturn(
     { $set: set, $inc: { revision: 1 } },
     { returnDocument: 'after' },
   ).lean<ReturnRecord>()
-  if (!updated) throw new OrderReturnServiceError(409, 'ORDER_RETURN_REVISION_CONFLICT', 'Order return changed; retry')
+  if (!updated) {
+    if (stockDirection !== 0) {
+      await adjustOrderReturned(orderModel, siteId, record.orderId, record.items, stockDirection === 1 ? -1 : 1)
+      if (meta?.stock) {
+        const order = await orderModel.findOne({ _id: Types.ObjectId.isValid(record.orderId) ? new Types.ObjectId(record.orderId) : null, siteId }).lean<OrderDocument | null>()
+        await applyOrderReturnStock(
+          meta.stock,
+          siteId,
+          order,
+          record.items,
+          stockDirection === 1 ? -1 : 1,
+          { id: String(record._id), code: record.code, model: 'OrderReturn' },
+        ).catch(() => undefined)
+      }
+    }
+    throw new OrderReturnServiceError(409, 'ORDER_RETURN_REVISION_CONFLICT', 'Order return changed; retry')
+  }
 
   await recordContentAudit(meta?.audit, {
     siteId,
@@ -315,7 +378,7 @@ export async function softDeleteOrderReturn(
   siteId: string,
   id: string,
   revision: number,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: OrderReturnMeta,
 ): Promise<OrderReturnAdmin> {
   const record = await model.findOne({ _id: objectId(id, 'ORDER_RETURN_ID_INVALID'), siteId }).lean<ReturnRecord>()
   if (!record) throw new OrderReturnServiceError(404, 'ORDER_RETURN_NOT_FOUND', 'Order return not found')
@@ -323,6 +386,17 @@ export async function softDeleteOrderReturn(
 
   if (record.status === 'approved' || record.status === 'refunded') {
     await adjustOrderReturned(orderModel, siteId, record.orderId, record.items, -1)
+    if (meta?.stock) {
+      const order = await orderModel.findOne({ _id: Types.ObjectId.isValid(record.orderId) ? new Types.ObjectId(record.orderId) : null, siteId }).lean<OrderDocument | null>()
+      await applyOrderReturnStock(
+        meta.stock,
+        siteId,
+        order,
+        record.items,
+        -1,
+        { id: String(record._id), code: record.code, model: 'OrderReturn' },
+      )
+    }
   }
 
   const updated = await model.findOneAndUpdate(
@@ -330,7 +404,23 @@ export async function softDeleteOrderReturn(
     { $set: { isDeleted: true, deletedAt: new Date() }, $inc: { revision: 1 } },
     { returnDocument: 'after' },
   ).lean<ReturnRecord>()
-  if (!updated) throw new OrderReturnServiceError(409, 'ORDER_RETURN_REVISION_CONFLICT', 'Order return changed; retry')
+  if (!updated) {
+    if (record.status === 'approved' || record.status === 'refunded') {
+      await adjustOrderReturned(orderModel, siteId, record.orderId, record.items, 1)
+      if (meta?.stock) {
+        const order = await orderModel.findOne({ _id: Types.ObjectId.isValid(record.orderId) ? new Types.ObjectId(record.orderId) : null, siteId }).lean<OrderDocument | null>()
+        await applyOrderReturnStock(
+          meta.stock,
+          siteId,
+          order,
+          record.items,
+          1,
+          { id: String(record._id), code: record.code, model: 'OrderReturn' },
+        ).catch(() => undefined)
+      }
+    }
+    throw new OrderReturnServiceError(409, 'ORDER_RETURN_REVISION_CONFLICT', 'Order return changed; retry')
+  }
 
   await recordContentAudit(meta?.audit, {
     siteId,
@@ -352,20 +442,47 @@ export async function restoreOrderReturn(
   siteId: string,
   id: string,
   revision: number,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: OrderReturnMeta,
 ): Promise<OrderReturnAdmin> {
   const record = await model.findOne({ _id: objectId(id, 'ORDER_RETURN_ID_INVALID'), siteId }).lean<ReturnRecord>()
   if (!record) throw new OrderReturnServiceError(404, 'ORDER_RETURN_NOT_FOUND', 'Order return not found')
   if (record.revision !== revision) throw new OrderReturnServiceError(409, 'ORDER_RETURN_REVISION_CONFLICT', 'Revision mismatch')
+
+  const active = record.status === 'approved' || record.status === 'refunded'
+  const order = active && meta?.stock
+    ? await orderModel.findOne({ _id: Types.ObjectId.isValid(record.orderId) ? new Types.ObjectId(record.orderId) : null, siteId }).lean<OrderDocument | null>()
+    : null
+  if (active && meta?.stock) {
+    await applyOrderReturnStock(
+      meta.stock,
+      siteId,
+      order,
+      record.items,
+      1,
+      { id: String(record._id), code: record.code, model: 'OrderReturn' },
+    )
+  }
 
   const updated = await model.findOneAndUpdate(
     { _id: record._id, siteId, revision },
     { $set: { isDeleted: false, deletedAt: null }, $inc: { revision: 1 } },
     { returnDocument: 'after' },
   ).lean<ReturnRecord>()
-  if (!updated) throw new OrderReturnServiceError(409, 'ORDER_RETURN_REVISION_CONFLICT', 'Order return changed; retry')
+  if (!updated) {
+    if (active && meta?.stock) {
+      await applyOrderReturnStock(
+        meta.stock,
+        siteId,
+        order,
+        record.items,
+        -1,
+        { id: String(record._id), code: record.code, model: 'OrderReturn' },
+      ).catch(() => undefined)
+    }
+    throw new OrderReturnServiceError(409, 'ORDER_RETURN_REVISION_CONFLICT', 'Order return changed; retry')
+  }
 
-  if (record.status === 'approved' || record.status === 'refunded') {
+  if (active) {
     await adjustOrderReturned(orderModel, siteId, record.orderId, record.items, 1)
   }
 

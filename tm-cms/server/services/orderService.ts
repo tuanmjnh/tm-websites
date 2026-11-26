@@ -10,6 +10,12 @@ import {
 } from '../models/order'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 import { ORDER_STATUS_TEMPLATE, type OrderStatusMailModels, queueOrderStatusMail } from './orderStatusMail'
+import {
+  applyOrderStockTransition,
+  orderStockStateOf,
+  type OrderStockDeps,
+  type OrderStockState,
+} from './orderStockService'
 
 export class OrderServiceError extends Error {
   statusCode: number
@@ -34,6 +40,13 @@ export type OrderRecord = OrderDocument & { _id: Types.ObjectId }
 export interface OrderUpdateMeta {
   audit?: ContentAuditMeta
   notify?: OrderStatusMailModels
+  stock?: OrderStockDeps
+}
+
+export interface OrderCreateMeta {
+  audit?: ContentAuditMeta
+  actorId?: string
+  stock?: OrderStockDeps
 }
 
 export interface OrderAdmin {
@@ -237,7 +250,7 @@ export async function createOrder(
   customerModel: Model<CustomerDocument> | null,
   siteId: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta; actorId?: string },
+  meta?: OrderCreateMeta,
 ): Promise<OrderAdmin> {
   const source = (input ?? {}) as Record<string, unknown>
   const draft = (() => {
@@ -279,6 +292,24 @@ export async function createOrder(
   }
 
   const record = created.toObject() as OrderRecord
+
+  if (meta?.stock) {
+    try {
+      await applyOrderStockTransition(
+        meta.stock,
+        siteId,
+        null,
+        orderStockStateOf(record),
+        { id: String(record._id), code: record.code, model: 'Order' },
+        { actorId: meta.actorId },
+      )
+    } catch (error) {
+      // The order was never committed to the caller: drop it so a retry with a
+      // fixed cart (or another warehouse) starts from a clean slate.
+      await model.deleteOne({ _id: record._id, siteId }).catch(() => undefined)
+      throw error
+    }
+  }
 
   // Update customer metrics (best-effort; customer may not exist)
   if (draft.customerId && customerModel) {
@@ -372,6 +403,17 @@ export async function updateOrder(
     draft.paymentStatus = 'unpaid'
   }
 
+  const nextState: OrderStockState = { warehouseId: draft.warehouseId, status: draft.status, items: draft.items }
+  const rollbackStock = meta?.stock
+    ? await applyOrderStockTransition(
+      meta.stock,
+      siteId,
+      orderStockStateOf(record),
+      nextState,
+      { id: String(record._id), code: record.code, model: 'Order' },
+    )
+    : async () => {}
+
   const statusChanged = draft.status !== record.status
   const newHistory = statusChanged
     ? [...(record.history ?? []), { status: draft.status, at: new Date().toISOString(), note: (body.note as string) ?? '', actorId: '' }]
@@ -403,10 +445,12 @@ export async function updateOrder(
       { returnDocument: 'after' },
     ).lean<OrderRecord>()
   } catch (error) {
+    await rollbackStock()
     return translateWriteError(error)
   }
 
   if (!updated) {
+    await rollbackStock()
     throw new OrderServiceError(409, 'ORDER_REVISION_CONFLICT', 'Order was changed by someone else; reload before saving', { expected: revision })
   }
 
@@ -440,7 +484,7 @@ export async function softDeleteOrder(
   siteId: string,
   id: string,
   revision: number,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; stock?: OrderStockDeps },
 ): Promise<{ id: string; code: string }> {
   if (!Number.isInteger(revision) || revision < 1) {
     throw new OrderServiceError(422, 'ORDER_REVISION_REQUIRED', 'An integer revision is required')
@@ -455,6 +499,16 @@ export async function softDeleteOrder(
   ).lean<OrderRecord | null>()
 
   if (!deleted) throw new OrderServiceError(409, 'ORDER_REVISION_CONFLICT', 'Order was changed by someone else; reload before deleting')
+
+  if (meta?.stock) {
+    await applyOrderStockTransition(
+      meta.stock,
+      siteId,
+      orderStockStateOf(record),
+      null,
+      { id: String(record._id), code: record.code, model: 'Order' },
+    )
+  }
 
   await recordContentAudit(meta?.audit, {
     siteId,
@@ -476,7 +530,7 @@ export async function restoreOrder(
   siteId: string,
   id: string,
   revision: number,
-  meta?: { audit?: ContentAuditMeta },
+  meta?: { audit?: ContentAuditMeta; stock?: OrderStockDeps },
 ): Promise<OrderAdmin> {
   if (!Number.isInteger(revision) || revision < 1) {
     throw new OrderServiceError(422, 'ORDER_REVISION_REQUIRED', 'An integer revision is required')
@@ -484,13 +538,26 @@ export async function restoreOrder(
   const record = await model.findOne({ _id: objectId(id, 'ORDER_ID_INVALID'), siteId }).lean<OrderRecord>()
   if (!record) throw new OrderServiceError(404, 'ORDER_NOT_FOUND', 'Order not found')
 
+  const rollbackStock = meta?.stock
+    ? await applyOrderStockTransition(
+      meta.stock,
+      siteId,
+      null,
+      orderStockStateOf(record),
+      { id: String(record._id), code: record.code, model: 'Order' },
+    )
+    : async () => {}
+
   const restored = await model.findOneAndUpdate(
     { _id: record._id, siteId, revision },
     { $set: { isDeleted: false, deletedAt: null }, $inc: { revision: 1 } },
     { returnDocument: 'after' },
   ).lean<OrderRecord | null>()
 
-  if (!restored) throw new OrderServiceError(409, 'ORDER_REVISION_CONFLICT', 'Order was changed by someone else; reload before restoring')
+  if (!restored) {
+    await rollbackStock()
+    throw new OrderServiceError(409, 'ORDER_REVISION_CONFLICT', 'Order was changed by someone else; reload before restoring')
+  }
 
   await recordContentAudit(meta?.audit, {
     siteId,
