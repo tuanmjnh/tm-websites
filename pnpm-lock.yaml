@@ -218,8 +218,8 @@ importers:
         specifier: workspace:*
         version: link:../tm-shared/packages/flow-utils
       '@tuanmjnh/tm-hub-client':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: git+https://github.com/tuanmjnh/tm-platform.git#f377891&path:/packages/tm-hub-client
+        version: https://codeload.github.com/tuanmjnh/tm-platform/tar.gz/f377891c374e04c55a5fe3261deb2a589d1abdc7#path:/packages/tm-hub-client
       '@vueuse/core':
         specifier: ^15.0.0
         version: 15.0.0(vue@3.5.44(typescript@6.0.3))
@@ -304,8 +304,8 @@ importers:
         specifier: workspace:*
         version: link:../core-base
       '@tuanmjnh/tm-ui':
-        specifier: ^0.2.0
-        version: 0.2.0(@he-tree/vue@2.10.5(vue@3.5.44(typescript@6.0.3)))(@nuxt/ui@4.12.2(0fdb72e56d9e777ce4b4209efd447dc3))(@tuanmjnh/tm-core@0.1.2)(@vueuse/core@15.0.0(vue@3.5.44(typescript@6.0.3)))(sortablejs@1.15.7)(vue@3.5.44(typescript@6.0.3))
+        specifier: git+https://github.com/tuanmjnh/tm-platform.git#f377891&path:/packages/tm-ui
+        version: https://codeload.github.com/tuanmjnh/tm-platform/tar.gz/f377891c374e04c55a5fe3261deb2a589d1abdc7#path:/packages/tm-ui(@he-tree/vue@2.10.5(vue@3.5.44(typescript@6.0.3)))(@nuxt/ui@4.12.2(0fdb72e56d9e777ce4b4209efd447dc3))(@tuanmjnh/tm-core@0.1.2)(@vueuse/core@15.0.0(vue@3.5.44(typescript@6.0.3)))(sortablejs@1.15.7)(vue@3.5.44(typescript@6.0.3))
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -3344,11 +3344,13 @@ packages:
   '@tuanmjnh/tm-core@0.1.2':
     resolution: {integrity: sha512-8ZgdJy4ofun7svDxsjcxUFWGJZxT3O+WWWiDu0FS2t+UfvOZVFzC2V9/zHUOO/PzzYKLZNegg5bQNpALBFF61w==}
 
-  '@tuanmjnh/tm-hub-client@1.2.1':
-    resolution: {integrity: sha512-9xSjxUqM1qcnL65y3pP8PBNpAVFf5n8kOhqQ9POCNjKRxV4wMuknVEO5A/IsVVI8H8rQHpk1lXzHdC7XznRr+w==}
+  '@tuanmjnh/tm-hub-client@https://codeload.github.com/tuanmjnh/tm-platform/tar.gz/f377891c374e04c55a5fe3261deb2a589d1abdc7#path:/packages/tm-hub-client':
+    resolution: {gitHosted: true, integrity: sha512-qwtOGb3qx2rRiEml9+R17yXmWKyV/3PoLnMW6k8F1FoVkKHBa4RzcL2ohlk2dFNME4/cmeXRd+YWSWw8Dn9Kug==, path: /packages/tm-hub-client, tarball: https://codeload.github.com/tuanmjnh/tm-platform/tar.gz/f377891c374e04c55a5fe3261deb2a589d1abdc7}
+    version: 1.2.2
 
-  '@tuanmjnh/tm-ui@0.2.0':
-    resolution: {integrity: sha512-gEo4iLlGrcGdARFBiLhlJotnMNaxGFrIpA68C1nnmDoLkrA7gKCjvNIxun1TkWMm9oBY405Aa03GVR4wntk/sw==}
+  '@tuanmjnh/tm-ui@https://codeload.github.com/tuanmjnh/tm-platform/tar.gz/f377891c374e04c55a5fe3261deb2a589d1abdc7#path:/packages/tm-ui':
+    resolution: {gitHosted: true, integrity: sha512-qwtOGb3qx2rRiEml9+R17yXmWKyV/3PoLnMW6k8F1FoVkKHBa4RzcL2ohlk2dFNME4/cmeXRd+YWSWw8Dn9Kug==, path: /packages/tm-ui, tarball: https://codeload.github.com/tuanmjnh/tm-platform/tar.gz/f377891c374e04c55a5fe3261deb2a589d1abdc7}
+    version: 0.2.1
     peerDependencies:
       '@he-tree/vue': ^2.10.1
       '@nuxt/ui': ^4.0.0
@@ -11843,9 +11845,9 @@ snapshots:
 
   '@tuanmjnh/tm-core@0.1.2': {}
 
-  '@tuanmjnh/tm-hub-client@1.2.1': {}
+  '@tuanmjnh/tm-hub-client@https://codeload.github.com/tuanmjnh/tm-platform/tar.gz/f377891c374e04c55a5fe3261deb2a589d1abdc7#path:/packages/tm-hub-client': {}
 
-  '@tuanmjnh/tm-ui@0.2.0(@he-tree/vue@2.10.5(vue@3.5.44(typescript@6.0.3)))(@nuxt/ui@4.12.2(0fdb72e56d9e777ce4b4209efd447dc3))(@tuanmjnh/tm-core@0.1.2)(@vueuse/core@15.0.0(vue@3.5.44(typescript@6.0.3)))(sortablejs@1.15.7)(vue@3.5.44(typescript@6.0.3))':
+  '@tuanmjnh/tm-ui@https://codeload.github.com/tuanmjnh/tm-platform/tar.gz/f377891c374e04c55a5fe3261deb2a589d1abdc7#path:/packages/tm-ui(@he-tree/vue@2.10.5(vue@3.5.44(typescript@6.0.3)))(@nuxt/ui@4.12.2(0fdb72e56d9e777ce4b4209efd447dc3))(@tuanmjnh/tm-core@0.1.2)(@vueuse/core@15.0.0(vue@3.5.44(typescript@6.0.3)))(sortablejs@1.15.7)(vue@3.5.44(typescript@6.0.3))':
     dependencies:
       '@he-tree/vue': 2.10.5(vue@3.5.44(typescript@6.0.3))
       '@tuanmjnh/tm-core': 0.1.2

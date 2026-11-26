@@ -24,7 +24,7 @@
     "@tm/flow-config": "workspace:*",
     "@tm/flow-contracts": "workspace:*",
     "@tm/flow-utils": "workspace:*",
-    "@tuanmjnh/tm-hub-client": "^1.2.1",
+    "@tuanmjnh/tm-hub-client": "git+https://github.com/tuanmjnh/tm-platform.git#f377891&path:/packages/tm-hub-client",
     "@vueuse/core": "^15.0.0",
     "@vueuse/nuxt": "^15.0.0",
     "date-fns": "^4.4.0",

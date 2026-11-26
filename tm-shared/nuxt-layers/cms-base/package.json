@@ -9,7 +9,7 @@
     "@tm/nuxt-layer-core": "workspace:*",
     "@tm/nuxt-layer-api-base": "workspace:*",
     "@tm/nuxt-layer-config-base": "workspace:*",
-    "@tuanmjnh/tm-ui": "^0.2.0",
+    "@tuanmjnh/tm-ui": "git+https://github.com/tuanmjnh/tm-platform.git#f377891&path:/packages/tm-ui",
     "zod": "^4.6.7"
   }
 }
