@@ -381,6 +381,12 @@ legacy `suppliers` collection (stored `null`), 3 quotations whose customer is no
 `null`), legacy fields with no destination (`purchase_orders.createdBy`, `quotations.history`,
 quotation line `importPrice`/`supplierId`).
 
+Those six orders can now be closed with a reviewed map: `pnpm backfill:po-suppliers --site <id> --map <file>
+[--apply]` (2026-11-26, see `05` PUR-01). It refuses an unknown or deleted supplier, keeps an order that
+already has one unless `--overwrite`, skips an order a colleague changed after planning, and is a no-op
+on a rerun. The `sen-tuan` map is still blank because none of the three migrated suppliers carries a real
+name yet.
+
 `check:migration` now counts these domains, so `✅ parity` covers them; a gap prints under
 `still to import:`.
 

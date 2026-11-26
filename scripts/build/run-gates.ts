@@ -39,6 +39,9 @@ const DOMAIN_GATES = [
   'test:shipment-movements',
   'test:order-returns',
   'test:order-stock',
+  // A reviewed-map backfill over orders the import could not resolve: the plan
+  // must refuse a wrong entry and a rerun must not rewrite anything.
+  'test:po-supplier-backfill',
   'test:serial-numbers',
   'test:serial-sync',
   'test:serial-import',
