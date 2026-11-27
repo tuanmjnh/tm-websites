@@ -13,12 +13,39 @@ const PAGE_SIZE = 12
 
 const { t, locale } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const config = useRuntimeConfig()
 const requestUrl = useRequestURL()
 
 const slug = computed(() => (typeof route.params.slug === 'string' ? route.params.slug.trim() : ''))
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
-const canonical = computed(() => buildCanonicalUrl(baseUrl, `/danh-muc/${encodeURIComponent(slug.value)}`))
+
+/** `offset` renders numbered pages, `cursor` keeps the load-more button. */
+const paginationType = await usePublicPaginationType()
+const paged = computed(() => paginationType.value === 'offset')
+const page = computed(() => {
+  if (!paged.value) return 1
+  const raw = route.query.page
+  const value = Array.isArray(raw) ? raw[0] : raw
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.trunc(parsed) : 1
+})
+const total = ref(0)
+
+const canonical = computed(() => {
+  const base = buildCanonicalUrl(baseUrl, `/danh-muc/${encodeURIComponent(slug.value)}`)
+  return paged.value && page.value > 1 ? `${base}?page=${page.value}` : base
+})
+
+const pageModel = computed({
+  get: () => page.value,
+  set: (value: number) => {
+    const query = { ...route.query }
+    if (value > 1) query.page = String(value)
+    else delete query.page
+    router.push({ query })
+  },
+})
 
 const category = ref<PublicContentCategory | null>(null)
 const items = ref<PublicContentListItem[]>([])
@@ -58,21 +85,23 @@ async function load(reset = true) {
     const response = await $fetch<{
       success: boolean
       data: PublicContentListItem[]
-      meta: { nextCursor: string | null, hasMore: boolean }
+      meta: { nextCursor: string | null, hasMore: boolean, page?: number, total?: number }
     }>('/api/public/content', {
       query: {
         category: category.value.key,
         locale: locale.value,
         limit: PAGE_SIZE,
-        cursor: reset ? undefined : cursor.value ?? undefined,
+        page: paged.value ? page.value : undefined,
+        cursor: paged.value ? undefined : (reset ? undefined : cursor.value ?? undefined),
       },
     })
 
-    items.value = reset
+    items.value = reset || paged.value
       ? response.data
       : [...items.value, ...response.data.filter(item => !items.value.some(existing => existing.key === item.key))]
     cursor.value = response.meta.nextCursor
     hasMore.value = response.meta.hasMore
+    total.value = response.meta.total ?? items.value.length
   } catch {
     if (reset) items.value = []
     loadError.value = true
@@ -91,9 +120,13 @@ watch(locale, async () => {
   items.value = []
   cursor.value = null
   hasMore.value = false
+  total.value = 0
   await loadCategory()
   await load()
 })
+
+// A pager click only changes the slice, so the category row is not re-read.
+watch([paged, page], () => load())
 
 /** The editor's own intro wins over the generated subtitle in both places below. */
 const categoryDescription = computed(
@@ -105,7 +138,9 @@ const categoryDescription = computed(
  * but it is thin content: it stays 200 and leaves the index until a published post
  * carries it, the same rule the tag landings follow.
  */
-const robots = usePageRobots({ empty: () => !items.value.length })
+// A paged URL is its own canonical, so `page` is the one query key that stays
+// indexable; every other parameter drops the page out of the index.
+const robots = usePageRobots({ keepQuery: paged.value ? ['page'] : [], empty: () => !items.value.length })
 
 useSeoMeta({
   title: () => category.value?.name || '',
@@ -171,9 +206,22 @@ useHead({
       :items="items"
       :loading="loading"
       :error="loadError"
-      :has-more="hasMore"
+      :has-more="!paged && hasMore"
       :empty-text="t('categoryContent.empty', { name: category?.name })"
       @load-more="load(false)"
     />
+
+    <div v-if="paged && total > PAGE_SIZE" class="mt-8 flex justify-center">
+      <UPagination
+        v-model:page="pageModel"
+        :aria-label="t('a11y.pagination')"
+        class="w-full"
+        :ui="{ list: 'flex-wrap justify-center' }"
+        :total="total"
+        :items-per-page="PAGE_SIZE"
+        :sibling-count="1"
+        show-edges
+      />
+    </div>
   </div>
 </template>

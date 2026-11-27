@@ -36,7 +36,7 @@ const q = computed(() => readQuery('q'))
  * The site owner chooses the list affordance in Settings: `offset` renders
  * numbered pages (a real `?page=` URL), `cursor` keeps the load-more button.
  */
-const { paginationType } = usePublicSite()
+const paginationType = await usePublicPaginationType()
 const paged = computed(() => paginationType.value === 'offset')
 const page = computed(() => {
   if (!paged.value) return 1

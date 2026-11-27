@@ -21,11 +21,15 @@ export interface PublicSiteLink {
  * the storefront with an empty header: `useSiteConfig()` still supplies the
  * customer's company name and the built-in navigation is used until menus exist.
  */
-export const usePublicSite = () => {
-  const { t, locale } = useI18n()
-  const { companyName, siteConfig, socialLinks: configuredSocialLinks } = useSiteConfig()
+/**
+ * The one public-site read. Nuxt shares an async-data entry by key, so every
+ * component that asks for it (app shell, layout, page) joins the same request
+ * instead of issuing another one.
+ */
+export const usePublicSiteData = () => {
+  const { locale } = useI18n()
 
-  const { data } = useAsyncData<PublicSite | null>(
+  return useAsyncData<PublicSite | null>(
     'public-site',
     async () => {
       try {
@@ -39,6 +43,27 @@ export const usePublicSite = () => {
     },
     { default: () => null, watch: [locale] },
   )
+}
+
+/**
+ * The listing affordance the site owner chose (`offset` = numbered pages,
+ * `cursor` = load more).
+ *
+ * Awaiting the shared read before rendering matters: `usePublicSite` falls back
+ * to `cursor` until the request resolves, so a server render would otherwise
+ * paint the wrong mode — and the wrong canonical — on a `?page=` URL, then flip
+ * after hydration.
+ */
+export const usePublicPaginationType = async () => {
+  const { data } = await usePublicSiteData()
+  return computed(() => data.value?.site?.paginationType ?? 'cursor')
+}
+
+export const usePublicSite = () => {
+  const { t, locale } = useI18n()
+  const { companyName, siteConfig, socialLinks: configuredSocialLinks } = useSiteConfig()
+
+  const { data } = usePublicSiteData()
 
   const publicSite = computed(() => data.value ?? null)
   const company = computed(() => publicSite.value?.company)

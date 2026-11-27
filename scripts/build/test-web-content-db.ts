@@ -361,6 +361,39 @@ async function main() {
     await check('an unknown category slug resolves to nothing', async () => {
       assert.equal(await findCategoryBySlug('khong-ton-tai'), null)
     })
+
+    console.log('\n7. Paged listing over a facet')
+    await check('a tag page slices and counts the same public filter without overlap', async () => {
+      await PublicContentModel.collection.insertMany(Array.from({ length: 5 }, (_, index) => record({
+        key: `pages/paging-${index}`,
+        type: 'post',
+        tags: ['paging'],
+        categories: ['paging-cat'],
+        locales: [localeEntry('vi', `paging-${index}`, `Paging ${index}`)],
+      })))
+
+      const filter = buildPublishedListFilter({ tag: 'paging', localeIn: ['vi'], now: NOW })
+      const [total, first, second, beyond] = await Promise.all([
+        PublicContentModel.countDocuments(filter),
+        PublicContentModel.find(filter, PUBLIC_CONTENT_LIST_PROJECTION).sort({ _id: -1 }).skip(0).limit(2).lean(),
+        PublicContentModel.find(filter, PUBLIC_CONTENT_LIST_PROJECTION).sort({ _id: -1 }).skip(2).limit(2).lean(),
+        PublicContentModel.find(filter, PUBLIC_CONTENT_LIST_PROJECTION).sort({ _id: -1 }).skip(4).limit(2).lean(),
+      ])
+
+      assert.equal(total, 5)
+      assert.deepEqual([first.length, second.length, beyond.length], [2, 2, 1])
+      const keys = [...first, ...second, ...beyond].map(doc => String((doc as { key: string }).key))
+      assert.equal(new Set(keys).size, 5, 'pages must not repeat a record')
+    })
+
+    await check('a category facet pages the same way and keeps the public policy', async () => {
+      const filter = buildPublishedListFilter({ category: 'paging-cat', localeIn: ['vi'], now: NOW })
+      assert.equal(await PublicContentModel.countDocuments(filter), 5)
+      const page = await PublicContentModel.find(filter, PUBLIC_CONTENT_LIST_PROJECTION)
+        .sort({ _id: -1 }).skip(2).limit(2).lean()
+      assert.equal(page.length, 2)
+      assert.ok(page.every(doc => (doc as { status?: string }).status === 'published'))
+    })
   } finally {
     await dropTestMongooseDatabase(connection).catch(() => undefined)
     await connection.disconnect().catch(() => undefined)
