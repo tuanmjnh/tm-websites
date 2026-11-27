@@ -2136,7 +2136,10 @@
         "allStates": "Mọi trạng thái",
         "summary": "Tất cả {all} · Đã ghi {posted} · {amount}",
         "empty": "Chưa có thanh toán nào",
-        "referencePlaceholder": "Dán id đơn hàng hoặc đơn mua",
+        "documentPlaceholder": "Tìm chứng từ theo mã hoặc tên khách/nhà cung cấp",
+    "noDocuments": "Không có chứng từ nào còn số dư",
+    "outstandingShort": "còn",
+    "documentSummary": "Tổng {total} · đã ghi {paid} · còn {outstanding}",
         "directionHint": "Đơn hàng chỉ nhận khoản thu; đơn mua chỉ nhận khoản chi.",
         "fields": {
           "direction": "Chiều tiền",

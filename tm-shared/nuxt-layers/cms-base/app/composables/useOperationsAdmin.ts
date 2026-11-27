@@ -242,6 +242,19 @@ export interface AdminPayable {
   updatedAt: string | null
 }
 
+export interface AdminOpenDocument {
+  id: string
+  code: string
+  model: string
+  status: string
+  totalAmount: number
+  paidAmount: number
+  outstanding: number
+  partyId: string | null
+  partyName: string
+  createdAt: string | null
+}
+
 export interface FinanceSummary {
   range: { from: string, to: string }
   timeZone: string
@@ -808,6 +821,17 @@ export const useOperationsAdmin = () => {
   const voidPayment = async (id: string, body: Record<string, unknown>, reason?: string) =>
     one<AdminPayment>(await write(`/api/v1/admin/finance/payments/${id}/void`, 'POST', body, reason))
 
+  /** Documents a payment can still be applied to, for the payment dialog's picker. */
+  const listOpenDocuments = async (params: { model?: string, q?: string, limit?: number } = {}) => {
+    const bounded = Math.min(Math.max(Math.trunc(params.limit ?? 20) || 20, 1), 50)
+    const payload = await plainFetch(`/api/v1/admin/finance/open-documents${pageQuery({
+      model: params.model,
+      q: params.q?.trim() || undefined,
+      limit: bounded,
+    })}`) as { data: AdminOpenDocument[] }
+    return payload.data
+  }
+
   const listPayables = async (params: { status?: string, cursor?: string | null, limit?: number } = {}) => {
     const payload = await plainFetch(`/api/v1/admin/finance/payables${pageQuery({
       status: params.status,
@@ -1230,6 +1254,7 @@ export const useOperationsAdmin = () => {
     listPayments,
     createPayment,
     voidPayment,
+    listOpenDocuments,
     listPayables,
     voidPayable,
     listSuppliers,

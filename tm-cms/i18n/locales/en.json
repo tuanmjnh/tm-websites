@@ -2134,7 +2134,10 @@
         "allStates": "All states",
         "summary": "All {all} · Posted {posted} · {amount}",
         "empty": "No payments yet",
-        "referencePlaceholder": "Paste an order or purchase-order id",
+        "documentPlaceholder": "Search a document by code",
+    "noDocuments": "No document with an outstanding balance",
+    "outstandingShort": "left",
+    "documentSummary": "Total {total} · recorded {paid} · outstanding {outstanding}",
         "directionHint": "Orders take money in; purchase orders take money out.",
         "fields": {
           "direction": "Direction",

@@ -8,6 +8,7 @@ import {
   PaymentServiceError,
   getPayment,
   listPayments,
+  listOpenDocuments,
   recordPayment,
   voidPayment,
   reconcilePayment,
@@ -59,6 +60,7 @@ async function integration() {
     const { Payment, Order, PurchaseOrder, Customer, CustomerSegment, Supplier, Audit } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR } }
     const targets = { order: Order, purchaseOrder: PurchaseOrder }
+    const picker = { order: Order, purchaseOrder: PurchaseOrder, customer: Customer as never, supplier: Supplier as never }
 
     const customer = await createCustomer(Customer, CustomerSegment, SITE, {
       subjectId: 'hub-subject-finance-test',
@@ -195,6 +197,28 @@ async function integration() {
       assert.equal(posted.data.length, 1)
     })
 
+    await check('the payment picker offers a document with its party and outstanding balance', async () => {
+      const open = await listOpenDocuments(picker, SITE, { model: 'Order' })
+      const row = open.data.find(entry => entry.id === order.id)
+      assert.ok(row, 'a partially paid order is offered')
+      assert.equal(row!.code, order.code)
+      assert.equal(row!.totalAmount, 200000)
+      assert.equal(row!.paidAmount, 150000)
+      assert.equal(row!.outstanding, 50000)
+      assert.equal(row!.partyName, 'Nguyễn Văn A')
+    })
+
+    await check('the picker searches by code and refuses an unknown document kind', async () => {
+      const byCode = await listOpenDocuments(picker, SITE, { model: 'Order', q: order.code })
+      assert.equal(byCode.data.length, 1)
+      assert.equal(byCode.data[0]!.id, order.id)
+      const missing = await listOpenDocuments(picker, SITE, { model: 'Order', q: 'ZZ-ZZ-ZZ' })
+      assert.equal(missing.data.length, 0)
+      await assert.rejects(
+        () => listOpenDocuments(picker, SITE, { model: 'Invoice' }),
+        isPaymentError(422, 'PAYMENT_REFERENCE_MODEL_INVALID'),
+      )
+    })
     const supplier = await createSupplier(Supplier, SITE, { title: 'Nhà cung cấp A' }, meta)
     const purchaseOrder = await createPurchaseOrder(PurchaseOrder, Supplier, SITE, {
       supplierId: supplier.id,
@@ -218,6 +242,12 @@ async function integration() {
       assert.equal(payment.partyId, storedSupplier.id)
     })
 
+    await check('a settled document leaves the picker', async () => {
+      const open = await listOpenDocuments(picker, SITE, { model: 'PurchaseOrder' })
+      assert.ok(!open.data.some(entry => entry.id === purchaseOrder.id), 'a fully paid document is not offered')
+      const otherSite = await listOpenDocuments(picker, OTHER_SITE, { model: 'PurchaseOrder' })
+      assert.equal(otherSite.data.length, 0, 'the picker is site-scoped')
+    })
     await check('a payment can be allocated across two orders', async () => {
       const orderA = await createOrder(Order, Customer, SITE, {
         customerId: customer.id,

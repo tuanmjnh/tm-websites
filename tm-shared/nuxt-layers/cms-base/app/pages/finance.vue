@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminPayable, AdminPayment } from '../composables/useOperationsAdmin'
+import type { AdminOpenDocument, AdminPayable, AdminPayment } from '../composables/useOperationsAdmin'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -98,17 +98,70 @@ const paymentForm = reactive({
   note: '',
 })
 
+/* The document picker: the open documents of the chosen model, by code. */
+const documentRows = ref<AdminOpenDocument[]>([])
+const documentOptions = computed(() => documentRows.value.map(row => ({
+  label: [row.code, row.partyName, `${t('admin.finance.payments.outstandingShort')} ${money(row.outstanding)}`]
+    .filter(Boolean)
+    .join(' · '),
+  value: row.id,
+})))
+const pickedDocumentId = ref<string | undefined>()
+const chosenDocument = ref<AdminOpenDocument | null>(null)
+const documentLoading = ref(false)
+const documentError = ref<string | null>(null)
+
+async function loadDocuments(term = '') {
+  documentLoading.value = true
+  documentError.value = null
+  try {
+    documentRows.value = await ops.listOpenDocuments({ model: paymentForm.referenceModel, q: term })
+  } catch (e) {
+    documentRows.value = []
+    documentError.value = describeError(e)
+  } finally {
+    documentLoading.value = false
+  }
+}
+
+watch(pickedDocumentId, (id) => {
+  const row = documentRows.value.find(entry => entry.id === id) ?? null
+  chosenDocument.value = row
+  paymentForm.referenceId = row?.id ?? ''
+  paymentForm.amount = row?.outstanding ?? 0
+})
+
+// An order only takes money in and a purchase order only takes money out; the
+// server refuses the other pair, so the form never offers it.
+watch(() => paymentForm.referenceModel, (model) => {
+  paymentForm.direction = model === 'Order' ? 'receivable' : 'payable'
+  pickedDocumentId.value = undefined
+  chosenDocument.value = null
+  paymentForm.referenceId = ''
+  paymentForm.amount = 0
+  if (paymentFormOpen.value) void loadDocuments()
+})
+
 function openPaymentCreate() {
   Object.assign(paymentForm, { direction: 'receivable', referenceModel: 'Order', referenceId: '', amount: 0, method: 'cash', note: '' })
+  pickedDocumentId.value = undefined
+  chosenDocument.value = null
+  documentRows.value = []
+  documentError.value = null
   auditReason.value = ''
   paymentFormError.value = null
   paymentFormOpen.value = true
+  void loadDocuments()
 }
 
 async function submitPayment() {
   if (paymentSaving.value) return
   if (!paymentForm.referenceId.trim() || Number(paymentForm.amount) <= 0) {
     paymentFormError.value = t('admin.finance.errors.paymentIncomplete')
+    return
+  }
+  if (chosenDocument.value && Number(paymentForm.amount) > chosenDocument.value.outstanding) {
+    paymentFormError.value = t('admin.finance.errors.exceeds')
     return
   }
   paymentSaving.value = true
@@ -392,7 +445,21 @@ resetOnClose(paymentFormOpen, voidOpen)
               />
             </UFormField>
             <UFormField :label="t('admin.finance.payments.fields.referenceId')" class="sm:col-span-2">
-              <UInput v-model="paymentForm.referenceId" class="w-full" :placeholder="t('admin.finance.payments.referencePlaceholder')" />
+              <USelectMenu
+                v-model="pickedDocumentId"
+                :items="documentOptions"
+                value-key="value"
+                searchable
+                :loading="documentLoading"
+                class="w-full"
+                :placeholder="t('admin.finance.payments.documentPlaceholder')"
+                @update:search-term="loadDocuments"
+              />
+              <p v-if="documentError" class="mt-1 text-xs text-error">{{ documentError }}</p>
+              <p v-else-if="!documentLoading && !documentOptions.length" class="mt-1 text-xs text-muted">{{ t('admin.finance.payments.noDocuments') }}</p>
+              <p v-else-if="chosenDocument" class="mt-1 text-xs text-muted">
+                {{ t('admin.finance.payments.documentSummary', { total: money(chosenDocument.totalAmount), paid: money(chosenDocument.paidAmount), outstanding: money(chosenDocument.outstanding) }) }}
+              </p>
             </UFormField>
             <UFormField :label="t('admin.finance.payments.fields.amount')">
               <UInput v-model.number="paymentForm.amount" type="number" min="0" class="w-full" />

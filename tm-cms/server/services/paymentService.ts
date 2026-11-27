@@ -74,9 +74,17 @@ export interface PaymentListResult {
   counts: { all: number; posted: number; voided: number; postedAmount: number }
 }
 
+/** The only two fields the finance document picker needs from a customer or supplier. */
+export interface PartyLookupRecord {
+  fullName?: string
+  title?: string
+}
+
 export interface PaymentTargets {
   order?: Model<OrderDocument> | null
   purchaseOrder?: Model<PurchaseOrderDocument> | null
+  customer?: Model<PartyLookupRecord> | null
+  supplier?: Model<PartyLookupRecord> | null
 }
 
 /** Both documents the money can be applied to carry these four fields. */
@@ -96,6 +104,9 @@ interface PayableRecord {
 const RESOURCE = 'payment'
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
+const SEARCH_MAX = 80
+/** The picker is a search box, not a page: a longer list would only hide the row. */
+const OPEN_DOCUMENT_MAX = 50
 
 function iso(value: Date | null | undefined): string | null {
   return value ? new Date(value).toISOString() : null
@@ -110,6 +121,14 @@ function objectId(value: unknown, code: string): Types.ObjectId {
 
 function round(value: number): number {
   return Math.round(value * 100) / 100
+}
+
+const REGEXP_SPECIALS = '.+*?^${}()|[]\\'
+
+function escapeRegExp(value: string): string {
+  return [...value]
+    .map(char => (REGEXP_SPECIALS.includes(char) ? `\\${char}` : char))
+    .join('')
 }
 
 function generatedCode(): string {
@@ -264,6 +283,109 @@ function targetModel(targets: PaymentTargets, referenceModel: PaymentReference):
     throw new PaymentServiceError(503, 'PAYMENT_REFERENCE_UNAVAILABLE', 'The module that owns this document is not available')
   }
   return model as unknown as Model<PayableRecord>
+}
+
+/**
+ * The documents a new payment can still be applied to.
+ *
+ * Before this existed the payment dialog asked the operator to paste a Mongo
+ * id, so a payment could only be recorded by someone holding a document id from
+ * somewhere else — and a mistyped id was refused as `not found` rather than
+ * caught before the write. The list is scoped to the site, skips deleted rows,
+ * skips a document that is already settled, and carries the party name and the
+ * outstanding balance so the dialog can prefill the amount.
+ */
+export interface OpenDocumentAdmin {
+  id: string
+  code: string
+  model: PaymentReference
+  status: string
+  totalAmount: number
+  paidAmount: number
+  outstanding: number
+  partyId: string | null
+  partyName: string
+  createdAt: string | null
+}
+
+export interface OpenDocumentListParams {
+  model?: string | null
+  q?: string | null
+  limit?: number
+}
+
+export interface OpenDocumentListResult {
+  data: OpenDocumentAdmin[]
+  hasMore: boolean
+}
+
+async function partyNames(
+  targets: PaymentTargets,
+  model: PaymentReference,
+  siteId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  const names = new Map<string, string>()
+  if (!ids.length) return names
+  const lookup = model === 'Order' ? targets.customer : targets.supplier
+  if (!lookup) return names
+  const rows = await (lookup as unknown as Model<PartyLookupRecord>)
+    .find({ siteId, _id: { $in: ids.map(id => new Types.ObjectId(id)) } })
+    .select(model === 'Order' ? 'fullName' : 'title')
+    .lean<(PartyLookupRecord & { _id: Types.ObjectId })[]>()
+  for (const row of rows) {
+    const name = (model === 'Order' ? row.fullName : row.title) ?? ''
+    if (name) names.set(String(row._id), name)
+  }
+  return names
+}
+
+export async function listOpenDocuments(
+  targets: PaymentTargets,
+  siteId: string,
+  params: OpenDocumentListParams = {},
+): Promise<OpenDocumentListResult> {
+  const model = readEnum(params.model ?? 'Order', PAYMENT_REFERENCES, 'PAYMENT_REFERENCE_MODEL_INVALID', 'Reference model')
+  const limit = Math.min(Math.max(Math.trunc(params.limit ?? DEFAULT_LIMIT), 1), OPEN_DOCUMENT_MAX)
+
+  const filter: Record<string, unknown> = {
+    siteId,
+    isDeleted: { $ne: true },
+    $expr: { $gt: [{ $subtract: ['$totalAmount', '$paidAmount'] }, 0] },
+  }
+  const search = (params.q ?? '').trim().slice(0, SEARCH_MAX)
+  if (search) filter.code = new RegExp(escapeRegExp(search), 'i')
+
+  const records = await (targetModel(targets, model) as unknown as Model<PayableRecord & { createdAt?: Date }>)
+    .find(filter)
+    .sort({ _id: 1 })
+    .limit(limit + 1)
+    .lean<(PayableRecord & { createdAt?: Date })[]>()
+  const hasMore = records.length > limit
+  const page = hasMore ? records.slice(0, limit) : records
+
+  const partyIdOf = (record: PayableRecord) => (model === 'Order' ? record.customerId : record.supplierId)
+  const partyIds = page.map(record => partyIdOf(record)).filter(Boolean).map(id => String(id))
+  const names = await partyNames(targets, model, siteId, [...new Set(partyIds)])
+
+  return {
+    data: page.map((record) => {
+      const partyId = partyIdOf(record)
+      return {
+        id: String(record._id),
+        code: record.code,
+        model,
+        status: record.status,
+        totalAmount: round(record.totalAmount ?? 0),
+        paidAmount: round(record.paidAmount ?? 0),
+        outstanding: round((record.totalAmount ?? 0) - (record.paidAmount ?? 0)),
+        partyId: partyId ? String(partyId) : null,
+        partyName: partyId ? names.get(String(partyId)) ?? '' : '',
+        createdAt: iso(record.createdAt),
+      }
+    }),
+    hasMore,
+  }
 }
 
 /**
