@@ -10,6 +10,7 @@ import {
   listCatalogTags,
   bulkUpdateCatalogItems,
   bulkUpdateCatalogItemsByFilter,
+  recordReceivedImportPrice,
   runCatalogItemEvent,
   updateCatalogCategory,
   updateCatalogItem,
@@ -307,6 +308,111 @@ try {
     const stored = await CatalogItem.findById(itemId).lean() as { searchString: string, sales: number }
     assert.match(stored.searchString, /cao cap/)
     assert.equal(stored.sales, 0)
+  })
+
+  await check('the import price stays 0 while the site disallows manual entry', async () => {
+    const before = await getCatalogItem(CatalogItem, SITE, itemId)
+    assert.equal(before.lastImportPrice, 0)
+
+    const locked = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, itemId, {
+      revision: before.revision,
+      key: 'nhan-bac',
+      title: { vi: 'Nhẫn bạc cao cấp' },
+      slug: { vi: 'nhan-bac' },
+      basePrice: 600000,
+      categories: ['trang-suc'],
+      tags: ['bạc', 'quà tặng'],
+      lastImportPrice: 250000,
+    })
+    assert.equal(locked.lastImportPrice, 0, 'a form value must not win over a receipt')
+  })
+
+  await check('a site that allows manual entry accepts the editor price', async () => {
+    const current = await getCatalogItem(CatalogItem, SITE, itemId)
+    const updated = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, itemId, {
+      revision: current.revision,
+      key: 'nhan-bac',
+      title: { vi: 'Nhẫn bạc cao cấp' },
+      slug: { vi: 'nhan-bac' },
+      basePrice: 600000,
+      categories: ['trang-suc'],
+      tags: ['bạc', 'quà tặng'],
+      lastImportPrice: 250000,
+    }, { allowManualImportPrice: true })
+    assert.equal(updated.lastImportPrice, 250000)
+  })
+
+  let importPriceItemId = ''
+  await check('a variant carries its own import price', async () => {
+    const created = await createCatalogItem(CatalogItem, CatalogCategory, SITE, {
+      key: 'day-chuyen',
+      type: 'variable',
+      title: { vi: 'Dây chuyền' },
+      slug: { vi: 'day-chuyen' },
+      variants: [{ sku: 'DC-01', basePrice: 300000, lastImportPrice: 90000 }],
+    }, { allowManualImportPrice: true })
+    importPriceItemId = created.id
+    assert.equal(created.lastImportPrice, 0)
+    assert.equal(created.variants[0]?.lastImportPrice, 90000)
+
+    const updated = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, created.id, {
+      revision: created.revision,
+      key: 'day-chuyen',
+      type: 'variable',
+      title: { vi: 'Dây chuyền' },
+      slug: { vi: 'day-chuyen' },
+      lastImportPrice: 95000,
+      variants: [{ sku: 'DC-01', basePrice: 300000, lastImportPrice: 95000 }],
+    }, { allowManualImportPrice: true })
+    assert.equal(updated.lastImportPrice, 95000)
+    assert.equal(updated.variants[0]?.lastImportPrice, 95000)
+  })
+
+  await check('a receipt writes the paid price onto the item and its variant', async () => {
+    assert.equal(await recordReceivedImportPrice(CatalogItem, SITE, {
+      itemId: importPriceItemId,
+      sku: 'DC-01',
+      unitCost: 123000,
+    }), true)
+
+    const stored = await getCatalogItem(CatalogItem, SITE, importPriceItemId)
+    assert.equal(stored.lastImportPrice, 123000)
+    assert.equal(stored.variants[0]?.lastImportPrice, 123000)
+  })
+
+  await check('an allowed update that omits the cost keeps the stored one', async () => {
+    const current = await getCatalogItem(CatalogItem, SITE, importPriceItemId)
+    const updated = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, importPriceItemId, {
+      revision: current.revision,
+      key: 'day-chuyen',
+      type: 'variable',
+      title: { vi: 'Dây chuyền' },
+      slug: { vi: 'day-chuyen' },
+      variants: [{ sku: 'DC-01', basePrice: 300000 }],
+    }, { allowManualImportPrice: true })
+    assert.equal(updated.lastImportPrice, 123000)
+    assert.equal(updated.variants[0]?.lastImportPrice, 123000)
+  })
+
+  await check('a locked editor keeps the receipt price and unlinked lines are ignored', async () => {
+    const current = await getCatalogItem(CatalogItem, SITE, importPriceItemId)
+    const updated = await updateCatalogItem(CatalogItem, CatalogCategory, SITE, importPriceItemId, {
+      revision: current.revision,
+      key: 'day-chuyen',
+      type: 'variable',
+      title: { vi: 'Dây chuyền' },
+      slug: { vi: 'day-chuyen' },
+      lastImportPrice: 1,
+      variants: [{ sku: 'DC-01', basePrice: 300000, lastImportPrice: 1 }],
+    })
+    assert.equal(updated.lastImportPrice, 123000)
+    assert.equal(updated.variants[0]?.lastImportPrice, 123000)
+
+    assert.equal(await recordReceivedImportPrice(CatalogItem, SITE, {
+      itemId: 'khong-phai-object-id',
+      sku: '',
+      unitCost: 1,
+    }), false)
   })
 
   let barcodeItemId = ''

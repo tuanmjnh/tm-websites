@@ -74,6 +74,8 @@ const CatalogVariantSchema = z.object({
   name: LocalizedTextSchema.default({}),
   basePrice: z.number().nonnegative().default(0),
   salePrice: z.number().nonnegative().nullable().default(null),
+  /** Internal purchase cost, maintained by receipts (or the editor when allowed). */
+  lastImportPrice: z.number().nonnegative().default(0),
   stock: z.number().int().default(0),
   manageStock: z.boolean().default(true),
   isActive: z.boolean().default(true),
@@ -101,6 +103,7 @@ export const CatalogItemDraftSchema = z.object({
   gallery: z.array(z.string().trim().max(500)).max(20).default([]),
   basePrice: z.number().nonnegative().default(0),
   salePrice: z.number().nonnegative().nullable().default(null),
+  lastImportPrice: z.number().nonnegative().default(0),
   sku: z.string().trim().max(80).default(''),
   /** Scannable identifier; empty means none, and a value is unique per site. */
   barcode: z.string().trim().max(64).default(''),
@@ -343,6 +346,7 @@ export interface CatalogItemDocument {
   gallery: string[]
   basePrice: number
   salePrice: number | null
+  lastImportPrice: number
   sku: string
   barcode: string
   uom: string
@@ -356,6 +360,7 @@ export interface CatalogItemDocument {
     name: Record<string, string>
     basePrice: number
     salePrice: number | null
+    lastImportPrice: number
     stock: number
     manageStock: boolean
     isActive: boolean
@@ -419,6 +424,7 @@ const CatalogItemSchema = new Schema<CatalogItemDocument>(
     gallery: { type: [String], default: [] },
     basePrice: { type: Number, default: 0, required: true },
     salePrice: { type: Number, default: null },
+    lastImportPrice: { type: Number, default: 0, min: 0 },
     sku: { type: String, default: '' },
     barcode: { type: String, default: '' },
     uom: { type: String, default: '' },

@@ -11,6 +11,8 @@ import {
 } from '../models/purchaseOrder'
 import type { SerialNumberDocument } from '../models/serialNumber'
 import type { PayableDocument } from '../models/payable'
+import type { CatalogItemDocument } from '../models/catalog'
+import { recordReceivedImportPrice } from './catalogService'
 import { registerSerialNumbers, SerialNumberServiceError } from './serialNumberService'
 import { type ContentAuditMeta, recordContentAudit } from './contentAudit'
 import { recordInventoryTransaction } from './inventoryTransactionService'
@@ -506,7 +508,13 @@ export async function receivePurchaseOrder(
   siteId: string,
   id: string,
   input: unknown,
-  meta?: { audit?: ContentAuditMeta; serialNumberModel?: Model<SerialNumberDocument>; payableModel?: Model<PayableDocument> },
+  meta?: {
+    audit?: ContentAuditMeta
+    serialNumberModel?: Model<SerialNumberDocument>
+    payableModel?: Model<PayableDocument>
+    /** When present, the paid price is written back as the catalog cost. */
+    catalogItemModel?: Model<CatalogItemDocument>
+  },
 ): Promise<PurchaseOrderAdmin> {
   const body = (input ?? {}) as Record<string, unknown>
   const revision = Number(body.revision)
@@ -678,6 +686,21 @@ export async function receivePurchaseOrder(
     toStatus: updated.status,
     changedFields: ['items', 'status', 'reconcileNote'],
   })
+
+  // The receipt is the price actually paid, so it becomes the catalog's import
+  // price (legacy behaved the same, and this is independent of the site's
+  // manual-entry setting). Best-effort: stock and the order are already committed,
+  // so an unlinked or deleted item must not turn a successful receipt into an error.
+  if (meta?.catalogItemModel) {
+    for (const movement of movements) {
+      if (!movement.item.itemId) continue
+      await recordReceivedImportPrice(meta.catalogItemModel, siteId, {
+        itemId: movement.item.itemId,
+        sku: movement.item.sku,
+        unitCost: movement.item.unitCost ?? 0,
+      }).catch(() => false)
+    }
+  }
 
   // Auto-post a payable when the order is received (PUR-01).
   if (meta?.payableModel && (nextStatus === 'received' || nextStatus === 'partial')) {

@@ -74,6 +74,11 @@ export interface CatalogWriteMeta {
   audit?: ContentAuditMeta
   /** Present on writes that may move or reuse a category slug. */
   redirects?: Model<RedirectDocument>
+  /**
+   * `site.allowManualImportPrice`. When absent/false the editor may not write
+   * `lastImportPrice`; receipts stay its only writer.
+   */
+  allowManualImportPrice?: boolean
 }
 
 const STATUSES: CatalogItemStatus[] = ['draft', 'published', 'archived', 'deleted']
@@ -134,6 +139,7 @@ export function toAdminCatalogItem(record: CatalogItemRecord): AdminCatalogItem 
     gallery: record.gallery ?? [],
     basePrice: record.basePrice ?? 0,
     salePrice: record.salePrice ?? null,
+    lastImportPrice: record.lastImportPrice ?? 0,
     sku: record.sku ?? '',
     barcode: record.barcode ?? '',
     uom: record.uom ?? '',
@@ -142,7 +148,11 @@ export function toAdminCatalogItem(record: CatalogItemRecord): AdminCatalogItem 
     categories: (record.categories ?? []).map(String),
     tags: record.tags ?? [],
     attributes: record.attributes ?? [],
-    variants: record.variants ?? [],
+    // Variants were stored before the cost column existed, so fill it defensively.
+    variants: (record.variants ?? []).map(variant => ({
+      ...variant,
+      lastImportPrice: variant.lastImportPrice ?? 0,
+    })),
     seo: {
       title: record.seo?.title ?? {},
       description: record.seo?.description ?? {},
@@ -154,6 +164,35 @@ export function toAdminCatalogItem(record: CatalogItemRecord): AdminCatalogItem 
     createdAt: iso(record.createdAt),
     updatedAt: iso(record.updatedAt),
   }
+}
+
+/**
+ * Writes the price actually paid on a receipt onto the catalog record.
+ *
+ * This runs regardless of `site.allowManualImportPrice`: that setting only
+ * decides whether the editor may type the number. A variant is matched by SKU,
+ * because a purchase order line carries the SKU and catalog variants have no
+ * separate id. Returns false when the line is not linked to a live catalog row.
+ */
+export async function recordReceivedImportPrice(
+  model: Model<CatalogItemDocument>,
+  siteId: string,
+  input: { itemId: string | null, sku?: string, unitCost: number },
+): Promise<boolean> {
+  const itemId = String(input.itemId ?? '')
+  if (!Types.ObjectId.isValid(itemId)) return false
+  const price = Number(input.unitCost)
+  if (!Number.isFinite(price) || price < 0) return false
+
+  const sku = String(input.sku ?? '').trim()
+  const result = sku
+    ? await model.updateOne(
+        { _id: new Types.ObjectId(itemId), siteId },
+        { $set: { lastImportPrice: price, 'variants.$[line].lastImportPrice': price } },
+        { arrayFilters: [{ 'line.sku': sku }] },
+      )
+    : await model.updateOne({ _id: new Types.ObjectId(itemId), siteId }, { $set: { lastImportPrice: price } })
+  return result.matchedCount > 0
 }
 
 export function toAdminCatalogCategory(record: CatalogCategoryRecord, itemCount = 0): AdminCatalogCategory {
@@ -344,6 +383,7 @@ export async function createCatalogItem(
   }
 
   const categories = await resolveCategoryIds(categoryModel, siteId, draft.categories)
+  const allowManualPrice = meta?.allowManualImportPrice === true
 
   let created
   try {
@@ -351,6 +391,13 @@ export async function createCatalogItem(
       ...draft,
       siteId,
       categories,
+      // A manual value is only accepted when the site opts in; otherwise the
+      // record starts at 0 and the first receipt sets it.
+      lastImportPrice: allowManualPrice ? draft.lastImportPrice : 0,
+      variants: draft.variants.map(variant => ({
+        ...variant,
+        lastImportPrice: allowManualPrice ? variant.lastImportPrice : 0,
+      })),
       status: 'draft',
       isActive: false,
       isDeleted: false,
@@ -409,6 +456,29 @@ export async function updateCatalogItem(
   }
 
   const categories = await resolveCategoryIds(categoryModel, siteId, draft.categories)
+  const allowManualPrice = meta?.allowManualImportPrice === true
+  // With manual entry off, a stale editor form or a forged payload must not
+  // overwrite what a receipt recorded: keep the stored cost, keyed by variant SKU.
+  // With it on, a payload that omits the field also keeps the stored number, so
+  // an older client cannot wipe a receipt price by not knowing about it.
+  const storedVariantPrices = new Map(
+    (record.variants ?? []).map(variant => [variant.sku, variant.lastImportPrice ?? 0]),
+  )
+  const rawVariants = Array.isArray(body.variants) ? body.variants : []
+  const submittedItemPrice = typeof body.lastImportPrice === 'number'
+  const lastImportPrice = allowManualPrice && submittedItemPrice
+    ? draft.lastImportPrice
+    : (record.lastImportPrice ?? 0)
+  const variants = draft.variants.map((variant, index) => {
+    const rawVariant = rawVariants[index]
+    const submittedVariantPrice = Boolean(rawVariant && typeof rawVariant === 'object' && typeof (rawVariant as Record<string, unknown>).lastImportPrice === 'number')
+    return {
+      ...variant,
+      lastImportPrice: allowManualPrice && submittedVariantPrice
+        ? variant.lastImportPrice
+        : (storedVariantPrices.get(variant.sku) ?? 0),
+    }
+  })
 
   let updated: CatalogItemRecord | null
   try {
@@ -425,6 +495,7 @@ export async function updateCatalogItem(
           gallery: draft.gallery,
           basePrice: draft.basePrice,
           salePrice: draft.salePrice,
+          lastImportPrice,
           sku: draft.sku,
           barcode: draft.barcode,
           uom: draft.uom,
@@ -433,7 +504,7 @@ export async function updateCatalogItem(
           categories,
           tags: draft.tags,
           attributes: draft.attributes,
-          variants: draft.variants,
+          variants,
           seo: draft.seo,
           searchString: buildSearchString(draft),
         },
@@ -474,7 +545,7 @@ export async function updateCatalogItem(
     revision: updated.revision,
     fromStatus: record.status,
     toStatus: updated.status,
-    changedFields: diffFields(record, draft),
+    changedFields: diffFields(record, { ...draft, lastImportPrice, variants }),
   })
 
   return toAdminCatalogItem(updated)

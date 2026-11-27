@@ -39,7 +39,7 @@ const canWrite = computed(() => hasCapability('content.write'))
 // Site policy from settings.site; defaults keep the editor usable when the
 // settings read fails rather than silently locking every field.
 const { fetchSettings } = useSettingsAdmin()
-const sitePolicy = reactive({ allowSkuEditAfterSave: true, allowEditStock: true })
+const sitePolicy = reactive({ allowSkuEditAfterSave: true, allowEditStock: true, allowManualImportPrice: false })
 
 const loading = ref(false)
 const saving = ref(false)
@@ -344,6 +344,7 @@ onMounted(async () => {
       .then((settings) => {
         sitePolicy.allowSkuEditAfterSave = settings.site.allowSkuEditAfterSave ?? true
         sitePolicy.allowEditStock = settings.site.allowEditStock ?? true
+        sitePolicy.allowManualImportPrice = settings.site.allowManualImportPrice ?? false
       })
       .catch(() => undefined),
   ])
@@ -372,6 +373,7 @@ const form = reactive({
   gallery: '',
   basePrice: 0,
   salePrice: null as number | null,
+  lastImportPrice: 0,
   sku: '',
   barcode: '',
   uom: '',
@@ -390,6 +392,7 @@ const emptyVariant = (): AdminCatalogVariant => ({
   name: { vi: '' },
   basePrice: Number(form.basePrice) || 0,
   salePrice: null,
+  lastImportPrice: 0,
   stock: 0,
   manageStock: true,
   isActive: true,
@@ -449,6 +452,7 @@ function resetForm() {
     gallery: '',
     basePrice: 0,
     salePrice: null,
+    lastImportPrice: 0,
     sku: '',
     barcode: '',
     uom: '',
@@ -490,6 +494,7 @@ function openEdit(item: AdminCatalogItem) {
     gallery: item.gallery.join('\n'),
     basePrice: item.basePrice,
     salePrice: item.salePrice,
+    lastImportPrice: item.lastImportPrice,
     sku: item.sku,
     barcode: item.barcode,
     uom: item.uom,
@@ -518,6 +523,7 @@ function payload(): AdminCatalogItemDraft {
     gallery: form.gallery.split('\n').map(line => line.trim()).filter(Boolean),
     basePrice: Number(form.basePrice) || 0,
     salePrice: form.salePrice === null ? null : Number(form.salePrice),
+    lastImportPrice: Number(form.lastImportPrice) || 0,
     sku: form.sku,
     barcode: form.barcode,
     uom: form.uom,
@@ -535,6 +541,7 @@ function payload(): AdminCatalogItemDraft {
           name: variant.name,
           basePrice: Number(variant.basePrice) || 0,
           salePrice: variant.salePrice === null ? null : Number(variant.salePrice),
+          lastImportPrice: Number(variant.lastImportPrice) || 0,
           stock: Number(variant.stock) || 0,
           // Blank rows are how the editor shows "no option yet"; the storefront
           // builds its size/colour chips from these pairs.
@@ -917,6 +924,9 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
             <UFormField :label="t('admin.catalog.fields.salePrice')" :hint="t('admin.catalog.fields.price', { price: (form.salePrice || form.basePrice || 0).toLocaleString('vi-VN') })">
               <UInput v-model.number="form.salePrice" type="number" class="w-full" />
             </UFormField>
+            <UFormField :label="t('admin.catalog.fields.lastImportPrice')" :hint="t('admin.catalog.fields.lastImportPriceHint')">
+              <UInput v-model.number="form.lastImportPrice" type="number" class="w-full" :disabled="!sitePolicy.allowManualImportPrice" />
+            </UFormField>
             <UFormField :label="t('admin.catalog.fields.sku')">
               <UInput v-model="form.sku" class="w-full" :disabled="Boolean(editingId) && !sitePolicy.allowSkuEditAfterSave" />
             </UFormField>
@@ -943,6 +953,7 @@ resetOnClose(formOpen, bulkOpen, categoriesOpen)
                   <UInput v-model="variant.name.vi" :placeholder="t('admin.catalog.fields.variantName')" />
                   <UInput v-model.number="variant.basePrice" type="number" :placeholder="t('admin.catalog.fields.basePrice')" />
                   <UInput v-model.number="variant.salePrice" type="number" :placeholder="t('admin.catalog.fields.salePrice')" />
+                  <UInput v-model.number="variant.lastImportPrice" type="number" :placeholder="t('admin.catalog.fields.lastImportPrice')" :disabled="!sitePolicy.allowManualImportPrice" />
                   <UInput v-model.number="variant.stock" type="number" :placeholder="t('admin.catalog.fields.stock')" :disabled="!sitePolicy.allowEditStock" />
                   <div class="flex items-center justify-between gap-2">
                     <USwitch v-model="variant.isActive" />

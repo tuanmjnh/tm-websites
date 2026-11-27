@@ -1,4 +1,5 @@
 import { createCatalogItem } from '#server/services/catalogService'
+import { getSiteSettings } from '#server/services/settingsService'
 import {
   CatalogItemBodySchema,
   idempotencyKeyOf,
@@ -22,16 +23,20 @@ export default defineEventHandler(async (event) => {
   const idempotencyKey = idempotencyKeyOf(event)
 
   try {
-    const executed = await withPreparedDb(event, ({ CatalogItem, CatalogCategory, Audit, Revision, IdempotencyKey }) =>
+    const executed = await withPreparedDb(event, ({ CatalogItem, CatalogCategory, Audit, Revision, IdempotencyKey, Settings }) =>
       executeIdempotent(
         { model: IdempotencyKey, siteId, action: 'catalog.item.create', key: idempotencyKey, payload: body },
         async () => {
+          const settings = await getSiteSettings(Settings, siteId)
           const created = await createCatalogItem(
             CatalogItem,
             CatalogCategory,
             siteId,
             body,
-            writeMetaOf(event, user, Audit, Revision),
+            {
+              ...writeMetaOf(event, user, Audit, Revision),
+              allowManualImportPrice: settings.site.allowManualImportPrice,
+            },
           )
           return {
             statusCode: 201,

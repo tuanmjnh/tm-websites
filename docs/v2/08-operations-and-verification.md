@@ -375,7 +375,7 @@ Read the report before applying:
 | `legacy gallery lists not carried (N)`, `legacy media embeds not carried (N)` | deliberate: v2 `media` holds ids, not URLs |
 | `not fully migrated N: no body A, gallery not carried B, media not carried C` | how many **writable** records lost their body, gallery or media list; each one carries `legacy.incomplete` (plus `legacy.gallerySkipped` / `legacy.mediaSkipped` counts) so it stays findable through the admin attribute filter |
 | `legacy tenants {…}` | how many legacy records sit under each tenant, counted across the collections the importer reads; `(none)` marks a record with no `tenantId` |
-| `legacy item fields not carried {…}` / `legacy category fields not carried {…}` | catalog-only: legacy fields that hold a value but have no column in the v2 schema, counted. Read it before deciding the import is complete — v2 has no inventory columns (`minStock`, `reserved`, `hasImei`, `supplierPrices`, `lastImportPrice`), no merchandising columns (`sort`, `display`, `options`, `shipping`) and no audit trail (`history`), so those stay behind by decision, not by accident |
+| `legacy item fields not carried {…}` / `legacy category fields not carried {…}` | catalog-only: legacy fields that hold a value but have no column in the v2 schema, counted. Read it before deciding the import is complete — v2 has no inventory columns (`minStock`, `reserved`, `hasImei`, `supplierPrices`), no merchandising columns (`sort`, `display`, `options`, `shipping`) and no audit trail (`history`), so those stay behind by decision, not by accident |
 | `planned N, skipped {…}` (redirects) | legacy URL paths that become a 301 to the migrated product or category, and why the rest were left alone: no published v2 row, a path a page already owns, two legacy rows claiming one path, an existing row |
 | `category paths not planned N` (redirects) | legacy category paths that are one segment: `/<slug>` is also the content short URL, so redirecting one would shadow a page — these need a decision, not a guess |
 | `mapped N [keys]` / `mapped fields {…}` (settings) | the four legacy keys this command may write (`site_name`, `site_description`, `content_locales`, `enabled_modules`) and what they become |
@@ -491,10 +491,14 @@ legacy category fields not carried {"sort":67,"searchString":67,"banner":66,"gal
 ```
 
 All of it is a schema decision, not a mapper gap: inventory (`minStock`, `reserved`,
-`hasImei`), supplier cost (`supplierPrices`, `lastImportPrice`) and merchandising
+`hasImei`), supplier cost (`supplierPrices`) and merchandising
 (`sort`, `display`, `options`, `shipping`) wait on P5/P6, `history` is the legacy
 audit trail which v2 keeps in revisions, `fullPath` is derivable from the migrated
-tree, and category `banner`/`gallery`/`tags` have no v2 column. `deletedAt` and
+tree, and category `banner`/`gallery`/`tags` have no v2 column. `lastImportPrice`
+now exists on catalog items and variants (2026-11-27), but this importer still
+leaves it at 0: the column is filled by stock receipts, and carrying the legacy
+number is a separate decision. The counts above are the 2026-11-18 measurement and
+still list it, which is why the report must be read with this note. `deletedAt` and
 `isDeleted` are carried for both items and categories — a soft-deleted legacy
 category used to be revived as live.
 

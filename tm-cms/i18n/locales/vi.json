@@ -978,6 +978,8 @@
         "slugEn": "Slug (EN)",
         "basePrice": "Giá gốc",
         "salePrice": "Giá khuyến mại",
+        "lastImportPrice": "Giá nhập nội bộ",
+        "lastImportPriceHint": "Tự cập nhật khi nhận hàng; bật “Cho phép sửa giá nhập” trong Cấu hình để sửa tay.",
         "sku": "SKU",
         "barcode": "Mã vạch",
         "barcodeHint": "Không bắt buộc, không trùng trong cùng site",

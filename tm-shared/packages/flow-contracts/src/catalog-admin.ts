@@ -31,6 +31,8 @@ export const AdminCatalogVariantSchema = z.object({
   name: z.record(z.string(), z.string()).default({}),
   basePrice: z.number(),
   salePrice: z.number().nullable(),
+  /** Internal purchase cost; never part of the storefront projection. */
+  lastImportPrice: z.number().default(0),
   stock: z.number(),
   manageStock: z.boolean(),
   isActive: z.boolean(),
@@ -59,6 +61,8 @@ export const AdminCatalogItemSchema = z.object({
   gallery: z.array(z.string()),
   basePrice: z.number(),
   salePrice: z.number().nullable(),
+  /** Latest cost actually paid on a receipt; internal, never public. */
+  lastImportPrice: z.number(),
   sku: z.string(),
   /** Empty means "no barcode"; a non-empty value is unique within the site. */
   barcode: z.string(),
@@ -124,6 +128,11 @@ export const AdminCatalogItemDraftSchema = z.object({
   gallery: z.array(z.string()),
   basePrice: z.number(),
   salePrice: z.number().nullable(),
+  /**
+   * Only honoured when `site.allowManualImportPrice` is on; the server keeps the
+   * stored cost otherwise, so receipts stay the single writer.
+   */
+  lastImportPrice: z.number().nonnegative().optional(),
   sku: z.string(),
   barcode: z.string(),
   uom: z.string(),

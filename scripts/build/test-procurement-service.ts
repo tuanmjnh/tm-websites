@@ -68,7 +68,7 @@ async function integration() {
 
   try {
     await dropTestDatabase(connection)
-    const { Supplier, PurchaseOrder, Warehouse, Inventory, InventoryTransaction, Audit, SerialNumber } = await prepareDatabase(connection)
+    const { Supplier, PurchaseOrder, Warehouse, Inventory, InventoryTransaction, Audit, SerialNumber, CatalogItem } = await prepareDatabase(connection)
     const meta = { audit: { model: Audit, actor: ACTOR } }
 
     const firstSupplier = await createSupplier(Supplier, SITE, {
@@ -349,6 +349,45 @@ async function integration() {
         }, meta),
         isPurchaseOrderError(409, 'PURCHASE_ORDER_LOCKED'),
       )
+    })
+
+    await check('a receipt records the paid price as the catalog import price', async () => {
+      const catalogItem = await CatalogItem.create({
+        siteId: SITE,
+        key: 'hang-gia-nhap',
+        title: { vi: 'Hàng giá nhập' },
+        slug: { vi: 'hang-gia-nhap' },
+        basePrice: 200000,
+        status: 'published',
+        isActive: true,
+        isDeleted: false,
+        revision: 1,
+        variants: [],
+      })
+      const costBalance = await createInventory(Inventory, Warehouse, SITE, {
+        itemId: String(catalogItem._id),
+        variantId: null,
+        warehouseId: receiptWarehouse.id,
+        sku: 'COST-01',
+        quantityOnHand: 0,
+      }, meta)
+      const costPo = await createPurchaseOrder(PurchaseOrder, Supplier, SITE, {
+        code: 'PO-COST',
+        supplierId: firstSupplier.id,
+        warehouseId: receiptWarehouse.id,
+        status: 'ordered',
+        items: [{ itemId: String(catalogItem._id), variantId: null, itemName: 'Hàng giá nhập', sku: 'COST-01', quantity: 2, unitCost: 123000 }],
+      }, meta)
+
+      await receivePurchaseOrder(PurchaseOrder, Inventory, InventoryTransaction, SITE, costPo.id, {
+        revision: costPo.revision,
+        lines: [{ itemId: String(catalogItem._id), variantId: null, receivedQuantity: 2 }],
+      }, { ...meta, catalogItemModel: CatalogItem })
+
+      const stored = await CatalogItem.findById(catalogItem._id).lean() as { lastImportPrice: number } | null
+      assert.equal(stored?.lastImportPrice, 123000, 'the receipt price is the catalog cost')
+      const stock = await getInventory(Inventory, SITE, costBalance.id)
+      assert.equal(stock.quantityOnHand, 2)
     })
 
     // Serial registration from a receipt

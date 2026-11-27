@@ -975,6 +975,8 @@
         "slugEn": "Slug (EN)",
         "basePrice": "Base price",
         "salePrice": "Sale price",
+        "lastImportPrice": "Internal import price",
+        "lastImportPriceHint": "Updated when a purchase order is received; enable “Allow manual import price” in Settings to edit it.",
         "sku": "SKU",
         "barcode": "Barcode",
         "barcodeHint": "Optional, unique within this site",
