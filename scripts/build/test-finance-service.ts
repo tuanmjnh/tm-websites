@@ -354,6 +354,19 @@ async function integration() {
       )
     })
 
+    await check('the list separates reconciled payments from the rest', async () => {
+      const posted = await listPayments(Payment, SITE, { state: 'posted' })
+      assert.equal((await listPayments(Payment, SITE, { reconciled: 'yes' })).data.length, 0)
+      const target = posted.data[0]!
+      await reconcilePayment(Payment, SITE, target.id, 'STMT-FILTER', meta)
+      const reconciled = await listPayments(Payment, SITE, { reconciled: 'yes' })
+      assert.equal(reconciled.data.length, 1)
+      assert.equal(reconciled.data[0]!.id, target.id)
+      assert.equal(reconciled.data[0]!.reconciliationRef, 'STMT-FILTER')
+      const rest = await listPayments(Payment, SITE, { reconciled: 'no', state: 'posted' })
+      assert.equal(rest.data.length, posted.data.length - 1)
+      assert.ok(rest.data.every(entry => entry.reconciledAt === null))
+    })
     await check('every payment mutation records an audit entry', async () => {
       const entries = await Audit.find({ siteId: SITE, resourceType: 'payment' }).lean<{ action: string, toStatus: string | null }[]>()
       assert.equal(entries.filter(entry => entry.action === 'create').length, 5)

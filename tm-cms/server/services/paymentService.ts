@@ -63,6 +63,8 @@ export interface PaymentListParams {
   referenceId?: string | null
   partyId?: string | null
   state?: string | null
+  /** `yes` keeps the rows the bank statement confirmed, `no` the rest. */
+  reconciled?: string | null
   cursor?: string | null
   limit?: number
 }
@@ -200,6 +202,8 @@ export async function listPayments(
   if (params.referenceId) filter.referenceId = objectId(params.referenceId, 'PAYMENT_REFERENCE_ID_INVALID')
   if (params.partyId) filter.partyId = objectId(params.partyId, 'PAYMENT_PARTY_ID_INVALID')
   if (params.state) filter.state = params.state
+  if (params.reconciled === 'yes') filter.reconciledAt = { $ne: null }
+  if (params.reconciled === 'no') filter.reconciledAt = null
   if (params.cursor) filter._id = { $lt: objectId(params.cursor, 'PAYMENT_CURSOR_INVALID') }
 
   const records = await model.find(filter).sort({ _id: -1 }).limit(limit + 1).lean<PaymentRecord[]>()

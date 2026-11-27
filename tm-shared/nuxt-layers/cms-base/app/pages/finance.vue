@@ -25,6 +25,8 @@ const describeError = (e: unknown) => {
   if (/DIRECTION_MISMATCH/.test(code)) return t('admin.finance.errors.direction')
   if (/REFERENCE_CLOSED/.test(code)) return t('admin.finance.errors.closed')
   if (/ALREADY_VOIDED/.test(code)) return t('admin.finance.errors.alreadyVoided')
+  if (/RECONCILIATION_REF/.test(code)) return t('admin.finance.errors.reconcileRefRequired')
+  if (/ALREADY_RECONCILED|NOT_RECONCILED|NOT_POSTED/.test(code)) return t('admin.finance.errors.reconciliation')
   if (/PAYLOAD_INVALID|_INVALID$/.test(code)) return t('admin.finance.errors.invalid')
   if (/REASON_REQUIRED/.test(code)) return t('admin.finance.errors.reasonRequired')
   const status = (e as { statusCode?: number, status?: number })?.statusCode ?? (e as { status?: number })?.status
@@ -41,6 +43,7 @@ const describeError = (e: unknown) => {
 const payments = ref<AdminPayment[]>([])
 const paymentDirection = ref('all')
 const paymentState = ref('all')
+const paymentReconciled = ref('all')
 const paymentCursor = ref<string | null>(null)
 const paymentHasMore = ref(false)
 const paymentLoading = ref(false)
@@ -63,6 +66,12 @@ const stateOptions = computed(() => [
   { label: t('admin.finance.paymentStates.voided'), value: 'voided' },
 ])
 
+const reconciledOptions = computed(() => [
+  { label: t('admin.finance.payments.allReconciliation'), value: 'all' },
+  { label: t('admin.finance.payments.reconciled'), value: 'yes' },
+  { label: t('admin.finance.payments.notReconciled'), value: 'no' },
+])
+
 async function loadPayments(reset = true) {
   if (!canRead.value) return
   paymentLoading.value = true
@@ -71,6 +80,7 @@ async function loadPayments(reset = true) {
     const page = await ops.listPayments({
       direction: paymentDirection.value === 'all' ? undefined : paymentDirection.value,
       state: paymentState.value === 'all' ? undefined : paymentState.value,
+      reconciled: paymentReconciled.value === 'all' ? undefined : paymentReconciled.value,
       cursor: reset ? null : paymentCursor.value,
     })
     payments.value = reset ? page.data : [...payments.value, ...page.data]
@@ -84,7 +94,7 @@ async function loadPayments(reset = true) {
   }
 }
 
-watch([paymentDirection, paymentState], () => loadPayments())
+watch([paymentDirection, paymentState, paymentReconciled], () => loadPayments())
 
 const paymentFormOpen = ref(false)
 const paymentSaving = ref(false)
@@ -221,6 +231,71 @@ async function loadPayables(reset = true) {
 
 watch(payableStatus, () => loadPayables())
 
+/* --------------------------- reconciliation ---------------------------- */
+
+const reconcileOpen = ref(false)
+const reconcileBusy = ref(false)
+const reconcileError = ref<string | null>(null)
+const reconcileTarget = ref<AdminPayment | null>(null)
+const reconcileRefValue = ref('')
+
+function askReconcile(payment: AdminPayment) {
+  reconcileTarget.value = payment
+  reconcileRefValue.value = ''
+  auditReason.value = ''
+  reconcileError.value = null
+  reconcileOpen.value = true
+}
+
+async function runReconcile() {
+  if (reconcileBusy.value || !reconcileTarget.value) return
+  const ref = reconcileRefValue.value.trim()
+  if (!ref) {
+    reconcileError.value = t('admin.finance.errors.reconcileRefRequired')
+    return
+  }
+  reconcileBusy.value = true
+  reconcileError.value = null
+  try {
+    await ops.reconcilePayment(reconcileTarget.value.id, ref, auditReason.value.trim() || undefined)
+    toast.add({ title: t('admin.finance.payments.reconciledToast'), color: 'success' })
+    reconcileOpen.value = false
+    await loadPayments()
+  } catch (e) {
+    reconcileError.value = describeError(e)
+  } finally {
+    reconcileBusy.value = false
+  }
+}
+
+const unreconcileOpen = ref(false)
+const unreconcileBusy = ref(false)
+const unreconcileError = ref<string | null>(null)
+const unreconcileTarget = ref<AdminPayment | null>(null)
+
+function askUnreconcile(payment: AdminPayment) {
+  unreconcileTarget.value = payment
+  auditReason.value = ''
+  unreconcileError.value = null
+  unreconcileOpen.value = true
+}
+
+async function runUnreconcile() {
+  if (unreconcileBusy.value || !unreconcileTarget.value) return
+  unreconcileBusy.value = true
+  unreconcileError.value = null
+  try {
+    await ops.unreconcilePayment(unreconcileTarget.value.id, auditReason.value.trim() || undefined)
+    toast.add({ title: t('admin.finance.payments.unreconciledToast'), color: 'success' })
+    unreconcileOpen.value = false
+    await loadPayments()
+  } catch (e) {
+    unreconcileError.value = describeError(e)
+  } finally {
+    unreconcileBusy.value = false
+  }
+}
+
 /* ------------------------------ void flow ------------------------------- */
 
 const voidOpen = ref(false)
@@ -279,7 +354,7 @@ if (canRead.value) {
   await Promise.all([loadPayments(), loadPayables()])
 }
 
-resetOnClose(paymentFormOpen, voidOpen)
+resetOnClose(paymentFormOpen, voidOpen, reconcileOpen, unreconcileOpen)
 </script>
 
 <template>
@@ -328,6 +403,7 @@ resetOnClose(paymentFormOpen, voidOpen)
           <div class="flex flex-wrap items-center gap-3">
             <USelect v-model="paymentDirection" :items="directionOptions" value-key="value" size="sm" class="w-full sm:w-44" />
             <USelect v-model="paymentState" :items="stateOptions" value-key="value" size="sm" class="w-full sm:w-40" />
+            <USelect v-model="paymentReconciled" :items="reconciledOptions" value-key="value" size="sm" class="w-full sm:w-44" />
             <p class="text-xs text-muted">
               {{ t('admin.finance.payments.summary', { all: paymentCounts.all, posted: paymentCounts.posted, amount: money(paymentCounts.postedAmount) }) }}
             </p>
@@ -348,15 +424,37 @@ resetOnClose(paymentFormOpen, voidOpen)
                   <UBadge :color="payment.state === 'voided' ? 'error' : 'neutral'" variant="subtle" size="sm">
                     {{ t(`admin.finance.paymentStates.${payment.state}`) }}
                   </UBadge>
+                  <UBadge v-if="payment.reconciledAt" color="info" variant="subtle" size="sm">
+                    {{ t('admin.finance.payments.reconciled') }}
+                  </UBadge>
                 </div>
                 <p class="mt-0.5 truncate text-xs text-muted">
                   <span>{{ payment.referenceModel }} · {{ payment.referenceCode || payment.referenceId }}</span>
                   <span> · {{ t(`admin.finance.methods.${payment.method}`) }}</span>
                   <span> · {{ payment.paidAt ? new Date(payment.paidAt).toLocaleString() : '' }}</span>
+                  <span v-if="payment.reconciledAt && payment.reconciliationRef"> · {{ t('admin.finance.payments.statementRef') }} {{ payment.reconciliationRef }}</span>
                 </p>
               </div>
               <div class="flex items-center gap-3">
                 <span class="text-sm font-medium text-highlighted">{{ money(payment.amount) }}</span>
+                <UButton
+                  v-if="canWrite && payment.state === 'posted' && !payment.reconciledAt"
+                  icon="i-lucide-badge-check"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  :title="t('admin.finance.payments.reconcile')"
+                  @click="askReconcile(payment)"
+                />
+                <UButton
+                  v-if="canWrite && payment.reconciledAt"
+                  icon="i-lucide-undo-2"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  :title="t('admin.finance.payments.unreconcile')"
+                  @click="askUnreconcile(payment)"
+                />
                 <UButton
                   v-if="canWrite && payment.state !== 'voided'"
                   icon="i-lucide-ban"
@@ -500,6 +598,47 @@ resetOnClose(paymentFormOpen, voidOpen)
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="voidOpen = false" />
           <UButton color="error" variant="soft" :loading="voidBusy" :label="t('admin.finance.void')" @click="runVoid" />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Reconcile against a statement line -->
+    <UModal v-model:open="reconcileOpen" :title="t('admin.finance.payments.reconcileTitle')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
+      <template #body>
+        <div class="flex flex-col gap-3">
+          <p class="text-sm text-toned">
+            {{ reconcileTarget?.code }} · {{ money(reconcileTarget?.amount ?? 0) }}
+          </p>
+          <UFormField :label="t('admin.finance.payments.reconcileRef')">
+            <UInput v-model="reconcileRefValue" class="w-full" :placeholder="t('admin.finance.payments.reconcileRefPlaceholder')" />
+          </UFormField>
+          <p class="text-xs text-muted">{{ t('admin.finance.payments.reconcileHint') }}</p>
+          <AuditReasonField v-model="auditReason" />
+          <p v-if="reconcileError" class="text-xs text-error">{{ reconcileError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="reconcileOpen = false" />
+          <UButton color="primary" variant="soft" :loading="reconcileBusy" :label="t('admin.finance.payments.reconcile')" @click="runReconcile" />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Undo a reconciliation -->
+    <UModal v-model:open="unreconcileOpen" :title="t('admin.finance.payments.unreconcileTitle')" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-md' }">
+      <template #body>
+        <div class="flex flex-col gap-3">
+          <p class="text-sm text-toned">{{ unreconcileTarget?.code }}</p>
+          <p class="text-xs text-muted">{{ t('admin.finance.payments.unreconcileHint') }}</p>
+          <AuditReasonField v-model="auditReason" />
+          <p v-if="unreconcileError" class="text-xs text-error">{{ unreconcileError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" :label="t('common.cancel')" @click="unreconcileOpen = false" />
+          <UButton color="warning" variant="soft" :loading="unreconcileBusy" :label="t('admin.finance.payments.unreconcile')" @click="runUnreconcile" />
         </div>
       </template>
     </UModal>

@@ -11,6 +11,7 @@ const PaymentListQuerySchema = z.object({
   referenceId: z.string().trim().max(64).optional(),
   partyId: z.string().trim().max(64).optional(),
   state: z.enum(['posted', 'voided']).optional(),
+  reconciled: z.enum(['yes', 'no']).optional(),
   cursor: z.string().max(64).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 })

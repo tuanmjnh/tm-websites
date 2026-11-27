@@ -801,6 +801,7 @@ export const useOperationsAdmin = () => {
     state?: string
     referenceModel?: string
     referenceId?: string
+    reconciled?: string
     cursor?: string | null
     limit?: number
   } = {}) => {
@@ -809,6 +810,7 @@ export const useOperationsAdmin = () => {
       state: params.state,
       referenceModel: params.referenceModel,
       referenceId: params.referenceId,
+      reconciled: params.reconciled,
       cursor: params.cursor ?? undefined,
       limit: params.limit,
     })}`) as ListResponse<AdminPayment>
@@ -820,6 +822,13 @@ export const useOperationsAdmin = () => {
 
   const voidPayment = async (id: string, body: Record<string, unknown>, reason?: string) =>
     one<AdminPayment>(await write(`/api/v1/admin/finance/payments/${id}/void`, 'POST', body, reason))
+
+  /** Confirm a posted payment against a bank statement line. */
+  const reconcilePayment = async (id: string, reconciliationRef: string, reason?: string) =>
+    one<AdminPayment>(await write(`/api/v1/admin/finance/payments/${id}/reconcile`, 'POST', { reconciliationRef }, reason))
+
+  const unreconcilePayment = async (id: string, reason?: string) =>
+    one<AdminPayment>(await write(`/api/v1/admin/finance/payments/${id}/unreconcile`, 'POST', {}, reason))
 
   /** Documents a payment can still be applied to, for the payment dialog's picker. */
   const listOpenDocuments = async (params: { model?: string, q?: string, limit?: number } = {}) => {
@@ -1254,6 +1263,8 @@ export const useOperationsAdmin = () => {
     listPayments,
     createPayment,
     voidPayment,
+    reconcilePayment,
+    unreconcilePayment,
     listOpenDocuments,
     listPayables,
     voidPayable,
