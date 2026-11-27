@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { Types } from 'mongoose'
 import {
   PublicSiteSchema,
   buildPublicSite,
@@ -7,11 +8,14 @@ import {
 } from '../../tm-shared/packages/flow-contracts/src/site-public.js'
 import { connectMongo } from '../../tm-web/server/utils/mongo.js'
 import {
+  PUBLIC_MEDIA_PROJECTION,
   PUBLIC_MENU_PROJECTION,
   PUBLIC_SETTINGS_PROJECTION,
+  PublicMediaModel,
   PublicSettingsModel,
   PublicSiteMenuModel,
   buildCategorySlugMap,
+  buildMediaUrlMap,
 } from '../../tm-web/server/models/sitePublic.js'
 import { PublicCategoryModel } from '../../tm-web/server/models/contentCategoryPublic.js'
 import { dropTestMongooseDatabase } from './testDatabase.js'
@@ -39,11 +43,17 @@ async function check(name: string, fn: () => Promise<void> | void) {
   }
 }
 
+const LOGO_ID = new Types.ObjectId('64b000000000000000000001').toString()
+const IMAGE_ID = new Types.ObjectId('64b000000000000000000002').toString()
+const DOCUMENT_ID = new Types.ObjectId('64b000000000000000000003').toString()
+const LOGO_KEY = 'sentuan/2026/aaaaaaaa-1111-4111-8111-111111111111.png'
+const IMAGE_KEY = 'sentuan/2026/bbbbbbbb-2222-4222-8222-222222222222.webp'
+
 const settingsDoc = {
   siteId: 'sentuan',
   revision: 4,
-  company: { name: 'Sen Tuấn', email: 'hello@sentuan.vn', phone: '0909', address: 'Hà Nội', logoMediaId: 'logo1' },
-  seo: { titleTemplate: '%s | Sen Tuấn', defaultDescription: 'Trang sức', defaultImageMediaId: 'img1' },
+  company: { name: 'Sen Tuấn', email: 'hello@sentuan.vn', phone: '0909', address: 'Hà Nội', logoMediaId: LOGO_ID },
+  seo: { titleTemplate: '%s | Sen Tuấn', defaultDescription: 'Trang sức', defaultImageMediaId: IMAGE_ID },
   locales: { default: 'vi', enabled: ['vi', 'en'] },
   // Private fields that must never reach the storefront.
   modules: { content: true, catalog: false },
@@ -70,17 +80,26 @@ async function load(connection: Awaited<ReturnType<typeof connectMongo>>) {
   await dropTestMongooseDatabase(connection)
   await connection.connection.collection('settings').insertOne({ ...settingsDoc })
   await connection.connection.collection('site_menus').insertMany(menus.map(menu => ({ ...menu })))
+  await connection.connection.collection('media').insertMany([
+    { _id: new Types.ObjectId(LOGO_ID), siteId: 'sentuan', kind: 'image', storage: { provider: 'local', key: LOGO_KEY } },
+    { _id: new Types.ObjectId(IMAGE_ID), siteId: 'sentuan', kind: 'image', storage: { provider: 'local', key: IMAGE_KEY } },
+    { _id: new Types.ObjectId(DOCUMENT_ID), siteId: 'sentuan', kind: 'document', storage: { provider: 'local', key: 'sentuan/2026/cccccccc-3333-4333-8333-333333333333.pdf' } },
+  ])
   await connection.connection.collection('categories').insertMany([
     { key: 'trang-suc', locales: [{ locale: 'vi', name: 'Trang sức', slug: 'trang-suc' }, { locale: 'en', name: 'Jewelry', slug: 'jewelry' }] },
     { key: 'phu-kien', locales: [{ locale: 'vi', name: 'Phụ kiện', slug: 'phu-kien' }] },
   ])
 }
 
-async function readSite(locale: string) {
+async function readSite(locale: string, mediaBaseUrl = '') {
   const [settings, menuDocs] = await Promise.all([
     PublicSettingsModel.findOne({}).select(PUBLIC_SETTINGS_PROJECTION).lean<Record<string, unknown> | null>(),
     PublicSiteMenuModel.find({}).select(PUBLIC_MENU_PROJECTION).sort({ key: 1 }).lean<Record<string, unknown>[]>(),
   ])
+  const mediaDocs = await PublicMediaModel
+    .find({ kind: 'image' })
+    .select(PUBLIC_MEDIA_PROJECTION)
+    .lean<{ _id?: unknown, kind?: unknown, storage?: { key?: unknown } }[]>()
 
   const keys = new Set<string>()
   for (const menu of menuDocs) {
@@ -98,6 +117,7 @@ async function readSite(locale: string) {
     settings,
     menus: menuDocs,
     categorySlugs: buildCategorySlugMap(categoryDocs, locale),
+    mediaUrls: buildMediaUrlMap(mediaDocs, mediaBaseUrl),
   })
 }
 
@@ -171,6 +191,28 @@ async function integration() {
       assert.deepEqual(site.locales, { default: 'vi', enabled: ['vi', 'en'] })
       assert.equal(JSON.stringify(site).includes('admin@example.com'), false)
       assert.equal(JSON.stringify(site).includes('revision'), false)
+    })
+
+    await check('a configured media origin turns the settings ids into absolute URLs', async () => {
+      const site = await readSite('vi', 'https://cms.example/')
+      assert.equal(site.company.logoUrl, `https://cms.example/media/${LOGO_KEY}`)
+      assert.equal(site.seo.defaultImageUrl, `https://cms.example/media/${IMAGE_KEY}`)
+      assert.equal(PublicSiteSchema.safeParse(site).success, true)
+
+      const unresolved = await readSite('vi')
+      assert.equal(unresolved.company.logoUrl, '')
+      assert.equal(unresolved.seo.defaultImageUrl, '')
+      assert.equal(unresolved.company.logoMediaId, LOGO_ID)
+    })
+
+    await check('a document or an unsafe storage key never becomes an image URL', () => {
+      const map = buildMediaUrlMap([
+        { _id: DOCUMENT_ID, kind: 'document', storage: { key: LOGO_KEY } },
+        { _id: IMAGE_ID, kind: 'image', storage: { key: '../outside.png' } },
+        { _id: LOGO_ID, kind: 'image', storage: { key: LOGO_KEY } },
+      ], 'https://cms.example')
+      assert.deepEqual([...map.keys()], [LOGO_ID])
+      assert.equal(map.get(LOGO_ID), `https://cms.example/media/${LOGO_KEY}`)
     })
 
     await check('an empty database reads defaults rather than failing', async () => {

@@ -68,6 +68,12 @@ export const PublicSiteSchema = z.object({
     phone: z.string(),
     address: z.string(),
     logoMediaId: z.string(),
+    /**
+     * Absolute URL of that media file, resolved by the storefront server from
+     * `TM_MEDIA_BASE_URL`. Empty when no origin is configured or the file is
+     * gone, so the client falls back to its bundled logo.
+     */
+    logoUrl: z.string(),
   }),
   seo: z.object({
     titleTemplate: z.string(),
@@ -79,6 +85,10 @@ export const PublicSiteSchema = z.object({
     defaultImageMediaIds: z.record(z.string(), z.string()),
     defaultDescription: z.string(),
     defaultImageMediaId: z.string(),
+    /** Locale -> absolute OG image URL; a missing entry falls back to the default. */
+    defaultImageUrls: z.record(z.string(), z.string()),
+    /** Absolute OG image URL for the site-wide default image; empty when unresolved. */
+    defaultImageUrl: z.string(),
   }),
   locales: z.object({
     default: z.string(),
@@ -111,8 +121,8 @@ export type PublicSite = z.infer<typeof PublicSiteSchema>
 
 export function emptyPublicSite(): PublicSite {
   return {
-    company: { name: '', names: {}, email: '', phone: '', address: '', logoMediaId: '' },
-    seo: { titleTemplate: '%s', titleTemplates: {}, defaultDescriptions: {}, defaultImageMediaIds: {}, defaultDescription: '', defaultImageMediaId: '' },
+    company: { name: '', names: {}, email: '', phone: '', address: '', logoMediaId: '', logoUrl: '' },
+    seo: { titleTemplate: '%s', titleTemplates: {}, defaultDescriptions: {}, defaultImageMediaIds: {}, defaultDescription: '', defaultImageMediaId: '', defaultImageUrls: {}, defaultImageUrl: '' },
     locales: { default: 'vi', enabled: ['vi'] },
     site: { footerText: '', copyright: '', websiteUrl: '', keywords: '', maintenanceMode: false, paginationType: 'cursor', openingHours: {}, social: [] },
     menus: [],
@@ -371,6 +381,12 @@ export function buildPublicSite(input: {
   menus: readonly Record<string, unknown>[]
   categorySlugs?: ReadonlyMap<string, string> | Record<string, string>
   productCategorySlugs?: ReadonlyMap<string, string> | Record<string, string>
+  /**
+   * Media id -> absolute file URL. The storefront server builds it from the
+   * files it actually found and its configured public media origin; a caller
+   * that cannot resolve media (or a test) omits it and every URL stays empty.
+   */
+  mediaUrls?: ReadonlyMap<string, string> | Record<string, string>
 }): PublicSite {
   const settings = input.settings ?? {}
   const company = readRecord(settings.company)
@@ -387,6 +403,12 @@ export function buildPublicSite(input: {
     return (map as Record<string, string>)[key]
   }
 
+  const mediaUrl = (id: string): string => {
+    if (!id) return ''
+    const value = readMap(input.mediaUrls, id)
+    return typeof value === 'string' ? value : ''
+  }
+
   const menus = input.menus
     .map(doc => toPublicMenu(
       doc,
@@ -400,6 +422,12 @@ export function buildPublicSite(input: {
     ? locales.enabled.filter((entry): entry is string => typeof entry === 'string')
     : []
 
+  const imageUrls: Record<string, string> = {}
+  for (const [code, id] of Object.entries(readDefaultImageMediaIds(seo.defaultImageMediaIds, enabled))) {
+    const url = mediaUrl(id)
+    if (url) imageUrls[code] = url
+  }
+
   return {
     company: {
       name: readString(company.name),
@@ -408,6 +436,7 @@ export function buildPublicSite(input: {
       phone: readString(company.phone),
       address: readString(company.address),
       logoMediaId: readString(company.logoMediaId),
+      logoUrl: mediaUrl(readString(company.logoMediaId)),
     },
     seo: {
       titleTemplate: readString(seo.titleTemplate, '%s'),
@@ -416,6 +445,8 @@ export function buildPublicSite(input: {
       defaultImageMediaIds: readDefaultImageMediaIds(seo.defaultImageMediaIds, enabled),
       defaultDescription: readString(seo.defaultDescription),
       defaultImageMediaId: readString(seo.defaultImageMediaId),
+      defaultImageUrls: imageUrls,
+      defaultImageUrl: mediaUrl(readString(seo.defaultImageMediaId)),
     },
     locales: {
       default: readString(locales.default, 'vi'),

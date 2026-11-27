@@ -47,7 +47,7 @@ Adopting the documented defaults converts "unanswered" into "decided, with a kno
 | ID | Decision | Status | Effect |
 | --- | --- | --- | --- |
 | Q12 / Q21 | No durable queue, no cron, no worker. Cache invalidation stays the signed-secret purge endpoint, and retention runs manually (`pnpm prune:retention`). Scheduled publish (`publishAt`) does not fire on its own. | RESOLVED | No Redis/BullMQ/cron is introduced. The storefront's uncached content handlers cover publishes; only CDN-held sitemaps lag up to 10 minutes. |
-| Q13 / Q19 | Media stays Cloudinary-oriented, with the CMS's local storage adapter standing in until a credential exists. No public media origin is chosen, so media stays out of the public projection and the logo id stays unresolved. | **WAITING_INPUT** (Cloudinary credentials) | Uploads and the library keep working locally; `PublicSite` keeps no media field, so nothing leaks a CMS-local path. |
+| Q13 / Q19 | Media stays Cloudinary-oriented, with the CMS's local storage adapter standing in until a credential exists. No public media origin is chosen, so media stays out of the public projection and the logo id stays unresolved. **Partly superseded (2026-11-27):** the storefront now resolves the settings' logo id and default OG image id to absolute URLs when `TM_MEDIA_BASE_URL` names the public origin serving `/media/<storage key>`; without it the projection keeps the ids only, exactly as before. The origin itself is still unchosen. | **WAITING_INPUT** (Cloudinary credentials / public media origin) | Uploads and the library keep working locally; `PublicSite` exposes no CMS filesystem path, only composed URLs of an origin the operator configures, and nothing at all when it is unset. |
 | Q17 | No checkout in this round. The cart stays client-owned with server-side re-quoting; orders are not persisted anywhere. | RESOLVED (deferred) | WEB-06 stays Planned. The three checkout invariants (server-side reprice, duplicate rejection, out-of-stock refusal) stay in the queue as requirements for when a provider is chosen. |
 | Q18 | No contact/newsletter form until a delivery target exists; no local-only stub that silently drops submissions. | RESOLVED (deferred) | WEB-07 stays Planned. The settings' contact address remains the only address in the system. |
 | Q20 | Storefront URLs keep `no_prefix` locale selection by cookie. No `hreflang` is emitted, and canonical URLs stay per selected locale. | RESOLVED | `/san-pham` and `/products` remain distinct URLs; sitemap stays locale-free. Changing this later is a WEB-08 slice, not a refactor of the router. |
@@ -75,7 +75,7 @@ Checked against the code on 2026-11-09. Nothing needed changing, so no behaviour
 | Q3 / Q2 | customer registry + `server/utils/database.ts` | Matches: no invented names, legacy names kept. |
 | Q12 | `tm-cms/server/utils/storefrontRevalidate.ts`, `tm-web/server/api/_internal/purge.post.ts` | Matches: header-reported outcome, best-effort, no queue. |
 | Q20 | `i18n` strategy `no_prefix` in `tm-web` | Matches: no `hreflang` in the SEO composable. |
-| Q13 | local media adapter + `PublicSite` projection without media | Matches: no public media field. |
+| Q13 | local media adapter + `PublicSite` projection without media | Matches in part: no media binary or CMS path is projected, and the two URL fields stay empty unless an operator configures the public media origin. |
 
 ## 4. WAITING_INPUT facts with no workaround
 

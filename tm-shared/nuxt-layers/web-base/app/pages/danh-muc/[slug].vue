@@ -19,6 +19,7 @@ const requestUrl = useRequestURL()
 
 const slug = computed(() => (typeof route.params.slug === 'string' ? route.params.slug.trim() : ''))
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
+const siteImage = useSiteSeoImage(resolveSiteUrl(baseUrl, '/branding/og-cover.png'))
 
 /** `offset` renders numbered pages, `cursor` keeps the load-more button. */
 const paginationType = await usePublicPaginationType()
@@ -151,9 +152,9 @@ useSeoMeta({
   ogUrl: () => canonical.value,
   // A content category carries no image of its own, so it shares the site card
   // rather than publishing an og:image a crawler cannot fetch.
-  ogImage: () => resolveSiteUrl(baseUrl, '/branding/og-cover.png'),
+  ogImage: () => siteImage.value,
   ogImageAlt: () => category.value?.name || '',
-  twitterImage: () => resolveSiteUrl(baseUrl, '/branding/og-cover.png'),
+  twitterImage: () => siteImage.value,
   twitterImageAlt: () => category.value?.name || '',
   robots,
 })

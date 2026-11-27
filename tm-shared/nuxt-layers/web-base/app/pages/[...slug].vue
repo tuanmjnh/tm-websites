@@ -70,7 +70,12 @@ const seoDescription = computed(() => content.value?.seo.description || content.
 const seoKeywords = computed(() => content.value?.keywords ?? [])
 const categoryLabel = computed(() => content.value?.categories[0] || '')
 
-const ogImage = computed(() => resolveSiteUrl(baseUrl, content.value?.seo.image || '/branding/og-cover.png'))
+// A record's own image wins; without one the site's default OG image applies.
+const siteImage = useSiteSeoImage()
+const ogImage = computed(() => resolveSiteUrl(
+  baseUrl,
+  content.value?.seo.image || siteImage.value || '/branding/og-cover.png',
+))
 
 const formattedDate = computed(() => {
   const value = content.value?.publishedAt || content.value?.updatedAt

@@ -32,7 +32,7 @@
 | --- | --- | --- | --- |
 | Q11 | Có được tạo package server-only dùng chung `@tm/flow-server` (Mongoose schema factory + invariants + commands) không? Hiện `mongoose` mới chỉ là dependency của host. **Đã làm P2.b trong `tm-cms/server/models/` theo mặc định này** — nếu bạn duyệt tạo package, tôi sẽ chuyển nguyên khối sang, không đổi hành vi. | Chưa tạo; logic đặt trong `tm-cms/server` cho tới khi bạn duyệt | P2/P3 |
 | Q12 | Cache invalidation bền vững (publish → Web) chạy bằng gì: cron Vercel, Redis/BullMQ, hay job trong Mongo? Máy local chưa có Redis nên mail/import queue của Hub đang tắt. | Tạm dùng purge endpoint hiện có; chưa thêm hạ tầng | P3/WEB-09 |
-| Q13 | Media đi tiếp bằng Cloudinary (Hub đang thiếu credential) hay chuyển sang R2/S3? | Giữ Cloudinary, chờ credential | MED-01 |
+| Q13 | Media đi tiếp bằng Cloudinary (Hub đang thiếu credential) hay chuyển sang R2/S3? Đường id→URL phía storefront đã có (`TM_MEDIA_BASE_URL`, xem todo 2026-11-27); chỉ còn chọn origin thật. | Giữ Cloudinary, chờ credential | MED-01 |
 | Q14 | Deploy: ai cấp Vercel token + domain cho từng customer? Có cần tôi chuẩn bị `vercel.json`/CI trước không? | Không deploy; chỉ build local | P10 |
 | Q15 | AI Workspace: bỏ hẳn khỏi scope (v2 đang coi là optional, không thay thế parity) hay vẫn làm sau P5? | Bỏ khỏi scope hiện tại | — |
 | Q16 | Retention: giữ bao nhiêu bản snapshot/nội dung và bao lâu `audit_logs`? Đã có lệnh `pnpm prune:retention` (dry-run mặc định, `--apply` mới xoá) với mặc định tạm 50 bản/nội dung và 365 ngày audit — cần con số chính thức. | Chưa chốt; mặc định tạm, không chạy tự động | P2.c |
@@ -60,7 +60,7 @@
 | --- | --- | --- | --- |
 | Q17 | Thanh toán cho WEB-06 dùng cổng nào: chỉ COD/chuyển khoản thủ công, VNPay, MoMo, ZaloPay, hay Stripe? Và đơn hàng lưu ở đâu (Mongo của customer, hay đẩy sang hệ thống khác)? | Chưa làm checkout; chỉ giữ giỏ hàng client-side | WEB-06: bắt buộc tính lại giá ở server, chống đặt trùng, từ chối khi hết hàng — cả ba đều cần biết đơn hàng nằm ở đâu |
 | Q18 | Form liên hệ/đăng ký nhận tin (WEB-07) gửi đi đâu: lưu Mongo rồi hiển thị trong CMS, gửi email qua provider (tên provider + địa chỉ nhận), hay bắn webhook sang CRM? | Chưa làm form; chỉ có trang tĩnh | WEB-07: cần đích đến để viết retry/failure handling thay vì làm giả |
-| Q19 | Ảnh public của storefront phục vụ từ đâu? CMS hiện lưu file trên đĩa của chính nó, còn Web là deployment riêng, nên cần một origin công khai: Cloudinary (Q13), bucket R2/S3, hay để Web proxy qua CMS? | Chưa đưa media vào projection công khai | MED-01 + logo trong SYS-02 + OG image; cũng là điều kiện để nội dung có ảnh hiển thị thật trên Web |
+| Q19 | Ảnh public của storefront phục vụ từ đâu? CMS hiện lưu file trên đĩa của chính nó, còn Web là deployment riêng, nên cần một origin công khai: Cloudinary (Q13), bucket R2/S3, hay để Web proxy qua CMS? | Đã có đường cấu hình (`TM_MEDIA_BASE_URL` → `<origin>/media/<storage key>`); chọn origin thật vẫn chờ Q13 | MED-01 + logo trong SYS-02 + OG image; cũng là điều kiện để nội dung có ảnh hiển thị thật trên Web |
 | Q20 | URL có phân biệt ngôn ngữ không? Hiện storefront dùng cookie (`no_prefix`), nên `/san-pham` và `/products` không cùng một URL và `hreflang` không phát được. Có đổi sang tiền tố `/vi/...`, `/en/...` không? | Giữ `no_prefix`; không phát `hreflang`, canonical theo từng locale đang chọn | WEB-08: hreflang, canonical chuẩn, sitemap đa ngôn ngữ, và redirect khi đổi ngôn ngữ |
 | Q21 | Có cần job nền chạy định kỳ (publish theo `publishAt`, prune retention) trên hạ tầng nào: cron của Vercel, worker riêng, hay chấp nhận chạy tay? | Chạy tay như hiện tại (`pnpm prune:retention`), publish theo lịch chưa tự chạy | Q12 + Q16: retention tự động và publish hẹn giờ |
 | Q22 | Bản ghi content/config/media legacy trong TM Hub: cho phép export → import một lần rồi Hub chỉ đọc, hay giữ Hub là nguồn trong suốt giai đoạn chuyển tiếp? (cùng Q5, nhưng giờ cần câu trả lời để làm slice import) | Không import; chỉ dữ liệu tạo mới trong Mongo | Q5 + Q2: bật `default`/`thanhtung`/`hoangvi` với dữ liệu thật |
@@ -74,7 +74,7 @@
 | Q5 | Chưa import gì từ Hub; xem Q22. |
 | Q11 | Theo mặc định: chưa tạo package `@tm/flow-server`, model/service nằm trong `tm-cms/server/`. Muốn chuyển thì nói, hành vi không đổi. |
 | Q12 | Đã có purge endpoint dùng chung secret, purge toàn bộ handler cache của storefront khi lưu settings/menu; chưa ký, chưa scoped theo tenant/tag, chưa có job bền vững. Xem Q21. |
-| Q13 | Vẫn chờ credential Cloudinary; media đang lưu đĩa local của CMS. Xem Q19. |
+| Q13 | Vẫn chờ credential Cloudinary; media đang lưu đĩa local của CMS. Storefront đã resolve được id→URL khi cấu hình `TM_MEDIA_BASE_URL` (logo + OG mặc định), mặc định tắt thì giữ nguyên hành vi cũ. Xem Q19. |
 | Q14 | Không deploy gì; chỉ build và chạy local. |
 | Q16 | `pnpm prune:retention` tồn tại, mặc định dry-run, tạm 50 bản/nội dung và 365 ngày audit — cần con số chính thức. |
 
@@ -96,7 +96,7 @@ Mỗi câu đã chốt theo **mặc định ghi ở bảng gốc**, và quyết 
 | Q10 | RESOLVED (deferred) | Không làm UI passkey/OAuth trong đợt này; để sau P9. |
 | Q11 | RESOLVED | Không tạo `@tm/flow-server`; model/invariant/command ở lại `tm-cms/server/` đúng phạm vi đã duyệt. |
 | Q12 | RESOLVED | Không queue bền vững/cron/worker; invalidation vẫn là purge endpoint có secret, publish content dựa vào handler không cache + TTL CDN của sitemap. |
-| Q13 | **WAITING_INPUT** | Media đi Cloudinary; chưa có credential nên vẫn dùng adapter local, chưa chọn public origin. |
+| Q13 | **WAITING_INPUT** (một phần đã làm) | Media đi Cloudinary; chưa có credential nên vẫn dùng adapter local, chưa chọn public origin. Storefront không còn bị chặn cứng: `TM_MEDIA_BASE_URL` trỏ origin công khai là logo và OG image mặc định resolve thành URL; chưa cấu hình thì giữ nguyên id như trước. |
 | Q14 | **WAITING_INPUT** | Không deploy, không chuẩn bị `vercel.json`/CI/domain. Xem mục I. |
 | Q15 | RESOLVED | AI Workspace ra khỏi scope v2. |
 | Q16 | RESOLVED | Giữ 50 bản snapshot/nội dung và 365 ngày `audit_logs`; lệnh vẫn dry-run trừ khi `--apply`. |

@@ -75,6 +75,15 @@ export const usePublicSite = () => {
     if (localized && localized.trim()) return localized.trim()
     return company.value?.name || companyName.value
   })
+  /** Resolved by the web server from `TM_MEDIA_BASE_URL`; empty keeps the bundled logo. */
+  const logoUrl = computed(() => company.value?.logoUrl || '')
+  /** Locale override first, then the site-wide default image, then empty. */
+  const seoImageUrl = computed(() => {
+    const code = String(locale.value || '')
+    const localized = seo.value?.defaultImageUrls?.[code]
+    if (localized) return localized
+    return seo.value?.defaultImageUrl || ''
+  })
   const contactEmail = computed(() => company.value?.email || siteConfig.value.supportEmail || '')
   const contactPhone = computed(() => company.value?.phone || siteConfig.value.supportPhone || '')
   const contactAddress = computed(() => company.value?.address || siteConfig.value.address || '')
@@ -156,6 +165,8 @@ export const usePublicSite = () => {
     company,
     seo,
     brandName,
+    logoUrl,
+    seoImageUrl,
     contactEmail,
     contactPhone,
     contactAddress,

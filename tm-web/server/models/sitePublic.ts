@@ -61,6 +61,65 @@ export const PublicCatalogCategoryModel: Model<Record<string, unknown>> =
 export const PUBLIC_SETTINGS_PROJECTION = 'company seo locales site'
 export const PUBLIC_MENU_PROJECTION = 'key items'
 
+/**
+ * Read-only view of the CMS media collection. Only the fields needed to turn a
+ * settings media id into a URL are selected; the uploader, checksum and folder
+ * stay in the CMS.
+ */
+const mediaSchema = new mongoose.Schema<Record<string, unknown>>(
+  {
+    siteId: String,
+    kind: String,
+    storage: { type: mongoose.Schema.Types.Mixed },
+  },
+  { strict: false, versionKey: false, timestamps: false, collection: 'media' },
+)
+
+export const PublicMediaModel: Model<Record<string, unknown>> =
+  mongoose.models.PublicSiteMedia
+  ?? mongoose.model<Record<string, unknown>>('PublicSiteMedia', mediaSchema)
+
+export const PUBLIC_MEDIA_PROJECTION = 'kind storage'
+
+/** Storage keys are site/year/uuid.ext; anything else is not a servable object. */
+const MEDIA_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}\/\d{4}\/[a-z0-9-]{36}\.(png|jpg|jpeg|webp|avif|gif)$/i
+
+export interface MediaUrlDoc {
+  _id?: unknown
+  kind?: unknown
+  storage?: { key?: unknown }
+}
+
+/** A settings field holds a media ObjectId; a legacy or hand-edited value may not. */
+export function isMediaId(value: unknown): value is string {
+  return typeof value === 'string' && mongoose.isValidObjectId(value)
+}
+
+/**
+ * Media id to absolute file URL. Media binaries are served by the CMS at
+ * `/media/<storage key>`, so the storefront needs that origin configured; with
+ * no origin the map stays empty and the projection keeps its ids only, which is
+ * the pre-existing behaviour. A document that is not an image or whose key is
+ * not servable is skipped rather than producing a broken `<img>`.
+ */
+export function buildMediaUrlMap(
+  docs: readonly MediaUrlDoc[],
+  mediaBaseUrl: string,
+): Map<string, string> {
+  const base = mediaBaseUrl.trim().replace(/\/+$/, '')
+  const map = new Map<string, string>()
+  if (!base) return map
+
+  for (const doc of docs) {
+    if (doc.kind !== 'image') continue
+    const id = doc._id ? String(doc._id) : ''
+    const key = typeof doc.storage?.key === 'string' ? doc.storage.key : ''
+    if (!id || !MEDIA_KEY_PATTERN.test(key)) continue
+    map.set(id, `${base}/media/${key}`)
+  }
+  return map
+}
+
 export interface CategorySlugDoc {
   key?: unknown
   locales?: unknown

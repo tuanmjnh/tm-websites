@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PublicContentListItem } from '@tm/flow-contracts/content-public'
 import type { CatalogListQuery } from '../composables/useCatalog'
-import { buildCanonicalUrl, buildWebSiteJsonLd } from '@tm/flow-utils/seo'
+import { buildCanonicalUrl, buildWebSiteJsonLd, resolveSiteUrl } from '@tm/flow-utils/seo'
 
 const { t, locale } = useI18n()
 const config = useRuntimeConfig()
@@ -10,6 +10,10 @@ const { brandName } = usePublicSite()
 
 const baseUrl = String(config.public.siteUrl || requestUrl.origin)
 const canonical = buildCanonicalUrl(baseUrl, '/')
+
+// The settings' default OG image when the storefront can resolve it; the bundled
+// cover is the fallback for a site that never picked one.
+const siteImage = useSiteSeoImage(resolveSiteUrl(baseUrl, '/branding/og-cover.png'))
 
 const featuredQuery = ref<CatalogListQuery>({ limit: 8, sort: 'newest' })
 const { result: featured, items: featuredItems } = useCatalogList(featuredQuery)
@@ -50,7 +54,7 @@ useSeoMeta({
   ogDescription: () => siteDescription.value,
   ogType: 'website',
   ogUrl: canonical,
-  ogImage: `${baseUrl}/branding/og-cover.png`,
+  ogImage: () => siteImage.value,
   twitterCard: 'summary_large_image',
   robots,
 })

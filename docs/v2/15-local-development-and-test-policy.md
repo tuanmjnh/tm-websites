@@ -133,6 +133,8 @@ Do not create a shared server-only package as a shortcut for cross-host imports.
 4. Record commit SHA, database target (host class + logical name only), gate counts, failures, test log and build results.
 5. Do not describe the app as production-ready from local `sen-tuan` checks alone; production URI, provider credentials, deployment, backup/off-site and rollback approvals remain separate launch requirements.
 
+**Evidence (2026-11-27).** Quality Gates run [45916706024](https://github.com/tuanmjnh/tm-websites/actions/runs/45916706024) on `main` (commit `6fb81e5`): job `All gates` **success** in 222s — `pnpm verify:all` against the workflow's own `mongo:7` service ran every gate in `package.json` and exited 0 — and job `Production builds` **success** in 83s for the CMS and Web builds. The local run of the same command before pushing took ~415s against `sen-tuan` with no failure. CI still does not cover browser, real-Hub or cross-host media checks; those remain local evidence.
+
 ## 7. Acceptance criteria
 
 - [ ] Both local CMS and Web server-side runtime resolve customer `sentuan` to database `sen-tuan`.

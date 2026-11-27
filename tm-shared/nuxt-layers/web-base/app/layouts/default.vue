@@ -7,6 +7,7 @@ const route = useRoute()
 // fallback so the header is never empty on a site that has not saved them.
 const {
   brandName,
+  logoUrl,
   contactEmail,
   contactPhone,
   contactAddress,
@@ -61,7 +62,15 @@ onMounted(() => hydrateCart())
     <header class="sticky top-0 z-30 border-b border-default bg-elevated/40 backdrop-blur-xl">
       <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <NuxtLink to="/" class="flex min-w-0 items-center gap-2.5">
-          <NuxtImg src="/branding/logo.svg" :alt="brandName" width="32" height="32" class="size-8 shrink-0" />
+          <img
+            v-if="logoUrl"
+            :src="logoUrl"
+            :alt="brandName"
+            width="32"
+            height="32"
+            class="size-8 shrink-0 object-contain"
+          >
+          <NuxtImg v-else src="/branding/logo.svg" :alt="brandName" width="32" height="32" class="size-8 shrink-0" />
           <span class="truncate text-base font-semibold tracking-tight text-highlighted">
             {{ brandName }}
           </span>
@@ -164,7 +173,15 @@ onMounted(() => hydrateCart())
         <div class="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div class="md:col-span-2">
             <div class="flex items-center gap-2.5">
-              <NuxtImg src="/branding/logo.svg" :alt="brandName" width="28" height="28" class="size-7" />
+              <img
+                v-if="logoUrl"
+                :src="logoUrl"
+                :alt="brandName"
+                width="28"
+                height="28"
+                class="size-7 object-contain"
+              >
+              <NuxtImg v-else src="/branding/logo.svg" :alt="brandName" width="28" height="28" class="size-7" />
               <h3 class="text-sm font-semibold text-highlighted">{{ brandName }}</h3>
             </div>
             <p class="mt-3 max-w-sm text-xs text-muted">

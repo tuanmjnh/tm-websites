@@ -227,6 +227,32 @@ check('the storefront pagination mode follows settings, legacy skip_limit includ
   assert.equal(buildPublicSite({ settings, menus: [] }).site.paginationType, 'cursor')
 })
 
+check('settings media ids become absolute URLs only when a media origin resolves them', () => {
+  const urls = new Map([
+    ['logo1', 'https://cms.example/media/sentuan/2026/logo.png'],
+    ['img1', 'https://cms.example/media/sentuan/2026/cover.webp'],
+  ])
+  const site = buildPublicSite({ settings, menus: [], mediaUrls: urls })
+  assert.equal(site.company.logoUrl, 'https://cms.example/media/sentuan/2026/logo.png')
+  assert.equal(site.seo.defaultImageUrl, 'https://cms.example/media/sentuan/2026/cover.webp')
+  assert.equal(PublicSiteSchema.safeParse(site).success, true)
+
+  const unresolved = buildPublicSite({ settings, menus: [] })
+  assert.equal(unresolved.company.logoUrl, '')
+  assert.equal(unresolved.seo.defaultImageUrl, '')
+  assert.equal(unresolved.company.logoMediaId, 'logo1', 'the id stays available to the CMS')
+})
+
+check('a per-locale default image wins and only resolved locales are published', () => {
+  const site = buildPublicSite({
+    settings: { ...settings, seo: { ...settings.seo, defaultImageMediaIds: { vi: 'img-vi', en: 'img-en' } } },
+    menus: [],
+    mediaUrls: { 'img-vi': 'https://cms.example/media/vi.png' },
+  })
+  assert.deepEqual(site.seo.defaultImageUrls, { vi: 'https://cms.example/media/vi.png' })
+  assert.equal(site.seo.defaultImageUrl, '')
+})
+
 check('menus keep both keys, sorted, and an empty menu survives', () => {
   const site = buildPublicSite({ settings, menus: [mainMenu, { key: 'footer', items: [] }, { key: 'zzz' }] })
   assert.deepEqual(site.menus.map(menu => menu.key), ['footer', 'main', 'zzz'])

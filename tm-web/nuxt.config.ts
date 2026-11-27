@@ -97,6 +97,10 @@ export default defineNuxtConfig({
     catalogDbDeclared: registryDatabase,
     catalogDbOverride: configuredDatabase,
     revalidateSecret: process.env.REVALIDATE_SECRET || '',
+    // Public origin that serves CMS media (`/media/<storage key>`). Empty keeps
+    // the settings' media ids unresolved, so the storefront keeps its bundled
+    // logo and OG cover instead of guessing another host.
+    mediaBaseUrl: process.env.TM_MEDIA_BASE_URL || '',
 
     public: {
       siteId: process.env.TM_SITE_ID || 'main',

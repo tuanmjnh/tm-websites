@@ -6,16 +6,20 @@ import {
   normalizePublicLocale,
 } from '@tm/flow-contracts/content-public'
 import {
+  PUBLIC_MEDIA_PROJECTION,
   PUBLIC_MENU_PROJECTION,
   PUBLIC_SETTINGS_PROJECTION,
   PublicCatalogCategoryModel,
+  PublicMediaModel,
   PublicSettingsModel,
   PublicSiteMenuModel,
   buildCatalogCategorySlugMap,
   buildCategorySlugMap,
+  buildMediaUrlMap,
+  isMediaId,
 } from '#server/models/sitePublic'
 import { PublicCategoryModel } from '#server/models/contentCategoryPublic'
-import type { CatalogCategorySlugDoc, CategorySlugDoc } from '#server/models/sitePublic'
+import type { CatalogCategorySlugDoc, CategorySlugDoc, MediaUrlDoc } from '#server/models/sitePublic'
 import { withSiteDb } from './mongo'
 
 /**
@@ -35,12 +39,49 @@ export function getSiteLocale(event: H3Event): string {
     ?? DEFAULT_PUBLIC_CONTENT_LOCALE
 }
 
+/**
+ * The settings store media ids, not URLs. Files live in the CMS media store and
+ * are served by its origin (`/media/<storage key>`), so an id is only resolvable
+ * when `TM_MEDIA_BASE_URL` names that public origin. Without it the projection
+ * keeps the ids and every URL stays empty, which is what the storefront did
+ * before; a broken guess at an origin would be worse than the bundled fallback.
+ */
+async function readMediaUrls(
+  event: H3Event,
+  settings: Record<string, unknown> | null,
+): Promise<Map<string, string>> {
+  if (!settings) return new Map()
+  const mediaBaseUrl = String(useRuntimeConfig(event).mediaBaseUrl || '')
+  if (!mediaBaseUrl.trim()) return new Map()
+
+  const company = settings.company as Record<string, unknown> | undefined
+  const seo = settings.seo as Record<string, unknown> | undefined
+  const ids = new Set<string>()
+  const add = (value: unknown) => {
+    if (isMediaId(value)) ids.add(value)
+  }
+  add(company?.logoMediaId)
+  add(seo?.defaultImageMediaId)
+  const localized = seo?.defaultImageMediaIds
+  if (localized && typeof localized === 'object') {
+    for (const value of Object.values(localized as Record<string, unknown>)) add(value)
+  }
+  if (!ids.size) return new Map()
+
+  const docs = await PublicMediaModel
+    .find({ _id: { $in: [...ids] }, kind: 'image' })
+    .select(PUBLIC_MEDIA_PROJECTION)
+    .lean<MediaUrlDoc[]>()
+  return buildMediaUrlMap(docs, mediaBaseUrl)
+}
+
 export async function readPublicSite(event: H3Event, locale: string): Promise<PublicSite> {
   return withSiteDb(event, async () => {
     const [settings, menuDocs] = await Promise.all([
       PublicSettingsModel.findOne({}).select(PUBLIC_SETTINGS_PROJECTION).lean<Record<string, unknown> | null>(),
       PublicSiteMenuModel.find({}).select(PUBLIC_MENU_PROJECTION).sort({ key: 1 }).lean<Record<string, unknown>[]>(),
     ])
+    const mediaUrls = await readMediaUrls(event, settings)
 
     // Children resolve to the same landing pages as their parent, so their
     // category keys have to be collected too or a dropdown link loses its slug.
@@ -89,6 +130,7 @@ export async function readPublicSite(event: H3Event, locale: string): Promise<Pu
       menus: menuDocs,
       categorySlugs: buildCategorySlugMap(categoryDocs, locale),
       productCategorySlugs: buildCatalogCategorySlugMap(productCategoryDocs, locale),
+      mediaUrls,
     })
   })
 }
