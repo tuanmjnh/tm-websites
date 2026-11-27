@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { Types } from 'mongoose'
 import {
   PublicSiteSchema,
   buildPublicSite,
@@ -43,17 +42,20 @@ async function check(name: string, fn: () => Promise<void> | void) {
   }
 }
 
-const LOGO_ID = new Types.ObjectId('64b000000000000000000001').toString()
-const IMAGE_ID = new Types.ObjectId('64b000000000000000000002').toString()
-const DOCUMENT_ID = new Types.ObjectId('64b000000000000000000003').toString()
+// The media documents are created through the model, so mongoose assigns the ids;
+// the settings below are given those ids once they exist.
+let LOGO_ID = ''
+let IMAGE_ID = ''
+let DOCUMENT_ID = ''
 const LOGO_KEY = 'sentuan/2026/aaaaaaaa-1111-4111-8111-111111111111.png'
 const IMAGE_KEY = 'sentuan/2026/bbbbbbbb-2222-4222-8222-222222222222.webp'
+const DOCUMENT_KEY = 'sentuan/2026/cccccccc-3333-4333-8333-333333333333.pdf'
 
 const settingsDoc = {
   siteId: 'sentuan',
   revision: 4,
-  company: { name: 'Sen Tuấn', email: 'hello@sentuan.vn', phone: '0909', address: 'Hà Nội', logoMediaId: LOGO_ID },
-  seo: { titleTemplate: '%s | Sen Tuấn', defaultDescription: 'Trang sức', defaultImageMediaId: IMAGE_ID },
+  company: { name: 'Sen Tuấn', email: 'hello@sentuan.vn', phone: '0909', address: 'Hà Nội', logoMediaId: '' },
+  seo: { titleTemplate: '%s | Sen Tuấn', defaultDescription: 'Trang sức', defaultImageMediaId: '' },
   locales: { default: 'vi', enabled: ['vi', 'en'] },
   // Private fields that must never reach the storefront.
   modules: { content: true, catalog: false },
@@ -78,13 +80,18 @@ const menus = [
 
 async function load(connection: Awaited<ReturnType<typeof connectMongo>>) {
   await dropTestMongooseDatabase(connection)
-  await connection.connection.collection('settings').insertOne({ ...settingsDoc })
+  const logo = await PublicMediaModel.create({ siteId: 'sentuan', kind: 'image', storage: { provider: 'local', key: LOGO_KEY } })
+  const image = await PublicMediaModel.create({ siteId: 'sentuan', kind: 'image', storage: { provider: 'local', key: IMAGE_KEY } })
+  const document = await PublicMediaModel.create({ siteId: 'sentuan', kind: 'document', storage: { provider: 'local', key: DOCUMENT_KEY } })
+  LOGO_ID = String(logo._id)
+  IMAGE_ID = String(image._id)
+  DOCUMENT_ID = String(document._id)
+  await connection.connection.collection('settings').insertOne({
+    ...settingsDoc,
+    company: { ...settingsDoc.company, logoMediaId: LOGO_ID },
+    seo: { ...settingsDoc.seo, defaultImageMediaId: IMAGE_ID },
+  })
   await connection.connection.collection('site_menus').insertMany(menus.map(menu => ({ ...menu })))
-  await connection.connection.collection('media').insertMany([
-    { _id: new Types.ObjectId(LOGO_ID), siteId: 'sentuan', kind: 'image', storage: { provider: 'local', key: LOGO_KEY } },
-    { _id: new Types.ObjectId(IMAGE_ID), siteId: 'sentuan', kind: 'image', storage: { provider: 'local', key: IMAGE_KEY } },
-    { _id: new Types.ObjectId(DOCUMENT_ID), siteId: 'sentuan', kind: 'document', storage: { provider: 'local', key: 'sentuan/2026/cccccccc-3333-4333-8333-333333333333.pdf' } },
-  ])
   await connection.connection.collection('categories').insertMany([
     { key: 'trang-suc', locales: [{ locale: 'vi', name: 'Trang sức', slug: 'trang-suc' }, { locale: 'en', name: 'Jewelry', slug: 'jewelry' }] },
     { key: 'phu-kien', locales: [{ locale: 'vi', name: 'Phụ kiện', slug: 'phu-kien' }] },
